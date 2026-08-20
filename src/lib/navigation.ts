@@ -59,7 +59,9 @@ export const UNIVERS_CLIENT: UniversNav[] = [
     id: 'applications',
     nom: 'Applications',
     sections: [
-      { nom: 'Mes applications', href: '/app/apps' },
+      { nom: 'Projets', href: '/app/projets' },
+      { nom: 'Applications', href: '/app/apps' },
+      { nom: 'Domaines & routage', href: '/app/routage' },
       { nom: 'Déploiements', href: '/app/deploiements' },
       { nom: "Registre d'images", href: '/app/registre' },
     ],

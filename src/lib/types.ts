@@ -502,6 +502,135 @@ export interface Deployment {
   pr?: number
 }
 
+// ─── Projets applicatifs ──────────────────────────────────────────────
+
+/**
+ * Un projet regroupe les services qui forment un même système : l'application,
+ * sa base, son cache, ses tâches de fond. Le regroupement est la seule façon de
+ * répondre à « qu'est-ce qui casse si j'arrête ça ? » sans lire une liste plate.
+ */
+export interface Projet {
+  id: string
+  nom: string
+  description: string
+  espaceId: string
+  cree: string
+  /** Un même projet se décline par environnement, chacun avec ses services. */
+  environnements: string[]
+  /** Variables partagées par tous les services du projet, par environnement. */
+  variables: Array<{
+    cle: string
+    valeur?: string
+    secret: boolean
+    portee: 'build' | 'runtime'
+    environnements: string[]
+  }>
+}
+
+export type TypeServiceProjet = 'application' | 'base' | 'statique' | 'cron' | 'worker'
+
+export type MoteurBase = 'postgresql' | 'mysql' | 'mariadb' | 'mongodb' | 'redis' | 'clickhouse'
+
+export interface ServiceProjet {
+  id: string
+  projetId: string
+  nom: string
+  type: TypeServiceProjet
+  environnement: string
+  statut: 'running' | 'building' | 'stopped' | 'degraded' | 'failed'
+  ressources: { cpu: number; ramMo: number; diskGo: number }
+  /**
+   * Emplacement réel d'exécution — rare chez les concurrents et volontairement
+   * exposé ici (§5.4) : on ne demande pas au client de faire confiance à vide.
+   */
+  emplacement: { site: Site; backend: string; vms?: string[]; namespace?: string }
+  derniereMaj: string
+  coutMensuel: number
+
+  /** Applications, sites statiques et workers : l'entrée qui porte les déploiements. */
+  appId?: string
+  source?: { type: 'git' | 'image'; ref: string; branche?: string }
+  portConteneur?: number
+
+  /** Base de données managée par la plateforme applicative. */
+  moteur?: MoteurBase
+  version?: string
+  base?: {
+    nom: string
+    utilisateur: string
+    motDePasse: string
+    hoteInterne: string
+    port: number
+  }
+  exposeExterne?: { actif: boolean; port?: number; sourcesAutorisees?: string[] }
+  sauvegarde?: {
+    plan: string
+    cron: string
+    destination: string
+    dernier: string
+    retentionJours: number
+    taille: string
+  }
+
+  /** Tâche planifiée. */
+  cron?: {
+    expression: string
+    lisible: string
+    commande: string
+    derniereExecution: string
+    dureeS: number
+    statut: 'ok' | 'echec'
+    prochaine: string
+  }
+
+  /** Worker de file. */
+  file?: {
+    nom: string
+    enAttente: number
+    traitesJour: number
+    echecsJour: number
+    concurrence: number
+  }
+}
+
+/**
+ * Zone applicative offerte à l'organisation. Elle existe pour que la première
+ * mise en ligne ne dépende pas d'un achat de domaine : on déploie, on obtient
+ * une URL qui fonctionne, on branche son domaine plus tard.
+ */
+export interface ZoneApplicative {
+  zone: string
+  wildcard: string
+  /** Adresses d'entrée à viser depuis un DNS externe, par site. */
+  ingress: Array<{ site: Site; ip: string; ipv6: string }>
+  certificat: { emetteur: string; renouvellementAuto: boolean; expire: string }
+  quotaDomaines: { utilises: number; total: number }
+}
+
+export interface DomaineApplicatif {
+  id: string
+  hote: string
+  origine: 'genere' | 'personnalise'
+  serviceId: string
+  chemin: string
+  portConteneur: number
+  https: boolean
+  certificat: {
+    etat: 'actif' | 'en_emission' | 'echec' | 'aucun'
+    emetteur?: string
+    expire?: string
+  }
+  /** Vérification DNS guidée : l'enregistrement exact à créer, et son état. */
+  verification?: {
+    etat: 'ok' | 'attente' | 'echec'
+    enregistrement: { type: 'A' | 'CNAME'; nom: string; valeur: string }
+    verifieLe?: string
+    detail?: string
+    correlationId?: string
+  }
+  redirections?: Array<{ de: string; vers: string; code: 301 | 302 }>
+}
+
 // ─── Marketplace ──────────────────────────────────────────────────────
 
 export type CategorieService =

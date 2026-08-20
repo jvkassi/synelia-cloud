@@ -24,6 +24,7 @@ import {
   LOGS_EXECUTION,
   envsDeLApp,
   espaceById,
+  projetDeLApp,
 } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink, IconButton } from '@/components/ui/button'
@@ -75,7 +76,17 @@ export function VueApplication({ id }: { id: string }) {
       <PageHeader
         fil={[
           { label: 'Espace client', href: '/app' },
-          { label: 'Applications', href: '/app/apps' },
+          { label: 'Projets', href: '/app/projets' },
+          // Le projet auquel appartient l'application, quand elle en a un :
+          // la hiérarchie affichée doit être celle qui existe vraiment.
+          ...(projetDeLApp(app.id)
+            ? [
+                {
+                  label: projetDeLApp(app.id)!.nom,
+                  href: `/app/projets/${projetDeLApp(app.id)!.id}`,
+                },
+              ]
+            : [{ label: 'Applications', href: '/app/apps' }]),
           { label: app.nom },
         ]}
         titre={<span className="font-mono">{app.nom}</span>}

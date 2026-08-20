@@ -122,16 +122,21 @@ export const MAINTENANT = '2026-08-19T15:20:00Z'
 
 export function relatif(iso: string, reference: string = MAINTENANT): string {
   const diff = parse(reference).getTime() - parse(iso).getTime()
-  const min = Math.round(diff / 60000)
+  // Le futur est traité symétriquement : une prochaine exécution planifiée ou
+  // une échéance ne doivent pas s'afficher « à l'instant ».
+  const futur = diff < 0
+  const min = Math.round(Math.abs(diff) / 60000)
+  const tourne = (texte: string) => (futur ? `dans ${texte}` : `il y a ${texte}`)
+
   if (min < 1) return "à l'instant"
-  if (min < 60) return `il y a ${min} min`
+  if (min < 60) return tourne(`${min} min`)
   const h = Math.round(min / 60)
-  if (h < 24) return `il y a ${h} h`
+  if (h < 24) return tourne(`${h} h`)
   const j = Math.round(h / 24)
-  if (j === 1) return 'hier'
-  if (j < 31) return `il y a ${j} j`
+  if (j === 1) return futur ? 'demain' : 'hier'
+  if (j < 31) return tourne(`${j} j`)
   const m = Math.round(j / 30)
-  return `il y a ${m} mois`
+  return tourne(`${m} mois`)
 }
 
 /** Durée en secondes → « 1 min 42 s » · « 3 h 12 » */

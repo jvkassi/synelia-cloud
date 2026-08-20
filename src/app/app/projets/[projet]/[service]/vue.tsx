@@ -1,0 +1,1439 @@
+'use client'
+
+import Link from 'next/link'
+import { useState } from 'react'
+import {
+  Copy,
+  Download,
+  ExternalLink,
+  Globe,
+  Play,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  Square,
+  Trash2,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { dateHeure, duree, money, relatif } from '@/lib/format'
+import type { DomaineApplicatif, ServiceProjet } from '@/lib/types'
+import {
+  DOMAINES_APPLICATIFS,
+  EVENEMENTS_SUPERVISION,
+  LOGS_EXECUTION,
+  MOTEUR_LABEL,
+  MOTEUR_URI,
+  TYPE_SERVICE_LABEL,
+  ZONE_APPLICATIVE,
+  deploiementsDeLApp,
+  domainesDuService,
+  projetById,
+  serviceProjetById,
+} from '@/lib/mock'
+import { Badge, MicroLabel } from '@/components/ui/badge'
+import { Button, ButtonLink, IconButton } from '@/components/ui/button'
+import { CopyField, GatedAction, Tabs } from '@/components/ui/display'
+import { Field, Input, Select, Slider, Switch } from '@/components/ui/field'
+import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
+import { StatTile } from '@/components/composition/metrics'
+import { EmptyState } from '@/components/composition/states'
+import { ConfirmDialog, Drawer } from '@/components/ui/overlay'
+import { EventList, GrilleSparkCharts, LogPeek } from '@/components/business/observabilite'
+import { EmplacementReel, StatutServiceBadge } from '@/components/business/projets'
+import { useApp } from '@/components/app/contexte'
+
+/** Les onglets dépendent du type : une base n'a pas de domaine, un cron n'a pas de file. */
+function ongletsDu(service: ServiceProjet) {
+  const communs = [{ id: 'apercu', label: 'Aperçu' }]
+  const specifiques =
+    service.type === 'base'
+      ? [
+          { id: 'connexion', label: 'Connexion' },
+          { id: 'sauvegardes', label: 'Sauvegardes' },
+        ]
+      : service.type === 'cron'
+        ? [{ id: 'executions', label: 'Exécutions' }]
+        : service.type === 'worker'
+          ? [{ id: 'file', label: 'File' }]
+          : [
+              { id: 'domaines', label: 'Domaines' },
+              { id: 'deploiements', label: 'Déploiements' },
+            ]
+  return [
+    ...communs,
+    ...specifiques,
+    { id: 'variables', label: 'Variables' },
+    { id: 'journaux', label: 'Journaux' },
+    { id: 'supervision', label: 'Supervision' },
+    { id: 'avance', label: 'Avancé' },
+  ]
+}
+
+export function VueService({ id }: { id: string }) {
+  const service = serviceProjetById(id)!
+  const projet = projetById(service.projetId)!
+  const domaines = domainesDuService(id)
+  const onglets = ongletsDu(service)
+  const [onglet, setOnglet] = useState('apercu')
+  const { autorise, refus } = useApp()
+
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        fil={[
+          { label: 'Espace client', href: '/app' },
+          { label: 'Projets', href: '/app/projets' },
+          { label: projet.nom, href: `/app/projets/${projet.id}` },
+          { label: service.nom },
+        ]}
+        titre={
+          <span className="flex flex-wrap items-baseline gap-2.5">
+            <span className="font-mono">{service.nom}</span>
+            <span className="text-[14px] font-semibold text-g-500">
+              {TYPE_SERVICE_LABEL[service.type]}
+              {service.moteur && ` · ${MOTEUR_LABEL[service.moteur]} ${service.version}`}
+            </span>
+          </span>
+        }
+        sousTitre={
+          service.type === 'base'
+            ? 'Base managée par la plateforme : version qualifiée, sauvegarde appliquée, accès restreint au réseau du projet.'
+            : service.type === 'cron'
+              ? 'Commande exécutée selon une planification, avec historique daté de chaque exécution.'
+              : service.type === 'worker'
+                ? 'Processus de file sans port exposé. Sa santé se lit à la profondeur de file, pas à un code HTTP.'
+                : 'Service exposé sur le web, construit depuis sa source puis déployé sans coupure.'
+        }
+        meta={
+          <>
+            <StatutServiceBadge statut={service.statut} size="md" />
+            <Badge tone="neutral">{service.environnement}</Badge>
+            <Badge tone="neutral">
+              {service.ressources.cpu} vCPU · {service.ressources.ramMo / 1024} Go ·{' '}
+              {service.ressources.diskGo} Go
+            </Badge>
+            <Badge tone="violet">{money(service.coutMensuel)}/mois</Badge>
+            <span className="text-[11.5px] text-g-500">
+              dernière modification {relatif(service.derniereMaj)}
+            </span>
+          </>
+        }
+        actions={
+          <>
+            {domaines.length > 0 && (
+              <ButtonLink
+                href={`https://${domaines[0].hote}`}
+                variant="secondary"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Ouvrir
+                <ExternalLink size={13} />
+              </ButtonLink>
+            )}
+            <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
+              {service.statut === 'stopped' ? (
+                <Button iconBefore={<Play size={14} />}>Démarrer</Button>
+              ) : (
+                <Button iconBefore={<RefreshCw size={14} />}>
+                  {service.type === 'base' ? 'Redémarrer' : 'Redéployer'}
+                </Button>
+              )}
+            </GatedAction>
+          </>
+        }
+      />
+
+      <Tabs tabs={onglets} active={onglet} onChange={setOnglet} />
+
+      {onglet === 'apercu' && <Apercu service={service} domaines={domaines} />}
+      {onglet === 'connexion' && <Connexion service={service} />}
+      {onglet === 'sauvegardes' && <Sauvegardes service={service} />}
+      {onglet === 'executions' && <Executions service={service} />}
+      {onglet === 'file' && <FileAttente service={service} />}
+      {onglet === 'domaines' && <Domaines service={service} domaines={domaines} />}
+      {onglet === 'deploiements' && <Deploiements service={service} />}
+      {onglet === 'variables' && <Variables service={service} />}
+      {onglet === 'journaux' && <Journaux service={service} />}
+      {onglet === 'supervision' && <Supervision service={service} />}
+      {onglet === 'avance' && <Avance service={service} />}
+    </div>
+  )
+}
+
+// ─── Aperçu ───────────────────────────────────────────────────────────
+
+function Apercu({
+  service,
+  domaines,
+}: {
+  service: ServiceProjet
+  domaines: DomaineApplicatif[]
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]">
+      <div className="min-w-0 space-y-4">
+        {service.statut === 'failed' && (
+          <Callout ton="err" titre="Ce service est en échec">
+            {service.type === 'cron'
+              ? 'La dernière exécution planifiée s’est terminée en erreur. L’onglet Exécutions donne le journal complet et la commande jouée.'
+              : 'Le service ne répond plus à ses sondes. L’onglet Journaux montre les vingt dernières lignes ; la supervision détaillée est dans Grafana.'}
+          </Callout>
+        )}
+        {service.statut === 'building' && (
+          <Callout ton="info" titre="Construction en cours">
+            Le déploiement précédent reste en ligne jusqu’à ce que le nouveau passe ses contrôles de
+            santé. Aucune coupure n’est attendue.
+          </Callout>
+        )}
+        {service.statut === 'stopped' && (
+          <Callout ton="warn" titre="Service arrêté">
+            Un service arrêté ne facture ni processeur ni mémoire. Ses volumes, en revanche,
+            continuent d’être facturés tant qu’ils existent.
+          </Callout>
+        )}
+
+        <Card>
+          <CardHeader
+            titre="Caractéristiques"
+            sousTitre="Ce que la plateforme exécute, exactement."
+          />
+          <KeyValueList
+            colonnes={2}
+            items={[
+              { cle: 'Type', valeur: TYPE_SERVICE_LABEL[service.type] },
+              { cle: 'Environnement', valeur: service.environnement },
+              ...(service.source
+                ? [
+                    {
+                      cle: service.source.type === 'git' ? 'Dépôt' : 'Image',
+                      valeur: (
+                        <span className="font-mono text-[12px]">
+                          {service.source.ref}
+                          {service.source.branche && ` · ${service.source.branche}`}
+                        </span>
+                      ),
+                    },
+                  ]
+                : []),
+              ...(service.moteur
+                ? [
+                    {
+                      cle: 'Moteur',
+                      valeur: `${MOTEUR_LABEL[service.moteur]} ${service.version}`,
+                    },
+                  ]
+                : []),
+              ...(service.portConteneur
+                ? [
+                    {
+                      cle: 'Port du conteneur',
+                      valeur: <span className="tnum font-mono">{service.portConteneur}</span>,
+                    },
+                  ]
+                : []),
+              {
+                cle: 'Processeur et mémoire',
+                valeur: `${service.ressources.cpu} vCPU · ${service.ressources.ramMo / 1024} Go`,
+              },
+              { cle: 'Disque', valeur: `${service.ressources.diskGo} Go` },
+              { cle: 'Coût mensuel', valeur: `${money(service.coutMensuel)} hors taxes` },
+            ]}
+          />
+        </Card>
+
+        {domaines.length > 0 && (
+          <Card>
+            <CardHeader
+              titre="Adresses qui répondent"
+              sousTitre="Une adresse offerte, plus les vôtres si vous en avez branché."
+            />
+            <div className="space-y-2">
+              {domaines.map((d) => (
+                <div
+                  key={d.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2.5"
+                >
+                  <a
+                    href={`https://${d.hote}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex min-w-0 items-center gap-1.5 font-mono text-[12.5px] font-semibold text-ink hover:text-p-700"
+                  >
+                    <span className="truncate">
+                      {d.hote}
+                      {d.chemin !== '/' && <span className="text-g-500">{d.chemin}</span>}
+                    </span>
+                    <ExternalLink size={11} className="shrink-0 text-g-500" />
+                  </a>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    <Badge tone={d.origine === 'genere' ? 'violet' : 'neutral'} size="sm">
+                      {d.origine === 'genere' ? 'Offert' : 'Votre domaine'}
+                    </Badge>
+                    <Badge tone={d.certificat.etat === 'actif' ? 'ok' : 'warn'} size="sm">
+                      {d.certificat.etat === 'actif' ? 'HTTPS' : 'Certificat en attente'}
+                    </Badge>
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+      </div>
+
+      <div className="space-y-4">
+        <EmplacementReel service={service} />
+
+        <Card>
+          <CardHeader titre="Sur 24 heures" sousTitre="Trois indicateurs, rien de plus." />
+          <div className="space-y-2.5">
+            <StatTile
+              libelle="Processeur"
+              valeur={service.statut === 'stopped' ? '—' : '38'}
+              unite="%"
+            />
+            <StatTile
+              libelle="Mémoire"
+              valeur={service.statut === 'stopped' ? '—' : '61'}
+              unite="%"
+            />
+            <StatTile
+              libelle={service.type === 'worker' ? 'File d’attente' : 'Requêtes par minute'}
+              valeur={
+                service.statut === 'stopped'
+                  ? '—'
+                  : service.type === 'worker'
+                    ? String(service.file?.enAttente ?? 0)
+                    : '1 240'
+              }
+            />
+          </div>
+          <p className="mt-3 text-[11px] leading-relaxed text-g-500">
+            L’analyse fine se fait dans Grafana, la recherche de journaux dans VictoriaLogs. Le
+            portail ne réimplémente ni l’un ni l’autre.
+          </p>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+// ─── Connexion (base de données) ──────────────────────────────────────
+
+function Connexion({ service }: { service: ServiceProjet }) {
+  const { autorise, refus } = useApp()
+  const base = service.base!
+  const uri = MOTEUR_URI[service.moteur!](base)
+  const [expose, setExpose] = useState(service.exposeExterne?.actif ?? false)
+
+  return (
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]">
+      <div className="min-w-0 space-y-4">
+        <Card>
+          <CardHeader
+            titre="Connexion depuis le projet"
+            sousTitre="Les services du même projet joignent la base par son nom interne, sans passer par Internet."
+          />
+          <div className="space-y-3">
+            <div>
+              <MicroLabel>URI de connexion</MicroLabel>
+              <CopyField value={uri} className="mt-1.5" />
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <MicroLabel>Hôte</MicroLabel>
+                <CopyField value={base.hoteInterne} className="mt-1.5" />
+              </div>
+              <div>
+                <MicroLabel>Port</MicroLabel>
+                <CopyField value={String(base.port)} className="mt-1.5" />
+              </div>
+              <div>
+                <MicroLabel>Base</MicroLabel>
+                <CopyField value={base.nom} className="mt-1.5" />
+              </div>
+              <div>
+                <MicroLabel>Utilisateur</MicroLabel>
+                <CopyField value={base.utilisateur} className="mt-1.5" />
+              </div>
+            </div>
+            <div>
+              <MicroLabel>Mot de passe</MicroLabel>
+              <CopyField value={base.motDePasse} masque className="mt-1.5" />
+              <p className="mt-1.5 text-[11px] text-g-500">
+                Toute révélation est inscrite au journal d’audit, avec l’auteur et l’heure.
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader
+            titre="Exposition sur Internet"
+            sousTitre="Fermée par défaut. Ouvrir un port de base de données au monde entier est la première cause de fuite de données."
+            actions={
+              <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
+                <Switch
+                  checked={expose}
+                  onChange={setExpose}
+                  label={expose ? 'Exposée' : 'Fermée'}
+                />
+              </GatedAction>
+            }
+          />
+          {expose ? (
+            <div className="space-y-3">
+              <Callout ton="warn" titre="Restreignez toujours les sources">
+                Sans liste d’adresses autorisées, le port est joignable depuis n’importe où. Nous
+                refusons l’exposition sans au moins une plage déclarée.
+              </Callout>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="Port public attribué">
+                  <Input readOnly defaultValue={service.exposeExterne?.port ?? 25432} />
+                </Field>
+                <Field label="Adresse d’entrée">
+                  <Input readOnly defaultValue={ZONE_APPLICATIVE.ingress[0].ip} />
+                </Field>
+              </div>
+              <div>
+                <MicroLabel>Sources autorisées</MicroLabel>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {(service.exposeExterne?.sourcesAutorisees ?? []).map((s) => (
+                    <Badge key={s} tone="neutral">
+                      <span className="font-mono">{s}</span>
+                    </Badge>
+                  ))}
+                  <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
+                    <Button size="sm" variant="ghost" iconBefore={<Plus size={12} />}>
+                      Ajouter une plage
+                    </Button>
+                  </GatedAction>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-[12.5px] leading-relaxed text-g-700">
+              La base n’est joignable que depuis le réseau privé du projet{' '}
+              <span className="font-mono text-[12px]">{service.projetId}</span>. C’est le réglage
+              recommandé : une application du même projet n’a pas besoin d’Internet pour parler à sa
+              base.
+            </p>
+          )}
+        </Card>
+      </div>
+
+      <div className="space-y-4">
+        <Card>
+          <CardHeader titre="Ce que le portail ne fait pas" />
+          <p className="text-[12.5px] leading-relaxed text-g-700">
+            Il n’y a pas d’explorateur de tables ici, et il n’y en aura pas. Le portail donne la
+            chaîne de connexion, la santé, les sauvegardes et les journaux lents. Pour interroger
+            vos données, <span className="font-semibold">psql</span>,{' '}
+            <span className="font-semibold">DBeaver</span> ou votre ORM font mieux que ce que nous
+            écririons.
+          </p>
+        </Card>
+        <EmplacementReel service={service} />
+      </div>
+    </div>
+  )
+}
+
+// ─── Sauvegardes (base de données) ────────────────────────────────────
+
+function Sauvegardes({ service }: { service: ServiceProjet }) {
+  const { autorise, refus } = useApp()
+  const s = service.sauvegarde
+
+  if (!s) {
+    return (
+      <EmptyState
+        titre="Aucun plan de sauvegarde"
+        phrase="Cette base n’est pas sauvegardée. Un cache peut s’en passer ; une base de production, jamais."
+        icone={<RotateCcw size={22} />}
+      />
+    )
+  }
+
+  const points = [
+    { date: '2026-08-19T01:04:00Z', taille: s.taille, type: 'Complète', etat: 'ok' as const },
+    { date: '2026-08-18T01:04:00Z', taille: '18,1 Go', type: 'Complète', etat: 'ok' as const },
+    { date: '2026-08-17T01:04:00Z', taille: '17,9 Go', type: 'Complète', etat: 'ok' as const },
+    { date: '2026-08-16T01:04:00Z', taille: '17,8 Go', type: 'Complète', etat: 'ok' as const },
+  ]
+
+  return (
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]">
+      <div className="min-w-0 space-y-4">
+        <Card>
+          <CardHeader
+            titre="Points de restauration"
+            sousTitre="Restaurer crée toujours une nouvelle base. L’originale n’est jamais écrasée."
+            actions={
+              <GatedAction autorise={autorise('backup.restore')} message={refus('backup.restore')}>
+                <Button size="sm" variant="secondary" iconBefore={<Download size={13} />}>
+                  Sauvegarder maintenant
+                </Button>
+              </GatedAction>
+            }
+          />
+          <div className="space-y-2">
+            {points.map((p) => (
+              <div
+                key={p.date}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2.5"
+              >
+                <span className="min-w-0">
+                  <span className="block text-[12.5px] font-semibold text-ink">
+                    {dateHeure(p.date)}
+                  </span>
+                  <span className="block text-[11px] text-g-500">
+                    {p.type} · {p.taille} · immuable jusqu’au{' '}
+                    {new Date(new Date(p.date).getTime() + s.retentionJours * 86400000)
+                      .toISOString()
+                      .slice(0, 10)}
+                  </span>
+                </span>
+                <GatedAction autorise={autorise('backup.restore')} message={refus('backup.restore')}>
+                  <Button size="sm" variant="ghost">
+                    Restaurer sur une nouvelle base
+                  </Button>
+                </GatedAction>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader titre="Restauration à un instant précis" />
+          <p className="mb-3 text-[12.5px] leading-relaxed text-g-700">
+            Les journaux de transaction sont archivés en continu : au-delà des points quotidiens,
+            vous pouvez viser une minute précise des {s.retentionJours} derniers jours.
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Date et heure visées">
+              <Input type="datetime-local" defaultValue="2026-08-19T09:30" />
+            </Field>
+            <Field label="Nom de la nouvelle base">
+              <Input defaultValue={`${service.base?.nom}_restore`} className="font-mono" />
+            </Field>
+          </div>
+          <GatedAction autorise={autorise('backup.restore')} message={refus('backup.restore')}>
+            <Button size="sm" className="mt-3">
+              Lancer la restauration
+            </Button>
+          </GatedAction>
+        </Card>
+      </div>
+
+      <div className="space-y-4">
+        <Card>
+          <CardHeader titre="Plan appliqué" />
+          <KeyValueList
+            colonnes={1}
+            items={[
+              { cle: 'Plan', valeur: s.plan },
+              { cle: 'Planification', valeur: <span className="font-mono text-[12px]">{s.cron}</span> },
+              { cle: 'Destination', valeur: s.destination },
+              { cle: 'Rétention', valeur: `${s.retentionJours} jours, immuable` },
+              { cle: 'Dernière exécution', valeur: `${dateHeure(s.dernier)} · ${s.taille}` },
+            ]}
+          />
+        </Card>
+        <Callout ton="violet" titre="Hors site par défaut">
+          La destination est un compartiment objet du second site. Une sauvegarde qui vit à côté de
+          la base ne protège de rien.
+        </Callout>
+      </div>
+    </div>
+  )
+}
+
+// ─── Exécutions (tâche planifiée) ─────────────────────────────────────
+
+function Executions({ service }: { service: ServiceProjet }) {
+  const c = service.cron!
+  const historique = [
+    { date: '2026-08-19T00:00:00Z', dureeS: c.dureeS, statut: c.statut, sortie: 'Traceback: KeyError « montant_ht » à la ligne 214' },
+    { date: '2026-08-18T00:00:00Z', dureeS: 1204, statut: 'ok' as const, sortie: '5 128 lignes traitées' },
+    { date: '2026-08-17T00:00:00Z', dureeS: 1187, statut: 'ok' as const, sortie: '4 902 lignes traitées' },
+    { date: '2026-08-16T00:00:00Z', dureeS: 1256, statut: 'ok' as const, sortie: '5 344 lignes traitées' },
+    { date: '2026-08-15T00:00:00Z', dureeS: 1198, statut: 'ok' as const, sortie: '5 011 lignes traitées' },
+  ]
+
+  return (
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]">
+      <div className="min-w-0 space-y-4">
+        {c.statut === 'echec' && (
+          <Callout ton="err" titre="La dernière exécution a échoué">
+            La tâche a tourné {duree(c.dureeS)} avant de s’arrêter en erreur. La prochaine
+            exécution reste planifiée : une tâche en échec n’est pas désactivée automatiquement, à
+            vous de décider.
+          </Callout>
+        )}
+        <Card>
+          <CardHeader
+            titre="Historique des exécutions"
+            sousTitre="Daté, avec la durée et la sortie de chaque passage."
+          />
+          <div className="space-y-2">
+            {historique.map((h) => (
+              <div
+                key={h.date}
+                className="rounded-[6px] border border-g-300 px-3 py-2.5"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="flex items-center gap-2">
+                    <Badge tone={h.statut === 'ok' ? 'ok' : 'err'} dot size="sm">
+                      {h.statut === 'ok' ? 'Succès' : 'Échec'}
+                    </Badge>
+                    <span className="text-[12.5px] font-semibold text-ink">
+                      {dateHeure(h.date)}
+                    </span>
+                  </span>
+                  <span className="tnum text-[11.5px] text-g-500">{duree(h.dureeS)}</span>
+                </div>
+                <p
+                  className={cn(
+                    'mt-1.5 font-mono text-[11.5px] leading-relaxed',
+                    h.statut === 'ok' ? 'text-g-700' : 'text-err',
+                  )}
+                >
+                  {h.sortie}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+
+      <div className="space-y-4">
+        <Card>
+          <CardHeader titre="Planification" />
+          <KeyValueList
+            colonnes={1}
+            items={[
+              {
+                cle: 'Expression',
+                valeur: <span className="font-mono text-[12px]">{c.expression}</span>,
+              },
+              { cle: 'En clair', valeur: c.lisible },
+              {
+                cle: 'Commande',
+                valeur: <span className="font-mono text-[11.5px]">{c.commande}</span>,
+              },
+              { cle: 'Prochaine exécution', valeur: dateHeure(c.prochaine) },
+              { cle: 'Fuseau', valeur: 'UTC — affiché en heure d’Abidjan (UTC+0)' },
+            ]}
+          />
+        </Card>
+        <EmplacementReel service={service} />
+      </div>
+    </div>
+  )
+}
+
+// ─── File (worker) ────────────────────────────────────────────────────
+
+function FileAttente({ service }: { service: ServiceProjet }) {
+  const f = service.file!
+  const { autorise, refus } = useApp()
+  const [concurrence, setConcurrence] = useState(f.concurrence)
+
+  return (
+    <div className="space-y-4">
+      {f.enAttente > 1000 && (
+        <Callout ton="err" titre="La file s’allonge plus vite qu’elle ne se vide">
+          {f.enAttente} messages en attente pour {f.traitesJour} traités aujourd’hui. Augmenter la
+          concurrence n’aidera pas si les échecs viennent d’une dépendance en panne — les{' '}
+          {f.echecsJour} échecs du jour méritent d’être lus avant.
+        </Callout>
+      )}
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile
+          libelle="En attente"
+          valeur={f.enAttente}
+          ton={f.enAttente > 1000 ? 'err' : 'neutral'}
+        />
+        <StatTile libelle="Traités aujourd’hui" valeur={f.traitesJour} />
+        <StatTile
+          libelle="Échecs du jour"
+          valeur={f.echecsJour}
+          ton={f.echecsJour > 0 ? 'warn' : 'ok'}
+        />
+        <StatTile libelle="Concurrence" valeur={concurrence} detail="tâches en parallèle" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader
+            titre={`File « ${f.nom} »`}
+            sousTitre="Un worker n’a pas d’adresse : sa santé se lit à la profondeur de file, pas à un code HTTP."
+          />
+          <Field
+            label="Tâches traitées en parallèle"
+            hint="Au-delà de la capacité de la base, augmenter la concurrence déplace le goulot d’étranglement sans rien accélérer."
+          >
+            <Slider min={1} max={16} value={concurrence} onChange={setConcurrence} unite="tâches" />
+          </Field>
+          <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
+            <Button size="sm" className="mt-3" disabled={concurrence === f.concurrence}>
+              Appliquer
+            </Button>
+          </GatedAction>
+        </Card>
+
+        <Card>
+          <CardHeader
+            titre="Messages en échec"
+            sousTitre="Conservés sept jours pour être rejoués après correction."
+          />
+          <div className="space-y-2">
+            {[
+              { id: 'msg-8841', erreur: 'Timeout sur svc-metier-db après 30 s', tentatives: 5 },
+              { id: 'msg-8839', erreur: 'Timeout sur svc-metier-db après 30 s', tentatives: 5 },
+              { id: 'msg-8802', erreur: 'Montant hors tolérance : écart de 1 240 FCFA', tentatives: 1 },
+            ].map((m) => (
+              <div
+                key={m.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2"
+              >
+                <span className="min-w-0">
+                  <span className="block font-mono text-[11.5px] font-semibold text-ink">
+                    {m.id}
+                  </span>
+                  <span className="block text-[11px] text-err">{m.erreur}</span>
+                </span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="tnum text-[11px] text-g-500">{m.tentatives} tentatives</span>
+                  <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
+                    <Button size="sm" variant="ghost">
+                      Rejouer
+                    </Button>
+                  </GatedAction>
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+// ─── Domaines du service ──────────────────────────────────────────────
+
+function Domaines({
+  service,
+  domaines,
+}: {
+  service: ServiceProjet
+  domaines: DomaineApplicatif[]
+}) {
+  const { autorise, refus } = useApp()
+  const [ajout, setAjout] = useState(false)
+  const genere = domaines.find((d) => d.origine === 'genere')
+
+  return (
+    <div className="space-y-4">
+      <Callout ton="violet" titre="Une adresse offerte, et la vôtre quand vous voulez">
+        {genere ? (
+          <>
+            Ce service répond déjà sur{' '}
+            <span className="font-mono text-[12px]">{genere.hote}</span>, certificat compris. Brancher
+            votre domaine consiste à créer un enregistrement DNS vers notre adresse d’entrée, puis à
+            l’associer ici — l’adresse offerte continue de fonctionner.
+          </>
+        ) : (
+          <>
+            Ce service n’a pas encore d’adresse. Générez-en une dans{' '}
+            <span className="font-mono text-[12px]">{ZONE_APPLICATIVE.zone}</span> pour le mettre en
+            ligne sans acheter de domaine.
+          </>
+        )}
+      </Callout>
+
+      <Card>
+        <CardHeader
+          titre="Domaines de ce service"
+          sousTitre="Chaque entrée route un hôte et un chemin vers un port du conteneur."
+          actions={
+            <span className="flex flex-wrap gap-2">
+              <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
+                <Button size="sm" variant="secondary" iconBefore={<Globe size={13} />}>
+                  Générer une adresse offerte
+                </Button>
+              </GatedAction>
+              <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
+                <Button size="sm" iconBefore={<Plus size={13} />} onClick={() => setAjout(true)}>
+                  Brancher mon domaine
+                </Button>
+              </GatedAction>
+            </span>
+          }
+        />
+
+        {domaines.length === 0 ? (
+          <EmptyState
+            titre="Aucune adresse"
+            phrase="Le service tourne mais rien ne pointe vers lui. Générez une adresse offerte pour le joindre immédiatement."
+            icone={<Globe size={22} />}
+          />
+        ) : (
+          <div className="space-y-3">
+            {domaines.map((d) => (
+              <LigneDomaine key={d.id} domaine={d} portDefaut={service.portConteneur ?? 80} />
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <TiroirDomaine
+        open={ajout}
+        onClose={() => setAjout(false)}
+        service={service}
+      />
+    </div>
+  )
+}
+
+export function LigneDomaine({
+  domaine: d,
+  portDefaut,
+}: {
+  domaine: DomaineApplicatif
+  portDefaut: number
+}) {
+  return (
+    <div className="rounded-[8px] border border-g-300 p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <span className="min-w-0">
+          <a
+            href={`https://${d.hote}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 font-mono text-[13px] font-bold text-ink hover:text-p-700"
+          >
+            <span className="truncate">
+              {d.hote}
+              {d.chemin !== '/' && <span className="text-g-500">{d.chemin}</span>}
+            </span>
+            <ExternalLink size={11} className="shrink-0 text-g-500" />
+          </a>
+          <span className="mt-0.5 block text-[11px] text-g-500">
+            → port {d.portConteneur || portDefaut} du conteneur ·{' '}
+            {d.https ? 'HTTPS forcé' : 'HTTP seulement'}
+          </span>
+        </span>
+        <span className="flex shrink-0 flex-wrap items-center gap-1.5">
+          <Badge tone={d.origine === 'genere' ? 'violet' : 'neutral'} size="sm">
+            {d.origine === 'genere' ? 'Offert' : 'Votre domaine'}
+          </Badge>
+          <Badge
+            tone={
+              d.certificat.etat === 'actif'
+                ? 'ok'
+                : d.certificat.etat === 'en_emission'
+                  ? 'info'
+                  : d.certificat.etat === 'echec'
+                    ? 'err'
+                    : 'neutral'
+            }
+            size="sm"
+          >
+            {
+              {
+                actif: 'Certificat actif',
+                en_emission: 'Émission en cours',
+                echec: 'Certificat en échec',
+                aucun: 'Sans certificat',
+              }[d.certificat.etat]
+            }
+          </Badge>
+        </span>
+      </div>
+
+      {d.verification && d.verification.etat !== 'ok' && (
+        <div
+          className={cn(
+            'mt-3 rounded-[6px] border p-3',
+            d.verification.etat === 'echec'
+              ? 'border-err/40 bg-err-bg'
+              : 'border-warn/40 bg-warn-bg',
+          )}
+        >
+          <p className="text-[12px] font-semibold text-ink">
+            {d.verification.etat === 'echec'
+              ? 'La vérification DNS a échoué'
+              : 'En attente de propagation DNS'}
+          </p>
+          <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{d.verification.detail}</p>
+          <div className="mt-2.5 rounded-[6px] border border-g-300 bg-white p-2.5">
+            <MicroLabel>Enregistrement à créer chez votre bureau d’enregistrement</MicroLabel>
+            <div className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[11.5px]">
+              <span className="text-g-500">Type</span>
+              <span className="font-semibold text-ink">{d.verification.enregistrement.type}</span>
+              <span className="text-g-500">Nom</span>
+              <span className="font-semibold text-ink">{d.verification.enregistrement.nom}</span>
+              <span className="text-g-500">Valeur</span>
+              <span className="font-semibold text-ink">
+                {d.verification.enregistrement.valeur}
+              </span>
+            </div>
+          </div>
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="secondary" iconBefore={<RefreshCw size={12} />}>
+              Vérifier maintenant
+            </Button>
+            {d.verification.verifieLe && (
+              <span className="text-[11px] text-g-500">
+                dernière vérification {relatif(d.verification.verifieLe)}
+              </span>
+            )}
+            {d.verification.correlationId && (
+              <span className="font-mono text-[10.5px] text-g-500">
+                identifiant de corrélation {d.verification.correlationId}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {d.redirections && d.redirections.length > 0 && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <MicroLabel>Redirections</MicroLabel>
+          {d.redirections.map((r) => (
+            <Badge key={r.de} tone="neutral" size="sm">
+              <span className="font-mono">
+                {r.de} → {r.vers}
+              </span>{' '}
+              · {r.code}
+            </Badge>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function TiroirDomaine({
+  open,
+  onClose,
+  service,
+}: {
+  open: boolean
+  onClose: () => void
+  service: ServiceProjet
+}) {
+  const [hote, setHote] = useState('')
+  const [etape, setEtape] = useState<'saisie' | 'dns'>('saisie')
+
+  return (
+    <Drawer
+      open={open}
+      onClose={onClose}
+      title="Brancher votre domaine"
+      size="md"
+      footer={
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="ghost" onClick={onClose}>
+            Fermer
+          </Button>
+          {etape === 'saisie' ? (
+            <Button onClick={() => setEtape('dns')} disabled={!hote.trim()}>
+              Continuer
+            </Button>
+          ) : (
+            <Button iconBefore={<RefreshCw size={13} />} onClick={onClose}>
+              Vérifier et activer
+            </Button>
+          )}
+        </div>
+      }
+    >
+      {etape === 'saisie' ? (
+        <div className="space-y-4">
+          <Field
+            label="Domaine ou sous-domaine"
+            hint="Sans http:// ni barre oblique finale. Un apex comme exemple.ci est accepté."
+          >
+            <Input
+              value={hote}
+              onChange={(e) => setHote(e.target.value)}
+              placeholder="api.mon-entreprise.ci"
+              className="font-mono"
+            />
+          </Field>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Chemin" hint="Laissez / pour tout le trafic.">
+              <Input defaultValue="/" className="font-mono" />
+            </Field>
+            <Field label="Port du conteneur" hint="Le port sur lequel votre service écoute.">
+              <Input defaultValue={service.portConteneur ?? 80} type="number" />
+            </Field>
+          </div>
+          <Field label="Certificat">
+            <Select defaultValue="acme">
+              <option value="acme">Émission automatique (Let’s Encrypt)</option>
+              <option value="manuel">Certificat que je fournis</option>
+            </Select>
+          </Field>
+          <Switch checked onChange={() => {}} label="Rediriger HTTP vers HTTPS" />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <Callout ton="info" titre="Créez cet enregistrement, puis revenez">
+            Tant que l’enregistrement n’est pas visible depuis nos résolveurs, le certificat ne peut
+            pas être émis. La propagation dépend du TTL fixé chez votre bureau d’enregistrement.
+          </Callout>
+          <Card padding={false} className="p-3">
+            <MicroLabel>Enregistrement DNS à créer</MicroLabel>
+            <div className="mt-2 space-y-2">
+              <div>
+                <MicroLabel>Type</MicroLabel>
+                <CopyField value="A" className="mt-1" />
+              </div>
+              <div>
+                <MicroLabel>Nom</MicroLabel>
+                <CopyField value={hote || 'api.mon-entreprise.ci'} className="mt-1" />
+              </div>
+              <div>
+                <MicroLabel>Valeur — adresse d’entrée {ZONE_APPLICATIVE.ingress[0].site}</MicroLabel>
+                <CopyField value={ZONE_APPLICATIVE.ingress[0].ip} className="mt-1" />
+              </div>
+            </div>
+          </Card>
+          <p className="text-[11.5px] leading-relaxed text-g-500">
+            Vous préférez un CNAME ? Pointez vers{' '}
+            <span className="font-mono">{ZONE_APPLICATIVE.zone}</span> — impossible en revanche sur
+            un apex, où la norme DNS impose un enregistrement A.
+          </p>
+        </div>
+      )}
+    </Drawer>
+  )
+}
+
+// ─── Déploiements ─────────────────────────────────────────────────────
+
+function Deploiements({ service }: { service: ServiceProjet }) {
+  const deploiements = service.appId ? deploiementsDeLApp(service.appId).slice(0, 6) : []
+
+  if (deploiements.length === 0) {
+    return (
+      <EmptyState
+        titre="Aucun déploiement"
+        phrase="Ce service n’a pas encore été construit. Le premier déploiement crée l’historique immuable."
+        icone={<RefreshCw size={22} />}
+      />
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <Callout ton="info" titre="Historique immuable">
+        Un déploiement ne se modifie pas : on en produit un nouveau. Le retour arrière rejoue un
+        artefact déjà construit, sans reconstruction, donc sans surprise.
+      </Callout>
+      <Card padding={false}>
+        <div className="no-scrollbar overflow-x-auto">
+          <table className="w-full min-w-max border-collapse">
+            <thead>
+              <tr className="border-b border-g-300 bg-g-050">
+                {['Version', 'Commit', 'Auteur', 'Durée', 'État', ''].map((h) => (
+                  <th key={h} className="type-micro px-3 py-2 text-left font-semibold text-g-500">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {deploiements.map((d) => (
+                <tr key={d.id} className="border-b border-g-100 last:border-0">
+                  <td className="px-3 py-2.5">
+                    <span className="font-mono text-[12.5px] font-semibold text-ink">
+                      {d.version}
+                    </span>
+                    <span className="block text-[11px] text-g-500">{relatif(d.startedAt)}</span>
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <span className="font-mono text-[11.5px] text-g-700">{d.commit ?? '—'}</span>
+                    <span className="block max-w-56 truncate text-[11px] text-g-500">
+                      {d.commitMessage}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5 text-[12px] text-g-700">{d.auteur}</td>
+                  <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
+                    {d.dureeS ? duree(d.dureeS) : '—'}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <Badge
+                      tone={
+                        d.statut === 'live'
+                          ? 'ok'
+                          : d.statut === 'failed'
+                            ? 'err'
+                            : d.statut === 'rolled_back'
+                              ? 'warn'
+                              : 'info'
+                      }
+                      size="sm"
+                    >
+                      {
+                        {
+                          queued: 'En file',
+                          building: 'Construction',
+                          scanning: 'Analyse',
+                          provisioning: 'Provisioning',
+                          deploying: 'Déploiement',
+                          live: 'En ligne',
+                          failed: 'Échec',
+                          rolled_back: 'Retour arrière',
+                        }[d.statut]
+                      }
+                    </Badge>
+                  </td>
+                  <td className="px-3 py-2.5 text-right">
+                    <Link
+                      href={`/app/apps/${service.appId}`}
+                      className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+                    >
+                      Détail →
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+      <p className="text-[12px] text-g-500">
+        Le pipeline complet — build, analyse de sécurité, provisioning, bascule — et les journaux de
+        construction sont sur{' '}
+        <Link
+          href={`/app/apps/${service.appId}`}
+          className="font-semibold text-p-700 hover:text-m-600"
+        >
+          l’écran de l’application
+        </Link>
+        .
+      </p>
+    </div>
+  )
+}
+
+// ─── Variables du service ─────────────────────────────────────────────
+
+function Variables({ service }: { service: ServiceProjet }) {
+  const { autorise, refus } = useApp()
+  const projet = projetById(service.projetId)!
+  const heritees = projet.variables.filter((v) => v.environnements.includes(service.environnement))
+
+  const propres =
+    service.type === 'base'
+      ? [{ cle: 'POSTGRES_MAX_CONNECTIONS', valeur: '200', secret: false }]
+      : [
+          { cle: 'PORT', valeur: String(service.portConteneur ?? 3000), secret: false },
+          { cle: 'LOG_LEVEL', valeur: 'info', secret: false },
+        ]
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader
+          titre="Variables propres au service"
+          sousTitre="Elles écrasent la valeur héritée du projet, pour ce service seulement."
+          actions={
+            <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
+              <Button size="sm" iconBefore={<Plus size={13} />}>
+                Ajouter
+              </Button>
+            </GatedAction>
+          }
+        />
+        <div className="space-y-2">
+          {propres.map((v) => (
+            <div
+              key={v.cle}
+              className="flex items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2"
+            >
+              <span className="font-mono text-[12px] font-semibold text-ink">{v.cle}</span>
+              <span className="font-mono text-[12px] text-g-700">{v.valeur}</span>
+            </div>
+          ))}
+        </div>
+        <Callout ton="warn" className="mt-3" titre="Un changement demande un redéploiement">
+          Les variables sont injectées au démarrage du conteneur. Modifier une valeur sans
+          redéployer ne change rien au processus en cours.
+        </Callout>
+      </Card>
+
+      <Card>
+        <CardHeader
+          titre={`Héritées du projet ${projet.nom}`}
+          sousTitre={`Environnement ${service.environnement}. Modifiables au niveau du projet.`}
+        />
+        <div className="space-y-2">
+          {heritees.map((v, i) => (
+            <div
+              key={`${v.cle}-${i}`}
+              className="flex items-center justify-between gap-3 rounded-[6px] border border-g-300 bg-g-050 px-3 py-2"
+            >
+              <span className="font-mono text-[12px] font-semibold text-ink">{v.cle}</span>
+              <span className="flex items-center gap-2">
+                <span className="font-mono text-[12px] text-g-700">
+                  {v.secret ? '••••••••' : v.valeur}
+                </span>
+                <Badge tone={v.portee === 'build' ? 'info' : 'neutral'} size="sm">
+                  {v.portee === 'build' ? 'Build' : 'Exécution'}
+                </Badge>
+              </span>
+            </div>
+          ))}
+        </div>
+        <Link
+          href={`/app/projets/${projet.id}`}
+          className="mt-3 inline-block text-[12px] font-semibold text-p-700 hover:text-m-600"
+        >
+          Gérer les variables du projet →
+        </Link>
+      </Card>
+    </div>
+  )
+}
+
+// ─── Journaux ─────────────────────────────────────────────────────────
+
+function Journaux({ service }: { service: ServiceProjet }) {
+  return (
+    <div className="space-y-4">
+      <Callout ton="info" titre="Vingt dernières lignes ici, l’historique dans VictoriaLogs">
+        Le portail montre l’extrait qui permet de décider. La recherche sur plusieurs jours, les
+        expressions et les agrégats sont l’affaire d’un moteur de journaux, que nous ne
+        réimplémentons pas.
+      </Callout>
+      <Card>
+        <LogPeek
+          lignes={LOGS_EXECUTION}
+          max={20}
+          titre={`Exécution · ${service.nom} · ${service.environnement}`}
+        />
+      </Card>
+    </div>
+  )
+}
+
+// ─── Supervision ──────────────────────────────────────────────────────
+
+function Supervision({ service }: { service: ServiceProjet }) {
+  const evenements = EVENEMENTS_SUPERVISION.slice(0, 6)
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile
+          libelle="Disponibilité 30 j"
+          valeur={service.statut === 'running' ? '99,96' : '98,12'}
+          unite="%"
+          ton={service.statut === 'running' ? 'ok' : 'warn'}
+        />
+        <StatTile libelle="Engagement" valeur="99,9" unite="%" detail="palier souscrit" />
+        <StatTile
+          libelle="Incidents 30 j"
+          valeur={service.statut === 'running' ? 0 : 2}
+          ton={service.statut === 'running' ? 'ok' : 'warn'}
+        />
+        <StatTile libelle="Sondes posées" valeur={4} detail="automatiquement" />
+      </div>
+
+      <GrilleSparkCharts seed={service.id} degrade={service.statut === 'degraded'} />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader titre="Derniers événements" sousTitre="Les six plus récents." />
+          <EventList evenements={evenements} max={6} />
+        </Card>
+        <Card>
+          <CardHeader
+            titre="Aller plus loin"
+            sousTitre="Le portail donne l'essentiel ; l'analyse détaillée vit dans les outils dédiés."
+          />
+          <div className="space-y-2">
+            {[
+              { nom: 'Centreon', phrase: 'État des sondes et historique des alertes', href: 'https://centreon.synelia.tech' },
+              { nom: 'Grafana', phrase: 'Métriques détaillées et tableaux de bord', href: 'https://grafana.synelia.cloud' },
+              { nom: 'VictoriaLogs', phrase: 'Recherche dans les journaux, toute la rétention', href: 'https://vlogs.synelia.cloud' },
+            ].map((o) => (
+              <a
+                key={o.nom}
+                href={o.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5 transition-colors hover:border-p-400 hover:bg-p-050"
+              >
+                <span className="min-w-0">
+                  <span className="block text-[12.5px] font-semibold text-ink">{o.nom}</span>
+                  <span className="block text-[11px] text-g-500">{o.phrase}</span>
+                </span>
+                <ExternalLink size={13} className="shrink-0 text-g-500" />
+              </a>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+// ─── Avancé ───────────────────────────────────────────────────────────
+
+function Avance({ service }: { service: ServiceProjet }) {
+  const { autorise, refus } = useApp()
+  const [cpu, setCpu] = useState(service.ressources.cpu)
+  const [ram, setRam] = useState(service.ressources.ramMo / 1024)
+  const [suppression, setSuppression] = useState(false)
+
+  const coutEstime = Math.round(cpu * 4200 + ram * 1800 + service.ressources.diskGo * 70)
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="space-y-4">
+        <Card>
+          <CardHeader
+            titre="Ressources"
+            sousTitre="Modifiables à chaud. Le service redémarre si la mémoire diminue."
+          />
+          <div className="space-y-4">
+            <Field label="Processeur">
+              <Slider min={1} max={16} value={cpu} onChange={setCpu} unite="vCPU" />
+            </Field>
+            <Field label="Mémoire">
+              <Slider min={1} max={64} value={ram} onChange={setRam} unite="Go" />
+            </Field>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] bg-g-050 px-3 py-2.5">
+              <span className="text-[12px] text-g-700">Nouveau coût mensuel estimé</span>
+              <span className="tnum text-[13px] font-bold text-ink">{money(coutEstime)}</span>
+            </div>
+          </div>
+          <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
+            <Button
+              size="sm"
+              className="mt-3"
+              disabled={cpu === service.ressources.cpu && ram === service.ressources.ramMo / 1024}
+            >
+              Appliquer
+            </Button>
+          </GatedAction>
+        </Card>
+
+        <Card>
+          <CardHeader titre="Redémarrage et santé" />
+          <div className="space-y-3">
+            <Field
+              label="Politique de redémarrage"
+              hint="Par défaut, la plateforme relance un conteneur qui s’arrête anormalement."
+            >
+              <Select defaultValue="echec">
+                <option value="echec">Relancer en cas d’échec</option>
+                <option value="toujours">Toujours relancer</option>
+                <option value="jamais">Ne jamais relancer</option>
+              </Select>
+            </Field>
+            {service.type !== 'base' && service.type !== 'cron' && (
+              <Field
+                label="Contrôle de santé"
+                hint="Un service qui ne répond pas à sa sonde n’entre pas en production."
+              >
+                <Input defaultValue="/healthz" className="font-mono" />
+              </Field>
+            )}
+          </div>
+        </Card>
+      </div>
+
+      <div className="space-y-4">
+        <EmplacementReel service={service} />
+
+        <Card className="border-err/40">
+          <CardHeader
+            titre="Zone de danger"
+            sousTitre="Ces actions ne se rattrapent pas depuis le portail."
+          />
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2.5">
+              <span className="min-w-0">
+                <span className="block text-[12.5px] font-semibold text-ink">Arrêter</span>
+                <span className="block text-[11px] text-g-500">
+                  Libère processeur et mémoire. Les volumes restent facturés.
+                </span>
+              </span>
+              <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
+                <Button size="sm" variant="secondary" iconBefore={<Square size={12} />}>
+                  Arrêter
+                </Button>
+              </GatedAction>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-err/40 bg-err-bg px-3 py-2.5">
+              <span className="min-w-0">
+                <span className="block text-[12.5px] font-semibold text-ink">Supprimer</span>
+                <span className="block text-[11px] text-g-700">
+                  {service.type === 'base'
+                    ? 'Détruit la base, ses volumes et ses sauvegardes hors rétention légale.'
+                    : 'Détruit le service et ses volumes. Les domaines cessent de répondre.'}
+                </span>
+              </span>
+              <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
+                <Button
+                  size="sm"
+                  variant="danger"
+                  iconBefore={<Trash2 size={12} />}
+                  onClick={() => setSuppression(true)}
+                >
+                  Supprimer
+                </Button>
+              </GatedAction>
+            </div>
+          </div>
+        </Card>
+
+        <Card>
+          <CardHeader titre="Identifiants techniques" sousTitre="Utiles au support." />
+          <div className="space-y-2">
+            <div>
+              <MicroLabel>Identifiant du service</MicroLabel>
+              <CopyField value={service.id} className="mt-1" />
+            </div>
+            <div>
+              <MicroLabel>Identifiant du projet</MicroLabel>
+              <CopyField value={service.projetId} className="mt-1" />
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <ConfirmDialog
+        open={suppression}
+        onClose={() => setSuppression(false)}
+        onConfirm={() => setSuppression(false)}
+        titre={`Supprimer le service ${service.nom}`}
+        ressource={service.nom}
+        pertes={
+          service.type === 'base'
+            ? [
+                'La base de données et toutes ses tables',
+                `Le volume de ${service.ressources.diskGo} Go`,
+                'Les sauvegardes au-delà de la rétention légale',
+                'Les services qui s’y connectent tomberont en erreur',
+              ]
+            : [
+                'Le service et son volume',
+                'Les domaines rattachés cesseront de répondre',
+                'L’historique des déploiements',
+              ]
+        }
+        libelleAction="Supprimer définitivement"
+      />
+    </div>
+  )
+}

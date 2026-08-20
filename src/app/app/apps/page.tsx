@@ -1,10 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { ExternalLink, Plus, Power, RotateCw, Stethoscope } from 'lucide-react'
+import { ExternalLink, Layers, Plus, Power, RotateCw, Stethoscope } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { pct, relatif } from '@/lib/format'
-import { APPLICATIONS, ANOMALIES, DEPLOIEMENTS, ENVIRONNEMENTS, envsDeLApp } from '@/lib/mock'
+import {
+  APPLICATIONS,
+  ANOMALIES,
+  DEPLOIEMENTS,
+  ENVIRONNEMENTS,
+  envsDeLApp,
+  projetDeLApp,
+} from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -118,6 +125,16 @@ export default function Applications() {
                   </div>
                   <HealthBadge etat={app.sante} size="sm" />
                 </div>
+
+                {projetDeLApp(app.id) && (
+                  <Link
+                    href={`/app/projets/${projetDeLApp(app.id)!.id}`}
+                    className="mt-2 inline-flex items-center gap-1.5 self-start rounded-[6px] border border-g-300 bg-g-050 px-2 py-1 text-[11px] font-semibold text-g-700 transition-colors hover:border-p-400 hover:text-p-700"
+                  >
+                    <Layers size={11} />
+                    {projetDeLApp(app.id)!.nom}
+                  </Link>
+                )}
 
                 <p className="mt-2.5 line-clamp-2 text-[12.5px] leading-relaxed text-g-700">
                   {app.description}
