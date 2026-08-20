@@ -1,0 +1,116 @@
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { slugify } from '@/lib/utils'
+import { PAGES_LEGALES } from '@/lib/mock'
+import { MicroLabel } from '@/components/ui/badge'
+import { Callout } from '@/components/composition/card'
+import { Container, SiteSection } from '@/components/site/blocs'
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}): Promise<Metadata> {
+  const { slug } = await params
+  const p = PAGES_LEGALES.find((x) => x.slug === slug)
+  return { title: p?.titre ?? 'Page introuvable' }
+}
+
+export default async function PageLegale({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
+  const page = PAGES_LEGALES.find((p) => p.slug === slug)
+  if (!page) notFound()
+
+  return (
+    <SiteSection>
+      <Container>
+        <div className="grid gap-10 lg:grid-cols-[220px_1fr]">
+          <aside className="lg:sticky lg:top-24 lg:self-start">
+            <MicroLabel className="mb-3">Documents légaux</MicroLabel>
+            <nav className="space-y-0.5">
+              {PAGES_LEGALES.map((p) => (
+                <Link
+                  key={p.slug}
+                  href={`/legal/${p.slug}`}
+                  className={
+                    p.slug === slug
+                      ? 'block rounded-[6px] bg-p-050 px-2.5 py-1.5 text-[12.5px] font-semibold text-p-700'
+                      : 'block rounded-[6px] px-2.5 py-1.5 text-[12.5px] text-g-700 transition-colors hover:bg-g-050 hover:text-p-700'
+                  }
+                >
+                  {p.titre}
+                </Link>
+              ))}
+            </nav>
+
+            <div className="mt-6 border-t border-g-300 pt-4">
+              <MicroLabel className="mb-2">Sommaire</MicroLabel>
+              <nav className="space-y-0.5">
+                {page.sections.map((s) => (
+                  <a
+                    key={s.titre}
+                    href={`#${slugify(s.titre)}`}
+                    className="block py-1 text-[12px] leading-snug text-g-500 transition-colors hover:text-p-700"
+                  >
+                    {s.titre}
+                  </a>
+                ))}
+              </nav>
+            </div>
+          </aside>
+
+          <article className="min-w-0 max-w-3xl">
+            <h1 className="type-h1">{page.titre}</h1>
+            <p className="mt-2 text-[12.5px] text-g-500">
+              Dernière mise à jour : 19 août 2026 · Synelia Group Afrique, Cocody, Abidjan, Côte
+              d’Ivoire
+            </p>
+
+            <div className="mt-8 space-y-8">
+              {page.sections.map((s, i) => (
+                <section key={s.titre} id={slugify(s.titre)}>
+                  <h2 className="type-h2">
+                    <span className="tnum mr-2 text-g-300">{i + 1}.</span>
+                    {s.titre}
+                  </h2>
+                  <p className="mt-3 text-[14px] leading-[1.75] text-g-700">{s.texte}</p>
+                </section>
+              ))}
+            </div>
+
+            <Callout ton="info" className="mt-10" titre="Instance de démonstration">
+              Ce portail est une maquette. Les organisations, utilisateurs, ressources, factures,
+              incidents et montants qui y figurent sont entièrement fictifs. Les mentions
+              d’immatriculation, de certification et de coordonnées sont des données d’exemple et
+              n’ont aucune valeur juridique.
+            </Callout>
+
+            <div className="mt-8 border-t border-g-300 pt-5">
+              <p className="text-[12.5px] text-g-500">
+                Une question sur ce document ?{' '}
+                <Link
+                  href="/entreprises#contact"
+                  className="font-semibold text-p-700 hover:text-m-600"
+                >
+                  Contactez-nous
+                </Link>
+                {' · '}
+                <a
+                  href="mailto:avs@synelia.tech"
+                  className="font-semibold text-p-700 hover:text-m-600"
+                >
+                  avs@synelia.tech
+                </a>
+              </p>
+            </div>
+          </article>
+        </div>
+      </Container>
+    </SiteSection>
+  )
+}
