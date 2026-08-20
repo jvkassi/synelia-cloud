@@ -46,7 +46,7 @@ export default function BibliothequeModeles() {
       <PageHeader
         fil={[{ label: 'Espace client', href: '/app' }, { label: 'Bibliothèque de modèles' }]}
         titre="Bibliothèque de modèles"
-        sousTitre="Des solutions open source prêtes à déployer dans un projet. Déployer un modèle crée une instance qui n’appartient qu’à vous : ses ressources, sa version, son plan de sauvegarde. C’est ce qui la distingue d’un service partagé, rattaché à un domaine."
+        sousTitre="Des solutions open source prêtes à déployer dans un projet. Déployer un modèle crée une instance qui n’appartient qu’à vous : ses ressources, sa version, son plan de sauvegarde. C’est ce qui la distingue d’un service partagé, rattaché à un domaine. Le catalogue est le même pour tous vos Espaces Cloud : celui du panneau de gauche est celui où le déploiement se fera."
         meta={
           <>
             <Badge tone="neutral">{MODELES.length} modèles</Badge>

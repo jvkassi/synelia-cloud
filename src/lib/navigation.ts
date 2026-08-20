@@ -20,11 +20,17 @@ export interface SectionNav {
    */
   aussi?: string[]
   /**
-   * Préfixes de routes dont le `layout` monte un panneau de sélection
-   * persistant. Le contenu y touche le bord de l'écran : c'est le panneau qui
-   * porte la marge, pas le conteneur de page.
+   * Préfixes de routes dont le `layout` monte un panneau listant les ressources
+   * de la section — le patron de Web Cloud, une liste différente par onglet. Le
+   * contenu y touche le bord de l'écran : c'est le panneau qui porte la marge.
    */
   panneau?: string[]
+  /**
+   * Exception au sélecteur d'Espace de l'univers : cette section ne le montre
+   * pas. Réservé aux accueils, qui parlent de tout le parc à la fois et
+   * n'auraient rien à faire choisir.
+   */
+  sansPanneau?: boolean
 }
 
 export interface UniversNav {
@@ -36,6 +42,15 @@ export interface UniversNav {
    * ont besoin de la place. Les univers de lecture gardent une largeur bornée.
    */
   pleineLargeur?: boolean
+  /**
+   * L'univers porte un **sélecteur d'Espace Cloud unique**, le même sur toutes
+   * ses sections : on choisit une fois où l'on travaille, et cela vaut pour
+   * tous les onglets. C'est un contexte, pas une navigation — le panneau ne
+   * change jamais de contenu d'un onglet à l'autre, contrairement aux panneaux
+   * de ressources de Web Cloud. La barre supérieure masque alors son propre
+   * sélecteur d'Espace : la même question posée à deux endroits.
+   */
+  panneauEspace?: boolean
   sections: SectionNav[]
 }
 
@@ -58,33 +73,33 @@ export const UNIVERS_CLIENT: UniversNav[] = [
     id: 'infrastructure',
     nom: 'Infrastructure',
     pleineLargeur: true,
+    panneauEspace: true,
     sections: [
-      { nom: 'Espaces Cloud', href: '/app/espaces', panneau: ['/app/espaces'] },
-      { nom: 'Machines virtuelles', href: '/app/vms', panneau: ['/app/vms'] },
-      { nom: 'Kubernetes', href: '/app/kubernetes', panneau: ['/app/kubernetes'] },
-      { nom: 'Load balancers', href: '/app/reseau/lb', panneau: ['/app/reseau/lb'] },
-      // Réseaux privés, adresses publiques, VPN et filtrage se lisent ensemble
-      // par Espace Cloud : il n'y a pas une ressource à choisir avant d'entrer.
+      // L'accueil est la seule section sans le sélecteur : il fait le tour de
+      // tous les Espaces à la fois, c'est là qu'on choisit lequel ouvrir.
+      { nom: 'Accueil', href: '/app/infrastructure', sansPanneau: true },
+      { nom: 'Espaces Cloud', href: '/app/espaces' },
+      { nom: 'Machines virtuelles', href: '/app/vms' },
+      { nom: 'Kubernetes', href: '/app/kubernetes' },
+      { nom: 'Load balancers', href: '/app/reseau/lb' },
       { nom: 'Réseau & IP', href: '/app/reseau' },
       { nom: 'Stockage bloc', href: '/app/stockage' },
-      { nom: 'Stockage objet S3', href: '/app/objet', panneau: ['/app/objet'] },
+      { nom: 'Stockage objet S3', href: '/app/objet' },
       { nom: 'Bases managées', href: '/app/bases' },
       // Les sauvegardes se règlent aussi ressource par ressource ; cette
       // section porte les plans réutilisables, la restauration granulaire, la
       // reprise d'activité et le tableau de conformité qu'on montre à un auditeur.
-      // Seule la reprise d'activité se choisit plan par plan.
-      { nom: 'Sauvegardes & PRA', href: '/app/sauvegarde', aussi: ['/app/pra'], panneau: ['/app/pra'] },
+      { nom: 'Sauvegardes & PRA', href: '/app/sauvegarde', aussi: ['/app/pra'] },
     ],
   },
   {
     id: 'applications',
     nom: 'Applications',
     pleineLargeur: true,
+    panneauEspace: true,
     sections: [
-      { nom: 'Projets', href: '/app/projets', aussi: ['/app/routage'], panneau: ['/app/projets'] },
-      { nom: 'Bibliothèque de modèles', href: '/app/modeles', panneau: ['/app/modeles'] },
-      // Deux journaux transverses : ils croisent tous les projets à la fois,
-      // il n'y a rien à sélectionner avant de les lire.
+      { nom: 'Projets', href: '/app/projets', aussi: ['/app/routage'] },
+      { nom: 'Bibliothèque de modèles', href: '/app/modeles' },
       { nom: 'Déploiements', href: '/app/deploiements' },
       { nom: "Registre d'images", href: '/app/registre' },
     ],
@@ -231,8 +246,23 @@ export type Gabarit = 'borne' | 'large' | 'plein'
 export function gabarit(univers: UniversNav[], chemin: string): Gabarit {
   const trouve = sectionActive(univers, chemin)
   if (!trouve?.univers.pleineLargeur) return 'borne'
-  const sousPanneau = (trouve.section.panneau ?? []).some(
+  return avecPanneau(trouve.univers, trouve.section, chemin) ? 'plein' : 'large'
+}
+
+/** Vrai si un panneau est monté sur cette route — de section ou d'univers. */
+export function avecPanneau(
+  univers: UniversNav,
+  section: SectionNav,
+  chemin: string,
+): boolean {
+  if (univers.panneauEspace) return !section.sansPanneau
+  return (section.panneau ?? []).some(
     (base) => chemin === base || chemin.startsWith(`${base}/`),
   )
-  return sousPanneau ? 'plein' : 'large'
+}
+
+/** Sélecteur d'Espace à monter pour cette route, s'il y en a un. */
+export function panneauEspaceActif(univers: UniversNav[], chemin: string): boolean {
+  const trouve = sectionActive(univers, chemin)
+  return Boolean(trouve?.univers.panneauEspace && !trouve.section.sansPanneau)
 }

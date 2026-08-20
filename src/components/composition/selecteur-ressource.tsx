@@ -13,7 +13,11 @@ export interface EntreeSelecteur {
   /** Court libellé d'état, aligné à droite. */
   etat?: string
   ton?: Tone
-  href: string
+  /**
+   * Fiche à ouvrir. Absent pour un sélecteur de contexte : choisir l'Espace où
+   * l'on travaille ne fait pas changer de page, seulement de contexte.
+   */
+  href?: string
   /** Termes supplémentaires pris en compte par la recherche. */
   motsCles?: string[]
 }
@@ -39,6 +43,7 @@ export function SelecteurRessource({
   compteur,
   lienBas,
   className,
+  onChoisir,
 }: {
   titre: string
   actionPrincipale?: { libelle: string; href: string }
@@ -49,6 +54,8 @@ export function SelecteurRessource({
   compteur?: (visibles: number, total: number) => string
   lienBas?: { libelle: string; href: string }
   className?: string
+  /** Appelé quand une entrée sans `href` est choisie. */
+  onChoisir?: (id: string) => void
 }) {
   const [q, setQ] = useState('')
 
@@ -99,16 +106,33 @@ export function SelecteurRessource({
         ) : (
           visibles.map((e) => {
             const actif = e.id === actifId
+            const classe = cn(
+              'flex w-full items-start gap-2 rounded-[6px] px-2 py-2 text-left transition-colors',
+              actif ? 'bg-white shadow-[0_1px_2px_rgba(43,27,77,.08)]' : 'hover:bg-white/70',
+            )
+            const Ligne = e.href
+              ? ({ children }: { children: React.ReactNode }) => (
+                  <Link
+                    href={e.href as string}
+                    aria-current={actif ? 'page' : undefined}
+                    className={classe}
+                  >
+                    {children}
+                  </Link>
+                )
+              : ({ children }: { children: React.ReactNode }) => (
+                  <button
+                    type="button"
+                    onClick={() => onChoisir?.(e.id)}
+                    aria-current={actif ? 'true' : undefined}
+                    className={classe}
+                  >
+                    {children}
+                  </button>
+                )
             return (
               <li key={e.id}>
-                <Link
-                  href={e.href}
-                  aria-current={actif ? 'page' : undefined}
-                  className={cn(
-                    'flex items-start gap-2 rounded-[6px] px-2 py-2 transition-colors',
-                    actif ? 'bg-white shadow-[0_1px_2px_rgba(43,27,77,.08)]' : 'hover:bg-white/70',
-                  )}
-                >
+                <Ligne>
                   <span
                     aria-hidden
                     className={cn(
@@ -136,7 +160,7 @@ export function SelecteurRessource({
                       {e.etat}
                     </Badge>
                   )}
-                </Link>
+                </Ligne>
               </li>
             )
           })

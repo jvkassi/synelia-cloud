@@ -52,21 +52,51 @@ export function CadreSection({
     : undefined
   const actif = entrees.find((e) => e.id === segment)
 
-  const panneau = (
-    <SelecteurRessource
+  return (
+    <CoquillePanneau
       titre={titre}
-      actionPrincipale={actionPrincipale}
-      entrees={entrees}
-      actifId={actif?.id}
-      placeholderRecherche={placeholderRecherche ?? `Rechercher…`}
-      compteur={compteur}
-      lienBas={lienBas}
-    />
+      nomActif={actif?.nom}
+      panneau={
+        <SelecteurRessource
+          titre={titre}
+          actionPrincipale={actionPrincipale}
+          entrees={entrees}
+          actifId={actif?.id}
+          placeholderRecherche={placeholderRecherche ?? `Rechercher…`}
+          compteur={compteur}
+          lienBas={lienBas}
+        />
+      }
+    >
+      {children}
+    </CoquillePanneau>
   )
+}
 
+/**
+ * Les deux colonnes : le panneau collé au bord gauche, le contenu à droite.
+ *
+ * Le panneau est rendu deux fois — en colonne au-delà de 1024 px, en bandeau
+ * dépliant en dessous. C'est le même arbre React : dupliquer le balisage coûte
+ * moins qu'un panneau qui change de nature selon la largeur.
+ *
+ * Le contenu porte ici sa marge, et non dans un conteneur de page : c'est ce qui
+ * permet au panneau de toucher le bord de l'écran.
+ */
+export function CoquillePanneau({
+  titre,
+  nomActif,
+  panneau,
+  children,
+}: {
+  titre: string
+  nomActif?: string
+  panneau: React.ReactNode
+  children: React.ReactNode
+}) {
   return (
     <>
-      <SelecteurRepliable titre={titre} nomActif={actif?.nom}>
+      <SelecteurRepliable titre={titre} nomActif={nomActif}>
         {panneau}
       </SelecteurRepliable>
 

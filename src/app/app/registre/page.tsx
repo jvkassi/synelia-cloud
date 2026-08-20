@@ -153,7 +153,7 @@ export default function Registre() {
       <PageHeader
         fil={[{ label: 'Espace client', href: '/app' }, { label: 'Registre d’images' }]}
         titre="Registre d’images"
-        sousTitre="Vos images de conteneurs, hébergées à Abidjan, à côté de vos environnements d’exécution. Un artefact ne sort jamais de la plateforme entre le build et le déploiement : c’est la même image, au même condensat, que celle analysée."
+        sousTitre="Vos images de conteneurs, hébergées à Abidjan, à côté de vos environnements d’exécution. Un artefact ne sort jamais de la plateforme entre le build et le déploiement : c’est la même image, au même condensat, que celle analysée. Le registre est commun à l’organisation, tous Espaces Cloud confondus."
         actions={
           <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
             <Button variant="secondary" iconBefore={<Upload size={14} />}>

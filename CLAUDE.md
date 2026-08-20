@@ -114,40 +114,68 @@ modèle ; `topbar.tsx` le rend.
 les load balancers, pas le réseau. Le champ `aussi` rattache les routes sans
 onglet propre (`/app/dns` → Domaines, `/app/taches` → Tableau de bord).
 
-### Trois univers en maître-détail : Infrastructure, Applications, Web Cloud
+### Deux façons d'occuper toute la largeur
 
-Ces trois univers portent des ressources qu'on ouvre une par une. Ils partagent
-donc la même coquille, et `src/lib/navigation.ts` en est la seule source :
+Trois univers clients portent des ressources et occupent tout l'écran :
+Infrastructure, Applications, Web Cloud. Mais leur panneau de gauche ne dit pas
+la même chose, et c'est la distinction à ne pas perdre.
 
-- `pleineLargeur: true` sur l'univers — `Conteneur` retire la borne de 1400 px
-  pour toutes ses routes. Les deux autres univers clients la gardent : ce sont
-  des écrans de lecture, et un paragraphe de 1900 px ne se lit pas.
-- `panneau: ['/prefixe']` sur une section — son `layout.tsx` monte un **panneau
-  de sélection persistant** via `CadreSection`
-  (`src/components/app/cadre-section.tsx`), jamais une page, sinon il se
-  reconstruit à chaque changement d'onglet. C'est le panneau qui porte la marge
-  du contenu, d'où l'absence de conteneur sur ces routes.
+**Infrastructure et Applications : un contexte.** `panneauEspace: true` sur
+l'univers. Le panneau est un **sélecteur d'Espace Cloud unique**, rigoureusement
+identique sur toutes les sections — machines, clusters, réseau, volumes, bases,
+projets. On choisit une fois où l'on travaille, et cela vaut pour tous les
+onglets. Choisir ne navigue pas : les entrées sont des boutons, pas des liens, et
+l'on reste sur l'onglet courant, relu dans le nouvel Espace. C'est le modèle du
+manager OVHcloud, où le projet se choisit à gauche et ne se repose plus.
 
-`gabarit()` réunit les deux et rend `plein` (sous un panneau), `large` (univers
-en pleine largeur, écran sans panneau, borné à 1600 px) ou `borne` (1400 px).
-`topbar.tsx` s'en sert aussi : les onglets d'un univers en pleine largeur
-s'alignent sur le bord gauche, là où commence le panneau.
+Le panneau est monté par `Conteneur`, donc par le `layout.tsx` de l'espace
+client, et non par les sections : c'est ce qui garantit qu'il ne se reconstruit
+jamais d'un onglet à l'autre — un contexte doit survivre à la navigation. La
+barre supérieure masque alors son propre sélecteur d'Espace (`avecEspace`), pour
+ne pas poser la même question à deux endroits de l'écran ; elle le garde
+ailleurs, notamment pour la Supervision de l'univers Global, filtrée par Espace
+elle aussi.
 
-Ce qui a un panneau : Espaces Cloud, Machines virtuelles, Kubernetes, Load
-balancers, Stockage objet, les plans de reprise (`/app/pra`), Projets, Modèles,
-et les huit sections de ressources de Web Cloud.
+`sansPanneau: true` fait l'exception : l'accueil d'Infrastructure
+(`/app/infrastructure`) est la seule section sans panneau. Elle regarde tous les
+Espaces à la fois, et sert précisément à choisir lequel ouvrir — un sélecteur y
+serait redondant. C'est aussi elle qui rassemble ce qui demande une décision :
+quota près du plafond, machine sans plan de sauvegarde, plan de reprise jamais
+testé.
 
-Ce qui n'en a pas, et pourquoi : un écran transverse n'a rien à faire choisir
-avant d'entrer. Réseau & IP, Stockage bloc et Bases managées se lisent par
-Espace Cloud ; Sauvegardes, Déploiements, Registre d'images et l'accueil de Web
-Cloud croisent tout le parc à la fois ; le relais SMTP est un service unique.
-Leur donner un panneau dont les entrées n'ouvrent aucune fiche n'en ferait
-qu'un décor.
+**Web Cloud : une navigation.** `panneau: ['/prefixe']` sur chaque section. Le
+panneau liste les *ressources de la section* — domaines, hébergements,
+certificats — et change donc de contenu d'un onglet à l'autre. Ses entrées sont
+des liens vers une fiche. Il est monté par le `layout.tsx` de la section, jamais
+par une page, sinon il se reconstruit à chaque changement d'onglet.
 
-**Les ressources d'infrastructure suivent le sélecteur d'Espace Cloud** de la
-barre supérieure (`useEspace()`) : machines, clusters et répartiteurs
-appartiennent à un Espace. Les projets, eux, ne sont pas filtrés — un projet est
-une unité de travail, on passe de l'un à l'autre sans se demander où il tourne.
+**Les deux cas partagent la coquille** `CoquillePanneau`
+(`src/components/app/cadre-section.tsx`) : panneau collé au bord gauche en
+colonne au-delà de 1024 px, bandeau dépliant en dessous, et c'est le panneau qui
+porte la marge du contenu — d'où l'absence de conteneur de page sur ces routes.
+
+`gabarit()` rend `plein` (sous un panneau, quel qu'il soit), `large` (univers en
+pleine largeur, écran sans panneau : accueil d'Infrastructure, accueil de Web
+Cloud, relais SMTP — borné à 1600 px) ou `borne` (1400 px, le reste). `topbar.tsx`
+s'en sert aussi : les onglets d'un univers en pleine largeur s'alignent sur le
+bord gauche, là où commence le panneau.
+
+**Le sélecteur doit dire vrai.** Un panneau qui annonce un Espace au-dessus d'une
+liste qui l'ignore est un mensonge d'interface. Les écrans d'Infrastructure
+filtraient déjà par `useEspace()` ; les projets le font désormais aussi, agrégats
+compris. Les trois écrans d'Applications qui traversent réellement tous les
+Espaces — Déploiements, Registre d'images, catalogue de Modèles — le disent dans
+leur sous-titre plutôt que de faire semblant de filtrer.
+
+Reste à trancher : `/app/espaces` liste encore les trois Espaces alors que le
+panneau en désigne un. Chez OVH, l'onglet « Projet » montre le projet
+sélectionné. Le transformer en fiche de l'Espace courant est un chantier à part.
+
+### Infrastructure
+
+Dix sections : `Accueil · Espaces Cloud · Machines virtuelles · Kubernetes ·
+Load balancers · Réseau & IP · Stockage bloc · Stockage objet S3 ·
+Bases managées · Sauvegardes & PRA`.
 
 ### Web Cloud
 

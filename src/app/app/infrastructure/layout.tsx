@@ -5,8 +5,9 @@ import type { Metadata } from 'next'
  * n'existe que pour nommer l'onglet du navigateur — il n'ajoute aucun rendu.
  */
 export const metadata: Metadata = {
-  title: 'Projets',
-  description: 'Vos projets applicatifs : applications, bases de données, tâches planifiées et workers.',
+  title: 'Infrastructure',
+  description:
+    'Tour du parc, tous Espaces Cloud confondus : capacité, machines, clusters, protection des données.',
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {

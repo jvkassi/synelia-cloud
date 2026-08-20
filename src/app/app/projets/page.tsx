@@ -8,7 +8,6 @@ import { money, relatif } from '@/lib/format'
 import type { TypeServiceProjet } from '@/lib/types'
 import {
   PROJETS,
-  SYNTHESE_PROJETS,
   TYPE_SERVICE_LABEL,
   ZONE_APPLICATIVE,
   servicesDuProjet,
@@ -22,11 +21,28 @@ import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/
 import { StatTile } from '@/components/composition/metrics'
 import { Drawer } from '@/components/ui/overlay'
 import { ICONE_TYPE } from '@/components/business/projets'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useEspace } from '@/components/app/contexte'
 
 export default function Projets() {
   const { autorise, refus } = useApp()
+  const espace = useEspace()
   const [creation, setCreation] = useState(false)
+
+  // Le panneau de gauche choisit l'Espace Cloud : cette liste doit s'y tenir,
+  // sinon le sélecteur ne dit pas la vérité. Les agrégats se recalculent donc
+  // sur les projets visibles, et non sur tout le parc.
+  const projets = PROJETS.filter((p) => p.espaceId === espace.id)
+  const bilan = projets.reduce(
+    (a, p) => {
+      const s = syntheseProjet(p.id)
+      return {
+        services: a.services + s.services,
+        enEchec: a.enEchec + s.enEchec,
+        coutMensuel: a.coutMensuel + s.coutMensuel,
+      }
+    },
+    { services: 0, enEchec: 0, coutMensuel: 0 },
+  )
 
   return (
     <div className="space-y-6">
@@ -44,21 +60,21 @@ export default function Projets() {
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile libelle="Projets" valeur={SYNTHESE_PROJETS.projets} />
+        <StatTile libelle="Projets" valeur={projets.length} detail={espace.code} />
         <StatTile
           libelle="Services déployés"
-          valeur={SYNTHESE_PROJETS.services}
+          valeur={bilan.services}
           detail="applications, bases, tâches"
         />
         <StatTile
           libelle="Services en échec"
-          valeur={SYNTHESE_PROJETS.enEchec}
-          ton={SYNTHESE_PROJETS.enEchec > 0 ? 'err' : 'ok'}
-          detail={SYNTHESE_PROJETS.enEchec > 0 ? 'à traiter' : 'rien à signaler'}
+          valeur={bilan.enEchec}
+          ton={bilan.enEchec > 0 ? 'err' : 'ok'}
+          detail={bilan.enEchec > 0 ? 'à traiter' : 'rien à signaler'}
         />
         <StatTile
           libelle="Coût mensuel"
-          valeur={money(SYNTHESE_PROJETS.coutMensuel).replace(' FCFA', '')}
+          valeur={money(bilan.coutMensuel).replace(' FCFA', '')}
           unite="FCFA"
         />
       </div>
@@ -74,8 +90,24 @@ export default function Projets() {
         .
       </Callout>
 
+      {projets.length === 0 && (
+        <Card>
+          <CardHeader
+            titre={`Aucun projet dans ${espace.code}`}
+            sousTitre="Un projet regroupe les services qui forment un même système : l’application, sa base, son cache, ses tâches de fond. Créez le premier ici, ou changez d’Espace Cloud dans le panneau de gauche."
+            actions={
+              <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
+                <Button iconBefore={<Plus size={14} />} onClick={() => setCreation(true)}>
+                  Créer un projet
+                </Button>
+              </GatedAction>
+            }
+          />
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {PROJETS.map((p) => {
+        {projets.map((p) => {
           const s = syntheseProjet(p.id)
           const services = servicesDuProjet(p.id)
           const alerte = s.enEchec > 0 ? 'err' : s.degrades > 0 ? 'warn' : 'ok'

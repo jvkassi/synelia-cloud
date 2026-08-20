@@ -25,6 +25,7 @@
 "/app",
 "/app/taches/job-1",
 "/app/lanceur",
+"/app/infrastructure",
 "/app/espaces",
 "/app/espaces/new",
 "/app/espaces/ec-dba-01",

@@ -2,28 +2,37 @@
 
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { UNIVERS_CLIENT, gabarit } from '@/lib/navigation'
+import { UNIVERS_CLIENT, gabarit, panneauEspaceActif } from '@/lib/navigation'
+import { CadreEspace } from './cadre-espace'
 
 /**
- * Conteneur de contenu de l'espace client.
+ * Coquille de contenu de l'espace client.
  *
- * Trois univers sont bâtis en maître-détail — Infrastructure, Applications,
- * Web Cloud — et occupent toute la largeur : leur panneau de sélection doit
- * toucher le bord de l'écran, comme dans une console d'exploitation, et leurs
- * tableaux ont besoin de la place. Sur ces routes le panneau porte lui-même la
- * marge du contenu, d'où l'absence de conteneur ; les écrans transverses de ces
- * univers, qui n'ont pas de panneau, gardent une marge et s'arrêtent à 1600 px.
+ * Trois univers occupent toute la largeur, pour deux raisons différentes :
  *
- * Le reste de l'espace reste borné à 1400 px : ce sont des écrans de lecture,
- * et un paragraphe de 1900 px de large ne se lit pas.
+ * - **Infrastructure** et **Applications** portent un sélecteur d'Espace Cloud
+ *   unique, monté ici et donc identique sur toutes leurs sections. Le monter au
+ *   niveau du layout est ce qui garantit qu'il ne se reconstruit pas d'un onglet
+ *   à l'autre : c'est un contexte, il doit survivre à la navigation.
+ * - **Web Cloud** monte, lui, un panneau différent par section, depuis le
+ *   `layout.tsx` de chaque section. Ici, rien à ajouter.
  *
- * Le découpage n'est pas décidé ici : il est déclaré une fois pour toutes dans
- * `lib/navigation.ts`, à côté des sections auxquelles il s'applique.
+ * Les écrans sans panneau de ces univers — l'accueil d'Infrastructure, celui de
+ * Web Cloud, le relais SMTP — gardent une marge et s'arrêtent à 1600 px. Le
+ * reste de l'espace client reste borné à 1400 px : ce sont des écrans de
+ * lecture, et un paragraphe de 1900 px de large ne se lit pas.
+ *
+ * Le découpage n'est pas décidé ici : il est déclaré dans `lib/navigation.ts`,
+ * à côté des sections auxquelles il s'applique.
  */
 export function Conteneur({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const forme = gabarit(UNIVERS_CLIENT, pathname)
 
+  if (panneauEspaceActif(UNIVERS_CLIENT, pathname)) {
+    return <CadreEspace>{children}</CadreEspace>
+  }
+
+  const forme = gabarit(UNIVERS_CLIENT, pathname)
   if (forme === 'plein') return <>{children}</>
 
   return (
