@@ -1,0 +1,6 @@
+# Vercel reconstruit le projet de son côté : envoyer la sortie de build locale
+# et les dépendances alourdit l'archive de plusieurs centaines de mégaoctets
+# pour rien, et fait échouer l'envoi.
+.next
+node_modules
+tsconfig.tsbuildinfo
