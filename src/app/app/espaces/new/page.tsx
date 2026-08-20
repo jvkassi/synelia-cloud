@@ -1,0 +1,460 @@
+'use client'
+
+import { useRouter } from 'next/navigation'
+import { useMemo, useState } from 'react'
+import { Check, Network, Server, ShieldCheck } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { money, num } from '@/lib/format'
+import { SITE_LABEL, type Site } from '@/lib/types'
+import { BACKUP_PLANS, ESPACES, OFFRES } from '@/lib/mock'
+import { Badge, MicroLabel } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Checkbox, Field, Input, Select, Switch } from '@/components/ui/field'
+import { Card, CardHeader, Callout, KeyValueList } from '@/components/composition/card'
+import { CostPreview, WizardShell } from '@/components/composition/flow'
+import { useApp } from '@/components/app/contexte'
+
+const ETAPES = [
+  { numero: 1, titre: 'Offre' },
+  { numero: 2, titre: 'Site' },
+  { numero: 3, titre: 'Réseau' },
+  { numero: 4, titre: 'Options' },
+  { numero: 5, titre: 'Récapitulatif' },
+]
+
+const OFFRES_ESPACE = OFFRES.filter((o) => o.categorie === 'espace_cloud' && o.statut === 'publiee')
+
+const LATENCE: Record<Site, string> = {
+  ABJ: '2 à 4 ms depuis Abidjan · 6 à 9 ms depuis Grand-Bassam',
+  GBM: '4 à 6 ms depuis Abidjan · 1 à 3 ms depuis Grand-Bassam',
+}
+
+export default function NouvelEspace() {
+  const router = useRouter()
+  const { pousser } = useApp()
+
+  const [etape, setEtape] = useState(1)
+  const [offerId, setOfferId] = useState('off-pro')
+  const [site, setSite] = useState<Site>('ABJ')
+  const [code, setCode] = useState('EC-DBA-04')
+  const [cidr, setCidr] = useState('10.6.0.0/22')
+  const [dnsInterne, setDnsInterne] = useState(true)
+  const [peering, setPeering] = useState('')
+  const [planSauvegarde, setPlanSauvegarde] = useState('bp-prod-quotidien')
+  const [supervision, setSupervision] = useState(true)
+  const [pra, setPra] = useState(false)
+  const [periodicite, setPeriodicite] = useState<'mensuelle' | 'annuelle'>('mensuelle')
+  const [conditions, setConditions] = useState(false)
+
+  const offre = OFFRES_ESPACE.find((o) => o.id === offerId)!
+
+  const lignes = useMemo(() => {
+    const l = [
+      {
+        libelle: `${offre.nom} · ${offre.specs}`,
+        detail: `Site ${site} · plage ${cidr}`,
+        montant: offre.prix.direct,
+      },
+    ]
+    if (planSauvegarde !== 'aucun') {
+      l.push({
+        libelle: 'Sauvegarde incluse dans l’offre',
+        detail: BACKUP_PLANS.find((p) => p.id === planSauvegarde)?.nom ?? '',
+        montant: 0,
+      })
+    }
+    if (pra) {
+      l.push({
+        libelle: 'Option PRA inter-site',
+        detail: `Réplication vers ${site === 'ABJ' ? 'Grand-Bassam' : 'Abidjan'}`,
+        montant: 96000,
+      })
+    }
+    return l
+  }, [offre, site, cidr, planSauvegarde, pra])
+
+  const codeValide = /^EC-[A-Z0-9]{2,6}-\d{2}$/.test(code) && !ESPACES.some((e) => e.code === code)
+  const cidrValide = /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}\/(2[0-4]|1[6-9])$/.test(cidr)
+
+  const peutContinuer =
+    etape === 3 ? codeValide && cidrValide : etape === 5 ? conditions : true
+
+  return (
+    <WizardShell
+      etapes={ETAPES}
+      courante={etape}
+      onChange={setEtape}
+      titre={ETAPES[etape - 1].titre}
+      panneau={
+        <>
+          <Card>
+            <MicroLabel>Configuration</MicroLabel>
+            <dl className="mt-2.5 space-y-1.5">
+              <Petit cle="Offre" valeur={offre.nom} />
+              <Petit cle="Code" valeur={code} mono />
+              <Petit cle="Site" valeur={site === 'ABJ' ? 'Abidjan' : 'Grand-Bassam'} />
+              <Petit cle="Plage réseau" valeur={cidr} mono />
+              <Petit cle="vCPU · Mémoire" valeur={offre.specs} />
+              <Petit cle="PRA inter-site" valeur={pra ? 'Activé' : 'Non'} />
+            </dl>
+          </Card>
+          <CostPreview lignes={lignes} periodicite={periodicite} />
+        </>
+      }
+      actions={
+        <>
+          <Button
+            variant="ghost"
+            onClick={() => (etape === 1 ? router.push('/app/espaces') : setEtape(etape - 1))}
+          >
+            {etape === 1 ? 'Annuler' : 'Précédent'}
+          </Button>
+          {etape < 5 ? (
+            <Button disabled={!peutContinuer} onClick={() => setEtape(etape + 1)}>
+              Continuer
+            </Button>
+          ) : (
+            <Button
+              disabled={!conditions}
+              onClick={() => {
+                pousser({
+                  ton: 'info',
+                  titre: `Création de ${code} lancée`,
+                  detail: 'Le quota est réservé, la plage réseau allouée. Suivi dans le centre de tâches.',
+                })
+                router.push('/app/espaces')
+              }}
+            >
+              Créer l’Espace Cloud
+            </Button>
+          )}
+        </>
+      }
+    >
+      {/* Étape 1 — Offre */}
+      {etape === 1 && (
+        <div className="space-y-4">
+          <p className="text-[13px] leading-relaxed text-g-700">
+            L’offre détermine le quota de votre enveloppe. Elle se change à chaud, sans recréer quoi
+            que ce soit, et le quota s’étend indépendamment de l’offre si nécessaire.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {OFFRES_ESPACE.map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => setOfferId(o.id)}
+                className={cn(
+                  'flex flex-col rounded-[10px] border-2 bg-white p-4 text-left transition-colors',
+                  offerId === o.id
+                    ? 'border-p-700 shadow-[0_4px_16px_rgba(43,27,77,.1)]'
+                    : 'border-g-300 hover:border-p-400',
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="type-h3">{o.nom}</h3>
+                  {o.populaire && (
+                    <Badge tone="violet" size="sm">
+                      Populaire
+                    </Badge>
+                  )}
+                </div>
+                <p className="mt-1 text-[12px] text-g-500">{o.specs}</p>
+                <p className="tnum mt-3 text-[19px] font-bold [font-family:var(--font-display)] text-p-700">
+                  {o.surDevis ? <span className="text-[15px]">Sur devis</span> : money(o.prix.direct)}
+                  {!o.surDevis && (
+                    <span className="text-[11px] font-semibold text-g-500">/mois</span>
+                  )}
+                </p>
+                <ul className="mt-3 flex-1 space-y-1 border-t border-g-100 pt-3">
+                  {o.caracteristiques.map((c) => (
+                    <li key={c} className="flex items-start gap-1.5 text-[12px] text-g-700">
+                      <Check size={12} className="mt-0.5 shrink-0 text-ok" />
+                      {c}
+                    </li>
+                  ))}
+                </ul>
+                {o.sla && (
+                  <p className="mt-3 text-[11px] font-semibold text-g-500">SLA {o.sla}</p>
+                )}
+              </button>
+            ))}
+          </div>
+          <Card className="bg-g-050">
+            <Switch
+              checked={periodicite === 'annuelle'}
+              onChange={(v) => setPeriodicite(v ? 'annuelle' : 'mensuelle')}
+              label="Facturation annuelle (−15 %)"
+              description="Engagement de douze mois. Le mensuel reste sans engagement, résiliable en fin de mois."
+            />
+          </Card>
+        </div>
+      )}
+
+      {/* Étape 2 — Site */}
+      {etape === 2 && (
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(['ABJ', 'GBM'] as Site[]).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setSite(s)}
+                className={cn(
+                  'rounded-[10px] border-2 bg-white p-5 text-left transition-colors',
+                  site === s ? 'border-p-700' : 'border-g-300 hover:border-p-400',
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  <Server size={16} className="text-p-700" />
+                  <span className="type-h3">{SITE_LABEL[s]}</span>
+                </span>
+                <p className="mt-2.5 text-[12.5px] leading-relaxed text-g-700">
+                  {s === 'ABJ'
+                    ? 'Site principal, 640 m² de salle blanche, 1,2 MW installés, quatre opérateurs. Capacité la plus importante et connectivité la plus dense. Recommandé pour la production.'
+                    : 'Parc technologique VITIB en zone franche, 420 m², 800 kW installés. Site de repli PRA et destination des sauvegardes immuables. Recommandé pour séparer physiquement une charge de votre production.'}
+                </p>
+                <dl className="mt-3 space-y-1.5 border-t border-g-100 pt-3">
+                  <Petit cle="Latence indicative" valeur={LATENCE[s]} />
+                  <Petit cle="Résidence des données" valeur="Côte d’Ivoire" />
+                </dl>
+              </button>
+            ))}
+          </div>
+          <Callout ton="violet" titre="Résidence des données">
+            Quel que soit le site retenu, vos données restent en Côte d’Ivoire. Aucune réplication
+            hors du territoire n’a lieu sans demande écrite de votre part, et une attestation de
+            résidence est générable à tout moment depuis vos paramètres.
+          </Callout>
+          <Callout ton="info" titre="Le placement technique n’est pas exposé">
+            Vous choisissez le site physique ; la répartition sur nos hyperviseurs est décidée côté
+            fournisseur. Sur l’offre Cloud Souverain, ce placement est contractuellement limité aux
+            socles open source.
+          </Callout>
+        </div>
+      )}
+
+      {/* Étape 3 — Réseau */}
+      {etape === 3 && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader
+              titre={
+                <span className="flex items-center gap-2">
+                  <Network size={15} className="text-p-700" />
+                  Identité et adressage
+                </span>
+              }
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Code de l’espace"
+                hint="format EC-XXX-NN"
+                required
+                error={
+                  code && !codeValide
+                    ? ESPACES.some((e) => e.code === code)
+                      ? 'Ce code est déjà utilisé.'
+                      : 'Format attendu : EC-DBA-04'
+                    : undefined
+                }
+              >
+                <Input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  className="font-mono"
+                />
+              </Field>
+              <Field
+                label="Plage CIDR"
+                hint="proposée automatiquement, modifiable"
+                required
+                error={cidr && !cidrValide ? 'Plage privée attendue, /16 à /24 dans 10.0.0.0/8.' : undefined}
+              >
+                <Input
+                  value={cidr}
+                  onChange={(e) => setCidr(e.target.value)}
+                  className="font-mono"
+                />
+              </Field>
+            </div>
+            <p className="mt-2.5 text-[11.5px] leading-relaxed text-g-500">
+              La plage proposée ne chevauche aucune de vos plages existantes (
+              {ESPACES.map((e) => e.cidr).join(', ')}), ce qui rend le peering possible sans
+              renumérotation. Un /22 offre 1 024 adresses, soit environ quatre réseaux privés de 254
+              hôtes.
+            </p>
+          </Card>
+
+          <Card>
+            <CardHeader titre="Options réseau" />
+            <div className="space-y-3.5">
+              <Switch
+                checked={dnsInterne}
+                onChange={setDnsInterne}
+                label="DNS interne"
+                description={`Zone privée résolue depuis l’espace : ${code.toLowerCase()}.interne.synelia.cloud. Vos machines se joignent par nom sans configuration.`}
+              />
+              <Field
+                label="Peering avec un autre Espace Cloud"
+                hint="facultatif"
+              >
+                <Select value={peering} onChange={(e) => setPeering(e.target.value)}>
+                  <option value="">Aucun peering</option>
+                  {ESPACES.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.code} · {e.cidr} · {e.site}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              {peering && (
+                <Callout ton="info" titre="Routage inter-espaces">
+                  Le trafic entre les deux plages sera routé sans passer par Internet. Le trafic
+                  inter-site (Abidjan ↔ Grand-Bassam) n’est pas facturé.
+                </Callout>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Étape 4 — Options */}
+      {etape === 4 && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader
+              titre={
+                <span className="flex items-center gap-2">
+                  <ShieldCheck size={15} className="text-p-700" />
+                  Protection
+                </span>
+              }
+              sousTitre="Un espace sans plan de sauvegarde n’offre aucune possibilité de restauration."
+            />
+            <Field label="Plan de sauvegarde par défaut">
+              <Select value={planSauvegarde} onChange={(e) => setPlanSauvegarde(e.target.value)}>
+                {BACKUP_PLANS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nom} · rétention {p.retentionJours} j{p.immutable ? ' · immuable' : ''}
+                  </option>
+                ))}
+                <option value="aucun">Aucun plan (déconseillé)</option>
+              </Select>
+            </Field>
+            <p className="mt-2 text-[11.5px] leading-relaxed text-g-500">
+              Le plan s’appliquera automatiquement à toute ressource créée dans cet espace portant
+              l’étiquette correspondante. Vous pourrez le modifier à tout moment.
+            </p>
+          </Card>
+
+          <Card>
+            <CardHeader titre="Exploitation" />
+            <div className="space-y-3.5">
+              <Switch
+                checked={supervision}
+                onChange={setSupervision}
+                label="Supervision incluse"
+                description="Sondes posées automatiquement à la création de chaque ressource, avec remontée dans l’écran Supervision et dans Centreon. Incluse dans l’offre."
+              />
+              <Switch
+                checked={pra}
+                onChange={setPra}
+                label={`Plan de reprise vers ${site === 'ABJ' ? 'Grand-Bassam' : 'Abidjan'}`}
+                description="Réplication continue, ordre de démarrage avec dépendances, adressage de repli, exercices trimestriels avec rapport daté. Option facturée 96 000 FCFA par mois."
+              />
+            </div>
+            {pra && (
+              <Callout ton="ok" className="mt-3.5" titre="Ce que l’option PRA vous engage à faire">
+                Un plan de reprise n’a de valeur que s’il est exercé. Nous planifions un premier
+                exercice de bascule de test dans les trente jours suivant la mise en place — en
+                réseau isolé, sans impact sur votre production — et vous remettons le rapport avec le
+                temps de reprise réellement constaté.
+              </Callout>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* Étape 5 — Récapitulatif */}
+      {etape === 5 && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader titre="Ce qui va être créé" />
+            <KeyValueList
+              colonnes={2}
+              items={[
+                { cle: 'Code', valeur: <span className="font-mono">{code}</span> },
+                { cle: 'Offre', valeur: `${offre.nom} — ${offre.specs}` },
+                { cle: 'Site', valeur: SITE_LABEL[site] },
+                { cle: 'Plage réseau', valeur: <span className="font-mono">{cidr}</span> },
+                {
+                  cle: 'Quota',
+                  valeur: offre.surDevis
+                    ? 'Défini au devis'
+                    : offre.specs,
+                },
+                {
+                  cle: 'DNS interne',
+                  valeur: dnsInterne
+                    ? `${code.toLowerCase()}.interne.synelia.cloud`
+                    : 'Désactivé',
+                },
+                {
+                  cle: 'Peering',
+                  valeur: peering
+                    ? ESPACES.find((e) => e.id === peering)?.code ?? '—'
+                    : 'Aucun',
+                },
+                {
+                  cle: 'Plan de sauvegarde',
+                  valeur: BACKUP_PLANS.find((p) => p.id === planSauvegarde)?.nom ?? 'Aucun',
+                },
+                { cle: 'Supervision', valeur: supervision ? 'Incluse' : 'Désactivée' },
+                { cle: 'PRA inter-site', valeur: pra ? 'Activé' : 'Non souscrit' },
+                { cle: 'SLA', valeur: offre.sla ?? '—' },
+                {
+                  cle: 'Périodicité',
+                  valeur: periodicite === 'annuelle' ? 'Annuelle (−15 %)' : 'Mensuelle',
+                },
+              ]}
+            />
+          </Card>
+
+          <CostPreview lignes={lignes} periodicite={periodicite} />
+
+          <Card>
+            <Checkbox
+              checked={conditions}
+              onChange={(e) => setConditions(e.target.checked)}
+              label="J’accepte les conditions générales de vente et l’annexe SLA"
+              description={`Montants hors taxes en FCFA, TVA 18 % appliquée à la facturation. Prorata du mois en cours ajouté à la prochaine facture. ${periodicite === 'annuelle' ? 'Engagement de douze mois, résiliable à l’échéance avec trente jours de préavis.' : 'Sans engagement, résiliable en fin de mois.'}`}
+            />
+          </Card>
+
+          <Callout ton="info" titre="Après validation">
+            Le quota est réservé, la plage réseau allouée et le DNS interne créé. L’espace est
+            utilisable en moins de deux minutes. Vous pourrez ensuite créer des machines, des
+            clusters Kubernetes et des volumes dans cette enveloppe.
+          </Callout>
+        </div>
+      )}
+    </WizardShell>
+  )
+}
+
+function Petit({ cle, valeur, mono }: { cle: string; valeur: string; mono?: boolean }) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <dt className="shrink-0 text-[11.5px] text-g-500">{cle}</dt>
+      <dd
+        className={cn(
+          'min-w-0 text-right text-[11.5px] font-semibold text-ink',
+          mono && 'font-mono',
+        )}
+      >
+        {valeur}
+      </dd>
+    </div>
+  )
+}
