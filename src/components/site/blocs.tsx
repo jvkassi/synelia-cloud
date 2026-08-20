@@ -1,0 +1,347 @@
+import Link from 'next/link'
+import type { ReactNode } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { ButtonLink } from '@/components/ui/button'
+import { MicroLabel } from '@/components/ui/badge'
+
+/** Conteneur de largeur de page pour la vitrine. */
+export function Container({
+  children,
+  className,
+  taille = 'lg',
+}: {
+  children: ReactNode
+  className?: string
+  taille?: 'md' | 'lg'
+}) {
+  return (
+    <div
+      className={cn(
+        'mx-auto w-full px-4 sm:px-6',
+        taille === 'md' ? 'max-w-4xl' : 'max-w-7xl',
+        className,
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+/** Section de la vitrine, avec fond alterné. */
+export function SiteSection({
+  children,
+  fond = 'blanc',
+  className,
+  id,
+}: {
+  children: ReactNode
+  fond?: 'blanc' | 'clair' | 'violet' | 'violet-fonce'
+  className?: string
+  id?: string
+}) {
+  const fonds = {
+    blanc: 'bg-white',
+    clair: 'bg-p-050',
+    violet: 'bg-p-700',
+    'violet-fonce': 'bg-p-900',
+  }[fond]
+  return (
+    <section id={id} className={cn('py-14 sm:py-20', fonds, className)}>
+      {children}
+    </section>
+  )
+}
+
+/** Titre de section marketing. */
+export function SectionTitle({
+  surtitre,
+  titre,
+  chapeau,
+  sombre,
+  centre,
+  className,
+}: {
+  surtitre?: string
+  titre: ReactNode
+  chapeau?: ReactNode
+  sombre?: boolean
+  centre?: boolean
+  className?: string
+}) {
+  return (
+    <div className={cn(centre && 'mx-auto max-w-2xl text-center', className)}>
+      {surtitre && (
+        <MicroLabel className={sombre ? 'text-p-300' : 'text-m-600'}>{surtitre}</MicroLabel>
+      )}
+      <h2
+        className={cn(
+          'mt-2 text-[26px] font-bold leading-tight [font-family:var(--font-display)] sm:text-[32px]',
+          sombre ? 'text-white' : 'text-ink',
+        )}
+      >
+        {titre}
+      </h2>
+      {chapeau && (
+        <p
+          className={cn(
+            'mt-3 text-[14.5px] leading-relaxed',
+            sombre ? 'text-p-300' : 'text-g-700',
+            centre && 'mx-auto max-w-2xl',
+          )}
+        >
+          {chapeau}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Héros court des pages secondaires. */
+export function HeroCourt({
+  surtitre,
+  titre,
+  chapeau,
+  actions,
+  enfants,
+}: {
+  surtitre?: string
+  titre: ReactNode
+  chapeau?: ReactNode
+  actions?: ReactNode
+  enfants?: ReactNode
+}) {
+  return (
+    <section className="relative overflow-hidden border-b border-g-300 bg-p-900">
+      <span className="absolute inset-0 bg-grid-light opacity-60" aria-hidden />
+      <span
+        className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-m-600/20 blur-3xl"
+        aria-hidden
+      />
+      <Container className="relative py-14 sm:py-16">
+        {surtitre && <MicroLabel className="text-p-300">{surtitre}</MicroLabel>}
+        <h1 className="mt-2 max-w-3xl text-[30px] font-bold leading-[1.12] [font-family:var(--font-display)] text-white sm:text-[42px]">
+          {titre}
+        </h1>
+        {chapeau && (
+          <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-p-300">{chapeau}</p>
+        )}
+        {actions && <div className="mt-6 flex flex-wrap items-center gap-3">{actions}</div>}
+        {enfants}
+      </Container>
+    </section>
+  )
+}
+
+/** Appel final en bandeau violet, deux boutons (§2.2 §10). */
+export function AppelFinal({
+  titre = 'Prêt à voir la plateforme sur vos propres charges ?',
+  chapeau = 'Créez un compte pour explorer le portail avec des données de démonstration, ou parlez à un architecte qui connaît le contexte ivoirien.',
+  primaire = { libelle: 'Créer un compte', href: '/signup' },
+  secondaire = { libelle: 'Parler à un architecte', href: '/entreprises#contact' },
+}: {
+  titre?: string
+  chapeau?: string
+  primaire?: { libelle: string; href: string }
+  secondaire?: { libelle: string; href: string }
+}) {
+  return (
+    <section className="relative overflow-hidden bg-p-700">
+      <span className="absolute inset-0 bg-grid-light opacity-50" aria-hidden />
+      <Container className="relative py-14 text-center sm:py-16">
+        <h2 className="mx-auto max-w-2xl text-[26px] font-bold leading-tight [font-family:var(--font-display)] text-white sm:text-[32px]">
+          {titre}
+        </h2>
+        <p className="mx-auto mt-3 max-w-xl text-[14.5px] leading-relaxed text-p-300">{chapeau}</p>
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+          <ButtonLink
+            href={primaire.href}
+            size="lg"
+            className="bg-white text-p-700 hover:bg-p-050"
+          >
+            {primaire.libelle}
+          </ButtonLink>
+          <ButtonLink
+            href={secondaire.href}
+            size="lg"
+            variant="ghost"
+            className="border border-p-400 text-white hover:bg-white/10"
+          >
+            {secondaire.libelle}
+          </ButtonLink>
+        </div>
+      </Container>
+    </section>
+  )
+}
+
+/** Accordéon de questions fréquentes. */
+export function Accordeon({
+  items,
+  className,
+}: {
+  items: Array<{ question: string; reponse: string }>
+  className?: string
+}) {
+  return (
+    <div className={cn('divide-y divide-g-300 overflow-hidden rounded-[10px] border border-g-300 bg-white', className)}>
+      {items.map((it) => (
+        <details key={it.question} className="group">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 transition-colors hover:bg-g-050">
+            <span className="text-[14px] font-semibold text-ink">{it.question}</span>
+            <ChevronDown
+              size={16}
+              className="shrink-0 text-g-500 transition-transform group-open:rotate-180"
+            />
+          </summary>
+          <div className="px-4 pb-4">
+            <p className="max-w-3xl text-[13.5px] leading-relaxed text-g-700">{it.reponse}</p>
+          </div>
+        </details>
+      ))}
+    </div>
+  )
+}
+
+/** Chiffre clé dans un bandeau. */
+export function ChiffreCle({
+  valeur,
+  libelle,
+  sombre,
+}: {
+  valeur: string
+  libelle: string
+  sombre?: boolean
+}) {
+  return (
+    <div>
+      <p
+        className={cn(
+          'tnum text-[30px] font-bold leading-none [font-family:var(--font-display)] sm:text-[36px]',
+          sombre ? 'text-p-300' : 'text-p-700',
+        )}
+      >
+        {valeur}
+      </p>
+      <p className={cn('mt-1.5 text-[12.5px]', sombre ? 'text-white/80' : 'text-g-500')}>
+        {libelle}
+      </p>
+    </div>
+  )
+}
+
+/** Représentation abstraite d'un rack — jamais une photo générique (§2.2). */
+export function VisuelRack({ className }: { className?: string }) {
+  const unites = [
+    { h: 3, teinte: 'bg-p-400/70', label: 'Load balancer · WAF' },
+    { h: 5, teinte: 'bg-white/85', label: 'Calcul · 4 hôtes' },
+    { h: 5, teinte: 'bg-white/70', label: 'Calcul · 4 hôtes' },
+    { h: 4, teinte: 'bg-m-600/70', label: 'Stockage NVMe' },
+    { h: 4, teinte: 'bg-white/55', label: 'Stockage objet' },
+    { h: 3, teinte: 'bg-p-300/70', label: 'Réseau · 2 chemins' },
+  ]
+  return (
+    <div className={cn('relative', className)}>
+      <div className="rounded-[14px] border border-p-400/50 bg-p-800/60 p-3 backdrop-blur-sm">
+        <div className="mb-2.5 flex items-center justify-between px-1">
+          <span className="type-micro text-p-300">Site ABJ · Synertech Vallon</span>
+          <span className="flex items-center gap-1.5 text-[10.5px] font-semibold text-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-ok animate-pulse-dot" />
+            En ligne
+          </span>
+        </div>
+        <div className="space-y-1.5">
+          {unites.map((u, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-2 rounded-[6px] border border-white/10 bg-white/5 px-2.5"
+              style={{ height: u.h * 14 }}
+            >
+              <span className={cn('h-2 w-2 shrink-0 rounded-sm', u.teinte)} />
+              <span className="flex-1 truncate text-[11px] font-medium text-white/85">
+                {u.label}
+              </span>
+              <span className="flex shrink-0 gap-0.5">
+                {Array.from({ length: u.h }).map((_, j) => (
+                  <span key={j} className="h-1.5 w-1.5 rounded-full bg-p-300/45" />
+                ))}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2.5 grid grid-cols-3 gap-2 border-t border-white/10 pt-2.5">
+          {[
+            { l: 'vCPU', v: '62 %' },
+            { l: 'Mémoire', v: '68 %' },
+            { l: 'Stockage', v: '57 %' },
+          ].map((s) => (
+            <div key={s.l}>
+              <p className="text-[10px] text-p-300">{s.l}</p>
+              <p className="tnum text-[13px] font-bold text-white">{s.v}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="absolute -bottom-4 -right-4 hidden rounded-[10px] border border-p-400/50 bg-p-900 px-3 py-2 shadow-[0_8px_28px_rgba(0,0,0,.3)] sm:block">
+        <p className="type-micro text-p-300">Latence inter-site</p>
+        <p className="tnum text-[15px] font-bold text-white">4–6 ms</p>
+        <p className="text-[10px] text-p-300">ABJ ↔ GBM</p>
+      </div>
+    </div>
+  )
+}
+
+/** Carrousel de logos du marketplace (§2.2 §7). */
+export function CarrouselLogos({
+  logos,
+}: {
+  logos: Array<{ nom: string; initiales: string; teinte: string }>
+}) {
+  const doubles = [...logos, ...logos]
+  return (
+    <div className="relative overflow-hidden">
+      <div className="flex w-max animate-marquee gap-3">
+        {doubles.map((l, i) => (
+          <div
+            key={`${l.nom}-${i}`}
+            className="flex w-40 shrink-0 items-center gap-2.5 rounded-[10px] border border-g-300 bg-white px-3 py-2.5"
+          >
+            <span
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[10.5px] font-bold text-white"
+              style={{ background: l.teinte }}
+            >
+              {l.initiales}
+            </span>
+            <span className="truncate text-[12.5px] font-semibold text-ink">{l.nom}</span>
+          </div>
+        ))}
+      </div>
+      <span className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-white to-transparent" />
+      <span className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white to-transparent" />
+    </div>
+  )
+}
+
+/** Lien texte fléché. */
+export function LienFleche({
+  href,
+  children,
+  sombre,
+}: {
+  href: string
+  children: ReactNode
+  sombre?: boolean
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        'group inline-flex items-center gap-1.5 text-[13px] font-semibold transition-colors',
+        sombre ? 'text-p-300 hover:text-white' : 'text-p-700 hover:text-m-600',
+      )}
+    >
+      {children}
+      <span className="transition-transform group-hover:translate-x-0.5">→</span>
+    </Link>
+  )
+}
