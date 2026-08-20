@@ -40,9 +40,17 @@ import { EmptyState } from '@/components/composition/states'
 import { ConfirmDialog, Drawer } from '@/components/ui/overlay'
 import { EventList, GrilleSparkCharts, LogPeek } from '@/components/business/observabilite'
 import { EmplacementReel, StatutServiceBadge } from '@/components/business/projets'
+import { ConfigurationServicePanel } from '@/components/business/configuration-service'
+import { configurationDuService } from '@/lib/configurations'
+import { modeleBySlug } from '@/lib/mock/modeles'
 import { useApp } from '@/components/app/contexte'
 
-/** Les onglets dépendent du type : une base n'a pas de domaine, un cron n'a pas de file. */
+/**
+ * Les onglets dépendent du type — une base n'a pas de domaine, un cron n'a pas
+ * de file — et du fait que le service vienne ou non d'un modèle. Un service
+ * issu d'un modèle matérialise le contrat d'intégration en neuf capacités
+ * (§6.1) : configuration, sièges, sauvegarde, versions, réversibilité.
+ */
 function ongletsDu(service: ServiceProjet) {
   const communs = [{ id: 'apercu', label: 'Aperçu' }]
   const specifiques =
@@ -57,11 +65,21 @@ function ongletsDu(service: ServiceProjet) {
           ? [{ id: 'file', label: 'File' }]
           : [
               { id: 'domaines', label: 'Domaines' },
-              { id: 'deploiements', label: 'Déploiements' },
+              ...(service.modeleSlug ? [] : [{ id: 'deploiements', label: 'Déploiements' }]),
             ]
+  const duModele = service.modeleSlug
+    ? [
+        { id: 'configuration', label: 'Configuration' },
+        ...(service.sieges ? [{ id: 'sieges', label: 'Sièges' }] : []),
+        ...(service.type === 'base' ? [] : [{ id: 'sauvegardes', label: 'Sauvegardes' }]),
+        { id: 'versions', label: 'Versions' },
+        { id: 'reversibilite', label: 'Réversibilité' },
+      ]
+    : []
   return [
     ...communs,
     ...specifiques,
+    ...duModele,
     { id: 'variables', label: 'Variables' },
     { id: 'journaux', label: 'Journaux' },
     { id: 'supervision', label: 'Supervision' },
@@ -153,6 +171,10 @@ export function VueService({ id }: { id: string }) {
       {onglet === 'file' && <FileAttente service={service} />}
       {onglet === 'domaines' && <Domaines service={service} domaines={domaines} />}
       {onglet === 'deploiements' && <Deploiements service={service} />}
+      {onglet === 'configuration' && <Configuration service={service} />}
+      {onglet === 'sieges' && <Sieges service={service} />}
+      {onglet === 'versions' && <Versions service={service} />}
+      {onglet === 'reversibilite' && <Reversibilite service={service} />}
       {onglet === 'variables' && <Variables service={service} />}
       {onglet === 'journaux' && <Journaux service={service} />}
       {onglet === 'supervision' && <Supervision service={service} />}
@@ -1096,7 +1118,7 @@ function Deploiements({ service }: { service: ServiceProjet }) {
                   </td>
                   <td className="px-3 py-2.5 text-right">
                     <Link
-                      href={`/app/apps/${service.appId}`}
+                      href="/app/deploiements"
                       className="text-[12px] font-semibold text-p-700 hover:text-m-600"
                     >
                       Détail →
@@ -1109,13 +1131,9 @@ function Deploiements({ service }: { service: ServiceProjet }) {
         </div>
       </Card>
       <p className="text-[12px] text-g-500">
-        Le pipeline complet — build, analyse de sécurité, provisioning, bascule — et les journaux de
-        construction sont sur{' '}
-        <Link
-          href={`/app/apps/${service.appId}`}
-          className="font-semibold text-p-700 hover:text-m-600"
-        >
-          l’écran de l’application
+        L’historique immuable de tous les déploiements, tous projets confondus, est sur{' '}
+        <Link href="/app/deploiements" className="font-semibold text-p-700 hover:text-m-600">
+          l’écran Déploiements
         </Link>
         .
       </p>
@@ -1434,6 +1452,214 @@ function Avance({ service }: { service: ServiceProjet }) {
         }
         libelleAction="Supprimer définitivement"
       />
+    </div>
+  )
+}
+
+// ─── Contrat d'intégration d'un service issu d'un modèle (§6.1) ────────
+
+/**
+ * Configuration propre à la solution. Le fichier de configuration du service
+ * décrit le schéma — sections, champs, aides, valeurs par défaut ; l'instance
+ * porte l'état. Régler une messagerie n'a presque rien de commun avec régler
+ * un ERP, d'où un fichier par solution plutôt qu'un formulaire générique.
+ */
+function Configuration({ service }: { service: ServiceProjet }) {
+  const { autorise, refus } = useApp()
+  const modele = service.modeleSlug ? modeleBySlug(service.modeleSlug) : undefined
+  const config = modele?.configuration ? configurationDuService(modele.configuration) : undefined
+
+  if (!config) {
+    return (
+      <EmptyState
+        titre="Pas de réglages propres à cette solution"
+        phrase="Ce modèle se configure entièrement par ses variables d’environnement. L’onglet Variables porte tout ce qui est réglable."
+        action={{ libelle: 'Voir les variables', href: '#' }}
+      />
+    )
+  }
+
+  return (
+    <ConfigurationServicePanel
+      config={config}
+      autorise={autorise('service.admin')}
+      messageRefus={refus('service.admin')}
+    />
+  )
+}
+
+/** Sièges et licences — la vue « qui consomme quoi » du contrat d'intégration. */
+function Sieges({ service }: { service: ServiceProjet }) {
+  const { autorise, refus } = useApp()
+  const sieges = service.sieges
+  if (!sieges) return null
+
+  const libres = sieges.souscrits - sieges.attribues
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatTile libelle="Sièges souscrits" valeur={sieges.souscrits} />
+        <StatTile libelle="Sièges attribués" valeur={sieges.attribues} ton="violet" />
+        <StatTile
+          libelle="Sièges libres"
+          valeur={libres}
+          ton={libres === 0 ? 'warn' : 'ok'}
+          detail={libres === 0 ? 'Ajoutez des sièges pour inviter' : 'attribuables tout de suite'}
+        />
+        <StatTile
+          libelle="Coût par siège"
+          valeur={money(Math.round(service.coutMensuel / Math.max(1, sieges.souscrits)))}
+          detail="par mois, à titre indicatif"
+        />
+      </div>
+
+      <Card>
+        <CardHeader
+          titre="Qui consomme quoi"
+          sousTitre="Un siège attribué est facturé, qu’il soit utilisé ou non. Le retirer libère la facturation au prorata du jour."
+          actions={
+            <GatedAction autorise={autorise('seat.assign')} message={refus('seat.assign')}>
+              <Button size="sm">Attribuer un siège</Button>
+            </GatedAction>
+          }
+        />
+        <ul className="divide-y divide-g-100">
+          {[
+            { n: 'Léa Konan', e: 'l.konan@dba.africa', d: '2026-08-19T15:02:00Z', u: 'quotidien' },
+            { n: 'Fatou Diallo', e: 'f.diallo@dba.africa', d: '2026-08-19T14:41:00Z', u: 'quotidien' },
+            { n: 'Yao Kouassi', e: 'y.kouassi@dba.africa', d: '2026-08-18T09:12:00Z', u: 'hebdomadaire' },
+            { n: 'Aïcha Koné', e: 'a.kone@dba.africa', d: '2026-07-28T10:22:00Z', u: 'inactif depuis 3 semaines' },
+          ].map((m) => (
+            <li key={m.e} className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0">
+              <span className="min-w-0">
+                <span className="block truncate text-[12.5px] font-semibold text-ink">{m.n}</span>
+                <span className="block truncate text-[11.5px] text-g-500">{m.e}</span>
+              </span>
+              <span className="flex shrink-0 items-center gap-2">
+                <span className="text-[11.5px] text-g-500">{m.u}</span>
+                <Badge tone={m.u.startsWith('inactif') ? 'warn' : 'ok'} size="sm" dot>
+                  Actif
+                </Badge>
+                <GatedAction autorise={autorise('seat.assign')} message={refus('seat.assign')}>
+                  <Button variant="ghost" size="sm">
+                    Retirer
+                  </Button>
+                </GatedAction>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <Callout ton="info" className="mt-3" titre="Un siège inactif reste facturé">
+          Aïcha Koné n’a pas ouvert le service depuis trois semaines. Retirer son siège la
+          déconnecte mais ne supprime rien : ses données restent, et le siège se réattribue.
+        </Callout>
+      </Card>
+    </div>
+  )
+}
+
+/** Cycle de vie : versions qualifiées, fenêtre de mise à jour, retour arrière. */
+function Versions({ service }: { service: ServiceProjet }) {
+  const { autorise, refus } = useApp()
+  const modele = service.modeleSlug ? modeleBySlug(service.modeleSlug) : undefined
+  if (!modele) return null
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader
+          titre="Version déployée"
+          sousTitre="Nous qualifions chaque version avant de la proposer : jamais de « latest », jamais de mise à jour non annoncée."
+          actions={
+            <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
+              <Button size="sm">Planifier la mise à jour</Button>
+            </GatedAction>
+          }
+        />
+        <KeyValueList
+          items={[
+            { cle: 'Solution', valeur: `${modele.solution} ${modele.version}` },
+            { cle: 'Chart déployé', valeur: <span className="font-mono text-[12px]">{modele.chart}</span> },
+            { cle: 'Dernière mise à jour', valeur: dateHeure(service.derniereMaj) },
+            { cle: 'Fenêtre de maintenance', valeur: 'Dimanche 22:00 – 02:00, annoncée 7 jours avant' },
+            { cle: 'Retour arrière', valeur: 'Disponible 7 jours après une mise à jour' },
+          ]}
+        />
+      </Card>
+
+      <Card>
+        <CardHeader
+          titre="Historique"
+          sousTitre="Chaque ligne porte son changelog et reste restaurable pendant sept jours."
+        />
+        <ul className="divide-y divide-g-100">
+          {[
+            { v: modele.version, d: service.derniereMaj, n: 'Version courante — correctifs de sécurité et corrections mineures.', a: true },
+            { v: '10.1.2', d: '2026-05-14T22:30:00Z', n: 'Montée de version mineure. Aucun changement de schéma.', a: false },
+            { v: '10.0.8', d: '2026-02-18T22:12:00Z', n: 'Correctif de sécurité, appliqué hors fenêtre après validation.', a: false },
+          ].map((h) => (
+            <li key={h.v} className="flex flex-wrap items-start justify-between gap-2 py-2.5 first:pt-0">
+              <span className="min-w-0">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-[12.5px] font-semibold text-ink">{h.v}</span>
+                  {h.a && (
+                    <Badge tone="ok" size="sm">
+                      Déployée
+                    </Badge>
+                  )}
+                  <span className="text-[11px] text-g-500">{dateHeure(h.d)}</span>
+                </span>
+                <span className="mt-0.5 block text-[11.5px] leading-snug text-g-500">{h.n}</span>
+              </span>
+              {!h.a && (
+                <Button variant="ghost" size="sm">
+                  Revenir à cette version
+                </Button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </div>
+  )
+}
+
+/** Réversibilité — §6.1 capacité 9. Une instance qu'on ne peut pas quitter ne se prend pas. */
+function Reversibilite({ service }: { service: ServiceProjet }) {
+  const { autorise, refus } = useApp()
+  const modele = service.modeleSlug ? modeleBySlug(service.modeleSlug) : undefined
+  if (!modele) return null
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader
+          titre="Sortir de ce service"
+          sousTitre="L’export se fait dans le format natif de la solution, documenté, et nous testons sa réimportation comme nous testons nos restaurations."
+          actions={
+            <GatedAction autorise={autorise('compliance.export')} message={refus('compliance.export')}>
+              <Button size="sm">Générer un export complet</Button>
+            </GatedAction>
+          }
+        />
+        <KeyValueList
+          items={[
+            { cle: 'Format d’export', valeur: `Format natif ${modele.solution}, documenté` },
+            { cle: 'Contenu', valeur: modele.sauvegardeParDefaut.inclut.join(' · ') },
+            { cle: 'Dernier export testé', valeur: '12 juillet 2026 — réimport vérifié sur une instance vierge' },
+            { cle: 'Délai de mise à disposition', valeur: 'Moins de 24 h pour une instance de cette taille' },
+            { cle: 'Conservation après résiliation', valeur: '30 jours, puis suppression définitive avec attestation' },
+          ]}
+        />
+      </Card>
+
+      <Callout ton="info" titre="Ce que la réversibilité ne couvre pas">
+        Les réglages que vous avez faits dans {modele.solution} suivent l’export. En revanche, ce
+        que le portail ajoute autour — plan de sauvegarde, sondes de supervision, fédération
+        d’identité — est propre à Synelia et devra être reconstruit chez votre nouvel hébergeur.
+        Nous le disons pour que la comparaison soit honnête.
+      </Callout>
     </div>
   )
 }

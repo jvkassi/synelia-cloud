@@ -5,8 +5,9 @@ import type { Metadata } from 'next'
  * n'existe que pour nommer l'onglet du navigateur — il n'ajoute aucun rendu.
  */
 export const metadata: Metadata = {
-  title: 'Applications',
-  description: 'Vos applications déployées, leurs environnements et leurs livraisons.',
+  title: 'Services partagés',
+  description:
+    'Messagerie, drive et visio rattachés à un domaine, sur instance mutualisée.',
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {

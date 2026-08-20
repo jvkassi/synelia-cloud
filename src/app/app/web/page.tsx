@@ -1,199 +1,258 @@
 'use client'
 
 import Link from 'next/link'
-import { ExternalLink, Plus, ShieldAlert } from 'lucide-react'
+import { Globe, HardDrive, Plus, Server, ShoppingBag } from 'lucide-react'
 import { cn, surfaceMarque } from '@/lib/utils'
-import { dateCourte, goHumain, relatif } from '@/lib/format'
-import { HEBERGEMENTS } from '@/lib/mock'
+import { dateHeure, money, num } from '@/lib/format'
+import { SITE_LABEL } from '@/lib/types'
+import {
+  HEBERGEMENTS,
+  SERVICES_PARTAGES,
+  SITES_WEB,
+  TYPE_SITE_LABEL,
+  nomServi,
+  partagesDeLHebergement,
+  sitesDeLHebergement,
+} from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
-import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/card'
-import { HealthBadge, QuotaBar, StatTile } from '@/components/composition/metrics'
+import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
+import { StatTile, QuotaBar, HealthBadge } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { useApp } from '@/components/app/contexte'
 
-const TYPE_LABEL: Record<string, { nom: string; teinte: string; admin: string }> = {
-  wordpress: { nom: 'WordPress', teinte: '#21759B', admin: '/wp-admin' },
-  prestashop: { nom: 'PrestaShop', teinte: '#DF0067', admin: '/admin-dba' },
-  mutualise: { nom: 'Hébergement mutualisé', teinte: '#6B3FA0', admin: '' },
+/** Teinte de la vignette d'un site, par famille de solution. */
+const TEINTE_SITE: Record<string, string> = {
+  wordpress: '#21759B',
+  prestashop: '#DF0067',
+  php: '#777BB4',
+  statique: '#4B2882',
+  laravel: '#FF2D20',
 }
 
-export default function Web() {
+export default function HebergementsWeb() {
   const { autorise, refus } = useApp()
 
-  const aMettreAJour = HEBERGEMENTS.filter(
-    (h) => (h.versions?.extensionsAMettreAJour ?? 0) > 0 || !h.versions?.majAuto,
-  ).length
-  const sansWaf = HEBERGEMENTS.filter((h) => !h.securite.waf).length
-  const certProche = HEBERGEMENTS.filter((h) => h.certificat.expire < '2026-10-15').length
+  const espace = HEBERGEMENTS.reduce((a, h) => a + h.espaceUtiliseGo, 0)
+  const espaceTotal = HEBERGEMENTS.reduce((a, h) => a + h.espaceTotalGo, 0)
+  const majEnAttente = SITES_WEB.reduce((a, s) => a + (s.majEnAttente ?? 0), 0)
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
-        fil={[{ label: 'Espace client', href: '/app' }, { label: 'Hébergement web' }]}
-        titre="Hébergement web"
-        sousTitre="Nous exploitons le socle : moteur PHP, base de données, certificat, pare-feu applicatif, sauvegardes, environnement de pré-production. Le contenu de votre site se travaille dans son propre administrateur — nous vous y menons, nous ne le refaisons pas."
+        fil={[{ label: 'Espace client', href: '/app' }, { label: 'Hébergements web' }]}
+        titre="Hébergements web"
+        sousTitre="Un hébergement, c’est un domaine et un serveur, liés strictement. Sur ce serveur cohabitent vos sites — chacun sur son sous-domaine —, vos bases, et les services partagés rattachés au domaine : messagerie et drive."
         actions={
           <GatedAction autorise={autorise('marketplace.subscribe')} message={refus('marketplace.subscribe')}>
-            <ButtonLink href="/app/marketplace" iconBefore={<Plus size={14} />}>
-              Nouvel hébergement
-            </ButtonLink>
+            <Button iconBefore={<Plus size={14} />}>Commander un hébergement</Button>
           </GatedAction>
+        }
+        meta={
+          <>
+            <Badge tone="neutral">{HEBERGEMENTS.length} hébergements</Badge>
+            <Badge tone="neutral">{SITES_WEB.length} sites</Badge>
+            <Badge tone="neutral">{SERVICES_PARTAGES.length} services partagés</Badge>
+          </>
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile libelle="Sites hébergés" valeur={HEBERGEMENTS.length} ton="ok" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatTile libelle="Hébergements" valeur={HEBERGEMENTS.length} detail="un serveur chacun" />
+        <StatTile libelle="Sites en ligne" valeur={SITES_WEB.filter((s) => s.statut === 'en_ligne').length} detail={`sur ${SITES_WEB.length} installés`} />
+        <StatTile
+          libelle="Espace occupé"
+          valeur={`${espace.toFixed(1)} Go`}
+          detail={`sur ${num(espaceTotal)} Go alloués`}
+        />
         <StatTile
           libelle="Mises à jour en attente"
-          valeur={aMettreAJour}
-          ton={aMettreAJour > 0 ? 'warn' : 'ok'}
-          detail={aMettreAJour > 0 ? 'Cœur ou extensions' : 'Tout est à jour'}
-        />
-        <StatTile
-          libelle="Sites sans pare-feu applicatif"
-          valeur={sansWaf}
-          ton={sansWaf > 0 ? 'warn' : 'ok'}
-          detail={sansWaf > 0 ? 'Exposition directe' : 'Tous protégés'}
-        />
-        <StatTile
-          libelle="Certificats à renouveler"
-          valeur={certProche}
-          ton="ok"
-          detail="Renouvellement automatique actif"
+          valeur={majEnAttente}
+          ton={majEnAttente > 0 ? 'warn' : 'ok'}
+          detail="cœur et extensions"
         />
       </div>
 
       {HEBERGEMENTS.length === 0 ? (
         <EmptyState
-          titre="Aucun hébergement web"
-          phrase="Un hébergement web comprend le moteur, la base, le certificat, le pare-feu applicatif et les sauvegardes. Vous choisissez la solution — WordPress, PrestaShop, ou un socle libre — et nous nous occupons du reste."
-          action={{ libelle: 'Voir le catalogue', href: '/app/marketplace' }}
+          titre="Aucun hébergement"
+          phrase="Un hébergement mutualisé vous donne un serveur avec Apache, PHP et un moteur de base, sur lequel vous installez autant de sites que nécessaire. Le nom de domaine peut être acheté plus tard."
+          action={{ libelle: 'Commander un hébergement', href: '#' }}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="space-y-4">
           {HEBERGEMENTS.map((h) => {
-            const t = TYPE_LABEL[h.type]
-            const majEnAttente = h.versions?.extensionsAMettreAJour ?? 0
+            const sites = sitesDeLHebergement(h.id)
+            const partages = partagesDeLHebergement(h.id)
             return (
-              <Card key={h.id} className="flex flex-col" hover>
-                <div className="flex items-start justify-between gap-3">
-                  <span className="flex min-w-0 items-center gap-2.5">
-                    <span
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[7px] text-[10px] font-bold"
-                      style={{
-                        background: surfaceMarque(t.teinte).fond,
-                        color: surfaceMarque(t.teinte).texte,
-                      }}
-                    >
-                      {t.nom.slice(0, 2).toUpperCase()}
-                    </span>
-                    <span className="min-w-0">
+              <Card key={h.id}>
+                <CardHeader
+                  titre={
+                    <span className="flex flex-wrap items-center gap-2.5">
                       <Link
                         href={`/app/web/${h.id}`}
-                        className="block truncate font-mono text-[13px] font-bold text-ink hover:text-p-700"
+                        className="break-words font-mono text-[15px] font-bold text-ink hover:text-p-700"
                       >
-                        {h.domaine}
+                        {nomServi(h)}
                       </Link>
-                      <span className="block text-[11px] text-g-500">
-                        {t.nom} · palier {h.palier}
-                      </span>
+                      {!h.domaine && (
+                        <Badge tone="warn" size="sm">
+                          Domaine à acheter
+                        </Badge>
+                      )}
+                      <HealthBadge etat={h.statut === 'en_ligne' ? 'ok' : h.statut === 'maintenance' ? 'maintenance' : 'suspendu'} />
+                      <Badge tone="neutral" size="sm">
+                        {h.palier}
+                      </Badge>
                     </span>
-                  </span>
-                  <HealthBadge etat={h.statut} size="sm" />
-                </div>
-
-                <div className="mt-3 space-y-2">
-                  <QuotaBar
-                    libelle="Espace disque"
-                    utilise={h.espaceUtiliseGo}
-                    total={h.espaceTotalGo}
-                    compact
-                    seuil={80}
-                    formateur={(v) => goHumain(v)}
-                  />
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-1">
-                  <Badge tone="neutral" size="sm">
-                    PHP {h.runtime.php}
-                  </Badge>
-                  {h.runtime.node && (
-                    <Badge tone="neutral" size="sm">
-                      Node {h.runtime.node}
-                    </Badge>
-                  )}
-                  {h.versions?.coeur ? (
-                    <Badge tone="neutral" size="sm">
-                      {t.nom} {h.versions.coeur}
-                    </Badge>
-                  ) : null}
-                  <Badge tone="neutral" size="sm">
-                    {h.bases} base{h.bases > 1 ? 's' : ''}
-                  </Badge>
-                  {h.staging && (
-                    <Badge tone="violet" size="sm">
-                      Pré-production
-                    </Badge>
-                  )}
-                </div>
-
-                <dl className="mt-3.5 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-g-100 pt-3">
-                  <Meta
-                    cle="Pare-feu applicatif"
-                    valeur={h.securite.waf ? 'Actif' : 'Inactif'}
-                    ton={h.securite.waf ? 'ok' : 'warn'}
-                  />
-                  <Meta
-                    cle="Analyse antimalware"
-                    valeur={h.securite.scanMalware ? 'Quotidienne' : 'Désactivée'}
-                    ton={h.securite.scanMalware ? 'ok' : 'warn'}
-                  />
-                  <Meta
-                    cle="Certificat TLS"
-                    valeur={`${dateCourte(h.certificat.expire)}${h.certificat.auto ? ' · auto' : ''}`}
-                    ton="ok"
-                  />
-                  <Meta
-                    cle="Mises à jour du cœur"
-                    valeur={h.versions?.majAuto ? 'Automatiques' : 'Manuelles'}
-                    ton={h.versions?.majAuto ? 'ok' : 'warn'}
-                  />
-                </dl>
-
-                {majEnAttente > 0 && (
-                  <p className="mt-2.5 flex items-center gap-1.5 rounded-[6px] bg-warn-bg px-2.5 py-1.5 text-[11.5px] text-ink">
-                    <ShieldAlert size={12} className="shrink-0 text-warn" />
-                    {majEnAttente} extension{majEnAttente > 1 ? 's' : ''} à mettre à jour, dont une
-                    correction de sécurité
-                  </p>
-                )}
-
-                <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-g-100 pt-3.5">
-                  {t.admin && (
-                    <ButtonLink
-                      size="sm"
-                      variant="accent"
-                      external
-                      href={`https://${h.domaine}${t.admin}`}
-                      iconAfter={<ExternalLink size={12} />}
-                    >
-                      Ouvrir l’administration
+                  }
+                  sousTitre={`Serveur ${h.serveur.nom} · ${h.serveur.vcpu} vCPU · ${h.serveur.ramGo} Go · ${h.serveur.diskGo} Go · ${SITE_LABEL[h.serveur.site]} · ${h.serveur.serveurWeb} · PHP ${h.php.versionDefaut}`}
+                  actions={
+                    <ButtonLink href={`/app/web/${h.id}`} variant="secondary" size="sm">
+                      Gérer
                     </ButtonLink>
+                  }
+                />
+
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                  {/* Le serveur, parce que c'est lui qui plafonne tout le reste */}
+                  <div className="rounded-[8px] border border-g-300 bg-g-050 p-3">
+                    <MicroLabel className="flex items-center gap-1.5">
+                      <Server size={11} /> Serveur
+                    </MicroLabel>
+                    <div className="mt-2 space-y-2">
+                      <QuotaBar libelle="Processeur" utilise={h.serveur.chargeCpuPct} total={100} unite="%" compact seuil={85} />
+                      <QuotaBar libelle="Mémoire" utilise={h.serveur.ramUtiliseePct} total={100} unite="%" compact seuil={90} />
+                      <QuotaBar
+                        libelle="Disque"
+                        utilise={h.espaceUtiliseGo}
+                        total={h.espaceTotalGo}
+                        seuil={85}
+                        compact
+                        formateur={(v) => `${v.toFixed(1)} Go`}
+                      />
+                    </div>
+                    <p className="mt-2.5 font-mono text-[11px] text-g-500">
+                      {h.serveur.ip} · {h.serveur.os}
+                    </p>
+                  </div>
+
+                  {/* Les sites, un par sous-domaine */}
+                  <div className="lg:col-span-2">
+                    <MicroLabel className="flex items-center gap-1.5">
+                      <Globe size={11} /> Sites installés
+                    </MicroLabel>
+                    {sites.length === 0 ? (
+                      <p className="mt-2 text-[12.5px] text-g-500">
+                        Aucun site installé. Le serveur est prêt : installez WordPress, PrestaShop
+                        ou déposez vos fichiers par SFTP.
+                      </p>
+                    ) : (
+                      <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {sites.map((s) => {
+                          const surface = surfaceMarque(TEINTE_SITE[s.type] ?? '#4B2882')
+                          return (
+                            <li key={s.id}>
+                              <Link
+                                href={`/app/web/${h.id}?site=${s.id}`}
+                                className="flex items-start gap-2.5 rounded-[8px] border border-g-300 bg-white p-2.5 transition-colors hover:border-p-400 hover:bg-p-050"
+                              >
+                                <span
+                                  className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] text-[9.5px] font-bold"
+                                  style={{ background: surface.fond, color: surface.texte }}
+                                  aria-hidden
+                                >
+                                  {TYPE_SITE_LABEL[s.type].slice(0, 2).toUpperCase()}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate font-mono text-[12px] font-semibold text-ink">
+                                    {s.hote}
+                                  </span>
+                                  <span className="block text-[11px] text-g-500">
+                                    {TYPE_SITE_LABEL[s.type]}
+                                    {s.version ? ` ${s.version}` : ''} · PHP {s.phpVersion} ·{' '}
+                                    {num(s.visitesMois)} visites/mois
+                                  </span>
+                                </span>
+                                <span className="flex shrink-0 flex-col items-end gap-1">
+                                  {s.statut === 'installation' ? (
+                                    <Badge tone="info" size="sm" dot>
+                                      Installation
+                                    </Badge>
+                                  ) : s.ssl.etat === 'actif' ? (
+                                    <Badge tone="ok" size="sm">
+                                      TLS
+                                    </Badge>
+                                  ) : (
+                                    <Badge tone="warn" size="sm">
+                                      TLS en cours
+                                    </Badge>
+                                  )}
+                                  {(s.majEnAttente ?? 0) > 0 && (
+                                    <Badge tone="warn" size="sm">
+                                      {s.majEnAttente} maj
+                                    </Badge>
+                                  )}
+                                </span>
+                              </Link>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+
+                {/* Services partagés fixés au domaine */}
+                <div className="mt-4 border-t border-g-100 pt-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <MicroLabel className="flex items-center gap-1.5">
+                      <ShoppingBag size={11} /> Services partagés sur ce domaine
+                    </MicroLabel>
+                    <Link
+                      href="/app/web/services"
+                      className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+                    >
+                      Voir le catalogue partagé →
+                    </Link>
+                  </div>
+                  {partages.length === 0 ? (
+                    <p className="mt-2 text-[12px] text-g-500">
+                      Ni messagerie ni drive sur ce domaine pour l’instant.
+                    </p>
+                  ) : (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {partages.map((p) => (
+                        <span
+                          key={p.id}
+                          className="flex items-center gap-2 rounded-[6px] border border-g-300 bg-white px-2.5 py-1.5"
+                        >
+                          <span className="text-[12px] font-semibold text-ink">{p.nom}</span>
+                          <span className="font-mono text-[11px] text-g-500">{p.hote}</span>
+                          <span className="tnum text-[11px] text-g-700">
+                            {p.usage.utilise}/{p.usage.total} {p.usage.unite}
+                          </span>
+                          {p.sante === 'maj_disponible' && (
+                            <Badge tone="accent" size="sm">
+                              Mise à jour
+                            </Badge>
+                          )}
+                        </span>
+                      ))}
+                    </div>
                   )}
-                  <ButtonLink size="sm" variant="secondary" href={`/app/web/${h.id}`}>
-                    Gérer l’hébergement
-                  </ButtonLink>
-                  <ButtonLink
-                    size="sm"
-                    variant="ghost"
-                    external
-                    href={`https://${h.domaine}`}
-                    iconAfter={<ExternalLink size={11} />}
-                  >
-                    Voir le site
-                  </ButtonLink>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] text-g-500">
+                  <span className="flex items-center gap-1.5">
+                    <HardDrive size={11} />
+                    Dernière sauvegarde {dateHeure(h.sauvegarde.derniere)} · {h.sauvegarde.taille}
+                    {h.sauvegarde.immuable && ' · immuable'}
+                  </span>
+                  <span className={cn(h.sauvegarde.statut === 'ok' ? 'text-ok' : 'text-err')}>
+                    {h.sauvegarde.statut === 'ok' ? 'Sauvegarde conforme' : 'Dernière sauvegarde en échec'}
+                  </span>
                 </div>
               </Card>
             )
@@ -201,99 +260,48 @@ export default function Web() {
         </div>
       )}
 
+      <Callout ton="info" titre="Partagé ou dédié : comment choisir">
+        Sur un hébergement, tout partage le même serveur — c’est ce qui rend l’offre abordable, et
+        c’est aussi sa limite : un pic de trafic sur un site se ressent sur les autres. Quand une
+        application demande sa propre capacité, sa propre version de moteur ou son propre plan de
+        sauvegarde, elle relève d’un projet applicatif et non d’un hébergement.{' '}
+        <Link href="/app/modeles" className="font-semibold text-p-700 hover:text-m-600">
+          Voir la bibliothèque de modèles dédiés →
+        </Link>
+      </Callout>
+
       <Card>
         <CardHeader
-          titre="Dernières interventions du socle"
-          sousTitre="Ce que nous avons fait pour vous, sans que vous ayez à le demander."
+          titre="Ce que coûte un hébergement"
+          sousTitre="Prix mensuels hors taxes, en francs CFA. Le nom de domaine est facturé à l’année, séparément."
         />
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
-            {
-              quand: '2026-08-19T04:12:00Z',
-              site: 'blog.dba.africa',
-              quoi: 'Correctif de sécurité du cœur appliqué (6.6.1 → 6.6.2)',
-              detail: 'Snapshot pris avant, vérification du démarrage après. Aucune interruption mesurée.',
-              ton: 'ok' as const,
-            },
-            {
-              quand: '2026-08-18T22:40:00Z',
-              site: 'boutique.dba.africa',
-              quoi: '1 284 requêtes bloquées par le pare-feu applicatif',
-              detail: 'Tentatives d’injection sur le formulaire de recherche, depuis 42 adresses. Aucune n’a atteint la base.',
-              ton: 'warn' as const,
-            },
-            {
-              quand: '2026-08-18T03:00:00Z',
-              site: 'Tous les sites',
-              quoi: 'Sauvegarde quotidienne complète — fichiers et bases',
-              detail: 'Conservation 30 jours, copie hors site à Grand-Bassam.',
-              ton: 'ok' as const,
-            },
-            {
-              quand: '2026-08-15T11:22:00Z',
-              site: 'carrieres.dba.africa',
-              quoi: 'Certificat TLS renouvelé automatiquement',
-              detail: 'Nouvelle échéance au 30 septembre 2026. Aucune action de votre part.',
-              ton: 'ok' as const,
-            },
-          ].map((e) => (
+            { nom: 'Démarrage', specs: '2 vCPU · 4 Go · 40 Go · 1 site', prix: 4500 },
+            { nom: 'Pro', specs: '2 vCPU · 4 Go · 80 Go · 5 sites', prix: 12000, recommande: true },
+            { nom: 'Agence', specs: '4 vCPU · 8 Go · 200 Go · 25 sites', prix: 38000 },
+          ].map((p) => (
             <div
-              key={e.quand}
-              className="flex flex-wrap items-start justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
+              key={p.nom}
+              className={cn(
+                'rounded-[8px] border-2 p-3',
+                p.recommande ? 'border-p-700 bg-p-050' : 'border-g-300 bg-white',
+              )}
             >
-              <span className="min-w-0">
-                <span className="block text-[12.5px] font-semibold text-ink">{e.quoi}</span>
-                <span className="block text-[11.5px] leading-relaxed text-g-500">{e.detail}</span>
-              </span>
-              <span className="flex shrink-0 flex-col items-end gap-1">
-                <Badge tone={e.ton} size="sm">
-                  {e.site}
-                </Badge>
-                <span className="text-[10.5px] text-g-500">{relatif(e.quand)}</span>
-              </span>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[13px] font-bold text-ink">{p.nom}</p>
+                {p.recommande && (
+                  <Badge tone="violet" size="sm">
+                    Le plus pris
+                  </Badge>
+                )}
+              </div>
+              <p className="mt-1 text-[11.5px] text-g-700">{p.specs}</p>
+              <p className="tnum mt-2 text-[16px] font-bold text-p-700">{money(p.prix)}<span className="text-[11px] font-semibold text-g-500">/mois</span></p>
             </div>
           ))}
         </div>
       </Card>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Callout ton="violet" titre="Nous ne construisons pas d’éditeur de contenu">
-          Écrire un article, gérer un catalogue produits, régler un thème : ces écrans existent déjà
-          dans WordPress et PrestaShop, et ils sont bien meilleurs que ce que nous pourrions faire.
-          Notre travail s’arrête à la porte : version du cœur, moteur PHP, base, certificat,
-          pare-feu, sauvegardes, pré-production. Le bouton « Ouvrir l’administration » vous connecte
-          directement, sans ressaisir de mot de passe.
-        </Callout>
-        <Callout ton="info" titre="La pré-production, pour ne rien casser en direct">
-          Un clic clone le site — fichiers, base, configuration — dans un environnement isolé. Vous y
-          testez une mise à jour, une extension, un changement de thème. Quand c’est bon, la remise
-          en production ne copie que ce qui a changé, et un snapshot est pris juste avant.
-        </Callout>
-      </div>
-    </div>
-  )
-}
-
-function Meta({
-  cle,
-  valeur,
-  ton = 'neutral',
-}: {
-  cle: string
-  valeur: string
-  ton?: 'neutral' | 'ok' | 'warn'
-}) {
-  return (
-    <div className="min-w-0">
-      <dt className="type-micro text-g-500">{cle}</dt>
-      <dd
-        className={cn(
-          'mt-0.5 truncate text-[12px] font-semibold',
-          ton === 'ok' ? 'text-ok' : ton === 'warn' ? 'text-warn' : 'text-ink',
-        )}
-      >
-        {valeur}
-      </dd>
     </div>
   )
 }

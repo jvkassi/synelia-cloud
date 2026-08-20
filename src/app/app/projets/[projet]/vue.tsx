@@ -140,7 +140,7 @@ export function VueProjet({ id }: { id: string }) {
               titre={`Aucun service en ${env}`}
               phrase="Un environnement vide ne facture rien. Déployez une application, une base ou une tâche planifiée pour le peupler."
               icone={<Rocket size={22} />}
-              action={{ libelle: 'Déployer une application', href: '/app/apps/new' }}
+              action={{ libelle: 'Déployer une application', href: '/app/projets/nouveau' }}
             />
           ) : (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
@@ -287,7 +287,7 @@ function TiroirCreation({
             Annuler
           </Button>
           {type === 'application' || type === 'statique' ? (
-            <ButtonLink href="/app/apps/new">Ouvrir l’assistant complet</ButtonLink>
+            <ButtonLink href="/app/projets/nouveau">Ouvrir l’assistant complet</ButtonLink>
           ) : (
             <Button onClick={onClose}>Créer le service</Button>
           )}

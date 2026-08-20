@@ -4,7 +4,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { GitCommitHorizontal, RotateCcw, ShieldCheck } from 'lucide-react'
 import { dateHeure, duree, relatif } from '@/lib/format'
-import { APPLICATIONS, DEPLOIEMENTS, ENVIRONNEMENTS, appById, envById } from '@/lib/mock'
+import { APPLICATIONS, DEPLOIEMENTS, ENVIRONNEMENTS, appById, envById,
+  hrefDuService,
+} from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -162,7 +164,7 @@ export default function Deploiements() {
                 rendu: (d) => (
                   <span className="block min-w-0">
                     <Link
-                      href={`/app/apps/${d.appId}`}
+                      href={hrefDuService(d.appId)}
                       className="block truncate font-mono text-[12.5px] font-semibold text-ink hover:text-p-700"
                     >
                       {appById(d.appId)?.nom ?? d.appId}
@@ -298,7 +300,7 @@ export default function Deploiements() {
             vide={{
               titre: 'Aucun déploiement',
               phrase: 'L’historique se remplit dès votre premier déploiement.',
-              action: { libelle: 'Déployer une application', href: '/app/apps/new' },
+              action: { libelle: 'Déployer une application', href: '/app/projets/nouveau' },
             }}
           />
         </div>

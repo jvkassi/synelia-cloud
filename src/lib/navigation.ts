@@ -35,6 +35,7 @@ export const UNIVERS_CLIENT: UniversNav[] = [
     sections: [
       { nom: 'Tableau de bord', href: '/app', aussi: ['/app/taches'] },
       { nom: 'Supervision', href: '/app/observabilite' },
+      { nom: "Lanceur d'applications", href: '/app/lanceur' },
       { nom: 'Facturation', href: '/app/facturation' },
       { nom: 'Support & SLA', href: '/app/support' },
       { nom: 'Documentation', href: '/app/docs' },
@@ -53,15 +54,18 @@ export const UNIVERS_CLIENT: UniversNav[] = [
       { nom: 'Stockage bloc', href: '/app/stockage' },
       { nom: 'Stockage objet S3', href: '/app/objet' },
       { nom: 'Bases managées', href: '/app/bases' },
+      // Les sauvegardes se règlent aussi ressource par ressource ; cette
+      // section porte les plans réutilisables, la restauration granulaire, la
+      // reprise d'activité et le tableau de conformité qu'on montre à un auditeur.
+      { nom: 'Sauvegardes & PRA', href: '/app/sauvegarde', aussi: ['/app/pra'] },
     ],
   },
   {
     id: 'applications',
     nom: 'Applications',
     sections: [
-      { nom: 'Projets', href: '/app/projets' },
-      { nom: 'Applications', href: '/app/apps' },
-      { nom: 'Domaines & routage', href: '/app/routage' },
+      { nom: 'Projets', href: '/app/projets', aussi: ['/app/routage'] },
+      { nom: 'Bibliothèque de modèles', href: '/app/modeles' },
       { nom: 'Déploiements', href: '/app/deploiements' },
       { nom: "Registre d'images", href: '/app/registre' },
     ],
@@ -70,26 +74,10 @@ export const UNIVERS_CLIENT: UniversNav[] = [
     id: 'web',
     nom: 'Web Cloud',
     sections: [
-      { nom: 'Hébergements web', href: '/app/web' },
+      { nom: 'Hébergements', href: '/app/web' },
+      { nom: 'Services partagés', href: '/app/web/services' },
       { nom: 'Domaines & DNS', href: '/app/domaines', aussi: ['/app/dns'] },
       { nom: 'Relais SMTP', href: '/app/smtp' },
-    ],
-  },
-  {
-    id: 'marketplace',
-    nom: 'Marketplace',
-    sections: [
-      { nom: 'Catalogue', href: '/app/marketplace' },
-      { nom: 'Mes services', href: '/app/services' },
-      { nom: "Lanceur d'applications", href: '/app/lanceur' },
-    ],
-  },
-  {
-    id: 'protection',
-    nom: 'Protection',
-    sections: [
-      { nom: 'Sauvegardes', href: '/app/sauvegarde' },
-      { nom: 'Plan de reprise (PRA)', href: '/app/pra' },
     ],
   },
   {

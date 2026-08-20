@@ -1,10 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { Camera, Plus, Power, RotateCw, Shield, Tag } from 'lucide-react'
+import { Camera, Plus, Power, RotateCw, Shield, Tag, Layers} from 'lucide-react'
 import { num, relatif } from '@/lib/format'
 import { SITE_COURT, type VM } from '@/lib/types'
-import { ESPACES, VMS } from '@/lib/mock'
+import { ESPACES, VMS,
+  hrefDuService,
+} from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -87,7 +89,7 @@ export default function ListeVms() {
       rendu: (v) =>
         v.applicationId ? (
           <Link
-            href={`/app/apps/${v.applicationId}`}
+            href={hrefDuService(v.applicationId)}
             className="text-[12.5px] text-p-700 hover:text-m-600"
           >
             {v.applicationNom}
@@ -153,9 +155,14 @@ export default function ListeVms() {
         sousTitre={`Machines de l’espace ${espace.code} (${SITE_COURT[espace.site]}). Changez d’espace depuis le sélecteur de contexte, en haut à droite.`}
         actions={
           <GatedAction autorise={autorise('vm.create_delete')} message={refus('vm.create_delete')}>
-            <ButtonLink href="/app/vms/new" iconBefore={<Plus size={14} />}>
-              Créer des machines
-            </ButtonLink>
+            <>
+              <ButtonLink href="/app/vms/composer" variant="secondary" iconBefore={<Layers size={14} />}>
+                Composer un lot
+              </ButtonLink>
+              <ButtonLink href="/app/vms/new" iconBefore={<Plus size={14} />}>
+                Créer des machines
+              </ButtonLink>
+            </>
           </GatedAction>
         }
       />

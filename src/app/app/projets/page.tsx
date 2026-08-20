@@ -279,7 +279,7 @@ export default function Projets() {
               L’assistant de création propose aussi un canvas : on pose les briques, on relie les
               dépendances, la plateforme génère le tout.
             </p>
-            <ButtonLink href="/app/apps/new" variant="ghost" size="sm" className="mt-2 self-start">
+            <ButtonLink href="/app/projets/nouveau" variant="ghost" size="sm" className="mt-2 self-start">
               Ouvrir l’assistant
               <Boxes size={13} />
             </ButtonLink>

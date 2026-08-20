@@ -287,7 +287,7 @@ export default function Securite() {
                     t: 'Services managés raccordés',
                     etat: 'warn' as const,
                     d: 'Un service utilise encore ses propres mots de passe. Tant que c’est le cas, un départ n’en coupe pas l’accès automatiquement.',
-                    action: { l: 'Voir les services', h: '/app/services' },
+                    action: { l: 'Voir les projets', h: '/app/projets' },
                   },
                   {
                     t: 'Aucune adresse IP publique sans groupe de sécurité',

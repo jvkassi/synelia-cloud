@@ -547,6 +547,15 @@ export interface ServiceProjet {
   derniereMaj: string
   coutMensuel: number
 
+  /**
+   * Modèle de la bibliothèque dont ce service est issu. Il apporte avec lui sa
+   * configuration propre, ses versions qualifiées et son plan de sauvegarde :
+   * un Odoo ne se règle pas comme un Zimbra.
+   */
+  modeleSlug?: string
+  /** Sièges attribués, pour les modèles qui se comptent par utilisateur. */
+  sieges?: { attribues: number; souscrits: number }
+
   /** Applications, sites statiques et workers : l'entrée qui porte les déploiements. */
   appId?: string
   source?: { type: 'git' | 'image'; ref: string; branche?: string }
@@ -730,21 +739,152 @@ export interface Seat {
   derniereActivite?: string
 }
 
+// ─── Web Cloud — hébergement mutualisé (§6.8) ─────────────────────────
+
+/**
+ * Un hébergement, c'est un domaine et un serveur, liés strictement.
+ *
+ * Le serveur porte Apache, PHP et un moteur de base : tout ce qui est installé
+ * dessus partage la même machine, et c'est cette mise en commun qui rend
+ * l'offre abordable. Plusieurs sites cohabitent, chacun sur son sous-domaine.
+ * Le domaine peut n'être acheté que plus tard : l'hébergement démarre alors
+ * sur un nom provisoire, pour que la mise en ligne ne dépende pas d'un achat.
+ */
 export interface WebHosting {
   id: string
   orgId: string
-  type: 'mutualise' | 'wordpress' | 'prestashop'
-  domaine: string
+  /** `null` tant que le client n'a pas acheté ou transféré son nom. */
+  domaine: string | null
+  domaineProvisoire: string
   palier: string
-  runtime: { php?: string; node?: string }
-  staging: boolean
+  /** Un domaine est attaché à un serveur et à un seul. */
+  serveur: {
+    nom: string
+    vcpu: number
+    ramGo: number
+    diskGo: number
+    ip: string
+    ipv6: string
+    site: Site
+    os: string
+    serveurWeb: string
+    statut: 'en_ligne' | 'maintenance' | 'redemarrage'
+    chargeCpuPct: number
+    ramUtiliseePct: number
+    uptimeJours: number
+  }
+  php: {
+    versionDefaut: string
+    versionsDisponibles: string[]
+    extensions: Array<{ nom: string; active: boolean; requisePar?: string }>
+    limites: {
+      memoryLimitMo: number
+      uploadMaxMo: number
+      maxExecutionS: number
+      opcache: boolean
+    }
+  }
+  /** Protocoles de transfert ouverts sur le serveur, activables séparément. */
+  acces: { ftp: boolean; sftp: boolean; ftps: boolean; ssh: boolean; portSsh: number }
   espaceUtiliseGo: number
   espaceTotalGo: number
-  versions?: { coeur: string; majAuto: boolean; extensionsAMettreAJour?: number }
-  securite: { waf: boolean; scanMalware: boolean; bruteForce?: boolean }
+  sauvegarde: {
+    frequence: 'quotidienne' | 'bihebdomadaire' | 'hebdomadaire'
+    heure: string
+    retentionJours: number
+    destination: string
+    immuable: boolean
+    derniere: string
+    taille: string
+    statut: 'ok' | 'echec' | 'en_cours'
+  }
   statut: 'en_ligne' | 'maintenance' | 'suspendu'
-  certificat: { expire: string; auto: boolean }
-  bases: number
+  cree: string
+}
+
+export type TypeSiteWeb = 'wordpress' | 'prestashop' | 'php' | 'statique' | 'laravel'
+
+/** Un site installé sur un hébergement, servi par son propre sous-domaine. */
+export interface SiteWeb {
+  id: string
+  hebergementId: string
+  hote: string
+  racine: string
+  type: TypeSiteWeb
+  version?: string
+  phpVersion: string
+  baseId?: string
+  ssl: { etat: 'actif' | 'en_emission' | 'expire' | 'aucun'; emetteur?: string; expire?: string }
+  espaceMo: number
+  visitesMois: number
+  preproduction?: { actif: boolean; hote: string; derniereSync?: string }
+  majEnAttente?: number
+  securite: { waf: boolean; bruteForce: boolean; scanMalware: boolean }
+  statut: 'en_ligne' | 'maintenance' | 'suspendu' | 'installation'
+}
+
+/** Base hébergée sur le serveur de l'hébergement, pas sur une offre managée. */
+export interface BaseHebergement {
+  id: string
+  hebergementId: string
+  nom: string
+  moteur: 'mariadb' | 'postgresql'
+  version: string
+  tailleMo: number
+  jeuCaracteres: string
+  utilisateurs: Array<{ nom: string; droits: 'tous' | 'lecture' | 'lecture_ecriture'; hote: string }>
+  siteId?: string
+}
+
+export interface CompteFichiers {
+  id: string
+  hebergementId: string
+  utilisateur: string
+  protocoles: Array<'ftp' | 'sftp' | 'ftps'>
+  racine: string
+  quotaGo: number | null
+  utiliseGo: number
+  clesSsh: number
+  derniereConnexion?: string
+  statut: 'actif' | 'suspendu'
+}
+
+export interface TachePlanifieeWeb {
+  id: string
+  hebergementId: string
+  libelle: string
+  expression: string
+  lisible: string
+  commande: string
+  siteId?: string
+  derniereExecution: string
+  dureeS: number
+  statut: 'ok' | 'echec'
+  prochaine: string
+  actif: boolean
+}
+
+/**
+ * Service partagé rattaché au domaine de l'hébergement — messagerie, drive.
+ *
+ * « Partagé » a un sens précis ici : l'instance est mutualisée entre plusieurs
+ * clients et le service est fixé au domaine, pas à un projet. On le configure
+ * depuis la fiche de l'hébergement ; on l'utilise dans son interface d'origine.
+ */
+export interface ServicePartage {
+  id: string
+  hebergementId: string
+  /** Slug du catalogue : donne accès au fichier de configuration du service. */
+  slug: string
+  nom: string
+  solution: string
+  hote: string
+  usage: { libelle: string; utilise: number; total: number; unite: string }
+  version: string
+  sante: 'ok' | 'degrade' | 'maintenance' | 'maj_disponible'
+  derniereSauvegarde: string
+  urlOuverture: string
+  actif: boolean
 }
 
 export interface DnsZone {

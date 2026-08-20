@@ -1,58 +1,11 @@
 /**
- * Données de démonstration — hébergement web, domaines, DNS, relais SMTP.
+ * Données de démonstration — domaines, DNS, relais SMTP.
+ *
+ * L'hébergement lui-même vit dans `hebergement.ts` : un domaine et son serveur
+ * forment une entité assez riche pour tenir dans son propre fichier.
  */
 
-import type { Domaine, DnsZone, WebHosting } from '../types'
-
-export const HEBERGEMENTS: WebHosting[] = [
-  {
-    id: 'web-1',
-    orgId: 'org-dba',
-    type: 'prestashop',
-    domaine: 'boutique.dba.africa',
-    palier: 'Business',
-    runtime: { php: '8.2' },
-    staging: true,
-    espaceUtiliseGo: 28.4,
-    espaceTotalGo: 50,
-    versions: { coeur: '8.1.7', majAuto: false },
-    securite: { waf: true, scanMalware: true, bruteForce: true },
-    statut: 'en_ligne',
-    certificat: { expire: '2026-11-02', auto: true },
-    bases: 2,
-  },
-  {
-    id: 'web-2',
-    orgId: 'org-dba',
-    type: 'wordpress',
-    domaine: 'blog.dba.africa',
-    palier: 'Business',
-    runtime: { php: '8.3' },
-    staging: false,
-    espaceUtiliseGo: 12.1,
-    espaceTotalGo: 100,
-    versions: { coeur: '6.6.2', majAuto: true, extensionsAMettreAJour: 3 },
-    securite: { waf: true, scanMalware: true, bruteForce: true },
-    statut: 'en_ligne',
-    certificat: { expire: '2026-10-19', auto: true },
-    bases: 1,
-  },
-  {
-    id: 'web-3',
-    orgId: 'org-dba',
-    type: 'mutualise',
-    domaine: 'carrieres.dba.africa',
-    palier: 'Essentiel',
-    runtime: { php: '8.1', node: '20' },
-    staging: false,
-    espaceUtiliseGo: 1.8,
-    espaceTotalGo: 10,
-    securite: { waf: false, scanMalware: false },
-    statut: 'en_ligne',
-    certificat: { expire: '2026-09-30', auto: true },
-    bases: 1,
-  },
-]
+import type { Domaine, DnsZone } from '../types'
 
 export const DOMAINES: Domaine[] = [
   { id: 'dom-1', orgId: 'org-dba', nom: 'dba.africa', extension: '.africa', expiration: '2027-03-11', renouvellementAuto: true, whoisProtege: true, verrouTransfert: true, zoneId: 'zone-1' },
@@ -177,7 +130,6 @@ export const SMTP = {
   ],
 }
 
-export const hebergementById = (id: string) => HEBERGEMENTS.find((h) => h.id === id)
 export const zoneById = (id: string) =>
   ZONES_DNS.find((z) => z.id === id || z.domaine === id)
 export const domaineById = (id: string) => DOMAINES.find((d) => d.id === id)

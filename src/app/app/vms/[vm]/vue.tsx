@@ -24,6 +24,7 @@ import {
   VMS,
   VOLUMES,
   espaceById,
+  hrefDuService,
 } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, IconButton } from '@/components/ui/button'
@@ -81,7 +82,7 @@ export function VueVm({ id }: { id: string }) {
             )}
             {vm.applicationId && (
               <Link
-                href={`/app/apps/${vm.applicationId}`}
+                href={hrefDuService(vm.applicationId)}
                 className="text-[12px] font-semibold text-p-700 hover:text-m-600"
               >
                 {vm.applicationNom} →

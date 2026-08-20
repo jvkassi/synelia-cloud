@@ -5,8 +5,9 @@ import type { Metadata } from 'next'
  * n'existe que pour nommer l'onglet du navigateur — il n'ajoute aucun rendu.
  */
 export const metadata: Metadata = {
-  title: 'Marketplace',
-  description: 'Solutions à souscrire, opérées par Synelia et ouvertes depuis le portail.',
+  title: 'Composer un lot de serveurs',
+  description:
+    'Décrire une architecture par glisser-déposer, puis livrer toutes les machines d’un coup.',
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {

@@ -6,10 +6,12 @@ import { Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { APPLICATIONS } from '@/lib/mock/paas'
 import { ESPACES, VMS, K8S_CLUSTERS, LOAD_BALANCERS, BUCKETS } from '@/lib/mock/iaas'
-import { SERVICES_MANAGES } from '@/lib/mock/marketplace'
+import { SERVICES_PROJET, projetDeLApp } from '@/lib/mock/projets'
+import { MODELES } from '@/lib/mock/modeles'
 import { FACTURES, TICKETS_PLATEFORME } from '@/lib/mock/commerce'
 import { ORGANISATIONS } from '@/lib/mock/orgs'
-import { HEBERGEMENTS, DOMAINES } from '@/lib/mock/web'
+import { DOMAINES } from '@/lib/mock/web'
+import { HEBERGEMENTS, SERVICES_PARTAGES, nomServi } from '@/lib/mock/hebergement'
 import { BACKENDS } from '@/lib/mock/iaas'
 
 interface Entree {
@@ -57,26 +59,33 @@ function entreesClient(): Entree[] {
       href: `/app/objet/${b.id}`,
       meta: b.region,
     })),
-    ...APPLICATIONS.map((a) => ({
-      id: a.id,
-      label: a.nom,
-      categorie: 'Applications',
-      href: `/app/apps/${a.id}`,
-      meta: a.domainePrincipal,
-    })),
-    ...SERVICES_MANAGES.map((s) => ({
+    ...SERVICES_PROJET.map((s) => ({
       id: s.id,
       label: s.nom,
-      categorie: 'Services managés',
-      href: `/app/services/${s.id}`,
-      meta: s.domaine,
+      categorie: 'Services applicatifs',
+      href: `/app/projets/${s.projetId}/${s.id}`,
+      meta: `${s.environnement} · ${s.emplacement.site}`,
+    })),
+    ...MODELES.map((m) => ({
+      id: m.slug,
+      label: m.nom,
+      categorie: 'Modèles à déployer',
+      href: `/app/modeles/${m.slug}`,
+      meta: `${m.solution} ${m.version}`,
     })),
     ...HEBERGEMENTS.map((h) => ({
       id: h.id,
-      label: h.domaine,
+      label: nomServi(h),
       categorie: 'Hébergements web',
       href: `/app/web/${h.id}`,
-      meta: h.type,
+      meta: `${h.serveur.nom} · ${h.palier}`,
+    })),
+    ...SERVICES_PARTAGES.map((sp) => ({
+      id: sp.id,
+      label: `${sp.nom} — ${sp.hote}`,
+      categorie: 'Services partagés',
+      href: `/app/web/${sp.hebergementId}`,
+      meta: sp.solution,
     })),
     ...DOMAINES.map((d) => ({
       id: d.id,

@@ -15,6 +15,7 @@ import {
   REGLES_ALERTES,
   VMS,
   vmsDeLEspace,
+  hrefDuService,
 } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
@@ -267,7 +268,7 @@ export default function Observabilite() {
                       <tr key={e.id} className="border-b border-g-100 last:border-0">
                         <td className="px-3 py-2.5">
                           <Link
-                            href={`/app/apps/${e.appId}`}
+                            href={hrefDuService(e.appId)}
                             className="font-mono text-[12px] font-semibold text-ink hover:text-p-700"
                           >
                             {app?.nom} / {e.nom}

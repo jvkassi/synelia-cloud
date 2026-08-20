@@ -122,7 +122,7 @@ export default function NouvelleApplication() {
           <Button
             variant="ghost"
             onClick={() => {
-              if (etape === 1) return router.push('/app/apps')
+              if (etape === 1) return router.push('/app/projets')
               setEtape(source === 'git' || etape !== 3 ? etape - 1 : 1)
             }}
           >
@@ -143,7 +143,7 @@ export default function NouvelleApplication() {
                   titre: `Création de ${nomApp} lancée`,
                   detail: 'Build, analyse DevSecOps, provisioning puis déploiement. Suivi dans le centre de tâches.',
                 })
-                router.push('/app/apps')
+                router.push('/app/projets')
               }}
             >
               Créer et déployer

@@ -108,6 +108,24 @@ export const PROJETS: Projet[] = [
     ],
   },
   {
+    id: 'prj-solutions',
+    nom: 'Solutions métier',
+    description:
+      'Les solutions déployées depuis la bibliothèque de modèles : messagerie dédiée, ERP, GED. Chacune est une instance isolée, avec ses ressources et son plan de sauvegarde.',
+    espaceId: 'ec-dba-01',
+    cree: '2026-02-04',
+    environnements: ['Production'],
+    variables: [
+      {
+        cle: 'SMTP_RELAY',
+        valeur: 'smtp.synelia.cloud',
+        secret: false,
+        portee: 'runtime',
+        environnements: ['Production'],
+      },
+    ],
+  },
+  {
     id: 'prj-outillage',
     nom: 'Outillage interne',
     description:
@@ -400,6 +418,70 @@ export const SERVICES_PROJET: ServiceProjet[] = [
     coutMensuel: 26400,
   },
   {
+    id: 'svc-sol-mail',
+    projetId: 'prj-solutions',
+    nom: 'messagerie',
+    type: 'application',
+    environnement: 'Production',
+    statut: 'running',
+    modeleSlug: 'zimbra',
+    sieges: { attribues: 128, souscrits: 150 },
+    source: { type: 'image', ref: 'synelia/zimbra:10.1.4' },
+    portConteneur: 443,
+    ressources: { cpu: 4, ramMo: 16384, diskGo: 500 },
+    emplacement: { site: 'ABJ', backend: 'OS-GRA-02', namespace: 'prj-solutions-prod' },
+    derniereMaj: '2026-07-22T22:14:00Z',
+    coutMensuel: 78000,
+    sauvegarde: {
+      plan: 'Messagerie — quotidienne immuable',
+      cron: '0 1 * * *',
+      destination: 'Bucket immuable — Grand-Bassam',
+      dernier: '2026-08-19T01:04:00Z',
+      retentionJours: 30,
+      taille: '284 Go',
+    },
+  },
+  {
+    id: 'svc-sol-erp',
+    projetId: 'prj-solutions',
+    nom: 'erp',
+    type: 'application',
+    environnement: 'Production',
+    statut: 'running',
+    modeleSlug: 'odoo',
+    sieges: { attribues: 6, souscrits: 10 },
+    source: { type: 'image', ref: 'synelia/odoo:18.0' },
+    portConteneur: 8069,
+    ressources: { cpu: 4, ramMo: 8192, diskGo: 200 },
+    emplacement: { site: 'ABJ', backend: 'OS-GRA-02', namespace: 'prj-solutions-prod' },
+    derniereMaj: '2026-08-02T23:41:00Z',
+    coutMensuel: 96000,
+    sauvegarde: {
+      plan: 'ERP — quotidienne immuable',
+      cron: '30 1 * * *',
+      destination: 'Bucket immuable — Grand-Bassam',
+      dernier: '2026-08-19T01:34:00Z',
+      retentionJours: 90,
+      taille: '41 Go',
+    },
+  },
+  {
+    id: 'svc-sol-ged',
+    projetId: 'prj-solutions',
+    nom: 'ged',
+    type: 'application',
+    environnement: 'Production',
+    statut: 'building',
+    modeleSlug: 'mayan',
+    sieges: { attribues: 0, souscrits: 25 },
+    source: { type: 'image', ref: 'synelia/mayan:4.8.3' },
+    portConteneur: 8000,
+    ressources: { cpu: 4, ramMo: 8192, diskGo: 500 },
+    emplacement: { site: 'GBM', backend: 'PVE-PAR-01', namespace: 'prj-solutions-prod' },
+    derniereMaj: '2026-08-19T14:52:00Z',
+    coutMensuel: 68000,
+  },
+  {
     id: 'svc-outil-staging',
     projetId: 'prj-outillage',
     nom: 'bac-a-sable',
@@ -611,6 +693,19 @@ export const domainesDuService = (serviceId: string) =>
 
 /** Service applicatif rattaché à une entrée APPLICATIONS, pour les liens croisés. */
 export const serviceDeLApp = (appId: string) => SERVICES_PROJET.find((s) => s.appId === appId)
+
+/**
+ * Adresse de la fiche d'un service à partir de l'identifiant d'application.
+ *
+ * Les machines, les déploiements et la supervision désignent encore une
+ * application par son identifiant historique ; la maille d'affichage est
+ * désormais le service dans son projet.
+ */
+export const hrefDuService = (appId: string | undefined): string => {
+  if (!appId) return '/app/projets'
+  const service = SERVICES_PROJET.find((s) => s.appId === appId)
+  return service ? `/app/projets/${service.projetId}/${service.id}` : '/app/projets'
+}
 
 export const projetDeLApp = (appId: string) => {
   const svc = serviceDeLApp(appId)

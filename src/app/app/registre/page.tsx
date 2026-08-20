@@ -370,7 +370,7 @@ export default function Registre() {
                 <EmptyState
                   titre="Étiquettes non chargées"
                   phrase="Le détail des étiquettes de ce dépôt est disponible depuis la page de l’application qui le produit."
-                  action={{ libelle: 'Voir les applications', href: '/app/apps' }}
+                  action={{ libelle: 'Voir les projets', href: '/app/projets' }}
                 />
               ) : (
                 <div className="overflow-x-auto rounded-[8px] border border-g-300">

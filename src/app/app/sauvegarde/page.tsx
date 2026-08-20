@@ -1,18 +1,21 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { Download, FileDown, Plus, RotateCcw, Shield, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateCourte, dateHeure, dureeMin, goHumain, num, pct } from '@/lib/format'
+import { SITE_COURT } from '@/lib/types'
 import type { BackupPlan, ConformiteLigne, RestorePoint } from '@/lib/types'
-import { BACKUP_PLANS, BUCKETS, CONFORMITE, RESTORE_POINTS, VMS } from '@/lib/mock'
+import { BACKUP_PLANS, BUCKETS, CONFORMITE, DR_PLANS, RESTORE_POINTS, VMS } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
-import { Button, IconButton } from '@/components/ui/button'
+import { Button, ButtonLink, IconButton } from '@/components/ui/button'
 import { Checkbox, Field, Input, Radio, Select, Switch } from '@/components/ui/field'
 import { GatedAction, Tabs } from '@/components/ui/display'
 import { Drawer } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
+import { RpoRtoGauge } from '@/components/business/infra'
 import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { Stepper } from '@/components/composition/flow'
 import { Regle321 } from '@/components/business/infra'
@@ -23,6 +26,7 @@ const ONGLETS = [
   { id: 'points', label: 'Points de restauration' },
   { id: 'restauration', label: 'Restauration' },
   { id: 'conformite', label: 'Conformité' },
+  { id: 'reprise', label: 'Plans de reprise' },
 ]
 
 export default function Sauvegarde() {
@@ -72,6 +76,7 @@ export default function Sauvegarde() {
       {onglet === 'points' && <OngletPoints />}
       {onglet === 'restauration' && <AssistantRestauration />}
       {onglet === 'conformite' && <OngletConformite />}
+      {onglet === 'reprise' && <OngletReprise />}
     </div>
   )
 }
@@ -1015,6 +1020,86 @@ function Petit({ cle, valeur }: { cle: string; valeur: string }) {
     <div className="flex items-baseline justify-between gap-2">
       <dt className="shrink-0 text-[11.5px] text-g-500">{cle}</dt>
       <dd className="truncate text-right text-[11.5px] font-semibold text-ink">{valeur}</dd>
+    </div>
+  )
+}
+
+/**
+ * Plans de reprise, en accès depuis les sauvegardes : les deux répondent à la
+ * même question — que se passe-t-il quand on perd quelque chose — mais à deux
+ * échelles, le fichier et le site.
+ */
+function OngletReprise() {
+  return (
+    <div className="space-y-4">
+      <Callout ton="info" titre="Sauvegarde et reprise ne se remplacent pas">
+        Une sauvegarde restaure un état passé, en quelques minutes à quelques heures. Un plan de
+        reprise redémarre tout un périmètre sur l’autre site, dans un ordre défini, avec un
+        engagement de délai. Le premier couvre l’erreur, le second couvre la perte du site.
+      </Callout>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {DR_PLANS.map((p) => {
+          const dernier = p.exercices[0]
+          return (
+            <Card key={p.id}>
+              <CardHeader
+                titre={
+                  <span className="flex flex-wrap items-center gap-2.5">
+                    <Link
+                      href={`/app/pra/${p.id}`}
+                      className="font-mono text-[14px] font-bold text-ink hover:text-p-700"
+                    >
+                      {p.nom}
+                    </Link>
+                    <Badge
+                      tone={
+                        p.statut === 'operationnel'
+                          ? 'ok'
+                          : p.statut === 'degrade'
+                            ? 'warn'
+                            : 'err'
+                      }
+                      size="sm"
+                      dot
+                    >
+                      {p.statut === 'operationnel'
+                        ? 'Opérationnel'
+                        : p.statut === 'degrade'
+                          ? 'Dégradé'
+                          : 'Jamais testé'}
+                    </Badge>
+                  </span>
+                }
+                sousTitre={`${SITE_COURT[p.siteSource]} → ${SITE_COURT[p.siteRepli]} · ${p.groupes.length} groupes de démarrage · réplication ${p.replication.mode === 'continu' ? 'continue' : 'planifiée'}`}
+                actions={
+                  <ButtonLink href={`/app/pra/${p.id}`} variant="secondary" size="sm">
+                    Ouvrir le plan
+                  </ButtonLink>
+                }
+              />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <RpoRtoGauge
+                  libelle="RPO — perte de données admise"
+                  cibleMin={p.rpoCibleMin}
+                  constateMin={p.rpoConstateMin}
+                />
+                <RpoRtoGauge
+                  libelle="RTO — délai de remise en service"
+                  cibleMin={p.rtoCibleMin}
+                  constateMin={p.rtoConstateMin}
+                />
+              </div>
+              {dernier && (
+                <p className="mt-3 border-t border-g-100 pt-2.5 text-[11.5px] text-g-500">
+                  Dernier exercice {dernier.type === 'test' ? 'de test' : 'réel'} le {dernier.date} —{' '}
+                  {dernier.succes ? 'réussi' : 'échoué'}, RTO constaté {dernier.rtoConstateMin} min.
+                </p>
+              )}
+            </Card>
+          )
+        })}
+      </div>
     </div>
   )
 }

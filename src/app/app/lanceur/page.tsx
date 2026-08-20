@@ -71,7 +71,7 @@ export default function Lanceur() {
         <EmptyState
           titre="Aucun siège ne vous a encore été attribué"
           phrase="Un siège vous donne accès à un service managé. Demandez à votre administrateur d’organisation de vous en attribuer, ou parcourez le catalogue pour découvrir ce qui est disponible."
-          action={{ libelle: 'Parcourir le marketplace', href: '/app/marketplace' }}
+          action={{ libelle: 'Parcourir les modèles', href: '/app/modeles' }}
           actionSecondaire={{ libelle: 'Contacter le support', href: '/app/support' }}
         />
       ) : (

@@ -19,6 +19,7 @@ import {
   userById,
   vmsDeLEspace,
   volumesDeLEspace,
+  hrefDuService,
 } from '@/lib/mock'
 import { ROLE_LABEL } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -382,7 +383,7 @@ export function VueEspace({ id }: { id: string }) {
                           </td>
                           <td className="px-3 py-2.5">
                             <Link
-                              href={`/app/apps/${v.applicationId}`}
+                              href={hrefDuService(v.applicationId)}
                               className="text-[12.5px] text-p-700 hover:text-m-600"
                             >
                               {v.applicationNom}

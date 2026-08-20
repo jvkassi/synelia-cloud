@@ -20,11 +20,19 @@ export function ServiceCard({
   service,
   catalogue,
   compact,
+  hrefAdmin,
   className,
 }: {
   service: ManagedService
   catalogue?: CatalogService
   compact?: boolean
+  /**
+   * Où l'administration se fait. Elle n'a plus d'adresse unique : un service
+   * partagé se règle sur la fiche de son hébergement, un service dédié sur la
+   * fiche de son service dans le projet.
+   */
+  hrefAdmin?: string
+  compactClassName?: never
   className?: string
 }) {
   const pretAOuvrir = service.statut !== 'provisioning' && service.statut !== 'erreur'
@@ -103,7 +111,7 @@ export function ServiceCard({
           </span>
         )}
         <ButtonLink
-          href={`/app/services/${service.id}`}
+          href={hrefAdmin ?? '/app/web/services'}
           variant="secondary"
           size="sm"
           iconBefore={<Settings2 size={13} />}

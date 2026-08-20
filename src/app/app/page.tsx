@@ -10,6 +10,7 @@ import { GaugeCircle, QuotaBar, StatTile } from '@/components/composition/metric
 import { Sparkline } from '@/components/composition/metrics'
 import { Timeline } from '@/components/composition/flow'
 import { EventList } from '@/components/business/observabilite'
+import { MODELES } from '@/lib/mock/modeles'
 import { ServiceCard } from '@/components/business/service-card'
 import { PanneauOnboarding } from '@/components/app/onboarding'
 import {
@@ -64,8 +65,8 @@ export default function TableauDeBord() {
             <ButtonLink href="/app/espaces/new" variant="secondary" iconBefore={<Plus size={14} />}>
               Nouvel Espace Cloud
             </ButtonLink>
-            <ButtonLink href="/app/marketplace" iconBefore={<Plus size={14} />}>
-              Souscrire un service
+            <ButtonLink href="/app/modeles" iconBefore={<Plus size={14} />}>
+              Déployer une solution
             </ButtonLink>
           </>
         }
@@ -213,13 +214,13 @@ export default function TableauDeBord() {
       {/* ─── Bande 3 : services, santé, facturation ──────────────────── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Section
-          titre="Mes services managés"
+          titre="Mes services opérés"
           actions={
             <Link
-              href="/app/services"
+              href="/app/lanceur"
               className="text-[12px] font-semibold text-p-700 hover:text-m-600"
             >
-              Tous les services →
+              Ouvrir le lanceur →
             </Link>
           }
         >
@@ -399,17 +400,19 @@ export default function TableauDeBord() {
       </Card>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {CATALOGUE.slice(0, 4).map((c) => (
+        {MODELES.filter((m) => m.populaire || m.certifie)
+          .slice(0, 4)
+          .map((c) => (
           <Link
             key={c.slug}
-            href={`/app/marketplace/${c.slug}`}
+            href={`/app/modeles/${c.slug}`}
             className="group rounded-[10px] border border-dashed border-g-300 bg-white p-3.5 transition-colors hover:border-p-400 hover:bg-p-050"
           >
             <MicroLabel>Suggestion</MicroLabel>
             <p className="mt-1.5 text-[13px] font-semibold text-ink group-hover:text-p-700">
               {c.nom}
             </p>
-            <p className="mt-0.5 text-[11.5px] leading-snug text-g-500">{c.pitch}</p>
+            <p className="mt-0.5 text-[11.5px] leading-snug text-g-500">{c.phrase}</p>
           </Link>
         ))}
       </div>
