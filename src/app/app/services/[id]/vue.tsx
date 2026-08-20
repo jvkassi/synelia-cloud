@@ -37,6 +37,8 @@ import { EmptyState } from '@/components/composition/states'
 import { GrilleSparkCharts, EventList, LiensSortie } from '@/components/business/observabilite'
 import { SlaGauge } from '@/components/business/infra'
 import { CostPreview } from '@/components/composition/flow'
+import { ConfigurationServicePanel } from '@/components/business/configuration-service'
+import { configurationDuService } from '@/lib/configurations'
 import { useApp } from '@/components/app/contexte'
 
 const ONGLETS = [
@@ -831,141 +833,27 @@ function OngletSso({ service, catalogue }: { service: Service; catalogue: Catalo
 
 function OngletParametres({ service, catalogue }: { service: Service; catalogue: Catalogue }) {
   const { autorise, refus } = useApp()
-  const entrees = Object.entries(service.parametres)
+  const config = configurationDuService(catalogue.slug)
 
-  if (entrees.length === 0) {
+  // Chaque service a son fichier de configuration : les politiques d'une
+  // messagerie n'ont presque rien de commun avec celles d'un Drive ou d'un ERP.
+  if (!config) {
     return (
       <EmptyState
         titre="Paramètres non encore disponibles"
-        phrase="Les politiques spécifiques à ce service deviendront modifiables à la fin du provisioning. Elles portent toujours sur des politiques, jamais sur du contenu."
+        phrase={`Les politiques propres à ${catalogue.solutionOSS} deviendront modifiables à la fin du provisioning. Elles portent toujours sur des politiques, jamais sur du contenu.`}
         icone={<RefreshCw size={22} />}
       />
     )
   }
 
   return (
-    <div className="space-y-4">
-      <Callout ton="violet" titre="Des politiques, jamais du contenu">
-        C’est la seule partie qui varie d’un service à l’autre. Le portail règle ici les politiques
-        applicables ; le contenu — fichiers, messages, documents, écritures comptables — se gère
-        exclusivement dans {catalogue.solutionOSS}.
-      </Callout>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader titre="Politiques appliquées" sousTitre="Valeurs actuellement en vigueur." />
-          <div className="space-y-3">
-            {entrees.map(([cle, valeur]) => (
-              <ParametreLigne key={cle} cle={cle} valeur={valeur} />
-            ))}
-          </div>
-          <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-            <Button size="sm" className="mt-4">
-              Enregistrer les modifications
-            </Button>
-          </GatedAction>
-        </Card>
-
-        <Card>
-          <CardHeader
-            titre="Politiques disponibles pour ce service"
-            sousTitre="Extrait du catalogue — ce que vous pouvez piloter depuis le portail."
-          />
-          <KeyValueList
-            colonnes={1}
-            items={catalogue.parametresSpecifiques.map((p) => ({
-              cle: p.titre,
-              valeur: p.description,
-            }))}
-          />
-        </Card>
-      </div>
-    </div>
-  )
-}
-
-const LIBELLES_PARAM: Record<string, string> = {
-  partageExterne: 'Politique de partage externe',
-  motDePasseObligatoire: 'Mot de passe obligatoire sur les liens',
-  expirationLiensJours: 'Expiration par défaut des liens (jours)',
-  quotaParUtilisateurGo: 'Quota par utilisateur (Go)',
-  retentionCorbeilleJours: 'Rétention de la corbeille (jours)',
-  domainesGeres: 'Domaines de messagerie gérés',
-  alias: 'Alias déclarés',
-  groupesDistribution: 'Groupes de distribution',
-  quotaBoiteGo: 'Quota de boîte (Go)',
-  antiSpam: 'Politique anti-spam',
-  spf: 'SPF',
-  dkim: 'DKIM',
-  dmarc: 'DMARC',
-  retentionArchivageMois: 'Rétention d’archivage (mois)',
-  participantsMax: 'Participants maximum par salle',
-  salleAttente: 'Salle d’attente obligatoire',
-  destinationEnregistrements: 'Destination des enregistrements',
-  retentionEnregistrementsJours: 'Rétention des enregistrements (jours)',
-  modulesActives: 'Modules activés',
-  jeuDemoActif: 'Jeu de données de démonstration',
-  bacASable: 'Environnement bac à sable',
-  planComptable: 'Plan comptable',
-  mfaObligatoire: 'MFA obligatoire',
-  complexiteMinimale: 'Complexité minimale',
-  exportPersonnelInterdit: 'Export personnel interdit',
-  journalisationAcces: 'Journalisation des accès',
-}
-
-function ParametreLigne({ cle, valeur }: { cle: string; valeur: unknown }) {
-  const libelle = LIBELLES_PARAM[cle] ?? cle
-  const [etat, setEtat] = useState(valeur)
-
-  if (typeof etat === 'boolean') {
-    return (
-      <Switch
-        checked={etat}
-        onChange={setEtat}
-        label={libelle}
-        description={etat ? 'Politique active' : 'Politique désactivée'}
-      />
-    )
-  }
-  if (Array.isArray(etat)) {
-    return (
-      <div>
-        <p className="mb-1.5 text-[12.5px] font-semibold text-g-700">{libelle}</p>
-        <div className="flex flex-wrap gap-1.5">
-          {etat.map((v) => (
-            <Badge key={String(v)} tone="neutral" size="sm">
-              {String(v)}
-            </Badge>
-          ))}
-        </div>
-      </div>
-    )
-  }
-  if (typeof etat === 'number') {
-    return (
-      <Field label={libelle}>
-        <Input
-          type="number"
-          value={etat}
-          onChange={(e) => setEtat(Number(e.target.value))}
-          className="max-w-40"
-        />
-      </Field>
-    )
-  }
-  const texte = String(etat)
-  const estStatutAuth = ['spf', 'dkim', 'dmarc'].includes(cle)
-  return (
-    <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-g-100 pb-2.5 last:border-0">
-      <p className="text-[12.5px] font-semibold text-g-700">{libelle}</p>
-      {estStatutAuth ? (
-        <Badge tone={texte.includes('valide') || texte.startsWith('p=') ? 'ok' : 'warn'} dot size="sm">
-          {texte}
-        </Badge>
-      ) : (
-        <p className="text-[12.5px] text-ink">{texte}</p>
-      )}
-    </div>
+    <ConfigurationServicePanel
+      config={config}
+      valeursAppliquees={service.parametres}
+      autorise={autorise('service.admin')}
+      messageRefus={refus('service.admin')}
+    />
   )
 }
 
