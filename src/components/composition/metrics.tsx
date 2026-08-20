@@ -301,6 +301,7 @@ export function HealthBadge({
     | 'ok'
     | 'operationnel'
     | 'running'
+    | 'deployed'
     | 'en_ligne'
     | 'degrade'
     | 'degraded'
@@ -314,6 +315,7 @@ export function HealthBadge({
     | 'arrete'
     | 'stopped'
     | 'suspendue'
+    | 'suspendu'
     | 'echec'
     | 'error'
     | 'failed'
@@ -327,6 +329,7 @@ export function HealthBadge({
     ok: { tone: 'ok', label: 'Opérationnel' },
     operationnel: { tone: 'ok', label: 'Opérationnel' },
     running: { tone: 'ok', label: 'En marche' },
+    deployed: { tone: 'ok', label: 'Déployé' },
     en_ligne: { tone: 'ok', label: 'En ligne' },
     degrade: { tone: 'warn', label: 'Dégradé' },
     degraded: { tone: 'warn', label: 'Dégradé' },
@@ -340,6 +343,7 @@ export function HealthBadge({
     arrete: { tone: 'neutral', label: 'Arrêté' },
     stopped: { tone: 'neutral', label: 'Arrêté' },
     suspendue: { tone: 'neutral', label: 'Suspendue' },
+    suspendu: { tone: 'neutral', label: 'Suspendu' },
     echec: { tone: 'err', label: 'En échec' },
     error: { tone: 'err', label: 'En erreur' },
     failed: { tone: 'err', label: 'En échec' },
