@@ -1,8 +1,11 @@
 import type { Metadata } from 'next'
+import { CadreLb } from './cadre'
 
 /**
- * Une page « use client » ne peut pas exporter `metadata`. Ce layout minimal
- * n'existe que pour nommer l'onglet du navigateur — il n'ajoute aucun rendu.
+ * Le panneau de sélection de la section vit ici, et non dans les pages : c'est
+ * ce qui fait qu'il ne se reconstruit pas quand on change de ressource ou
+ * d'onglet. Ce layout nomme aussi l'onglet du navigateur, qu'une page
+ * « use client » ne peut pas exporter elle-même.
  */
 export const metadata: Metadata = {
   title: 'Load balancers',
@@ -10,5 +13,5 @@ export const metadata: Metadata = {
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return children
+  return <CadreLb>{children}</CadreLb>
 }

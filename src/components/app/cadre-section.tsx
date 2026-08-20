@@ -8,15 +8,20 @@ import {
 } from '@/components/composition/selecteur-ressource'
 
 /**
- * Coquille maître-détail d'une section de Web Cloud.
+ * Coquille maître-détail d'une section, commune à Infrastructure, Applications
+ * et Web Cloud.
  *
- * Chaque section de la barre — domaines, hébergements, bases, messageries,
- * drives, applications, certificats, sauvegardes — liste ses propres ressources
- * dans le panneau et ouvre la fiche correspondante à droite. Seul « Accueil »
- * n'en a pas : c'est un tableau de bord, il ne porte pas sur une ressource.
+ * Une section qui porte sur une ressource — un Espace Cloud, une machine, un
+ * cluster, un projet, un domaine — liste les siennes dans le panneau et ouvre
+ * la fiche correspondante à droite. Sélectionner et agir deviennent deux gestes
+ * distincts : passer d'une ressource à l'autre ne repasse plus par une liste.
+ * Les écrans transverses (tableaux de bord, journaux, réseau d'un Espace) n'en
+ * ont pas : il n'y a rien à choisir avant d'entrer.
  *
  * Le panneau vit dans le `layout` de la section, pas dans ses pages : changer de
  * ressource ou d'onglet ne le reconstruit pas, et la sélection reste visible.
+ * Les routes concernées sont déclarées par `panneau` dans `lib/navigation.ts` —
+ * c'est ce qui dit au conteneur de page de ne pas ajouter sa propre marge.
  */
 export function CadreSection({
   titre,

@@ -21,6 +21,17 @@ décisions déjà prises.
 | Lint | `bun run lint` |
 | Audit du rendu | `bun run build && bun run start` puis `node outils/audit.mjs` |
 
+**Tout passe par bun** — `bun install`, `bun run`, `bunx`. Jamais npm, yarn ni
+pnpm, pas même pour un essai : chacun écrit son propre fichier de verrouillage et
+résout les versions à sa façon, et deux résolutions concurrentes dans le même
+dépôt finissent toujours par diverger.
+
+Il faut **bun 1.4.0 au moins** : `bun.lock` est en version 2, et un bun 1.3.x
+refuse de le lire (« Unknown lockfile version ») puis, avec
+`--frozen-lockfile`, échoue. Installer la bonne version plutôt que régénérer le
+verrou :
+`curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"`.
+
 Les versions des dépendances sont **épinglées à l'exact** : le bun de Vercel ne
 sait pas lire un `bun.lock` en version 2 et résout à neuf, ce qui ferait diverger
 l'installation locale de la distante. Ne remettez pas de caret.
@@ -48,6 +59,14 @@ Deux pièges déjà rencontrés :
   (`dba.africa`, `heb-dba`, `db-dba-maria`…). Ajoutez-y les nouvelles routes.
 
 ## Règles qui ne se négocient pas
+
+**Passer par le skill `ponytail` avant d'écrire du code.** Écrire, ajouter,
+corriger, refactorer, choisir une dépendance : à chaque fois. Il impose la
+solution la plus paresseuse qui marche — se demander d'abord si le besoin
+existe, réutiliser ce qui est déjà là, une ligne plutôt que cinquante, aucune
+dépendance nouvelle sans raison. Cette maquette a 128 routes et un seul jeu de
+composants : ce qu'on n'ajoute pas est ce qu'on n'aura pas à maintenir en
+cohérence partout.
 
 **Ne jamais reconstruire l'écran principal d'un produit existant.** Pas
 d'explorateur de fichiers, pas de webmail, pas d'écran métier d'ERP, pas
@@ -95,19 +114,45 @@ modèle ; `topbar.tsx` le rend.
 les load balancers, pas le réseau. Le champ `aussi` rattache les routes sans
 onglet propre (`/app/dns` → Domaines, `/app/taches` → Tableau de bord).
 
-### Web Cloud, en maître-détail
+### Trois univers en maître-détail : Infrastructure, Applications, Web Cloud
 
-Neuf sections : `Accueil · Domaines · Hébergement Web · Databases · Emails ·
+Ces trois univers portent des ressources qu'on ouvre une par une. Ils partagent
+donc la même coquille, et `src/lib/navigation.ts` en est la seule source :
+
+- `pleineLargeur: true` sur l'univers — `Conteneur` retire la borne de 1400 px
+  pour toutes ses routes. Les deux autres univers clients la gardent : ce sont
+  des écrans de lecture, et un paragraphe de 1900 px ne se lit pas.
+- `panneau: ['/prefixe']` sur une section — son `layout.tsx` monte un **panneau
+  de sélection persistant** via `CadreSection`
+  (`src/components/app/cadre-section.tsx`), jamais une page, sinon il se
+  reconstruit à chaque changement d'onglet. C'est le panneau qui porte la marge
+  du contenu, d'où l'absence de conteneur sur ces routes.
+
+`gabarit()` réunit les deux et rend `plein` (sous un panneau), `large` (univers
+en pleine largeur, écran sans panneau, borné à 1600 px) ou `borne` (1400 px).
+`topbar.tsx` s'en sert aussi : les onglets d'un univers en pleine largeur
+s'alignent sur le bord gauche, là où commence le panneau.
+
+Ce qui a un panneau : Espaces Cloud, Machines virtuelles, Kubernetes, Load
+balancers, Stockage objet, les plans de reprise (`/app/pra`), Projets, Modèles,
+et les huit sections de ressources de Web Cloud.
+
+Ce qui n'en a pas, et pourquoi : un écran transverse n'a rien à faire choisir
+avant d'entrer. Réseau & IP, Stockage bloc et Bases managées se lisent par
+Espace Cloud ; Sauvegardes, Déploiements, Registre d'images et l'accueil de Web
+Cloud croisent tout le parc à la fois ; le relais SMTP est un service unique.
+Leur donner un panneau dont les entrées n'ouvrent aucune fiche n'en ferait
+qu'un décor.
+
+**Les ressources d'infrastructure suivent le sélecteur d'Espace Cloud** de la
+barre supérieure (`useEspace()`) : machines, clusters et répartiteurs
+appartiennent à un Espace. Les projets, eux, ne sont pas filtrés — un projet est
+une unité de travail, on passe de l'un à l'autre sans se demander où il tourne.
+
+### Web Cloud
+
+Dix sections : `Accueil · Domaines · Hébergement Web · Databases · Emails ·
 Drive · Applications · SSL · Backup · Relais SMTP`.
-
-Chaque section sauf Accueil a un **panneau de sélection persistant**, monté dans
-son `layout.tsx` via `CadreSection` — jamais dans une page, sinon il se
-reconstruit à chaque changement d'onglet. Accueil n'en a pas : c'est un tableau de
-bord, il ne parle d'aucune ressource.
-
-Web Cloud est **en pleine largeur** : `Conteneur` (dans `app/layout.tsx`) retire
-la borne de 1400 px pour `/app/web`. Le reste de l'espace client la garde — un
-paragraphe de 1900 px ne se lit pas.
 
 **Un domaine est attaché à un serveur et à un seul.** C'est la règle du produit.
 Elle évite le défaut des portails qui vendent le nom, l'hébergement et la
@@ -183,5 +228,5 @@ utile avant de s'engager.
 
 Le travail va sur `claude/marketplace-admin-vercel-x4f2mh`, poussé directement,
 sans pull request. Déploiement :
-`npx vercel@latest --prod --yes --archive=tgz --token "$VERCEL_TOKEN"` — un
+`bunx vercel@latest --prod --yes --archive=tgz --token "$VERCEL_TOKEN"` — un
 `fetch failed` au premier essai est fréquent, le second passe.

@@ -211,7 +211,15 @@ function BarreSections({
         portee === 'fournisseur' ? 'bg-p-050' : 'bg-white',
       )}
     >
-      <ul className="mx-auto flex min-w-max max-w-[1400px] items-stretch px-2 sm:px-4">
+      {/* Un univers en pleine largeur aligne ses onglets sur le bord gauche,
+          là où commence son panneau de sélection : une bande d'onglets centrée
+          au-dessus d'une colonne collée au bord se lit comme un décalage. */}
+      <ul
+        className={cn(
+          'flex min-w-max items-stretch px-2 sm:px-4',
+          !univers.pleineLargeur && 'mx-auto max-w-[1400px]',
+        )}
+      >
         {univers.sections.map((s) => (
           <li key={s.href} className="flex">
             <Link
