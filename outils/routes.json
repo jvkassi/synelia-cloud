@@ -159,5 +159,6 @@
 "/app/applications/parametres/prj-vitrine",
 "/app/applications/parametres/prj-data",
 "/app/applications/parametres/prj-solutions",
-"/app/applications/parametres/prj-outillage"
+"/app/applications/parametres/prj-outillage",
+"/app/infrastructure"
 ]

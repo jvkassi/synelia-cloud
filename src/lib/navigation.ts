@@ -19,11 +19,38 @@ export interface SectionNav {
    * aucun onglet et le lecteur perdrait son repère.
    */
   aussi?: string[]
+  /**
+   * Préfixes de routes dont le `layout` monte un panneau listant les ressources
+   * de la section — le patron de Web Cloud, une liste différente par onglet. Le
+   * contenu y touche le bord de l'écran : c'est le panneau qui porte la marge.
+   */
+  panneau?: string[]
+  /**
+   * Exception au sélecteur d'Espace de l'univers : cette section ne le montre
+   * pas. Réservé aux accueils, qui parlent de tout le parc à la fois et
+   * n'auraient rien à faire choisir.
+   */
+  sansPanneau?: boolean
 }
 
 export interface UniversNav {
   id: string
   nom: string
+  /**
+   * L'univers occupe toute la largeur de l'écran. Réservé aux univers bâtis en
+   * maître-détail : leurs panneaux doivent toucher le bord et leurs tableaux
+   * ont besoin de la place. Les univers de lecture gardent une largeur bornée.
+   */
+  pleineLargeur?: boolean
+  /**
+   * L'univers porte un **sélecteur d'Espace Cloud unique**, le même sur toutes
+   * ses sections : on choisit une fois où l'on travaille, et cela vaut pour
+   * tous les onglets. C'est un contexte, pas une navigation — le panneau ne
+   * change jamais de contenu d'un onglet à l'autre, contrairement aux panneaux
+   * de ressources de Web Cloud. La barre supérieure masque alors son propre
+   * sélecteur d'Espace : la même question posée à deux endroits.
+   */
+  panneauEspace?: boolean
   sections: SectionNav[]
 }
 
@@ -45,7 +72,12 @@ export const UNIVERS_CLIENT: UniversNav[] = [
   {
     id: 'infrastructure',
     nom: 'Infrastructure',
+    pleineLargeur: true,
+    panneauEspace: true,
     sections: [
+      // L'accueil est la seule section sans le sélecteur : il fait le tour de
+      // tous les Espaces à la fois, c'est là qu'on choisit lequel ouvrir.
+      { nom: 'Accueil', href: '/app/infrastructure', sansPanneau: true },
       { nom: 'Espaces Cloud', href: '/app/espaces' },
       { nom: 'Machines virtuelles', href: '/app/vms' },
       { nom: 'Kubernetes', href: '/app/kubernetes' },
@@ -63,6 +95,12 @@ export const UNIVERS_CLIENT: UniversNav[] = [
   {
     id: 'applications',
     nom: 'Applications',
+    pleineLargeur: true,
+    // Pas de `panneauEspace` ici, contrairement à Infrastructure : un projet est
+    // une unité de travail indépendante de son hébergement, et deux projets du
+    // même Espace n'ont rien à se dire. La question à poser une fois pour toutes
+    // n'est pas « où est-ce que je travaille ? » mais « de quel projet
+    // parle-t-on ? » — d'où un panneau de projets, monté par chaque section.
     sections: [
       // Même patron maître-détail que Web Cloud, à une différence près : les
       // sections ne listent pas chacune leur ressource, elles partagent un seul
@@ -71,31 +109,63 @@ export const UNIVERS_CLIENT: UniversNav[] = [
       // « Accueil » n'a pas de panneau : c'est un tableau de bord, il ne porte
       // sur aucun projet en particulier.
       { nom: 'Accueil', href: '/app/applications' },
-      { nom: 'Projets', href: '/app/applications/projets', aussi: ['/app/applications/nouveau'] },
-      { nom: 'Déploiements', href: '/app/applications/deploiements' },
-      { nom: 'Observabilité', href: '/app/applications/observabilite' },
-      { nom: 'Backup', href: '/app/applications/backup' },
-      { nom: 'Domaines & routage', href: '/app/applications/routage' },
-      { nom: 'Variables & secrets', href: '/app/applications/variables' },
-      { nom: 'Paramètres', href: '/app/applications/parametres' },
+      {
+        nom: 'Projets',
+        href: '/app/applications/projets',
+        // L'assistant de création n'a pas de panneau : il ne parle pas d'un
+        // projet existant, il en fabrique un.
+        aussi: ['/app/applications/nouveau'],
+        panneau: ['/app/applications/projets'],
+      },
+      {
+        nom: 'Déploiements',
+        href: '/app/applications/deploiements',
+        panneau: ['/app/applications/deploiements'],
+      },
+      {
+        nom: 'Observabilité',
+        href: '/app/applications/observabilite',
+        panneau: ['/app/applications/observabilite'],
+      },
+      {
+        nom: 'Backup',
+        href: '/app/applications/backup',
+        panneau: ['/app/applications/backup'],
+      },
+      {
+        nom: 'Domaines & routage',
+        href: '/app/applications/routage',
+        panneau: ['/app/applications/routage'],
+      },
+      {
+        nom: 'Variables & secrets',
+        href: '/app/applications/variables',
+        panneau: ['/app/applications/variables'],
+      },
+      {
+        nom: 'Paramètres',
+        href: '/app/applications/parametres',
+        panneau: ['/app/applications/parametres'],
+      },
     ],
   },
   {
     id: 'web',
     nom: 'Web Cloud',
+    pleineLargeur: true,
     sections: [
-      // « Accueil » est la seule section sans panneau de sélection : c'est un
-      // tableau de bord, il ne porte pas sur une ressource en particulier.
-      // Toutes les autres suivent le même patron maître-détail.
+      // « Accueil » est un tableau de bord : il ne porte pas sur une ressource
+      // en particulier, donc pas de panneau. Toutes les autres sections, sauf
+      // le relais SMTP qui est un service unique, suivent le maître-détail.
       { nom: 'Accueil', href: '/app/web' },
-      { nom: 'Domaines', href: '/app/web/domaines' },
-      { nom: 'Hébergement Web', href: '/app/web/hebergement' },
-      { nom: 'Databases', href: '/app/web/bases' },
-      { nom: 'Emails', href: '/app/web/emails' },
-      { nom: 'Drive', href: '/app/web/drive' },
-      { nom: 'Applications', href: '/app/web/applications' },
-      { nom: 'SSL', href: '/app/web/ssl' },
-      { nom: 'Backup', href: '/app/web/backup' },
+      { nom: 'Domaines', href: '/app/web/domaines', panneau: ['/app/web/domaines'] },
+      { nom: 'Hébergement Web', href: '/app/web/hebergement', panneau: ['/app/web/hebergement'] },
+      { nom: 'Databases', href: '/app/web/bases', panneau: ['/app/web/bases'] },
+      { nom: 'Emails', href: '/app/web/emails', panneau: ['/app/web/emails'] },
+      { nom: 'Drive', href: '/app/web/drive', panneau: ['/app/web/drive'] },
+      { nom: 'Applications', href: '/app/web/applications', panneau: ['/app/web/applications'] },
+      { nom: 'SSL', href: '/app/web/ssl', panneau: ['/app/web/ssl'] },
+      { nom: 'Backup', href: '/app/web/backup', panneau: ['/app/web/backup'] },
       { nom: 'Relais SMTP', href: '/app/smtp' },
     ],
   },
@@ -204,4 +274,40 @@ export function sectionActive(
 /** Univers actif, avec repli sur le premier — jamais de barre 2 vide. */
 export function universActif(univers: UniversNav[], chemin: string): UniversNav {
   return sectionActive(univers, chemin)?.univers ?? univers[0]
+}
+
+/**
+ * Gabarit de contenu d'une route.
+ *
+ * `plein` — la section monte un panneau de sélection : il doit toucher le bord
+ * de l'écran, et c'est lui qui porte la marge du contenu.
+ * `large` — univers en pleine largeur, écran sans panneau : les tableaux
+ * respirent jusqu'à 1600 px.
+ * `borne` — tout le reste, borné à 1400 px. Un paragraphe de 1900 px ne se lit
+ * pas, et la moitié des écrans de l'espace client sont faits de phrases.
+ */
+export type Gabarit = 'borne' | 'large' | 'plein'
+
+export function gabarit(univers: UniversNav[], chemin: string): Gabarit {
+  const trouve = sectionActive(univers, chemin)
+  if (!trouve?.univers.pleineLargeur) return 'borne'
+  return avecPanneau(trouve.univers, trouve.section, chemin) ? 'plein' : 'large'
+}
+
+/** Vrai si un panneau est monté sur cette route — de section ou d'univers. */
+export function avecPanneau(
+  univers: UniversNav,
+  section: SectionNav,
+  chemin: string,
+): boolean {
+  if (univers.panneauEspace) return !section.sansPanneau
+  return (section.panneau ?? []).some(
+    (base) => chemin === base || chemin.startsWith(`${base}/`),
+  )
+}
+
+/** Sélecteur d'Espace à monter pour cette route, s'il y en a un. */
+export function panneauEspaceActif(univers: UniversNav[], chemin: string): boolean {
+  const trouve = sectionActive(univers, chemin)
+  return Boolean(trouve?.univers.panneauEspace && !trouve.section.sansPanneau)
 }

@@ -1,19 +1,52 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
+import { cn } from '@/lib/utils'
+import { UNIVERS_CLIENT, gabarit, panneauEspaceActif } from '@/lib/navigation'
+import { CadreEspace } from './cadre-espace'
 
 /**
- * Conteneur de contenu de l'espace client.
+ * Coquille de contenu de l'espace client.
  *
- * Web Cloud et Applications font exception : leur panneau de sélection doit
- * toucher le bord de l'écran, comme dans une console d'exploitation, et leurs
- * tableaux ont besoin de toute la largeur. Le reste de l'espace garde une
- * largeur de lecture bornée — un texte de 1900 px de large ne se lit pas.
+ * Trois univers occupent toute la largeur, pour trois raisons différentes :
+ *
+ * - **Infrastructure** porte un sélecteur d'Espace Cloud unique, monté ici et
+ *   donc identique sur toutes ses sections. Le monter au niveau du layout est ce
+ *   qui garantit qu'il ne se reconstruit pas d'un onglet à l'autre : c'est un
+ *   contexte, il doit survivre à la navigation.
+ * - **Applications** monte un panneau de projets, le même sur toutes ses
+ *   sections mais depuis le `layout.tsx` de chacune : un projet est une unité de
+ *   travail indépendante de son hébergement, ce n'est donc pas un contexte
+ *   d'Espace mais une sélection de ressource.
+ * - **Web Cloud** monte, lui, un panneau différent par section, depuis le
+ *   `layout.tsx` de chaque section. Ici, rien à ajouter.
+ *
+ * Les écrans sans panneau de ces univers — l'accueil d'Infrastructure, celui
+ * d'Applications, celui de Web Cloud, le relais SMTP — gardent une marge et
+ * s'arrêtent à 1600 px. Le reste de l'espace client reste borné à 1400 px : ce
+ * sont des écrans de lecture, et un paragraphe de 1900 px de large ne se lit pas.
+ *
+ * Le découpage n'est pas décidé ici : il est déclaré dans `lib/navigation.ts`,
+ * à côté des sections auxquelles il s'applique.
  */
-const PLEINE_LARGEUR = ['/app/web', '/app/applications']
-
 export function Conteneur({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  if (PLEINE_LARGEUR.some((p) => pathname.startsWith(p))) return <>{children}</>
-  return <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-7">{children}</div>
+
+  if (panneauEspaceActif(UNIVERS_CLIENT, pathname)) {
+    return <CadreEspace>{children}</CadreEspace>
+  }
+
+  const forme = gabarit(UNIVERS_CLIENT, pathname)
+  if (forme === 'plein') return <>{children}</>
+
+  return (
+    <div
+      className={cn(
+        'mx-auto px-4 py-6 sm:px-6 sm:py-7',
+        forme === 'large' ? 'max-w-[1600px]' : 'max-w-[1400px]',
+      )}
+    >
+      {children}
+    </div>
+  )
 }

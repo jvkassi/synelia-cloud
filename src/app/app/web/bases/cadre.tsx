@@ -2,7 +2,7 @@
 
 import { MOTEUR_WEB_LABEL, serveursBasesDeLOrg } from '@/lib/mock'
 import type { Tone } from '@/components/ui/badge'
-import { CadreSection } from '@/components/app/cadre-webcloud'
+import { CadreSection } from '@/components/app/cadre-section'
 
 /** Panneau de la section — liste les serveurs de bases de l'organisation. */
 export function CadreBases({ children }: { children: React.ReactNode }) {

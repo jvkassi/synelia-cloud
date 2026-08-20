@@ -21,6 +21,17 @@ décisions déjà prises.
 | Lint | `bun run lint` |
 | Audit du rendu | `bun run build && bun run start` puis `node outils/audit.mjs` |
 
+**Tout passe par bun** — `bun install`, `bun run`, `bunx`. Jamais npm, yarn ni
+pnpm, pas même pour un essai : chacun écrit son propre fichier de verrouillage et
+résout les versions à sa façon, et deux résolutions concurrentes dans le même
+dépôt finissent toujours par diverger.
+
+Il faut **bun 1.4.0 au moins** : `bun.lock` est en version 2, et un bun 1.3.x
+refuse de le lire (« Unknown lockfile version ») puis, avec
+`--frozen-lockfile`, échoue. Installer la bonne version plutôt que régénérer le
+verrou :
+`curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"`.
+
 Les versions des dépendances sont **épinglées à l'exact** : le bun de Vercel ne
 sait pas lire un `bun.lock` en version 2 et résout à neuf, ce qui ferait diverger
 l'installation locale de la distante. Ne remettez pas de caret.
@@ -48,6 +59,14 @@ Deux pièges déjà rencontrés :
   (`dba.africa`, `heb-dba`, `db-dba-maria`…). Ajoutez-y les nouvelles routes.
 
 ## Règles qui ne se négocient pas
+
+**Passer par le skill `ponytail` avant d'écrire du code.** Écrire, ajouter,
+corriger, refactorer, choisir une dépendance : à chaque fois. Il impose la
+solution la plus paresseuse qui marche — se demander d'abord si le besoin
+existe, réutiliser ce qui est déjà là, une ligne plutôt que cinquante, aucune
+dépendance nouvelle sans raison. Cette maquette a 128 routes et un seul jeu de
+composants : ce qu'on n'ajoute pas est ce qu'on n'aura pas à maintenir en
+cohérence partout.
 
 **Ne jamais reconstruire l'écran principal d'un produit existant.** Pas
 d'explorateur de fichiers, pas de webmail, pas d'écran métier d'ERP, pas
@@ -95,37 +114,93 @@ modèle ; `topbar.tsx` le rend.
 les load balancers, pas le réseau. Le champ `aussi` rattache les routes sans
 onglet propre (`/app/dns` → Domaines, `/app/taches` → Tableau de bord).
 
-### Applications, en maître-détail sur le projet
+### Trois façons d'occuper toute la largeur
+
+Trois univers clients portent des ressources et occupent tout l'écran :
+Infrastructure, Applications, Web Cloud. Mais leur panneau de gauche ne dit pas
+la même chose, et c'est la distinction à ne pas perdre.
+
+**Infrastructure : un contexte.** `panneauEspace: true` sur l'univers. Le panneau
+est un **sélecteur d'Espace Cloud unique**, rigoureusement identique sur toutes
+les sections — machines, clusters, réseau, volumes, bases. On choisit une fois où
+l'on travaille, et cela vaut pour tous les onglets. Choisir ne navigue pas : les
+entrées sont des boutons, pas des liens, et l'on reste sur l'onglet courant, relu
+dans le nouvel Espace.
+
+Le panneau est monté par `Conteneur`, donc par le `layout.tsx` de l'espace
+client, et non par les sections : c'est ce qui garantit qu'il ne se reconstruit
+jamais d'un onglet à l'autre — un contexte doit survivre à la navigation. La
+barre supérieure masque alors son propre sélecteur d'Espace (`avecEspace`), pour
+ne pas poser la même question à deux endroits de l'écran ; elle le garde
+ailleurs, notamment pour la Supervision de l'univers Global, filtrée par Espace
+elle aussi.
+
+`sansPanneau: true` fait l'exception : l'accueil d'Infrastructure
+(`/app/infrastructure`) est la seule section sans panneau. Elle regarde tous les
+Espaces à la fois, et sert précisément à choisir lequel ouvrir — un sélecteur y
+serait redondant. C'est aussi elle qui rassemble ce qui demande une décision :
+quota près du plafond, machine sans plan de sauvegarde, plan de reprise jamais
+testé.
+
+**Applications : une sélection, mais une seule pour tout l'univers.**
+`panneau: ['/prefixe']` sur chacune des sept sections qui suivent l'accueil, et
+`CadreProjet` (`src/components/app/cadre-projet.tsx`) monte partout la *même*
+liste : les projets. Volontairement pas un sélecteur d'Espace — un projet est une
+unité de travail indépendante de son hébergement, et deux projets du même Espace
+n'ont rien à se dire. La question à poser une fois pour toutes est « de quel
+projet parle-t-on ? ».
+
+Comme la sélection est partagée, changer d'onglet ne doit pas la reperdre :
+`hrefSection()` dans `topbar.tsx` reporte le projet courant dans l'adresse de la
+section visée.
+
+**Web Cloud : une navigation.** `panneau: ['/prefixe']` sur chaque section, mais
+le panneau liste les *ressources de la section* — domaines, hébergements,
+certificats — et change donc de contenu d'un onglet à l'autre. Ses entrées sont
+des liens vers une fiche.
+
+**Les trois cas partagent la coquille** `CoquillePanneau`
+(`src/components/app/cadre-section.tsx`) : panneau collé au bord gauche en
+colonne au-delà de 1024 px, bandeau dépliant en dessous, et c'est le panneau qui
+porte la marge du contenu — d'où l'absence de conteneur de page sur ces routes.
+
+`gabarit()` rend `plein` (sous un panneau, quel qu'il soit), `large` (univers en
+pleine largeur, écran sans panneau : les trois accueils, le relais SMTP — borné à
+1600 px) ou `borne` (1400 px, le reste). `topbar.tsx` s'en sert aussi : les
+onglets d'un univers en pleine largeur s'alignent sur le bord gauche, là où
+commence le panneau.
+
+**Le sélecteur doit dire vrai.** Un panneau qui annonce un Espace au-dessus d'une
+liste qui l'ignore est un mensonge d'interface. Les écrans d'Infrastructure
+filtraient déjà par `useEspace()`. Dans Applications, le panneau désigne un
+projet et chaque section ne montre que ce projet ; les racines de section, elles,
+assument de traverser tous les projets et le disent dans leur sous-titre.
+
+Reste à trancher : `/app/espaces` liste encore les trois Espaces alors que le
+panneau en désigne un. Chez OVH, l'onglet « Projet » montre le projet
+sélectionné. Le transformer en fiche de l'Espace courant est un chantier à part.
+
+### Infrastructure
+
+Dix sections : `Accueil · Espaces Cloud · Machines virtuelles · Kubernetes ·
+Load balancers · Réseau & IP · Stockage bloc · Stockage objet S3 ·
+Bases managées · Sauvegardes & PRA`.
+
+### Applications
 
 Huit sections : `Accueil · Projets · Déploiements · Observabilité · Backup ·
 Domaines & routage · Variables & secrets · Paramètres`, toutes sous
-`/app/applications/`.
+`/app/applications/`. Accueil n'a pas de panneau — c'est un tableau de bord, il
+ne porte sur aucun projet en particulier.
 
-Web Cloud donne à chaque section son propre panneau ; ici c'est **un seul
-panneau partagé — le projet** (`CadreProjet`, monté dans chaque `layout.tsx`).
-Les huit sections décrivent le même objet sous huit angles, donc changer
-d'onglet ne doit pas redemander de quel projet on parle : `hrefSection()` dans
-`topbar.tsx` reporte le projet courant dans l'adresse de la section visée.
-Accueil n'a pas de panneau — c'est un tableau de bord.
+La fiche d'un projet n'a pas d'onglets : variables, domaines et paramètres en ont
+été sortis pour devenir des sections. Un onglet dans un onglet oblige à retenir
+deux niveaux de position ; la barre en tient un seul.
 
-L'univers est **en pleine largeur**, comme Web Cloud (`Conteneur`).
+### Web Cloud
 
-La fiche d'un projet n'a plus d'onglets : variables, domaines et paramètres
-étaient des onglets dans un onglet, ils sont devenus des sections.
-
-### Web Cloud, en maître-détail
-
-Neuf sections : `Accueil · Domaines · Hébergement Web · Databases · Emails ·
+Dix sections : `Accueil · Domaines · Hébergement Web · Databases · Emails ·
 Drive · Applications · SSL · Backup · Relais SMTP`.
-
-Chaque section sauf Accueil a un **panneau de sélection persistant**, monté dans
-son `layout.tsx` via `CadreSection` — jamais dans une page, sinon il se
-reconstruit à chaque changement d'onglet. Accueil n'en a pas : c'est un tableau de
-bord, il ne parle d'aucune ressource.
-
-Web Cloud est **en pleine largeur** : `Conteneur` (dans `app/layout.tsx`) retire
-la borne de 1400 px pour `/app/web`. Le reste de l'espace client la garde — un
-paragraphe de 1900 px ne se lit pas.
 
 **Un domaine est attaché à un serveur et à un seul.** C'est la règle du produit.
 Elle évite le défaut des portails qui vendent le nom, l'hébergement et la
@@ -255,5 +330,5 @@ utile avant de s'engager.
 
 Le travail va sur `claude/univers-nav-restructure-1968bj`, poussé directement,
 sans pull request. Déploiement :
-`npx vercel@latest --prod --yes --archive=tgz --token "$VERCEL_TOKEN"` — un
+`bunx vercel@latest --prod --yes --archive=tgz --token "$VERCEL_TOKEN"` — un
 `fetch failed` au premier essai est fréquent, le second passe.

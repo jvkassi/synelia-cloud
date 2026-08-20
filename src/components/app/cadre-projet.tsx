@@ -4,10 +4,10 @@ import { usePathname } from 'next/navigation'
 import { PROJETS, servicesDuProjet, syntheseProjet } from '@/lib/mock'
 import type { Tone } from '@/components/ui/badge'
 import {
-  SelecteurRepliable,
   SelecteurRessource,
   type EntreeSelecteur,
 } from '@/components/composition/selecteur-ressource'
+import { CoquillePanneau } from './cadre-section'
 
 /**
  * Coquille maître-détail des sections de l'univers Applications.
@@ -81,23 +81,8 @@ export function CadreProjet({
   )
 
   return (
-    <>
-      <SelecteurRepliable titre="Projet" nomActif={actif?.nom}>
-        {panneau}
-      </SelecteurRepliable>
-
-      <div className="flex">
-        <aside
-          aria-label="Sélection — projets"
-          className="sticky top-[97px] hidden h-[calc(100vh-97px)] w-72 shrink-0 flex-col border-r border-g-300 bg-p-050 pt-3 lg:flex"
-        >
-          {panneau}
-        </aside>
-
-        <div className="min-w-0 flex-1">
-          <div className="px-4 py-6 sm:px-6 sm:py-7">{children}</div>
-        </div>
-      </div>
-    </>
+    <CoquillePanneau titre="Projets" nomActif={actif?.nom} panneau={panneau}>
+      {children}
+    </CoquillePanneau>
   )
 }

@@ -67,7 +67,7 @@ export default function Deploiements() {
       <PageHeader
         fil={[{ label: 'Espace client', href: '/app' }, { label: 'Déploiements' }]}
         titre="Déploiements"
-        sousTitre="L’historique complet de tous les déploiements de l’organisation, applications confondues. Chaque ligne est immuable : le commit, l’artefact, le résultat de l’analyse DevSecOps et l’auteur restent consultables indéfiniment, y compris après un retour arrière."
+        sousTitre="L’historique complet de tous les déploiements de l’organisation, applications confondues. Chaque ligne est immuable : le commit, l’artefact, le résultat de l’analyse DevSecOps et l’auteur restent consultables indéfiniment, y compris après un retour arrière. Tous Espaces Cloud confondus : un historique de livraisons ne se lit pas Espace par Espace."
         meta={
           <>
             <Badge tone="neutral" size="sm">
