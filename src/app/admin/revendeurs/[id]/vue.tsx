@@ -5,14 +5,16 @@ import Link from 'next/link'
 import { ExternalLink, Palette, Percent, Plus } from 'lucide-react'
 import { cn, surfaceMarque, trendSeries } from '@/lib/utils'
 import { dateCourte, money, moneyPerMonth, num, pct } from '@/lib/format'
-import { OFFRES, ORGANISATIONS, RELEVES_REVSHARE, RESELLERS } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { CopyField, GatedAction, Tabs } from '@/components/ui/display'
 import { Field, Input, Select, Switch } from '@/components/ui/field'
+import { Modal } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useActe, useAtelier } from '@/components/app/atelier'
+import type { Reseller } from '@/lib/types'
 
 const ONGLETS = [
   { id: 'synthese', label: 'Synthèse' },
@@ -22,14 +24,149 @@ const ONGLETS = [
   { id: 'revshare', label: 'Partage de revenus' },
 ]
 
-export function VueRevendeur({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
-  const [onglet, setOnglet] = useState('synthese')
+function RevendeurIntrouvable({ id }: { id: string }) {
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        fil={[
+          { label: 'Espace fournisseur', href: '/admin' },
+          { label: 'Revendeurs', href: '/admin/revendeurs' },
+          { label: 'Introuvable' },
+        ]}
+        titre="Partenaire introuvable"
+        sousTitre={`Aucun partenaire ne porte l’identifiant ${id}. Son agrément a peut-être été retiré.`}
+      />
+      <Card>
+        <p className="rounded-[8px] border border-dashed border-g-300 px-4 py-10 text-center text-[12.5px] text-g-500">
+          Un agrément retiré fait disparaître la fiche. Ses clients finaux, eux, restent servis : ils
+          sont passés en direct.
+        </p>
+        <ButtonLink variant="secondary" className="mt-4" href="/admin/revendeurs">
+          Revenir à la liste
+        </ButtonLink>
+      </Card>
+    </div>
+  )
+}
 
-  const r = RESELLERS.find((x) => x.id === id)!
-  const clients = ORGANISATIONS.filter((o) => r.clientsFinaux.includes(o.id))
-  const releves = RELEVES_REVSHARE.filter((x) => x.reseller === r.nom)
-  const orgRevendeur = ORGANISATIONS.find((o) => o.id === r.orgId)
+export function VueRevendeur({ id }: { id: string }) {
+  const { revendeurs } = useAtelier()
+  const r = revendeurs.parId(id)
+  if (!r) return <RevendeurIntrouvable id={id} />
+  return <FicheRevendeur r={r} />
+}
+
+const PERSONNALISATION_INITIALE = {
+  logo: true,
+  domaine: true,
+  courriels: true,
+  factures: true,
+}
+
+function FicheRevendeur({ r }: { r: Reseller }) {
+  const { autorise, refus } = useApp()
+  const { revendeurs, organisations, revshare, offres } = useAtelier()
+  const acte = useActe()
+
+  const [onglet, setOnglet] = useState('synthese')
+  const [ligne, setLigne] = useState<{ offerId: string; prixAchat: number; prixVente: number } | null>(
+    null,
+  )
+  const [ajout, setAjout] = useState(false)
+  const [personnalisation, setPersonnalisation] = useState(PERSONNALISATION_INITIALE)
+  const [partage, setPartage] = useState({
+    taux: r.revsharePct,
+    periodicite: 'mensuel',
+    delaiJours: 15,
+    surEncaisse: true,
+    deduireAvoirs: true,
+  })
+
+  const clients = organisations.liste.filter((o) => r.clientsFinaux.includes(o.id))
+  const releves = revshare.liste.filter((x) => x.reseller === r.nom)
+  const orgRevendeur = organisations.parId(r.orgId)
+  const OFFRES = offres.liste
+  const offresHorsGrille = OFFRES.filter(
+    (o) => o.statut === 'publiee' && !o.surDevis && !r.grille.some((g) => g.offerId === o.id),
+  )
+
+  const enregistrerLigne = (
+    valeur: { offerId: string; prixAchat: number; prixVente: number },
+    creation: boolean,
+  ) => {
+    const offre = OFFRES.find((o) => o.id === valeur.offerId)
+    acte({
+      faire: () =>
+        revendeurs.modifier(r.id, (courant) => ({
+          grille: creation
+            ? [...courant.grille, valeur]
+            : courant.grille.map((g) => (g.offerId === valeur.offerId ? valeur : g)),
+        })),
+      titre: creation
+        ? `${offre?.nom ?? valeur.offerId} ajoutée à la grille`
+        : `Grille mise à jour sur ${offre?.nom ?? valeur.offerId}`,
+      detail: `Prix d’achat ${money(valeur.prixAchat)}, prix de vente indicatif ${money(valeur.prixVente)}. Une hausse du prix d’achat ne s’applique jamais aux engagements en cours de ses clients.`,
+      action: creation ? 'reseller.grid.add' : 'reseller.grid.update',
+      cible: `${r.id}/${valeur.offerId}`,
+      orgNom: r.nom,
+    })
+    setLigne(null)
+    setAjout(false)
+  }
+
+  const retirerLigne = (offerId: string) => {
+    const offre = OFFRES.find((o) => o.id === offerId)
+    acte({
+      faire: () =>
+        revendeurs.modifier(r.id, (courant) => ({
+          grille: courant.grille.filter((g) => g.offerId !== offerId),
+        })),
+      ton: 'warn',
+      titre: `${offre?.nom ?? offerId} retirée de la grille`,
+      detail:
+        'Le partenaire ne peut plus souscrire cette offre. Ses clients qui l’ont déjà souscrite continuent d’être servis au prix garanti.',
+      action: 'reseller.grid.remove',
+      cible: `${r.id}/${offerId}`,
+      orgNom: r.nom,
+    })
+  }
+
+  const validerVersement = (x: (typeof releves)[number]) => {
+    acte({
+      faire: () => revshare.modifier(`${x.reseller}·${x.periode}`, { statut: 'réglé' }),
+      titre: `Partage de ${x.periode} validé`,
+      detail: `${money(x.montant)} seront versés à ${r.nom} sous ${partage.delaiJours} jours, avec le relevé détaillé ligne par ligne.`,
+      action: 'revshare.payout.approve',
+      cible: `${r.id}/${x.periode}`,
+      orgNom: r.nom,
+    })
+  }
+
+  const enregistrerPartage = () => {
+    acte({
+      faire: () => revendeurs.modifier(r.id, { revsharePct: partage.taux }),
+      ton: 'info',
+      titre: 'Réglages du partage enregistrés',
+      detail: `Taux ${pct(partage.taux)}, versement ${partage.periodicite === 'mensuel' ? 'mensuel' : 'trimestriel'} sous ${partage.delaiJours} jours. Le nouveau taux ne s’applique qu’après six mois de préavis, et jamais aux engagements en cours.`,
+      action: 'revshare.settings.update',
+      cible: r.id,
+      orgNom: r.nom,
+    })
+  }
+
+  const enregistrerPersonnalisation = () => {
+    const actifs = Object.entries(personnalisation)
+      .filter(([, v]) => v)
+      .map(([k]) => k)
+    acte({
+      faire: () => undefined,
+      titre: 'Périmètre de personnalisation enregistré',
+      detail: `${actifs.length} élément${actifs.length > 1 ? 's' : ''} thématisé${actifs.length > 1 ? 's' : ''} sur ${r.theme.domaine}. La structure des écrans et les mentions de l’exploitant restent inchangées.`,
+      action: 'reseller.branding.update',
+      cible: r.id,
+      orgNom: r.nom,
+    })
+  }
 
   const caMensuelClients = clients.reduce((a, o) => a + (o.caMensuel ?? 0), 0)
   const margeMoyenne =
@@ -232,8 +369,24 @@ export function VueRevendeur({ id }: { id: string }) {
                     autorise={autorise('reseller.manage')}
                     message={refus('reseller.manage')}
                   >
-                    <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />}>
-                      Ajouter une offre
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      iconBefore={<Plus size={13} />}
+                      disabled={offresHorsGrille.length === 0}
+                      onClick={() => {
+                        const o = offresHorsGrille[0]
+                        setLigne({
+                          offerId: o.id,
+                          prixAchat: o.prix.revendeur,
+                          prixVente: o.prix.direct,
+                        })
+                        setAjout(true)
+                      }}
+                    >
+                      {offresHorsGrille.length === 0
+                        ? 'Catalogue complet'
+                        : 'Ajouter une offre'}
                     </Button>
                   </GatedAction>
                 }
@@ -253,6 +406,14 @@ export function VueRevendeur({ id }: { id: string }) {
                   </tr>
                 </thead>
                 <tbody>
+                  {r.grille.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="px-3 py-8 text-center text-[12.5px] text-g-500">
+                        Aucune offre dans sa grille d’achat : ce partenaire ne peut rien vendre
+                        tant qu’au moins une n’y figure pas.
+                      </td>
+                    </tr>
+                  )}
                   {r.grille.map((g) => {
                     const offre = OFFRES.find((o) => o.id === g.offerId)
                     const remise = offre
@@ -303,14 +464,36 @@ export function VueRevendeur({ id }: { id: string }) {
                           </span>
                         </td>
                         <td className="px-3 py-2.5 text-right">
-                          <GatedAction
-                            autorise={autorise('reseller.manage')}
-                            message={refus('reseller.manage')}
-                          >
-                            <Button size="sm" variant="ghost">
-                              Modifier
-                            </Button>
-                          </GatedAction>
+                          <span className="flex items-center justify-end gap-1.5">
+                            <GatedAction
+                              autorise={autorise('reseller.manage')}
+                              message={refus('reseller.manage')}
+                            >
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setAjout(false)
+                                  setLigne({ ...g })
+                                }}
+                              >
+                                Modifier
+                              </Button>
+                            </GatedAction>
+                            <GatedAction
+                              autorise={autorise('reseller.manage')}
+                              message={refus('reseller.manage')}
+                            >
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-err hover:bg-err-bg"
+                                onClick={() => retirerLigne(g.offerId)}
+                              >
+                                Retirer
+                              </Button>
+                            </GatedAction>
+                          </span>
                         </td>
                       </tr>
                     )
@@ -506,36 +689,47 @@ export function VueRevendeur({ id }: { id: string }) {
             />
             <div className="space-y-3.5">
               <Switch
-                checked
+                checked={personnalisation.logo}
+                onChange={(v) => setPersonnalisation((c) => ({ ...c, logo: v }))}
                 label="Logo et couleurs du portail"
                 description="En-tête, boutons principaux, accents. La structure des écrans reste identique."
               />
               <Switch
-                checked
+                checked={personnalisation.domaine}
+                onChange={(v) => setPersonnalisation((c) => ({ ...c, domaine: v }))}
                 label="Domaine dédié avec certificat"
                 description="Certificat émis et renouvelé automatiquement pour le domaine du partenaire."
               />
               <Switch
-                checked
+                checked={personnalisation.courriels}
+                onChange={(v) => setPersonnalisation((c) => ({ ...c, courriels: v }))}
                 label="Modèles de courriels"
                 description="Notifications, invitations, alertes : envoyées sous le nom et le domaine du partenaire."
               />
               <Switch
-                checked
+                checked={personnalisation.factures}
+                onChange={(v) => setPersonnalisation((c) => ({ ...c, factures: v }))}
                 label="En-tête des factures"
                 description="Les factures émises au client final portent l’identité du partenaire."
               />
               <Switch
                 checked={false}
+                disabled
                 label="Structure des écrans"
                 description="Non personnalisable. Quand un incident survient, nos équipes et les leurs doivent regarder le même écran et se comprendre immédiatement."
               />
               <Switch
                 checked={false}
+                disabled
                 label="Mentions légales de l’exploitant"
                 description="Non masquable. La localisation des données et l’identité de l’exploitant technique restent visibles."
               />
             </div>
+            <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
+              <Button className="mt-4" variant="secondary" onClick={enregistrerPersonnalisation}>
+                Enregistrer le périmètre
+              </Button>
+            </GatedAction>
           </Card>
         </div>
       )}
@@ -591,7 +785,20 @@ export function VueRevendeur({ id }: { id: string }) {
                         </td>
                         <td className="px-3 py-2.5 text-right">
                           <span className="flex items-center justify-end gap-1.5">
-                            <Button size="sm" variant="ghost">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() =>
+                                acte({
+                                  ton: 'info',
+                                  titre: `Relevé de ${x.periode}`,
+                                  detail: `${money(x.caGenere)} de chiffre d’affaires encaissé, ${pct(x.revsharePct)} de partage, soit ${money(x.montant)}. Le détail ligne par ligne est joint au relevé.`,
+                                  action: 'revshare.statement.open',
+                                  cible: `${r.id}/${x.periode}`,
+                                  orgNom: r.nom,
+                                })
+                              }
+                            >
                               Détail
                             </Button>
                             {x.statut !== 'réglé' && (
@@ -602,13 +809,7 @@ export function VueRevendeur({ id }: { id: string }) {
                                 <Button
                                   size="sm"
                                   variant="secondary"
-                                  onClick={() =>
-                                    pousser({
-                                      ton: 'ok',
-                                      titre: `Partage de ${x.periode} validé`,
-                                      detail: `${money(x.montant)} seront versés à ${r.nom} sous 15 jours, avec le relevé détaillé ligne par ligne.`,
-                                    })
-                                  }
+                                  onClick={() => validerVersement(x)}
                                 >
                                   Valider le versement
                                 </Button>
@@ -684,37 +885,71 @@ export function VueRevendeur({ id }: { id: string }) {
               />
               <div className="space-y-4">
                 <Field label="Taux de partage" hint="pourcentage du CA encaissé reversé au partenaire">
-                  <Input type="number" defaultValue={r.revsharePct} suffix="%" />
+                  <Input
+                    type="number"
+                    min={0}
+                    max={60}
+                    value={partage.taux}
+                    suffix="%"
+                    onChange={(e) =>
+                      setPartage((c) => ({
+                        ...c,
+                        taux: Math.min(60, Math.max(0, Number(e.target.value) || 0)),
+                      }))
+                    }
+                  />
                 </Field>
                 <Field label="Périodicité du versement">
-                  <Select defaultValue="mensuel">
+                  <Select
+                    value={partage.periodicite}
+                    onChange={(e) => setPartage((c) => ({ ...c, periodicite: e.target.value }))}
+                  >
                     <option value="mensuel">Mensuelle</option>
                     <option value="trimestriel">Trimestrielle</option>
                   </Select>
                 </Field>
                 <Field label="Délai de versement après validation" hint="jours">
-                  <Input type="number" defaultValue={15} />
+                  <Input
+                    type="number"
+                    min={1}
+                    max={90}
+                    value={partage.delaiJours}
+                    onChange={(e) =>
+                      setPartage((c) => ({
+                        ...c,
+                        delaiJours: Math.min(90, Math.max(1, Number(e.target.value) || 1)),
+                      }))
+                    }
+                  />
                 </Field>
                 <div className="space-y-3">
                   <Switch
-                    checked
+                    checked={partage.surEncaisse}
+                    onChange={(v) => setPartage((c) => ({ ...c, surEncaisse: v }))}
                     label="Calcul sur le chiffre d’affaires encaissé"
                     description="Et non facturé. Un partage versé sur une facture impayée devrait être récupéré ensuite, ce qui empoisonne la relation."
                   />
                   <Switch
-                    checked
+                    checked={partage.deduireAvoirs}
+                    onChange={(v) => setPartage((c) => ({ ...c, deduireAvoirs: v }))}
                     label="Déduire les avoirs de service de l’assiette"
                     description="Cohérent : nous ne reversons pas un partage sur un montant que nous avons crédité au client."
                   />
                   <Switch
                     checked
+                    disabled
                     label="Relevé détaillé ligne par ligne"
                     description="Non désactivable. Un partenaire doit pouvoir vérifier son relevé, pas le prendre pour argent comptant."
                   />
                 </div>
               </div>
               <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
-                <Button className="mt-4" variant="secondary">
+                <Button
+                  className="mt-4"
+                  variant="secondary"
+                  disabled={partage.taux === r.revsharePct}
+                  onClick={enregistrerPartage}
+                >
                   Enregistrer — préavis de 6 mois
                 </Button>
               </GatedAction>
@@ -722,6 +957,129 @@ export function VueRevendeur({ id }: { id: string }) {
           </div>
         </div>
       )}
+
+      <Modal
+        open={ligne !== null}
+        onClose={() => {
+          setLigne(null)
+          setAjout(false)
+        }}
+        title={ajout ? 'Ajouter une offre à la grille' : 'Modifier la ligne de grille'}
+        description="Le prix d’achat est ce que nous facturons au partenaire. Le prix de vente n’est qu’indicatif : il le fixe librement."
+        size="md"
+        footer={
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setLigne(null)
+                setAjout(false)
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              disabled={
+                ligne === null || ligne.prixAchat <= 0 || ligne.prixVente < ligne.prixAchat
+              }
+              onClick={() => ligne && enregistrerLigne(ligne, ajout)}
+            >
+              {ajout ? 'Ajouter à la grille' : 'Enregistrer'}
+            </Button>
+          </>
+        }
+      >
+        {ligne && (
+          <div className="space-y-4">
+            <Field label="Offre">
+              <Select
+                value={ligne.offerId}
+                disabled={!ajout}
+                onChange={(e) => {
+                  const o = OFFRES.find((x) => x.id === e.target.value)
+                  setLigne({
+                    offerId: e.target.value,
+                    prixAchat: o?.prix.revendeur ?? 0,
+                    prixVente: o?.prix.direct ?? 0,
+                  })
+                }}
+              >
+                {(ajout
+                  ? offresHorsGrille
+                  : OFFRES.filter((o) => o.id === ligne.offerId)
+                ).map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.nom} — prix public {money(o.prix.direct)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Prix d’achat partenaire" required>
+                <Input
+                  type="number"
+                  min={0}
+                  value={ligne.prixAchat}
+                  suffix="FCFA"
+                  onChange={(e) =>
+                    setLigne((l) =>
+                      l ? { ...l, prixAchat: Math.max(0, Number(e.target.value) || 0) } : l,
+                    )
+                  }
+                />
+              </Field>
+              <Field
+                label="Prix de vente pratiqué"
+                hint="indicatif"
+                error={
+                  ligne.prixVente < ligne.prixAchat
+                    ? 'Un prix de vente sous le prix d’achat fait perdre de l’argent au partenaire.'
+                    : undefined
+                }
+              >
+                <Input
+                  type="number"
+                  min={0}
+                  value={ligne.prixVente}
+                  suffix="FCFA"
+                  onChange={(e) =>
+                    setLigne((l) =>
+                      l ? { ...l, prixVente: Math.max(0, Number(e.target.value) || 0) } : l,
+                    )
+                  }
+                />
+              </Field>
+            </div>
+            <KeyValueList
+              colonnes={2}
+              items={[
+                {
+                  cle: 'Remise sur le prix public',
+                  valeur: (() => {
+                    const o = OFFRES.find((x) => x.id === ligne.offerId)
+                    if (!o || o.prix.direct === 0) return '—'
+                    return `− ${pct(
+                      Math.round(((o.prix.direct - ligne.prixAchat) / o.prix.direct) * 1000) / 10,
+                      1,
+                    )}`
+                  })(),
+                },
+                {
+                  cle: 'Marge du partenaire',
+                  valeur:
+                    ligne.prixVente > 0
+                      ? `${money(ligne.prixVente - ligne.prixAchat)}/mois`
+                      : '—',
+                },
+              ]}
+            />
+            <Callout ton="warn" titre="Une hausse ne rattrape jamais l’existant">
+              Le prix d’achat modifié ne s’applique qu’aux nouvelles souscriptions du partenaire. Ses
+              clients déjà engagés conservent le prix garanti au moment de leur signature.
+            </Callout>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

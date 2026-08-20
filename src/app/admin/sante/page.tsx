@@ -3,14 +3,8 @@
 import { useState } from 'react'
 import { AlertTriangle, Megaphone, RefreshCw, Send } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
-import { dateHeure, duree, num, pct, relatif } from '@/lib/format'
-import {
-  ALERTES_PLATEFORME,
-  BACKENDS,
-  INCIDENTS,
-  JOBS_PLATEFORME,
-  STATUT_SERVICES,
-} from '@/lib/mock'
+import { MAINTENANT, dateHeure, duree, num, pct, relatif } from '@/lib/format'
+import { STATUT_SERVICES } from '@/lib/mock'
 import { BACKEND_LABEL, SITE_COURT } from '@/lib/types'
 import { Badge, MicroLabel, StatusDot } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
@@ -24,6 +18,8 @@ import { EventList, GrilleSparkCharts, LiensSortie } from '@/components/business
 import { BackendGauge } from '@/components/business/infra'
 import { JobTracker } from '@/components/business/paas'
 import { useApp } from '@/components/app/contexte'
+import { useActe, useAtelier } from '@/components/app/atelier'
+import type { Incident, Site } from '@/lib/types'
 
 const ONGLETS = [
   { id: 'services', label: 'État des services' },
@@ -33,10 +29,89 @@ const ONGLETS = [
   { id: 'alertes', label: 'Alertes' },
 ]
 
+const COMMUNICATION_VIDE = {
+  type: 'incident',
+  gravite: 'majeur' as Incident['gravite'],
+  service: '',
+  site: 'ABJ',
+  texte: '',
+  notifierOrgs: true,
+  publierStatut: true,
+  sms: false,
+}
+
 export default function SantePlateforme() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const { incidents, alertes, jobs, backends } = useAtelier()
+  const acte = useActe()
+
   const [onglet, setOnglet] = useState('services')
   const [communication, setCommunication] = useState<string | null>(null)
+  const [message, setMessage] = useState(COMMUNICATION_VIDE)
+  const [seuilsAjustes, setSeuilsAjustes] = useState<string[]>([])
+
+  const ALERTES_PLATEFORME = alertes.liste
+  const BACKENDS = backends.liste
+  const INCIDENTS = incidents.liste
+  const JOBS_PLATEFORME = jobs.liste
+
+  /** L'incident visé par la communication, s'il en existe un. */
+  const incidentVise = communication ? (incidents.parId(communication) ?? null) : null
+
+  const ouvrirCommunication = (cible: string, prerempli?: Partial<typeof COMMUNICATION_VIDE>) => {
+    setMessage({ ...COMMUNICATION_VIDE, ...prerempli })
+    setCommunication(cible)
+  }
+
+  const publier = () => {
+    const texte = message.texte.trim()
+    const sites: Site[] = message.site === 'tous' ? ['ABJ', 'GBM'] : [message.site as Site]
+
+    if (incidentVise) {
+      // Une mise à jour s'ajoute à la chronologie de l'incident ; une
+      // résolution le clôt en plus.
+      const resolution = message.type === 'resolution'
+      acte({
+        faire: () =>
+          incidents.modifier(incidentVise.id, (courant) => ({
+            mises_a_jour: [...courant.mises_a_jour, { ts: MAINTENANT, texte }],
+            statut: resolution ? ('resolu' as const) : courant.statut,
+            fin: resolution ? MAINTENANT : courant.fin,
+          })),
+        titre: resolution
+          ? `${incidentVise.titre} — incident clos`
+          : `Mise à jour publiée sur ${incidentVise.titre}`,
+        detail: resolution
+          ? 'Le rapport écrit est attendu sous cinq jours ouvrés, envoyé aux organisations touchées.'
+          : 'Visible immédiatement sur la page de statut publique et envoyée aux organisations touchées.',
+        action: resolution ? 'incident.resolve' : 'incident.update',
+        cible: incidentVise.id,
+      })
+    } else {
+      const id = `inc-session-${INCIDENTS.length + 1}`
+      acte({
+        faire: () =>
+          incidents.ajouter({
+            id,
+            titre: texte.split(/[.\n]/)[0].slice(0, 90) || 'Communication de service',
+            gravite: message.gravite,
+            statut: message.type === 'maintenance' ? 'surveille' : 'en_cours',
+            debut: MAINTENANT,
+            services: message.service ? [message.service] : [],
+            sites,
+            mises_a_jour: [{ ts: MAINTENANT, texte }],
+          }),
+        ton: 'warn',
+        titre: 'Communication publiée',
+        detail:
+          'Visible immédiatement sur la page de statut publique et envoyée aux organisations touchées.',
+        action: 'incident.declare',
+        cible: id,
+      })
+    }
+    setMessage(COMMUNICATION_VIDE)
+    setCommunication(null)
+  }
 
   const nonOperationnel = (s: (typeof STATUT_SERVICES)[number]) =>
     (['ABJ', 'GBM'] as const).some((x) => s.etats[x] !== 'operationnel')
@@ -59,7 +134,7 @@ export default function SantePlateforme() {
             <GatedAction autorise={autorise('capacity.manage')} message={refus('capacity.manage')}>
               <Button
                 iconBefore={<Megaphone size={14} />}
-                onClick={() => setCommunication('nouveau')}
+                onClick={() => ouvrirCommunication('nouveau')}
               >
                 Publier une communication
               </Button>
@@ -181,7 +256,12 @@ export default function SantePlateforme() {
                             <Button
                               size="sm"
                               variant="secondary"
-                              onClick={() => setCommunication(s.nom)}
+                              onClick={() =>
+                                ouvrirCommunication(`service-${s.nom}`, {
+                                  service: s.nom,
+                                  gravite: 'mineur',
+                                })
+                              }
                             >
                               Communiquer
                             </Button>
@@ -298,7 +378,14 @@ export default function SantePlateforme() {
                         variant="secondary"
                         className="mt-3.5"
                         iconBefore={<Send size={12} />}
-                        onClick={() => setCommunication(i.id)}
+                        onClick={() =>
+                          ouvrirCommunication(i.id, {
+                            type: 'incident',
+                            gravite: i.gravite,
+                            service: i.services[0] ?? '',
+                            site: i.sites.length > 1 ? 'tous' : (i.sites[0] ?? 'ABJ'),
+                          })
+                        }
                       >
                         Publier une mise à jour
                       </Button>
@@ -325,7 +412,20 @@ export default function SantePlateforme() {
                     ]}
                   />
                   {i.statut === 'resolu' && (
-                    <Button size="sm" variant="ghost" className="mt-3">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="mt-3"
+                      onClick={() =>
+                        acte({
+                          ton: 'info',
+                          titre: `Rapport d’incident — ${i.titre}`,
+                          detail: `${i.mises_a_jour.length} communications, ${i.services.length} service${i.services.length > 1 ? 's' : ''} touché${i.services.length > 1 ? 's' : ''}. Le rapport part aux organisations concernées, pas seulement à celles qui l’ont réclamé.`,
+                          action: 'incident.report',
+                          cible: i.id,
+                        })
+                      }
+                    >
                       Rapport d’incident
                     </Button>
                   )}
@@ -474,20 +574,62 @@ export default function SantePlateforme() {
                           variant="secondary"
                           iconBefore={<RefreshCw size={12} />}
                           onClick={() =>
-                            pousser({
+                            acte({
+                              faire: () =>
+                                jobs.modifier(j.id, (courant) => ({
+                                  statut: 'running',
+                                  erreur: undefined,
+                                  taches: courant.taches.map((t) =>
+                                    t.statut === 'failed'
+                                      ? { ...t, statut: 'running' as const, message: undefined }
+                                      : t,
+                                  ),
+                                })),
                               ton: 'info',
-                              titre: 'Reprise déclenchée',
-                              detail: `Le provisionnement repart de l’étape échouée. Aucune ressource déjà créée n’est recréée.`,
+                              titre: `Reprise de ${j.label}`,
+                              detail:
+                                'Le provisionnement repart de l’étape échouée. Aucune ressource déjà créée n’est recréée.',
+                              action: 'job.retry',
+                              cible: j.id,
+                              orgId: j.orgId,
                             })
                           }
                         >
                           Reprendre à l’étape échouée
                         </Button>
                       </GatedAction>
-                      <Button size="sm" variant="ghost">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          acte({
+                            faire: () => jobs.modifier(j.id, { statut: 'rolled_back' }),
+                            ton: 'warn',
+                            titre: `${j.label} annulé et nettoyé`,
+                            detail:
+                              'Les ressources partielles sont supprimées dans l’ordre inverse de leur création : rien ne reste facturé à un client qui n’a rien obtenu.',
+                            action: 'job.rollback',
+                            cible: j.id,
+                            orgId: j.orgId,
+                          })
+                        }
+                      >
                         Annuler et nettoyer
                       </Button>
-                      <Button size="sm" variant="ghost">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          acte({
+                            ton: 'info',
+                            titre: 'Ticket interne ouvert',
+                            detail: `${j.erreur?.correlationId ?? j.id} joint au ticket, avec l’étape fautive et le message du socle. Le client n’a pas à réexpliquer ce que nous savons déjà.`,
+                            action: 'job.escalate',
+                            cible: j.id,
+                            orgId: j.orgId,
+                          })
+                        }
+                      >
                         Ouvrir un ticket interne
                       </Button>
                     </div>
@@ -645,10 +787,28 @@ export default function SantePlateforme() {
                       </span>
                     </div>
                     <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{x.d}</p>
-                    {bruit && (
-                      <Button size="sm" variant="ghost" className="mt-1.5">
+                    {bruit && !seuilsAjustes.includes(x.r) && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="mt-1.5"
+                        onClick={() =>
+                          acte({
+                            faire: () => setSeuilsAjustes((l) => [...l, x.r]),
+                            titre: `Seuil de « ${x.r} » relevé`,
+                            detail: `${x.n} déclenchements pour ${x.incidents} incident${x.incidents > 1 ? 's' : ''} : le seuil monte pour que le signal reste audible. La règle reste active.`,
+                            action: 'alert.threshold.update',
+                            cible: x.r,
+                          })
+                        }
+                      >
                         Ajuster le seuil
                       </Button>
+                    )}
+                    {seuilsAjustes.includes(x.r) && (
+                      <Badge tone="ok" size="sm" className="mt-1.5">
+                        Seuil relevé
+                      </Badge>
                     )}
                   </div>
                 )
@@ -669,7 +829,16 @@ export default function SantePlateforme() {
       <Modal
         open={communication !== null}
         onClose={() => setCommunication(null)}
-        title="Publier une communication"
+        title={
+          incidentVise
+            ? `Mise à jour — ${incidentVise.titre}`
+            : 'Publier une communication'
+        }
+        description={
+          incidentVise
+            ? `${incidentVise.mises_a_jour.length} communication${incidentVise.mises_a_jour.length > 1 ? 's' : ''} déjà publiée${incidentVise.mises_a_jour.length > 1 ? 's' : ''} sur cet incident.`
+            : undefined
+        }
         size="lg"
         footer={
           <>
@@ -678,14 +847,8 @@ export default function SantePlateforme() {
             </Button>
             <Button
               iconBefore={<Send size={13} />}
-              onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: 'Communication publiée',
-                  detail: 'Visible immédiatement sur la page de statut publique et envoyée aux organisations touchées.',
-                })
-                setCommunication(null)
-              }}
+              disabled={message.texte.trim().length < 30}
+              onClick={publier}
             >
               Publier
             </Button>
@@ -695,15 +858,25 @@ export default function SantePlateforme() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Type">
-              <Select defaultValue="incident">
+              <Select
+                value={message.type}
+                onChange={(e) => setMessage((m) => ({ ...m, type: e.target.value }))}
+              >
                 <option value="incident">Incident en cours</option>
-                <option value="resolution">Résolution d’un incident</option>
+                <option value="resolution" disabled={!incidentVise}>
+                  Résolution d’un incident
+                </option>
                 <option value="maintenance">Maintenance planifiée</option>
                 <option value="info">Information</option>
               </Select>
             </Field>
             <Field label="Gravité">
-              <Select defaultValue="majeur">
+              <Select
+                value={message.gravite}
+                onChange={(e) =>
+                  setMessage((m) => ({ ...m, gravite: e.target.value as Incident['gravite'] }))
+                }
+              >
                 <option value="majeur">Majeure — service indisponible</option>
                 <option value="mineur">Mineure — service dégradé</option>
                 <option value="maintenance">Maintenance — interruption planifiée</option>
@@ -711,7 +884,10 @@ export default function SantePlateforme() {
             </Field>
           </div>
           <Field label="Services touchés" hint="détermine qui reçoit la notification">
-            <Select defaultValue="">
+            <Select
+              value={message.service}
+              onChange={(e) => setMessage((m) => ({ ...m, service: e.target.value }))}
+            >
               <option value="">Sélectionner…</option>
               {STATUT_SERVICES.map((s) => (
                 <option key={s.nom} value={s.nom}>
@@ -721,7 +897,10 @@ export default function SantePlateforme() {
             </Select>
           </Field>
           <Field label="Sites concernés">
-            <Select defaultValue="ABJ">
+            <Select
+              value={message.site}
+              onChange={(e) => setMessage((m) => ({ ...m, site: e.target.value }))}
+            >
               <option value="ABJ">Abidjan · ABJ-1</option>
               <option value="GBM">Grand-Bassam · GBM-1</option>
               <option value="tous">Les deux sites</option>
@@ -729,24 +908,37 @@ export default function SantePlateforme() {
           </Field>
           <Field
             label="Texte publié"
+            required
             hint="ce que le client lit — dites ce que vous savez, ce que vous ignorez encore, et quand vous recommuniquerez"
+            error={
+              message.texte !== '' && message.texte.trim().length < 30
+                ? 'Trop court pour informer qui que ce soit : trente caractères au minimum.'
+                : undefined
+            }
           >
             <Textarea
               rows={5}
-              defaultValue={
-                'Depuis 14 h 10 GMT, les services managés hébergés à Abidjan présentent des temps de réponse dégradés. La cause est identifiée : saturation d’un lien de stockage. Nos équipes travaillent au rééquilibrage. Aucune donnée n’est affectée. Prochaine communication dans 30 minutes.'
-              }
+              value={message.texte}
+              onChange={(e) => setMessage((m) => ({ ...m, texte: e.target.value }))}
+              placeholder="Depuis 14 h 10 GMT, les services managés hébergés à Abidjan présentent des temps de réponse dégradés. La cause est identifiée : saturation d’un lien de stockage. Nos équipes travaillent au rééquilibrage. Aucune donnée n’est affectée. Prochaine communication dans 30 minutes."
             />
           </Field>
           <div className="space-y-3">
             <Switch
-              checked
+              checked={message.notifierOrgs}
+              onChange={(v) => setMessage((m) => ({ ...m, notifierOrgs: v }))}
               label="Notifier les organisations touchées par courriel"
               description="Seules celles dont une ressource est réellement concernée. Notifier tout le monde à chaque incident finit par faire ignorer les notifications."
             />
-            <Switch checked label="Publier sur la page de statut publique" />
             <Switch
-              checked={false}
+              checked={message.publierStatut}
+              onChange={(v) => setMessage((m) => ({ ...m, publierStatut: v }))}
+              label="Publier sur la page de statut publique"
+            />
+            <Switch
+              checked={message.gravite === 'majeur' ? true : message.sms}
+              disabled={message.gravite === 'majeur'}
+              onChange={(v) => setMessage((m) => ({ ...m, sms: v }))}
               label="Envoyer un SMS aux contacts d’astreinte"
               description="À réserver aux incidents majeurs affectant la production."
             />

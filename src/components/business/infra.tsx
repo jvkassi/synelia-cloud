@@ -91,10 +91,13 @@ export function BackendGauge({
 export function PlacementSlider({
   backends,
   initial,
+  onAppliquer,
   className,
 }: {
   backends: Backend[]
   initial: Array<{ backendId: string; percent: number }>
+  /** Appelé avec la répartition retenue — l'appelant décide quoi en faire. */
+  onAppliquer?: (parts: Array<{ backendId: string; percent: number }>) => void
   className?: string
 }) {
   const [parts, setParts] = useState(initial)
@@ -194,7 +197,11 @@ export function PlacementSlider({
         </Callout>
       )}
 
-      <Button disabled={somme !== 100 || !modifie} fullWidth>
+      <Button
+        disabled={somme !== 100 || !modifie}
+        fullWidth
+        onClick={() => onAppliquer?.(parts)}
+      >
         Appliquer la répartition
       </Button>
     </div>

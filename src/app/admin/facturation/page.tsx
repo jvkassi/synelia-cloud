@@ -5,15 +5,7 @@ import Link from 'next/link'
 import { Download, Phone, Receipt, Send, TrendingUp } from 'lucide-react'
 import { cn, trendSeries } from '@/lib/utils'
 import { dateCourte, money, num, pct } from '@/lib/format'
-import {
-  FACTURES,
-  IMPAYES,
-  MARGE_BACKENDS,
-  ORGANISATIONS,
-  RELEVES_REVSHARE,
-  SYNTHESE_PLATEFORME,
-  VENTILATION_DEPENSE,
-} from '@/lib/mock'
+import { MARGE_BACKENDS, VENTILATION_DEPENSE } from '@/lib/mock'
 import { MOYEN_LABEL } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
@@ -23,6 +15,7 @@ import { Modal } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { StackedBar, StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useActe, useAtelier, type Impaye } from '@/components/app/atelier'
 
 const ONGLETS = [
   { id: 'revenus', label: 'Revenus' },
@@ -41,11 +34,27 @@ const COULEURS = [
 ]
 
 export default function FacturationAdmin() {
-  const { autorise, refus, pousser } = useApp()
-  const [onglet, setOnglet] = useState('revenus')
-  const [relance, setRelance] = useState<(typeof IMPAYES)[number] | null>(null)
+  const { autorise, refus } = useApp()
+  const { organisations, factures, impayes, revshare } = useAtelier()
+  const acte = useActe()
 
-  const caMensuel = SYNTHESE_PLATEFORME.caMensuel
+  const [onglet, setOnglet] = useState('revenus')
+  const [relance, setRelance] = useState<Impaye | null>(null)
+  const [dossier, setDossier] = useState({
+    action: 'appel',
+    compteRendu: '',
+    prochaine: '2026-09-05',
+    echelonnement: false,
+    suspension: false,
+  })
+  const [anomalieTraitee, setAnomalieTraitee] = useState(false)
+
+  const ORGANISATIONS = organisations.liste
+  const FACTURES = factures.liste
+  const IMPAYES = impayes.liste
+  const RELEVES_REVSHARE = revshare.liste
+  const caMensuel = ORGANISATIONS.reduce((a, o) => a + (o.caMensuel ?? 0), 0)
+  const tenantsActifs = ORGANISATIONS.filter((o) => o.statut === 'active').length
   const impayesTotal = IMPAYES.reduce((a, i) => a + i.montant, 0)
   const revshareDu = RELEVES_REVSHARE.filter((r) => r.statut !== 'réglé').reduce(
     (a, r) => a + r.montant,
@@ -54,6 +63,53 @@ export default function FacturationAdmin() {
   const coutInfra = MARGE_BACKENDS.reduce((a, m) => a + m.coutInfra, 0)
   const revenuInfra = MARGE_BACKENDS.reduce((a, m) => a + m.revenu, 0)
   const margeBrute = Math.round(((revenuInfra - coutInfra) / revenuInfra) * 1000) / 10
+
+  const LIBELLE_ACTION: Record<string, string> = {
+    appel: 'Appel téléphonique effectué',
+    relance: 'Relance écrite envoyée',
+    echelonnement: 'Proposition d’échelonnement',
+    avoir: 'Avoir commercial accordé',
+    promesse: 'Promesse de règlement enregistrée',
+  }
+
+  const enregistrerRecouvrement = (i: Impaye) => {
+    const org = ORGANISATIONS.find((o) => o.nom === i.org)
+    acte({
+      faire: () => {
+        // Un avoir solde la créance ; tout le reste incrémente le compteur de
+        // relances, qui est ce qui détermine l'étape suivante.
+        if (dossier.action === 'avoir') {
+          impayes.supprimer(i.facture)
+          const f = FACTURES.find((x) => x.numero === i.facture)
+          if (f) factures.modifier(f.id, { statut: 'annulee' })
+        } else {
+          impayes.modifier(i.facture, (courant) => ({ relances: courant.relances + 1 }))
+        }
+        if (dossier.suspension && org) {
+          organisations.modifier(org.id, { statut: 'suspendue' })
+        }
+      },
+      ton: dossier.suspension ? 'err' : 'ok',
+      titre: dossier.suspension
+        ? `${i.org} suspendue après relances`
+        : 'Action de recouvrement enregistrée',
+      detail: dossier.suspension
+        ? `${LIBELLE_ACTION[dossier.action]}. La suspension est consignée à votre nom dans le journal d’audit du client.`
+        : `${LIBELLE_ACTION[dossier.action]} sur ${i.facture}. Le dossier est mis à jour et l’action est consignée dans l’historique du compte.`,
+      action: dossier.suspension ? 'organisation.suspend' : 'dunning.action.log',
+      cible: i.facture,
+      orgId: org?.id,
+      orgNom: i.org,
+    })
+    setDossier({
+      action: 'appel',
+      compteRendu: '',
+      prochaine: '2026-09-05',
+      echelonnement: false,
+      suspension: false,
+    })
+    setRelance(null)
+  }
 
   const parCanal = [
     {
@@ -86,7 +142,19 @@ export default function FacturationAdmin() {
         sousTitre="Revenus par canal, cycle d’émission, recouvrement et rentabilité par socle. Le recouvrement se fait par appel et échelonnement avant de parler de suspension : une entreprise dont la trésorerie est tendue reste un client, pas un problème."
         actions={
           <GatedAction autorise={autorise('invoice.view')} message={refus('invoice.view')}>
-            <Button variant="secondary" iconBefore={<Download size={14} />}>
+            <Button
+              variant="secondary"
+              iconBefore={<Download size={14} />}
+              onClick={() =>
+                acte({
+                  ton: 'info',
+                  titre: 'Export de la période lancé',
+                  detail: `${FACTURES.length} factures, ${money(caMensuel)} de chiffre d’affaires, ventilation par canal et par famille. L’export arrive par courriel dans quelques minutes.`,
+                  action: 'billing.export',
+                  cible: 'periode-courante',
+                })
+              }
+            >
               Exporter la période
             </Button>
           </GatedAction>
@@ -181,13 +249,13 @@ export default function FacturationAdmin() {
                 <div>
                   <MicroLabel className="text-g-500">Panier moyen</MicroLabel>
                   <p className="tnum mt-0.5 text-[15px] font-bold text-ink">
-                    {money(Math.round(caMensuel / SYNTHESE_PLATEFORME.tenantsActifs))}
+                    {money(Math.round(caMensuel / tenantsActifs))}
                   </p>
                 </div>
                 <div>
                   <MicroLabel className="text-g-500">Organisations facturées</MicroLabel>
                   <p className="tnum mt-0.5 text-[15px] font-bold text-ink">
-                    {SYNTHESE_PLATEFORME.tenantsActifs}
+                    {tenantsActifs}
                   </p>
                 </div>
                 <div>
@@ -452,22 +520,58 @@ export default function FacturationAdmin() {
                   </div>
                 ))}
               </div>
-              <div className="mt-3.5 rounded-[6px] border border-warn/40 bg-warn-bg px-3 py-2.5">
+              <div
+                className={cn(
+                  'mt-3.5 rounded-[6px] border px-3 py-2.5',
+                  anomalieTraitee ? 'border-ok/40 bg-ok-bg' : 'border-warn/40 bg-warn-bg',
+                )}
+              >
                 <p className="text-[12.5px] font-semibold text-ink">
                   Anomalie : AMUGA, + 214 % sur le transfert sortant
                 </p>
                 <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">
-                  1,8 To de transfert sortant contre 580 Go le mois dernier. À vérifier avant émission :
-                  soit le client a mis en ligne un catalogue média, soit un compteur double-compte.
+                  {anomalieTraitee
+                    ? 'Compteurs vérifiés : le client a mis en ligne un catalogue média le 4 août. La consommation est réelle, la facture peut être émise.'
+                    : '1,8 To de transfert sortant contre 580 Go le mois dernier. À vérifier avant émission : soit le client a mis en ligne un catalogue média, soit un compteur double-compte.'}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <Button size="sm" variant="secondary">
-                    Vérifier les compteurs
-                  </Button>
-                  <Button size="sm" variant="ghost">
-                    Appeler le client
-                  </Button>
-                </div>
+                {!anomalieTraitee && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() =>
+                        acte({
+                          faire: () => setAnomalieTraitee(true),
+                          titre: 'Compteurs vérifiés',
+                          detail:
+                            'Le relevé de transfert sortant est confirmé par deux sources indépendantes. La consommation est réelle : la facture peut être émise.',
+                          action: 'billing.anomaly.verify',
+                          cible: 'AMUGA/egress',
+                          orgNom: 'AMUGA',
+                        })
+                      }
+                    >
+                      Vérifier les compteurs
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        acte({
+                          ton: 'info',
+                          titre: 'Appel à passer consigné',
+                          detail:
+                            'Prévenir avant d’émettre une facture qui triple coûte cinq minutes ; ne pas le faire coûte une contestation et une relation abîmée.',
+                          action: 'billing.anomaly.call',
+                          cible: 'AMUGA/egress',
+                          orgNom: 'AMUGA',
+                        })
+                      }
+                    >
+                      Appeler le client
+                    </Button>
+                  </div>
+                )}
               </div>
             </Card>
 
@@ -588,7 +692,20 @@ export default function FacturationAdmin() {
                                 Traiter
                               </Button>
                             </GatedAction>
-                            <Button size="sm" variant="ghost">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() =>
+                                acte({
+                                  ton: 'info',
+                                  titre: `Historique de ${i.facture}`,
+                                  detail: `${i.relances} relance${i.relances > 1 ? 's' : ''} depuis le ${dateCourte(i.echeance)}, ${i.retardJours} jours de retard. Aucune suspension prononcée à ce jour.`,
+                                  action: 'dunning.history.open',
+                                  cible: i.facture,
+                                  orgNom: i.org,
+                                })
+                              }
+                            >
                               Historique
                             </Button>
                           </span>
@@ -834,14 +951,8 @@ export default function FacturationAdmin() {
             </Button>
             <Button
               iconBefore={<Send size={13} />}
-              onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: 'Action de recouvrement enregistrée',
-                  detail: 'Le dossier est mis à jour et l’action est consignée dans l’historique du compte.',
-                })
-                setRelance(null)
-              }}
+              disabled={dossier.compteRendu.trim().length < 10}
+              onClick={() => relance && enregistrerRecouvrement(relance)}
             >
               Enregistrer l’action
             </Button>
@@ -862,7 +973,10 @@ export default function FacturationAdmin() {
               ]}
             />
             <Field label="Action">
-              <Select defaultValue="appel">
+              <Select
+                value={dossier.action}
+                onChange={(e) => setDossier((d) => ({ ...d, action: e.target.value }))}
+              >
                 <option value="appel">Appel téléphonique effectué</option>
                 <option value="relance">Relance écrite envoyée</option>
                 <option value="echelonnement">Proposition d’échelonnement</option>
@@ -870,27 +984,52 @@ export default function FacturationAdmin() {
                 <option value="promesse">Promesse de règlement enregistrée</option>
               </Select>
             </Field>
-            <Field label="Compte rendu" hint="ce que le client a dit, et ce qui a été convenu">
+            <Field
+              label="Compte rendu"
+              required
+              hint="ce que le client a dit, et ce qui a été convenu"
+              error={
+                dossier.compteRendu !== '' && dossier.compteRendu.trim().length < 10
+                  ? 'Un compte rendu de deux mots ne servira à personne dans trois semaines.'
+                  : undefined
+              }
+            >
               <Textarea
                 rows={4}
+                value={dossier.compteRendu}
+                onChange={(e) => setDossier((d) => ({ ...d, compteRendu: e.target.value }))}
                 placeholder="Appel au directeur financier. Difficulté de trésorerie liée à un retard de paiement de leur propre client public. Échelonnement en trois mensualités proposé et accepté, première échéance au 5 septembre."
               />
             </Field>
             <Field label="Prochaine relance" hint="laisser vide si le dossier est résolu">
-              <Input type="date" defaultValue="2026-09-05" />
+              <Input
+                type="date"
+                value={dossier.prochaine}
+                onChange={(e) => setDossier((d) => ({ ...d, prochaine: e.target.value }))}
+              />
             </Field>
             <div className="space-y-3">
               <Switch
-                checked={false}
+                checked={dossier.echelonnement || dossier.action === 'echelonnement'}
+                disabled={dossier.action === 'echelonnement'}
+                onChange={(v) => setDossier((d) => ({ ...d, echelonnement: v }))}
                 label="Proposer un échelonnement"
                 description="Trois mensualités par défaut, sans pénalité. C’est le levier qui recouvre le mieux."
               />
               <Switch
-                checked={false}
+                checked={dossier.suspension}
+                onChange={(v) => setDossier((d) => ({ ...d, suspension: v }))}
                 label="Suspendre l’organisation"
                 description="Décision humaine, à ne prendre qu’après rappel écrit et quinze jours supplémentaires. Elle arrête l’activité du client et sera consignée avec votre nom."
               />
             </div>
+            {dossier.suspension && (
+              <Callout ton="err" titre="Vous êtes sur le point d’arrêter une activité">
+                {relance.org} perdra l’accès à ses services dès l’enregistrement. Les ressources
+                continuent de tourner et de facturer : une suspension n’est pas un arrêt, c’est une
+                coupure d’accès. Vérifiez qu’un appel a bien été passé avant.
+              </Callout>
+            )}
             <Callout ton="violet" titre="Avant de suspendre, appelez">
               Sur les six dossiers d’impayé traités cette année, cinq se sont résolus par un simple
               appel et un échelonnement. Le sixième était une entreprise en cessation de paiement, où

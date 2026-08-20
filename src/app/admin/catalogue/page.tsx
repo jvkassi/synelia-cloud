@@ -1,12 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Archive, Eye, FileEdit, Plus, Tag } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { money, moneyPerMonth, num, pct } from '@/lib/format'
-import { OFFRES, SOUSCRIPTIONS } from '@/lib/mock'
+import { Archive, Plus, Trash2 } from 'lucide-react'
+import { cn, slugify } from '@/lib/utils'
+import { dateCourte, money, moneyPerMonth, num, pct } from '@/lib/format'
 import { Badge, MicroLabel } from '@/components/ui/badge'
-import { Button, ButtonLink } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
 import { Field, Input, Select, Switch, Textarea } from '@/components/ui/field'
 import { ConfirmDialog, Drawer } from '@/components/ui/overlay'
@@ -14,6 +13,7 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
+import { useActe, useAtelier } from '@/components/app/atelier'
 import type { Offer } from '@/lib/types'
 
 const ONGLETS = [
@@ -30,17 +30,207 @@ const LIBELLE_CATEGORIE: Record<Offer['categorie'], string> = {
   web: 'Hébergement web',
 }
 
+/** Ce qu'un formulaire d'offre porte — le reste du modèle est dérivé. */
+interface Brouillon {
+  nom: string
+  code: string
+  categorie: Offer['categorie']
+  specs: string
+  caracteristiques: string
+  direct: number
+  revendeur: number
+  operateur: number
+  sla: string
+  populaire: boolean
+  surDevis: boolean
+}
+
+const BROUILLON_VIDE: Brouillon = {
+  nom: '',
+  code: '',
+  categorie: 'espace_cloud',
+  specs: '',
+  caracteristiques: '',
+  direct: 0,
+  revendeur: 0,
+  operateur: 0,
+  sla: '99,9 %',
+  populaire: false,
+  surDevis: false,
+}
+
+const versBrouillon = (o: Offer): Brouillon => ({
+  nom: o.nom,
+  code: o.code,
+  categorie: o.categorie,
+  specs: o.specs,
+  caracteristiques: o.caracteristiques.join('\n'),
+  direct: o.prix.direct,
+  revendeur: o.prix.revendeur,
+  operateur: o.prix.operateur,
+  sla: o.sla ?? '',
+  populaire: o.populaire ?? false,
+  surDevis: o.surDevis ?? false,
+})
+
 export default function Catalogue() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const { offres, journal } = useAtelier()
+  const acte = useActe()
+
   const [onglet, setOnglet] = useState('offres')
   const [edition, setEdition] = useState<Offer | null>(null)
   const [creation, setCreation] = useState(false)
+  const [form, setForm] = useState<Brouillon>(BROUILLON_VIDE)
   const [depreciation, setDepreciation] = useState<Offer | null>(null)
+  const [suppression, setSuppression] = useState<Offer | null>(null)
 
+  const OFFRES = offres.liste
   const publiees = OFFRES.filter((o) => o.statut === 'publiee')
   const brouillons = OFFRES.filter((o) => o.statut === 'brouillon')
   const depreciees = OFFRES.filter((o) => o.statut === 'depreciee')
   const souscriptionsTotal = OFFRES.reduce((a, o) => a + o.souscriptionsActives, 0)
+
+  /** Les mouvements de catalogue de la session, lus dans le journal d'audit. */
+  const mouvements = journal.liste.filter((a) => a.action.startsWith('offer.'))
+
+  const modifierForm = <C extends keyof Brouillon>(champ: C, valeur: Brouillon[C]) =>
+    setForm((f) => ({ ...f, [champ]: valeur }))
+
+  const ouvrirCreation = () => {
+    setEdition(null)
+    setForm(BROUILLON_VIDE)
+    setCreation(true)
+  }
+
+  const ouvrirEdition = (o: Offer) => {
+    setCreation(false)
+    setForm(versBrouillon(o))
+    setEdition(o)
+  }
+
+  const fermerFormulaire = () => {
+    setEdition(null)
+    setCreation(false)
+  }
+
+  const nomValide = form.nom.trim().length >= 2
+  const codeValide = /^[A-Z0-9-]{3,}$/.test(form.code.trim().toUpperCase())
+  const prixValide = form.surDevis || form.direct > 0
+  const ordreValide =
+    form.surDevis || (form.revendeur <= form.direct && form.operateur <= form.revendeur)
+  const formValide = nomValide && codeValide && prixValide && ordreValide
+
+  const enregistrer = () => {
+    const nom = form.nom.trim()
+    const code = form.code.trim().toUpperCase()
+    const prix = { direct: form.direct, revendeur: form.revendeur, operateur: form.operateur }
+    const caracteristiques = form.caracteristiques
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+
+    if (edition) {
+      acte({
+        faire: () =>
+          offres.modifier(edition.id, {
+            nom,
+            code,
+            categorie: form.categorie,
+            specs: form.specs.trim(),
+            caracteristiques,
+            prix,
+            sla: form.sla || undefined,
+            populaire: form.populaire,
+            surDevis: form.surDevis,
+          }),
+        titre: `${nom} modifiée`,
+        detail:
+          edition.souscriptionsActives > 0
+            ? `Les ${edition.souscriptionsActives} souscriptions en cours conservent leur prix. La modification ne concerne que les nouvelles.`
+            : 'Aucune souscription en cours : la modification prend effet immédiatement.',
+        action: 'offer.update',
+        cible: code,
+      })
+    } else {
+      const base = `off-${slugify(nom).slice(0, 20) || 'offre'}`
+      let id = base
+      let n = 2
+      while (offres.parId(id)) {
+        id = `${base}-${n}`
+        n += 1
+      }
+      acte({
+        faire: () =>
+          offres.ajouter({
+            id,
+            code,
+            nom,
+            categorie: form.categorie,
+            specs: form.specs.trim(),
+            caracteristiques,
+            prix,
+            statut: 'brouillon',
+            souscriptionsActives: 0,
+            sla: form.sla || undefined,
+            populaire: form.populaire,
+            surDevis: form.surDevis,
+          }),
+        titre: `${nom} créée en brouillon`,
+        detail:
+          'Elle n’apparaîtra sur la vitrine qu’après publication explicite. Publier engage le prix.',
+        action: 'offer.create',
+        cible: code,
+      })
+    }
+    fermerFormulaire()
+  }
+
+  const publier = (o: Offer) => {
+    acte({
+      faire: () => offres.modifier(o.id, { statut: 'publiee' }),
+      titre: `${o.nom} publiée`,
+      detail:
+        'L’offre apparaît immédiatement sur la vitrine publique et dans le simulateur de coût. Son prix est désormais garanti pour chaque souscripteur.',
+      action: 'offer.publish',
+      cible: o.code,
+    })
+  }
+
+  const deprecier = (o: Offer) => {
+    acte({
+      faire: () => offres.modifier(o.id, { statut: 'depreciee', populaire: false }),
+      ton: 'info',
+      titre: `${o.nom} dépréciée`,
+      detail: `Elle n’est plus souscriptible. Les ${o.souscriptionsActives} clients existants continuent d’être servis au prix garanti.`,
+      action: 'offer.deprecate',
+      cible: o.code,
+    })
+    setDepreciation(null)
+  }
+
+  const republier = (o: Offer) => {
+    acte({
+      faire: () => offres.modifier(o.id, { statut: 'publiee' }),
+      titre: `${o.nom} remise en vente`,
+      detail: 'Elle réapparaît sur la vitrine et dans le simulateur, au prix affiché.',
+      action: 'offer.publish',
+      cible: o.code,
+    })
+  }
+
+  const supprimer = (o: Offer) => {
+    acte({
+      faire: () => offres.supprimer(o.id),
+      ton: 'warn',
+      titre: `${o.nom} supprimée`,
+      detail:
+        'Un brouillon n’a jamais été vendu : sa suppression n’engage personne. Une offre publiée, elle, ne peut être que dépréciée.',
+      action: 'offer.delete',
+      cible: o.code,
+    })
+    setSuppression(null)
+  }
 
   return (
     <div className="space-y-5">
@@ -49,7 +239,7 @@ export default function Catalogue() {
         sousTitre="Ce que nous vendons, à quel prix, et selon quel canal. Une offre publiée engage un prix : la modifier à la hausse ne s’applique jamais à une souscription en cours, seulement aux nouvelles."
         actions={
           <GatedAction autorise={autorise('catalog.edit')} message={refus('catalog.edit')}>
-            <Button iconBefore={<Plus size={14} />} onClick={() => setCreation(true)}>
+            <Button iconBefore={<Plus size={14} />} onClick={ouvrirCreation}>
               Créer une offre
             </Button>
           </GatedAction>
@@ -253,7 +443,7 @@ export default function Catalogue() {
                   aligne: 'right',
                   rendu: (o) => (
                     <span className="flex items-center justify-end gap-1.5">
-                      <Button size="sm" variant="ghost" onClick={() => setEdition(o)}>
+                      <Button size="sm" variant="ghost" onClick={() => ouvrirEdition(o)}>
                         Modifier
                       </Button>
                       {o.statut === 'publiee' && (
@@ -276,18 +466,34 @@ export default function Catalogue() {
                           autorise={autorise('catalog.edit')}
                           message={refus('catalog.edit')}
                         >
+                          <Button size="sm" variant="secondary" onClick={() => publier(o)}>
+                            Publier
+                          </Button>
+                        </GatedAction>
+                      )}
+                      {o.statut === 'depreciee' && (
+                        <GatedAction
+                          autorise={autorise('catalog.edit')}
+                          message={refus('catalog.edit')}
+                        >
+                          <Button size="sm" variant="ghost" onClick={() => republier(o)}>
+                            Remettre en vente
+                          </Button>
+                        </GatedAction>
+                      )}
+                      {o.souscriptionsActives === 0 && o.statut !== 'publiee' && (
+                        <GatedAction
+                          autorise={autorise('catalog.edit')}
+                          message={refus('catalog.edit')}
+                        >
                           <Button
                             size="sm"
-                            variant="secondary"
-                            onClick={() =>
-                              pousser({
-                                ton: 'ok',
-                                titre: `${o.nom} publiée`,
-                                detail: 'L’offre apparaît immédiatement sur la vitrine publique et dans le simulateur de coût.',
-                              })
-                            }
+                            variant="ghost"
+                            className="text-err hover:bg-err-bg"
+                            iconBefore={<Trash2 size={12} />}
+                            onClick={() => setSuppression(o)}
                           >
-                            Publier
+                            Supprimer
                           </Button>
                         </GatedAction>
                       )}
@@ -512,6 +718,21 @@ export default function Catalogue() {
               sousTitre="Chaque publication, dépréciation et modification de prix est datée et attribuée."
             />
             <div className="space-y-1.5">
+              {mouvements.map((a) => (
+                <div
+                  key={a.id}
+                  className="flex flex-wrap items-baseline justify-between gap-2 border-b border-g-100 pb-1.5 last:border-0"
+                >
+                  <span className="min-w-0 text-[12px] text-ink">
+                    <span className="mr-1.5 font-mono text-[10.5px] text-p-700">{a.action}</span>
+                    {a.target}
+                    {a.detail ? ` — ${a.detail}` : ''}
+                  </span>
+                  <span className="shrink-0 text-[10.5px] text-g-500">
+                    {a.actor.nom} · {dateCourte(a.ts)}
+                  </span>
+                </div>
+              ))}
               {[
                 { q: '12 août 2026', qui: 'Jean-Vincent Kassi', d: 'Publication de l’offre Cloud Souverain — placement exclusivement libre et local' },
                 { q: '4 août 2026', qui: 'Aïcha Bamba', d: 'Publication de l’offre Cloud Hybride — absorption d’une capacité VMware existante' },
@@ -536,37 +757,16 @@ export default function Catalogue() {
 
       <Drawer
         open={edition !== null || creation}
-        onClose={() => {
-          setEdition(null)
-          setCreation(false)
-        }}
+        onClose={fermerFormulaire}
         title={edition ? `Modifier ${edition.nom}` : 'Créer une offre'}
         size="lg"
         footer={
           <>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setEdition(null)
-                setCreation(false)
-              }}
-            >
+            <Button variant="ghost" onClick={fermerFormulaire}>
               Annuler
             </Button>
             <GatedAction autorise={autorise('catalog.edit')} message={refus('catalog.edit')}>
-              <Button
-                onClick={() => {
-                  pousser({
-                    ton: 'ok',
-                    titre: edition ? 'Offre modifiée' : 'Offre créée en brouillon',
-                    detail: edition
-                      ? 'Les souscriptions en cours conservent leur prix. La modification ne concerne que les nouvelles.'
-                      : 'Elle n’apparaîtra sur la vitrine qu’après publication explicite.',
-                  })
-                  setEdition(null)
-                  setCreation(false)
-                }}
-              >
+              <Button disabled={!formValide} onClick={enregistrer}>
                 {edition ? 'Enregistrer' : 'Créer en brouillon'}
               </Button>
             </GatedAction>
@@ -575,15 +775,47 @@ export default function Catalogue() {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Nom commercial">
-              <Input defaultValue={edition?.nom ?? ''} placeholder="Cloud Pro" />
+            <Field
+              label="Nom commercial"
+              required
+              error={form.nom !== '' && !nomValide ? 'Deux caractères au minimum.' : undefined}
+            >
+              <Input
+                value={form.nom}
+                onChange={(e) => modifierForm('nom', e.target.value)}
+                placeholder="Cloud Pro"
+                autoFocus
+              />
             </Field>
-            <Field label="Code" hint="apparaît sur les factures — immuable après publication">
-              <Input defaultValue={edition?.code ?? ''} placeholder="CLOUD-PRO" />
+            <Field
+              label="Code"
+              required
+              hint={
+                edition?.statut === 'publiee'
+                  ? 'immuable : il apparaît sur des factures déjà émises'
+                  : 'apparaît sur les factures — immuable après publication'
+              }
+              error={
+                form.code !== '' && !codeValide
+                  ? 'Trois caractères au minimum, en majuscules, chiffres et tirets.'
+                  : undefined
+              }
+            >
+              <Input
+                value={form.code}
+                disabled={edition?.statut === 'publiee'}
+                onChange={(e) => modifierForm('code', e.target.value.toUpperCase())}
+                placeholder="CLOUD-PRO"
+              />
             </Field>
           </div>
           <Field label="Catégorie">
-            <Select defaultValue={edition?.categorie ?? 'espace_cloud'}>
+            <Select
+              value={form.categorie}
+              onChange={(e) =>
+                modifierForm('categorie', e.target.value as Offer['categorie'])
+              }
+            >
               {Object.entries(LIBELLE_CATEGORIE).map(([v, l]) => (
                 <option key={v} value={v}>
                   {l}
@@ -592,29 +824,80 @@ export default function Catalogue() {
             </Select>
           </Field>
           <Field label="Caractéristiques" hint="phrase affichée sur la vitrine et le comparateur">
-            <Input defaultValue={edition?.specs ?? ''} placeholder="16 vCPU · 64 Go · 2 To SSD" />
+            <Input
+              value={form.specs}
+              onChange={(e) => modifierForm('specs', e.target.value)}
+              placeholder="16 vCPU · 64 Go · 2 To SSD"
+            />
           </Field>
           <Field label="Ce qui est inclus" hint="une ligne par élément">
             <Textarea
               rows={5}
-              defaultValue={edition?.caracteristiques.join('\n') ?? ''}
+              value={form.caracteristiques}
+              onChange={(e) => modifierForm('caracteristiques', e.target.value)}
               placeholder={'Sauvegarde quotidienne incluse\nIP publique\nSupport en heures ouvrées'}
             />
           </Field>
           <MicroLabel className="pt-2">Tarification par canal</MicroLabel>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Field label="Prix direct" hint="publié sur la vitrine">
-              <Input type="number" defaultValue={edition?.prix.direct ?? 0} suffix="FCFA" />
+            <Field
+              label="Prix direct"
+              hint="publié sur la vitrine"
+              required={!form.surDevis}
+              error={!form.surDevis && form.direct <= 0 ? 'Un prix est attendu.' : undefined}
+            >
+              <Input
+                type="number"
+                min={0}
+                value={form.direct}
+                disabled={form.surDevis}
+                onChange={(e) => modifierForm('direct', Math.max(0, Number(e.target.value) || 0))}
+                suffix="FCFA"
+              />
             </Field>
-            <Field label="Prix revendeur" hint="prix d’achat partenaire">
-              <Input type="number" defaultValue={edition?.prix.revendeur ?? 0} suffix="FCFA" />
+            <Field
+              label="Prix revendeur"
+              hint="prix d’achat partenaire"
+              error={
+                !form.surDevis && form.revendeur > form.direct
+                  ? 'Au-dessus du prix direct : le partenaire ne pourrait rien vendre.'
+                  : undefined
+              }
+            >
+              <Input
+                type="number"
+                min={0}
+                value={form.revendeur}
+                disabled={form.surDevis}
+                onChange={(e) =>
+                  modifierForm('revendeur', Math.max(0, Number(e.target.value) || 0))
+                }
+                suffix="FCFA"
+              />
             </Field>
-            <Field label="Prix opérateur" hint="volume négocié">
-              <Input type="number" defaultValue={edition?.prix.operateur ?? 0} suffix="FCFA" />
+            <Field
+              label="Prix opérateur"
+              hint="volume négocié"
+              error={
+                !form.surDevis && form.operateur > form.revendeur
+                  ? 'Au-dessus du prix revendeur : la hiérarchie des canaux s’inverse.'
+                  : undefined
+              }
+            >
+              <Input
+                type="number"
+                min={0}
+                value={form.operateur}
+                disabled={form.surDevis}
+                onChange={(e) =>
+                  modifierForm('operateur', Math.max(0, Number(e.target.value) || 0))
+                }
+                suffix="FCFA"
+              />
             </Field>
           </div>
           <Field label="Engagement de disponibilité">
-            <Select defaultValue={edition?.sla ?? '99,9 %'}>
+            <Select value={form.sla} onChange={(e) => modifierForm('sla', e.target.value)}>
               <option value="">Aucun engagement chiffré</option>
               <option value="99,9 %">99,9 %</option>
               <option value="99,95 %">99,95 %</option>
@@ -623,12 +906,14 @@ export default function Catalogue() {
           </Field>
           <div className="space-y-3">
             <Switch
-              checked={edition?.populaire ?? false}
+              checked={form.populaire}
+              onChange={(v) => modifierForm('populaire', v)}
               label="Marquer comme populaire"
               description="Met l’offre en avant sur la vitrine. À utiliser sur l’offre que vous recommandez réellement, pas sur celle qui rapporte le plus."
             />
             <Switch
-              checked={edition?.surDevis ?? false}
+              checked={form.surDevis}
+              onChange={(v) => modifierForm('surDevis', v)}
               label="Sur devis uniquement"
               description="L’offre apparaît sans prix, avec un bouton de prise de contact. Pour les périmètres qui exigent une qualification."
             />
@@ -653,14 +938,21 @@ export default function Catalogue() {
           `Les ${depreciation?.souscriptionsActives ?? 0} souscriptions actives sont maintenues, au prix garanti, sans limite de durée annoncée`,
           'Les clients concernés reçoivent une comparaison avec l’offre de remplacement, sans obligation de migrer',
         ]}
-        onConfirm={() => {
-          pousser({
-            ton: 'info',
-            titre: `${depreciation?.nom} dépréciée`,
-            detail: 'Elle n’est plus souscriptible. Les clients existants continuent d’être servis au prix garanti.',
-          })
-          setDepreciation(null)
-        }}
+        onConfirm={() => depreciation && deprecier(depreciation)}
+      />
+
+      <ConfirmDialog
+        open={suppression !== null}
+        onClose={() => setSuppression(null)}
+        titre="Supprimer une offre"
+        ressource={suppression?.code ?? ''}
+        libelleAction="Supprimer l’offre"
+        pertes={[
+          'L’offre disparaît du catalogue, sans trace côté client',
+          'Aucune souscription n’est concernée : seule une offre jamais vendue peut être supprimée',
+          'Une offre publiée, elle, ne se supprime pas — elle se déprécie',
+        ]}
+        onConfirm={() => suppression && supprimer(suppression)}
       />
     </div>
   )

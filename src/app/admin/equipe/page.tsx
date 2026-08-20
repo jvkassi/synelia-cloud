@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { KeyRound, Plus, ShieldCheck, UserMinus } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { dateHeure, relatif } from '@/lib/format'
-import { AUDIT, EQUIPE_SYNELIA, TICKETS_PLATEFORME } from '@/lib/mock'
+import { cn, slugify } from '@/lib/utils'
+import { MAINTENANT, dateHeure, relatif } from '@/lib/format'
+import type { MembreEquipe } from '@/lib/mock'
 import { MATRICE_RBAC, ROLES_FOURNISSEUR, can } from '@/lib/rbac'
 import { ROLE_LABEL, type Role } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -16,6 +16,7 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { RoleMatrix } from '@/components/business/rbac-canvas'
 import { useApp } from '@/components/app/contexte'
+import { useActe, useAtelier } from '@/components/app/atelier'
 
 const ONGLETS = [
   { id: 'membres', label: 'Membres de l’équipe' },
@@ -24,19 +25,167 @@ const ONGLETS = [
   { id: 'acces', label: 'Politique d’accès' },
 ]
 
-export default function Equipe() {
-  const { autorise, refus, pousser } = useApp()
-  const [onglet, setOnglet] = useState('membres')
-  const [detail, setDetail] = useState<(typeof EQUIPE_SYNELIA)[number] | null>(null)
-  const [ajout, setAjout] = useState(false)
-  const [retrait, setRetrait] = useState<(typeof EQUIPE_SYNELIA)[number] | null>(null)
+const EQUIPES_CONNUES = [
+  'Direction Innovation & Expertise',
+  'Sponsor stratégique',
+  'NOC Abidjan',
+  'NOC Abidjan · astreinte',
+  'Finance',
+  'Conformité & sécurité',
+  'Support niveau 2',
+]
 
+const RECRUE_VIDE = {
+  nom: '',
+  email: '',
+  equipe: '',
+  role: 'provider_operator' as Role,
+  privilegie: false,
+  astreinte: false,
+}
+
+const POLITIQUE_INITIALE = {
+  mfa: true,
+  elevationBornee: true,
+  journalisationFine: true,
+  revueTrimestrielle: true,
+  sessionCourte: true,
+  restrictionIp: false,
+}
+
+export default function Equipe() {
+  const { autorise, refus } = useApp()
+  const { equipe: registreEquipe, tickets, journal } = useAtelier()
+  const acte = useActe()
+
+  const [onglet, setOnglet] = useState('membres')
+  const [detail, setDetail] = useState<MembreEquipe | null>(null)
+  const [ajout, setAjout] = useState(false)
+  const [retrait, setRetrait] = useState<MembreEquipe | null>(null)
+  const [changementRole, setChangementRole] = useState<Role | null>(null)
+  const [recrue, setRecrue] = useState(RECRUE_VIDE)
+  const [politique, setPolitique] = useState(POLITIQUE_INITIALE)
+
+  const EQUIPE_SYNELIA = registreEquipe.liste
+  const AUDIT = journal.liste
   const privilegies = EQUIPE_SYNELIA.filter((m) => m.privilegie)
   const elevationsActives = EQUIPE_SYNELIA.filter((m) => m.elevation?.active)
-  const equipes = [...new Set(EQUIPE_SYNELIA.map((m) => m.equipe))]
+  const equipes = [...new Set([...EQUIPES_CONNUES, ...EQUIPE_SYNELIA.map((m) => m.equipe)])]
 
   const ticketsDe = (nom: string) =>
-    TICKETS_PLATEFORME.filter((t) => t.assigneA === nom && !['resolu', 'ferme'].includes(t.statut))
+    tickets.liste.filter((t) => t.assigneA === nom && !['resolu', 'ferme'].includes(t.statut))
+
+  // Le membre ouvert dans le tiroir doit refléter ses propres modifications :
+  // on le relit dans le registre plutôt que de garder la copie du clic.
+  const ouvert = detail ? (registreEquipe.parId(detail.id) ?? null) : null
+
+  const nomValide = recrue.nom.trim().split(/\s+/).filter(Boolean).length >= 2
+  const emailValide = /^[^@\s]+@synelia\.tech$/i.test(recrue.email.trim())
+  const equipeValide = recrue.equipe !== ''
+  const recrueValide = nomValide && emailValide && equipeValide
+
+  const ajouterMembre = () => {
+    const nom = recrue.nom.trim()
+    const id = `syn-${slugify(nom).slice(0, 20) || 'membre'}`
+    acte({
+      faire: () =>
+        registreEquipe.ajouterEnFin({
+          id,
+          nom,
+          email: recrue.email.trim().toLowerCase(),
+          role: recrue.role,
+          equipe: recrue.astreinte ? `${recrue.equipe} · astreinte` : recrue.equipe,
+          dernierAcces: MAINTENANT,
+          privilegie: recrue.privilegie,
+        }),
+      titre: `${nom} ajouté à l’équipe`,
+      detail: `Rôle ${ROLE_LABEL[recrue.role]}, ${MATRICE_RBAC.filter((a) => can(recrue.role, a.id) === 'full').length} actions autorisées. L’invitation est envoyée ; le deuxième facteur devra être activé avant tout accès.`,
+      action: 'team.member.add',
+      cible: recrue.email.trim().toLowerCase(),
+    })
+    setRecrue(RECRUE_VIDE)
+    setAjout(false)
+  }
+
+  const retirerMembre = (m: MembreEquipe) => {
+    const siens = ticketsDe(m.nom)
+    acte({
+      faire: () => {
+        registreEquipe.supprimer(m.id)
+        siens.forEach((t) => tickets.modifier(t.id, { assigneA: undefined }))
+      },
+      ton: 'info',
+      titre: `${m.nom} retiré de l’équipe`,
+      detail: `Accès coupés, jetons révoqués, ${siens.length} ticket${siens.length > 1 ? 's' : ''} remis dans la file non assignée. Pensez à faire tourner les secrets partagés : cette étape n’est pas automatique.`,
+      action: 'team.member.remove',
+      cible: m.email,
+    })
+    setRetrait(null)
+    if (detail?.id === m.id) setDetail(null)
+  }
+
+  const appliquerRole = (m: MembreEquipe, role: Role) => {
+    acte({
+      faire: () =>
+        registreEquipe.modifier(m.id, {
+          role,
+          privilegie: role === 'provider_admin' ? m.privilegie : false,
+        }),
+      titre: `Rôle de ${m.nom} modifié`,
+      detail: `${ROLE_LABEL[m.role]} → ${ROLE_LABEL[role]}, soit ${MATRICE_RBAC.filter((a) => can(role, a.id) === 'full').length} actions autorisées. Le changement prend effet à sa prochaine requête.`,
+      action: 'team.role.change',
+      cible: m.email,
+    })
+    setChangementRole(null)
+  }
+
+  const revoquerElevation = (m: MembreEquipe) => {
+    acte({
+      faire: () => registreEquipe.modifier(m.id, { elevation: { active: false } }),
+      ton: 'info',
+      titre: `Élévation de ${m.nom} révoquée`,
+      detail: 'L’accès est coupé immédiatement et la révocation est journalisée.',
+      action: 'access.elevation.revoke',
+      cible: m.email,
+    })
+  }
+
+  const fermerSessions = (m: MembreEquipe) => {
+    acte({
+      titre: `Sessions de ${m.nom} fermées`,
+      detail:
+        'Toutes ses sessions portail et interfaces d’exploitation sont invalidées. Il devra se réauthentifier, deuxième facteur compris.',
+      action: 'team.sessions.revoke',
+      cible: m.email,
+    })
+  }
+
+  const basculerPrivilege = (m: MembreEquipe) => {
+    const retirer = m.privilegie
+    acte({
+      faire: () => registreEquipe.modifier(m.id, { privilegie: !retirer }),
+      ton: retirer ? 'ok' : 'warn',
+      titre: retirer
+        ? `Privilège retiré à ${m.nom}`
+        : `${m.nom} passe compte privilégié`,
+      detail: retirer
+        ? 'Le privilège ne se retire jamais tout seul : c’est exactement ce que la revue trimestrielle sert à trouver.'
+        : 'À réexaminer au prochain trimestre. Un privilège accordé pour un projet ponctuel se garde six mois de trop.',
+      action: retirer ? 'team.privilege.revoke' : 'team.privilege.grant',
+      cible: m.email,
+    })
+  }
+
+  const enregistrerPolitique = () => {
+    acte({
+      faire: () => undefined,
+      ton: 'info',
+      titre: 'Politique d’accès enregistrée',
+      detail: `Deuxième facteur ${politique.mfa ? 'obligatoire' : 'facultatif'}, session expirée après ${politique.sessionCourte ? '4 heures' : '8 heures'} d’inactivité, restriction par adresse ${politique.restrictionIp ? 'active' : 'écartée'}.`,
+      action: 'team.policy.update',
+      cible: 'politique-acces-equipe',
+    })
+  }
 
   return (
     <div className="space-y-5">
@@ -547,48 +696,56 @@ export default function Equipe() {
             />
             <div className="space-y-3.5">
               <Switch
-                checked
+                checked={politique.mfa}
+                onChange={(v) => setPolitique((c) => ({ ...c, mfa: v }))}
                 label="Deuxième facteur obligatoire"
                 description="Sans exception, y compris pour la direction. Un compte privilégié sans deuxième facteur est la porte d’entrée la plus rentable pour un attaquant."
               />
               <Switch
                 checked
+                disabled
                 label="Aucun accès permanent aux données des clients"
                 description="Non désactivable. L’accès au contenu exige une élévation nominative, motivée, bornée et notifiée au client."
               />
               <Switch
-                checked
+                checked={politique.elevationBornee}
+                onChange={(v) => setPolitique((c) => ({ ...c, elevationBornee: v }))}
                 label="Élévation limitée à huit heures"
                 description="Au-delà, il faut une nouvelle demande. Le système refuse une élévation sans date de fin."
               />
               <Switch
-                checked
+                checked={politique.journalisationFine}
+                onChange={(v) => setPolitique((c) => ({ ...c, journalisationFine: v }))}
                 label="Journalisation de chaque action pendant une élévation"
                 description="Individuellement, pas globalement. Le client voit ce qui a été fait, pas seulement qu’un accès a eu lieu."
               />
               <Switch
                 checked
+                disabled
                 label="Notification du client sur toute intervention"
                 description="Non désactivable pour une intervention. Un accès dont le client n’est pas averti n’est pas légitime."
               />
               <Switch
-                checked
+                checked={politique.revueTrimestrielle}
+                onChange={(v) => setPolitique((c) => ({ ...c, revueTrimestrielle: v }))}
                 label="Révision trimestrielle des comptes privilégiés"
                 description="Chaque compte privilégié est réexaminé : son détenteur en a-t-il encore besoin ? Le privilège qui s’accumule est le pire ennemi de la sécurité."
               />
               <Switch
-                checked
+                checked={politique.sessionCourte}
+                onChange={(v) => setPolitique((c) => ({ ...c, sessionCourte: v }))}
                 label="Session expirée après 4 heures d’inactivité"
                 description="Plus court que pour les clients, parce que les droits sont plus étendus."
               />
               <Switch
-                checked={false}
+                checked={politique.restrictionIp}
+                onChange={(v) => setPolitique((c) => ({ ...c, restrictionIp: v }))}
                 label="Restreindre l’accès aux adresses de l’entreprise"
                 description="Écarté : nos équipes doivent pouvoir intervenir depuis n’importe où en astreinte. La contrainte serait contre-productive et contournée."
               />
             </div>
             <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
-              <Button className="mt-4" variant="secondary">
+              <Button className="mt-4" variant="secondary" onClick={enregistrerPolitique}>
                 Enregistrer la politique
               </Button>
             </GatedAction>
@@ -619,7 +776,14 @@ export default function Equipe() {
                       <Badge tone="ok" size="sm">
                         Confirmé en juin
                       </Badge>
-                      <Button size="sm" variant="ghost">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setChangementRole(null)
+                          setDetail(m)
+                        }}
+                      >
                         Réexaminer
                       </Button>
                     </span>
@@ -668,23 +832,26 @@ export default function Equipe() {
       )}
 
       <Drawer
-        open={detail !== null}
-        onClose={() => setDetail(null)}
-        title={detail?.nom ?? ''}
+        open={ouvert !== null}
+        onClose={() => {
+          setDetail(null)
+          setChangementRole(null)
+        }}
+        title={ouvert?.nom ?? ''}
         size="md"
       >
-        {detail && (
+        {ouvert && (
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <Avatar nom={detail.nom} size="lg" />
+              <Avatar nom={ouvert.nom} size="lg" />
               <div className="min-w-0">
-                <p className="text-[14px] font-bold text-ink">{detail.nom}</p>
-                <p className="text-[12px] text-g-500">{detail.email}</p>
+                <p className="text-[14px] font-bold text-ink">{ouvert.nom}</p>
+                <p className="text-[12px] text-g-500">{ouvert.email}</p>
                 <div className="mt-1 flex flex-wrap gap-1.5">
-                  <Badge tone={detail.privilegie ? 'violet' : 'neutral'} size="sm">
-                    {ROLE_LABEL[detail.role] ?? detail.role}
+                  <Badge tone={ouvert.privilegie ? 'violet' : 'neutral'} size="sm">
+                    {ROLE_LABEL[ouvert.role] ?? ouvert.role}
                   </Badge>
-                  {detail.privilegie && (
+                  {ouvert.privilegie && (
                     <Badge tone="violet" dot size="sm">
                       Compte privilégié
                     </Badge>
@@ -696,32 +863,32 @@ export default function Equipe() {
             <KeyValueList
               colonnes={1}
               items={[
-                { cle: 'Équipe', valeur: detail.equipe },
-                { cle: 'Rôle', valeur: ROLE_LABEL[detail.role] ?? detail.role },
-                { cle: 'Compte privilégié', valeur: detail.privilegie ? 'Oui' : 'Non' },
-                { cle: 'Dernier accès', valeur: `${dateHeure(detail.dernierAcces)} (${relatif(detail.dernierAcces)})` },
+                { cle: 'Équipe', valeur: ouvert.equipe },
+                { cle: 'Rôle', valeur: ROLE_LABEL[ouvert.role] ?? ouvert.role },
+                { cle: 'Compte privilégié', valeur: ouvert.privilegie ? 'Oui' : 'Non' },
+                { cle: 'Dernier accès', valeur: `${dateHeure(ouvert.dernierAcces)} (${relatif(ouvert.dernierAcces)})` },
                 { cle: 'Deuxième facteur', valeur: 'Actif — obligatoire' },
                 {
                   cle: 'Tickets en cours',
-                  valeur: String(ticketsDe(detail.nom).length),
+                  valeur: String(ticketsDe(ouvert.nom).length),
                 },
                 {
                   cle: 'Élévation active',
-                  valeur: detail.elevation?.active
-                    ? `Oui, jusqu’à ${detail.elevation.jusqua ? dateHeure(detail.elevation.jusqua) : '—'}`
+                  valeur: ouvert.elevation?.active
+                    ? `Oui, jusqu’à ${ouvert.elevation.jusqua ? dateHeure(ouvert.elevation.jusqua) : '—'}`
                     : 'Non',
                 },
               ]}
             />
 
-            {detail.elevation?.active && (
+            {ouvert.elevation?.active && (
               <Callout ton="warn" titre="Élévation de privilège en cours">
                 <span className="inline-flex items-start gap-1.5">
                   <KeyRound size={13} className="mt-0.5 shrink-0" />
                   <span>
-                    Motif : {detail.elevation.justification ?? 'non renseigné'}. Cette élévation est
+                    Motif : {ouvert.elevation.justification ?? 'non renseigné'}. Cette élévation est
                     visible dans le journal d’audit de l’organisation concernée, avec le nom de{' '}
-                    {detail.nom.split(' ')[0]} et ce motif. Elle expire d’elle-même.
+                    {ouvert.nom.split(' ')[0]} et ce motif. Elle expire d’elle-même.
                   </span>
                 </span>
               </Callout>
@@ -730,7 +897,7 @@ export default function Equipe() {
             <div>
               <MicroLabel className="mb-2">Ce que ce rôle autorise</MicroLabel>
               <div className="space-y-1">
-                {MATRICE_RBAC.filter((a) => can(detail.role, a.id) !== 'none')
+                {MATRICE_RBAC.filter((a) => can(ouvert.role, a.id) !== 'none')
                   .slice(0, 10)
                   .map((a) => (
                     <div
@@ -739,44 +906,97 @@ export default function Equipe() {
                     >
                       <span className="min-w-0 truncate text-[11.5px] text-ink">{a.libelle}</span>
                       <Badge
-                        tone={can(detail.role, a.id) === 'full' ? 'ok' : 'neutral'}
+                        tone={can(ouvert.role, a.id) === 'full' ? 'ok' : 'neutral'}
                         size="sm"
                       >
-                        {can(detail.role, a.id) === 'full' ? 'Complet' : 'Lecture'}
+                        {can(ouvert.role, a.id) === 'full' ? 'Complet' : 'Lecture'}
                       </Badge>
                     </div>
                   ))}
               </div>
               <p className="mt-2 text-[11px] text-g-500">
-                {MATRICE_RBAC.filter((a) => can(detail.role, a.id) !== 'none').length} actions au
+                {MATRICE_RBAC.filter((a) => can(ouvert.role, a.id) !== 'none').length} actions au
                 total. Aucune ne donne accès au contenu des données d’un client sans élévation.
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-1.5 border-t border-g-100 pt-4">
-              <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
-                <Button size="sm" variant="secondary">
-                  Changer le rôle
-                </Button>
-              </GatedAction>
-              {detail.elevation?.active && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() =>
-                    pousser({
-                      ton: 'info',
-                      titre: `Élévation de ${detail.nom} révoquée`,
-                      detail: 'L’accès est coupé immédiatement et la révocation est journalisée.',
-                    })
-                  }
-                >
-                  Révoquer l’élévation
-                </Button>
+            <div className="space-y-3 border-t border-g-100 pt-4">
+              {changementRole !== null && (
+                <div className="rounded-[8px] border border-p-300 bg-p-050 p-3">
+                  <Field
+                    label="Nouveau rôle"
+                    hint="le droit minimum pour faire le travail"
+                  >
+                    <Select
+                      value={changementRole}
+                      onChange={(e) => setChangementRole(e.target.value as Role)}
+                    >
+                      {ROLES_FOURNISSEUR.map((r) => (
+                        <option key={r} value={r}>
+                          {ROLE_LABEL[r]} —{' '}
+                          {MATRICE_RBAC.filter((a) => can(r, a.id) === 'full').length} actions
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    <Button
+                      size="sm"
+                      disabled={changementRole === ouvert.role}
+                      onClick={() => appliquerRole(ouvert, changementRole)}
+                    >
+                      Appliquer
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setChangementRole(null)}>
+                      Annuler
+                    </Button>
+                  </div>
+                </div>
               )}
-              <Button size="sm" variant="ghost">
-                Fermer les sessions actives
-              </Button>
+              <div className="flex flex-wrap gap-1.5">
+                <GatedAction
+                  autorise={autorise('reseller.manage')}
+                  message={refus('reseller.manage')}
+                >
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setChangementRole(ouvert.role)}
+                  >
+                    Changer le rôle
+                  </Button>
+                </GatedAction>
+                <GatedAction
+                  autorise={autorise('reseller.manage')}
+                  message={refus('reseller.manage')}
+                >
+                  <Button size="sm" variant="ghost" onClick={() => basculerPrivilege(ouvert)}>
+                    {ouvert.privilegie ? 'Retirer le privilège' : 'Passer privilégié'}
+                  </Button>
+                </GatedAction>
+                {ouvert.elevation?.active && (
+                  <Button size="sm" variant="ghost" onClick={() => revoquerElevation(ouvert)}>
+                    Révoquer l’élévation
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => fermerSessions(ouvert)}>
+                  Fermer les sessions actives
+                </Button>
+                <GatedAction
+                  autorise={autorise('reseller.manage')}
+                  message={refus('reseller.manage')}
+                >
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-err hover:bg-err-bg"
+                    iconBefore={<UserMinus size={12} />}
+                    onClick={() => setRetrait(ouvert)}
+                  >
+                    Retirer de l’équipe
+                  </Button>
+                </GatedAction>
+              </div>
             </div>
           </div>
         )}
@@ -792,31 +1012,50 @@ export default function Equipe() {
             <Button variant="ghost" onClick={() => setAjout(false)}>
               Annuler
             </Button>
-            <Button
-              onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: 'Membre ajouté',
-                  detail: 'L’invitation est envoyée. Le deuxième facteur devra être activé avant tout accès.',
-                })
-                setAjout(false)
-              }}
-            >
+            <Button disabled={!recrueValide} onClick={ajouterMembre}>
               Ajouter et inviter
             </Button>
           </>
         }
       >
         <div className="space-y-4">
-          <Field label="Nom complet">
-            <Input placeholder="Prénom Nom" />
+          <Field
+            label="Nom complet"
+            required
+            error={
+              recrue.nom !== '' && !nomValide ? 'Prénom et nom sont attendus.' : undefined
+            }
+          >
+            <Input
+              value={recrue.nom}
+              onChange={(e) => setRecrue((r) => ({ ...r, nom: e.target.value }))}
+              placeholder="Prénom Nom"
+              autoFocus
+            />
           </Field>
-          <Field label="Adresse professionnelle" hint="doit appartenir au domaine synelia.tech">
-            <Input type="email" placeholder="prenom.nom@synelia.tech" />
+          <Field
+            label="Adresse professionnelle"
+            required
+            hint="doit appartenir au domaine synelia.tech"
+            error={
+              recrue.email !== '' && !emailValide
+                ? 'Une adresse @synelia.tech est attendue.'
+                : undefined
+            }
+          >
+            <Input
+              type="email"
+              value={recrue.email}
+              onChange={(e) => setRecrue((r) => ({ ...r, email: e.target.value }))}
+              placeholder="prenom.nom@synelia.tech"
+            />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Équipe">
-              <Select defaultValue="">
+            <Field label="Équipe" required>
+              <Select
+                value={recrue.equipe}
+                onChange={(e) => setRecrue((r) => ({ ...r, equipe: e.target.value }))}
+              >
                 <option value="">Sélectionner…</option>
                 {equipes.map((e) => (
                   <option key={e} value={e}>
@@ -826,7 +1065,10 @@ export default function Equipe() {
               </Select>
             </Field>
             <Field label="Rôle" hint="le droit minimum pour faire le travail">
-              <Select defaultValue="provider_operator">
+              <Select
+                value={recrue.role}
+                onChange={(e) => setRecrue((r) => ({ ...r, role: e.target.value as Role }))}
+              >
                 {ROLES_FOURNISSEUR.map((r) => (
                   <option key={r} value={r}>
                     {ROLE_LABEL[r]} — {MATRICE_RBAC.filter((a) => can(r, a.id) === 'full').length}{' '}
@@ -839,16 +1081,19 @@ export default function Equipe() {
           <div className="space-y-3">
             <Switch
               checked
+              disabled
               label="Exiger le deuxième facteur avant tout accès"
               description="Non désactivable. La personne devra l’enregistrer à sa première connexion."
             />
             <Switch
-              checked={false}
+              checked={recrue.privilegie}
+              onChange={(v) => setRecrue((r) => ({ ...r, privilegie: v }))}
               label="Compte privilégié"
               description="Réservé aux quelques personnes qui pilotent réellement la plateforme. Chaque compte privilégié est réexaminé chaque trimestre."
             />
             <Switch
-              checked={false}
+              checked={recrue.astreinte}
+              onChange={(v) => setRecrue((r) => ({ ...r, astreinte: v }))}
               label="Inscrire dans la rotation d’astreinte"
               description="À activer après la période d’intégration et la formation aux procédures d’incident."
             />
@@ -874,14 +1119,7 @@ export default function Equipe() {
           `Ses ${retrait ? ticketsDe(retrait.nom).length : 0} tickets en cours devront être réassignés`,
           'Les secrets partagés auxquels il avait accès devront être renouvelés — étape distincte, à ne pas oublier',
         ]}
-        onConfirm={() => {
-          pousser({
-            ton: 'info',
-            titre: `${retrait?.nom} retiré de l’équipe`,
-            detail: 'Accès coupés et jetons révoqués. Pensez à faire tourner les secrets partagés : cette étape n’est pas automatique.',
-          })
-          setRetrait(null)
-        }}
+        onConfirm={() => retrait && retirerMembre(retrait)}
       />
     </div>
   )

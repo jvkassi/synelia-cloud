@@ -132,6 +132,56 @@ Elle évite le défaut des portails qui vendent le nom, l'hébergement et la
 messagerie séparément : chez eux le même nom réapparaît dans trois listes et
 aucune page ne dit tout ce qui le concerne.
 
+## L'atelier — l'état mutable du back-office
+
+`src/components/app/atelier.tsx` porte les créations, modifications et
+suppressions faites dans `/admin` pendant une session. Monté dans
+`admin/layout.tsx`, il prend une copie du jeu figé au montage et l'expose en
+registres typés (`organisations`, `revendeurs`, `offres`, `tickets`, `backends`,
+`campagnes`, `journal`…), chacun avec `ajouter`, `modifier`, `supprimer`,
+`remplacer` et `reinitialiser`.
+
+`src/lib/mock/` **reste figé** : c'est ce qui garantit qu'un rendu serveur et le
+premier rendu client donnent le même HTML. L'atelier ne persiste rien —
+recharger revient au jeu d'origine, et c'est voulu : une maquette qui accumule
+les essais de la veille devient illisible en démonstration.
+
+`useActe()` est la porte d'entrée des pages : un acte, c'est **la mutation, le
+message à l'écran, la trace au journal**. Les séparer garantit qu'un jour l'une
+des trois manquera — en pratique, la trace.
+
+```tsx
+const { organisations } = useAtelier()
+const acte = useActe()
+
+acte({
+  faire: () => organisations.modifier(o.id, { statut: 'suspendue' }),
+  ton: 'warn',
+  titre: `${o.nom} suspendue`,
+  detail: 'Les accès sont coupés, les données conservées intactes.',
+  action: 'organisation.suspend',   // objet.verbe, comme dans AUDIT
+  cible: o.id,
+  orgId: o.id,
+  orgNom: o.nom,
+})
+```
+
+Trois conséquences à connaître :
+
+- **Identifiants et horodatages restent déterministes** : `nouvelId()` compte,
+  `horodatage()` part de `MAINTENANT`. Pas de `Math.random()`, pas d'horloge
+  navigateur — le rendu ne doit pas diverger.
+- **Les routes de détail ne font plus `notFound()`.** Une organisation créée
+  pendant la session n'existe pas dans le jeu figé : un 404 du serveur ferait
+  croire à une panne. C'est la vue cliente qui dit ce qu'elle ne trouve pas.
+- **Un enregistrement ouvert dans un tiroir se relit dans le registre**
+  (`registre.parId(detail.id)`), sinon il affiche la copie du clic et ne reflète
+  pas ce qu'on vient d'y changer.
+
+Ce que l'atelier ne fait pas : appeler un réseau, valider métier côté serveur,
+gérer des écritures concurrentes. Ces trois-là appartiennent à
+l'implémentation, pas à la maquette.
+
 ## Décisions déjà arbitrées
 
 | Sujet | Décision |
@@ -146,6 +196,8 @@ aucune page ne dit tout ce qui le concerne.
 | Bases mutualisées | Aucun accès distant, présenté comme une propriété de l'offre et non un réglage. Une base mutualisée n'a pas à être joignable depuis Internet. |
 | Sortie du propriétaire | Les socles VMware et Hyper-V restent dans le jeu de données avec `enSortie`, et `/souverainete` publie la trajectoire de sortie datée. Assumer la transition plutôt que la cacher. |
 | Configurations de service | Un fichier par service dans `src/lib/configurations/`. Configurer une messagerie n'a presque rien de commun avec configurer un Drive ou un ERP. |
+| Membres d'une organisation cliente | Le fournisseur ne les crée pas, ne change pas leurs rôles et ne les révoque pas : l'organisation le fait depuis son propre espace. Seule exception, écrite dans l'écran : la récupération du dernier administrateur perdu. |
+| Suppression d'une offre | Une offre publiée ne se supprime pas, elle se déprécie — elle a été vendue. Seul un brouillon jamais souscrit se supprime. |
 
 ## Pièges techniques rencontrés
 

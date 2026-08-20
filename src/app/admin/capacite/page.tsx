@@ -4,24 +4,19 @@ import { useState } from 'react'
 import { ArrowRightLeft, Plus, Scale, TrendingUp } from 'lucide-react'
 import { cn, seededSeries, trendSeries } from '@/lib/utils'
 import { dateCourte, money, num, pct } from '@/lib/format'
-import {
-  BACKENDS,
-  ESPACES,
-  MARGE_BACKENDS,
-  PLACEMENTS,
-  SYNTHESE_PLATEFORME,
-  VMS,
-} from '@/lib/mock'
+import { ESPACES, MARGE_BACKENDS, VMS } from '@/lib/mock'
 import { BACKEND_LABEL, SITE_COURT } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
 import { Field, Input, Select, Switch } from '@/components/ui/field'
-import { ConfirmDialog } from '@/components/ui/overlay'
+import { ConfirmDialog, Modal } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { BackendGauge, PlacementSlider, AvertissementMigration } from '@/components/business/infra'
 import { useApp } from '@/components/app/contexte'
+import { useActe, useAtelier } from '@/components/app/atelier'
+import type { Backend, BackendType, Placement, Site } from '@/lib/types'
 
 const ONGLETS = [
   { id: 'socles', label: 'Socles et capacité' },
@@ -30,20 +25,113 @@ const ONGLETS = [
   { id: 'marge', label: 'Marge par socle' },
 ]
 
+const SOCLE_VIDE = {
+  code: '',
+  type: 'openstack' as BackendType,
+  site: 'ABJ' as Site,
+  hosts: 4,
+  vcpu: 512,
+  ramGo: 2048,
+  stockageTo: 100,
+}
+
 export default function Capacite() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const { backends, placements } = useAtelier()
+  const acte = useActe()
+
   const [onglet, setOnglet] = useState('socles')
   const [espaceId, setEspaceId] = useState(ESPACES[0]?.id ?? '')
-  const [rebalance, setRebalance] = useState(false)
+  const [repartition, setRepartition] = useState<Array<{
+    backendId: string
+    percent: number
+  }> | null>(null)
+  const [declaration, setDeclaration] = useState(false)
+  const [socle, setSocle] = useState(SOCLE_VIDE)
+  const [detailSocle, setDetailSocle] = useState<Backend | null>(null)
 
+  const BACKENDS = backends.liste
+  const PLACEMENTS = placements.liste
   const espace = ESPACES.find((e) => e.id === espaceId)
   const placementsEspace = PLACEMENTS.filter((p) => p.espaceId === espaceId)
   const satures = BACKENDS.filter((b) => (b.saturation?.j30 ?? 0) > 85)
   const enSortie = BACKENDS.filter((b) => b.enSortie?.actif)
 
-  const vcpuPct = Math.round(
-    (SYNTHESE_PLATEFORME.vcpuUtilise / SYNTHESE_PLATEFORME.vcpuTotal) * 100,
+  const vcpuTotal = BACKENDS.reduce((a, b) => a + b.capacite.vcpu, 0)
+  const vcpuUtilise = Math.round(
+    BACKENDS.reduce((a, b) => a + (b.capacite.vcpu * b.usage.vcpuPct) / 100, 0),
   )
+  const vcpuPct = vcpuTotal > 0 ? Math.round((vcpuUtilise / vcpuTotal) * 100) : 0
+  const ramTotalGo = BACKENDS.reduce((a, b) => a + b.capacite.ramGo, 0)
+  const stockageTotalTo = BACKENDS.reduce((a, b) => a + b.capacite.stockageTo, 0)
+
+  const codeValide = /^[A-Z]{2,3}-[A-Z]{3}-\d{2}$/.test(socle.code.trim().toUpperCase())
+  const codeLibre = !BACKENDS.some((b) => b.code === socle.code.trim().toUpperCase())
+
+  const declarerSocle = () => {
+    const code = socle.code.trim().toUpperCase()
+    acte({
+      faire: () =>
+        backends.ajouterEnFin({
+          id: `bk-${code.toLowerCase()}`,
+          code,
+          type: socle.type,
+          site: socle.site,
+          hosts: socle.hosts,
+          // Un socle déclaré n'accueille rien avant d'être basculé en ligne :
+          // on le pose en maintenance, usage à zéro.
+          statut: 'maintenance',
+          usage: { vcpuPct: 0, ramPct: 0, stockagePct: 0 },
+          capacite: { vcpu: socle.vcpu, ramGo: socle.ramGo, stockageTo: socle.stockageTo },
+          souverain: socle.type === 'openstack' || socle.type === 'proxmox' || socle.type === 'cloudstack',
+          saturation: { j30: 0, j60: 0, j90: 0 },
+        }),
+      titre: `${code} déclaré`,
+      detail: `${socle.hosts} hôtes, ${num(socle.vcpu)} vCPU, ${num(socle.ramGo)} Go, ${socle.stockageTo} To. Le socle entre en maintenance : aucune ressource n’y sera placée avant sa mise en ligne explicite.`,
+      action: 'backend.declare',
+      cible: code,
+    })
+    setSocle(SOCLE_VIDE)
+    setDeclaration(false)
+  }
+
+  const basculerSocle = (b: Backend) => {
+    const drainer = b.statut !== 'maintenance'
+    acte({
+      faire: () => backends.modifier(b.id, { statut: drainer ? 'maintenance' : 'en_ligne' }),
+      ton: drainer ? 'warn' : 'ok',
+      titre: drainer ? `${b.code} mis en drainage` : `${b.code} remis en ligne`,
+      detail: drainer
+        ? 'Aucune nouvelle ressource n’y sera placée. Les machines existantes continuent de tourner et se déplaceront à chaud quand le socle le permet.'
+        : 'Le socle redevient candidat au placement. Les ressources drainées n’y reviennent pas d’elles-mêmes : un rééquilibrage est nécessaire.',
+      action: drainer ? 'backend.maintenance.start' : 'backend.maintenance.end',
+      cible: b.code,
+    })
+  }
+
+  const appliquerRepartition = () => {
+    if (!espace || !repartition) return
+    const nouvelles: Placement[] = repartition.map((r) => ({
+      espaceId: espace.id,
+      backendId: r.backendId,
+      percent: r.percent,
+    }))
+    acte({
+      faire: () => {
+        placements.remplacer([
+          ...PLACEMENTS.filter((p) => p.espaceId !== espace.id),
+          ...nouvelles,
+        ])
+      },
+      titre: 'Rééquilibrage appliqué',
+      detail: `Le placement de ${espace.code} est mis à jour sur ${nouvelles.length} socle${nouvelles.length > 1 ? 's' : ''}. Les migrations à chaud démarrent maintenant ; les autres sont planifiées dans la fenêtre de maintenance du client.`,
+      action: 'capacity.rebalance',
+      cible: espace.code,
+      orgId: espace.orgId,
+      portee: { type: 'espace', id: espace.id, label: espace.code },
+    })
+    setRepartition(null)
+  }
   const margeMoyenne =
     Math.round(
       (MARGE_BACKENDS.reduce((a, m) => a + m.marge, 0) / MARGE_BACKENDS.length) * 10,
@@ -56,7 +144,15 @@ export default function Capacite() {
         sousTitre="Le placement multi-socle transparent est un objectif de produit, pas un détail d’exploitation : un Espace Cloud peut être réparti entre plusieurs hyperviseurs, et le client voit sur quel socle tourne chacune de ses machines."
         actions={
           <GatedAction autorise={autorise('capacity.manage')} message={refus('capacity.manage')}>
-            <Button iconBefore={<Plus size={14} />}>Déclarer un socle</Button>
+            <Button
+              iconBefore={<Plus size={14} />}
+              onClick={() => {
+                setSocle(SOCLE_VIDE)
+                setDeclaration(true)
+              }}
+            >
+              Déclarer un socle
+            </Button>
           </GatedAction>
         }
         meta={
@@ -65,7 +161,7 @@ export default function Capacite() {
               {BACKENDS.length} socles
             </Badge>
             <Badge tone="neutral" size="sm">
-              {num(SYNTHESE_PLATEFORME.vcpuTotal)} vCPU installés
+              {num(vcpuTotal)} vCPU installés
             </Badge>
             <Badge tone={margeMoyenne > 40 ? 'ok' : 'warn'} size="sm">
               Marge moyenne {pct(margeMoyenne, 1)}
@@ -90,17 +186,17 @@ export default function Capacite() {
           libelle="Processeur alloué"
           valeur={pct(vcpuPct)}
           ton={vcpuPct > 80 ? 'warn' : 'violet'}
-          detail={`${num(SYNTHESE_PLATEFORME.vcpuUtilise)} / ${num(SYNTHESE_PLATEFORME.vcpuTotal)} vCPU`}
+          detail={`${num(vcpuUtilise)} / ${num(vcpuTotal)} vCPU`}
           serie={trendSeries('cap-vcpu', 30, vcpuPct - 11, vcpuPct)}
         />
         <StatTile
           libelle="Mémoire installée"
-          valeur={`${num(Math.round(SYNTHESE_PLATEFORME.ramTotalGo / 1024))} Tio`}
-          detail={`${num(SYNTHESE_PLATEFORME.ramTotalGo)} Go`}
+          valeur={`${num(Math.round(ramTotalGo / 1024))} Tio`}
+          detail={`${num(ramTotalGo)} Go`}
         />
         <StatTile
           libelle="Stockage installé"
-          valeur={`${num(SYNTHESE_PLATEFORME.stockageTotalTo)} To`}
+          valeur={`${num(stockageTotalTo)} To`}
         />
         <StatTile
           libelle="Socles en tension"
@@ -216,14 +312,22 @@ export default function Capacite() {
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         <span className="flex items-center justify-end gap-1.5">
-                          <Button size="sm" variant="ghost">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setDetailSocle(b)}
+                          >
                             Détail
                           </Button>
                           <GatedAction
                             autorise={autorise('capacity.manage')}
                             message={refus('capacity.manage')}
                           >
-                            <Button size="sm" variant="ghost">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => basculerSocle(b)}
+                            >
                               {b.statut === 'maintenance' ? 'Remettre en ligne' : 'Drainer'}
                             </Button>
                           </GatedAction>
@@ -313,12 +417,23 @@ export default function Capacite() {
                 </div>
 
                 <PlacementSlider
+                  // La clé force la remise à zéro du curseur quand on change
+                  // d'espace : sans elle, il garderait la répartition du
+                  // précédent, ce qui est le plus sûr moyen de se tromper.
+                  key={espace.id}
                   backends={BACKENDS.filter((b) => b.statut === 'en_ligne')}
                   initial={
                     placementsEspace.length > 0
                       ? placementsEspace.map((p) => ({ backendId: p.backendId, percent: p.percent }))
-                      : [{ backendId: BACKENDS[1].id, percent: 100 }]
+                      : [
+                          {
+                            backendId:
+                              BACKENDS.find((b) => b.statut === 'en_ligne')?.id ?? BACKENDS[0].id,
+                            percent: 100,
+                          },
+                        ]
                   }
+                  onAppliquer={setRepartition}
                 />
 
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-g-100 pt-4">
@@ -328,15 +443,31 @@ export default function Capacite() {
                   >
                     <Button
                       iconBefore={<ArrowRightLeft size={13} />}
-                      onClick={() => setRebalance(true)}
+                      disabled={repartition === null}
+                      onClick={appliquerRepartition}
                     >
                       Appliquer le rééquilibrage
                     </Button>
                   </GatedAction>
-                  <Button variant="ghost">Simuler l’impact</Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() =>
+                      acte({
+                        ton: 'info',
+                        titre: `Impact simulé sur ${espace.code}`,
+                        detail: `${VMS.filter((v) => v.espaceId === espace.id).length} machines dans l’espace, dont ${VMS.filter((v) => v.espaceId === espace.id && v.statut === 'running').length} allumées : celles-là se déplacent à chaud, les autres au prochain démarrage.`,
+                        action: 'capacity.rebalance.simulate',
+                        cible: espace.code,
+                        orgId: espace.orgId,
+                      })
+                    }
+                  >
+                    Simuler l’impact
+                  </Button>
                   <span className="text-[11.5px] text-g-500">
-                    La simulation liste les machines à déplacer et le mode de migration disponible pour
-                    chacune.
+                    {repartition === null
+                      ? 'Réglez la répartition ci-dessus, puis validez-la pour l’appliquer.'
+                      : 'La simulation liste les machines à déplacer et le mode de migration disponible pour chacune.'}
                   </span>
                 </div>
               </>
@@ -749,8 +880,8 @@ export default function Capacite() {
       )}
 
       <ConfirmDialog
-        open={rebalance}
-        onClose={() => setRebalance(false)}
+        open={repartition !== null}
+        onClose={() => setRepartition(null)}
         titre="Appliquer un rééquilibrage de placement"
         ressource={espace?.code ?? ''}
         libelleAction="Appliquer le rééquilibrage"
@@ -759,15 +890,217 @@ export default function Capacite() {
           'Les machines existantes seront déplacées progressivement — à chaud quand le socle le permet, sinon lors d’un redémarrage planifié',
           'Le client verra le changement de socle sur chacune de ses machines, et l’opération apparaîtra dans son journal d’audit',
         ]}
-        onConfirm={() => {
-          pousser({
-            ton: 'ok',
-            titre: 'Rééquilibrage appliqué',
-            detail: `Le placement de ${espace?.code} est mis à jour. Les migrations à chaud démarrent maintenant ; les autres sont planifiées dans la fenêtre de maintenance du client.`,
-          })
-          setRebalance(false)
-        }}
+        onConfirm={appliquerRepartition}
       />
+
+      <Modal
+        open={declaration}
+        onClose={() => setDeclaration(false)}
+        title="Déclarer un socle"
+        description="Le socle entre en maintenance : rien n’y sera placé avant sa mise en ligne explicite."
+        size="md"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeclaration(false)}>
+              Annuler
+            </Button>
+            <Button disabled={!codeValide || !codeLibre} onClick={declarerSocle}>
+              Déclarer le socle
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field
+              label="Code"
+              required
+              hint="technologie, site, numéro — OS-ABJ-02"
+              error={
+                socle.code !== '' && !codeValide
+                  ? 'Format attendu : deux ou trois lettres, site, numéro à deux chiffres.'
+                  : !codeLibre
+                    ? 'Un socle porte déjà ce code.'
+                    : undefined
+              }
+            >
+              <Input
+                value={socle.code}
+                onChange={(e) => setSocle((c) => ({ ...c, code: e.target.value.toUpperCase() }))}
+                placeholder="OS-ABJ-02"
+                autoFocus
+              />
+            </Field>
+            <Field label="Technologie">
+              <Select
+                value={socle.type}
+                onChange={(e) => setSocle((c) => ({ ...c, type: e.target.value as BackendType }))}
+              >
+                {(Object.keys(BACKEND_LABEL) as BackendType[]).map((t) => (
+                  <option key={t} value={t}>
+                    {BACKEND_LABEL[t]}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Site physique">
+              <Select
+                value={socle.site}
+                onChange={(e) => setSocle((c) => ({ ...c, site: e.target.value as Site }))}
+              >
+                <option value="ABJ">{SITE_COURT.ABJ}</option>
+                <option value="GBM">{SITE_COURT.GBM}</option>
+              </Select>
+            </Field>
+            <Field label="Hôtes">
+              <Input
+                type="number"
+                min={1}
+                value={socle.hosts}
+                onChange={(e) =>
+                  setSocle((c) => ({ ...c, hosts: Math.max(1, Number(e.target.value) || 1) }))
+                }
+              />
+            </Field>
+          </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Field label="vCPU installés">
+              <Input
+                type="number"
+                min={1}
+                value={socle.vcpu}
+                onChange={(e) =>
+                  setSocle((c) => ({ ...c, vcpu: Math.max(1, Number(e.target.value) || 1) }))
+                }
+              />
+            </Field>
+            <Field label="Mémoire">
+              <Input
+                type="number"
+                min={1}
+                value={socle.ramGo}
+                suffix="Go"
+                onChange={(e) =>
+                  setSocle((c) => ({ ...c, ramGo: Math.max(1, Number(e.target.value) || 1) }))
+                }
+              />
+            </Field>
+            <Field label="Stockage">
+              <Input
+                type="number"
+                min={1}
+                value={socle.stockageTo}
+                suffix="To"
+                onChange={(e) =>
+                  setSocle((c) => ({ ...c, stockageTo: Math.max(1, Number(e.target.value) || 1) }))
+                }
+              />
+            </Field>
+          </div>
+          <Callout
+            ton={
+              socle.type === 'vsphere' || socle.type === 'hyperv' ? 'warn' : 'info'
+            }
+            titre={
+              socle.type === 'vsphere' || socle.type === 'hyperv'
+                ? 'Socle propriétaire'
+                : 'Socle libre'
+            }
+          >
+            {socle.type === 'vsphere' || socle.type === 'hyperv'
+              ? 'Déclarer un socle propriétaire va à l’encontre de la trajectoire de sortie publiée. Cela ne se justifie que pour absorber une capacité existante d’un client en migration.'
+              : 'Ce socle compte dans la part souveraine annoncée sur la vitrine. Il pourra accueillir les organisations soumises à une contrainte de résidence.'}
+          </Callout>
+        </div>
+      </Modal>
+
+      <Modal
+        open={detailSocle !== null}
+        onClose={() => setDetailSocle(null)}
+        title={detailSocle ? `${detailSocle.code} — ${BACKEND_LABEL[detailSocle.type]}` : ''}
+        size="md"
+      >
+        {detailSocle && (
+          <div className="space-y-4">
+            <KeyValueList
+              colonnes={2}
+              items={[
+                { cle: 'Site physique', valeur: SITE_COURT[detailSocle.site] },
+                { cle: 'Hôtes', valeur: String(detailSocle.hosts) },
+                { cle: 'vCPU installés', valeur: num(detailSocle.capacite.vcpu) },
+                { cle: 'Mémoire', valeur: `${num(detailSocle.capacite.ramGo)} Go` },
+                { cle: 'Stockage', valeur: `${num(detailSocle.capacite.stockageTo)} To` },
+                { cle: 'Nature', valeur: detailSocle.souverain ? 'Libre' : 'Propriétaire' },
+                { cle: 'Usage processeur', valeur: pct(detailSocle.usage.vcpuPct) },
+                { cle: 'Usage mémoire', valeur: pct(detailSocle.usage.ramPct) },
+                {
+                  cle: 'Saturation à 90 jours',
+                  valeur: pct(detailSocle.saturation?.j90 ?? 0),
+                },
+                {
+                  cle: 'Espaces placés',
+                  valeur: String(
+                    PLACEMENTS.filter((p) => p.backendId === detailSocle.id).length,
+                  ),
+                },
+              ]}
+            />
+            <BackendGauge backend={detailSocle} />
+            {detailSocle.enSortie?.actif && (
+              <Callout ton="warn" titre="Socle en trajectoire de sortie">
+                Cible de migration : {detailSocle.enSortie.cibleMigration}. Le calendrier est publié
+                sur la vitrine — nous ne prétendons pas être déjà entièrement libres.
+              </Callout>
+            )}
+            <div className="flex flex-wrap gap-1.5 border-t border-g-100 pt-4">
+              <GatedAction
+                autorise={autorise('capacity.manage')}
+                message={refus('capacity.manage')}
+              >
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    basculerSocle(detailSocle)
+                    setDetailSocle(null)
+                  }}
+                >
+                  {detailSocle.statut === 'maintenance' ? 'Remettre en ligne' : 'Drainer'}
+                </Button>
+              </GatedAction>
+              {PLACEMENTS.filter((p) => p.backendId === detailSocle.id).length === 0 &&
+                detailSocle.statut === 'maintenance' && (
+                  <GatedAction
+                    autorise={autorise('capacity.manage')}
+                    message={refus('capacity.manage')}
+                  >
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-err hover:bg-err-bg"
+                      onClick={() => {
+                        acte({
+                          faire: () => backends.supprimer(detailSocle.id),
+                          ton: 'warn',
+                          titre: `${detailSocle.code} retiré du parc`,
+                          detail:
+                            'Aucun espace n’y était placé : le retrait ne déplace rien. La capacité installée baisse d’autant.',
+                          action: 'backend.remove',
+                          cible: detailSocle.code,
+                        })
+                        setDetailSocle(null)
+                      }}
+                    >
+                      Retirer du parc
+                    </Button>
+                  </GatedAction>
+                )}
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }
