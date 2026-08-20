@@ -175,7 +175,7 @@ export default function Facturation() {
 
       {onglet === 'apercu' && (
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card className="lg:col-span-2">
               <CardHeader
                 titre="Consommation quotidienne"
@@ -205,7 +205,7 @@ export default function Facturation() {
                 <span>1er août</span>
                 <span>19 août</span>
               </div>
-              <div className="mt-4 grid gap-3 border-t border-g-100 pt-4 sm:grid-cols-4">
+              <div className="mt-4 grid grid-cols-1 gap-3 border-t border-g-100 pt-4 sm:grid-cols-4">
                 <div>
                   <MicroLabel className="text-g-500">Moyenne journalière</MicroLabel>
                   <p className="tnum mt-0.5 text-[15px] font-bold text-ink">
@@ -280,7 +280,7 @@ export default function Facturation() {
             </Card>
           )}
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Callout ton="violet" titre="Nous facturons ce que vous consommez, pas ce que vous réservez">
               Une machine arrêtée ne consomme ni processeur ni mémoire : vous ne payez que son disque.
               Un compartiment vidé cesse d’être facturé le jour même. Un siège de service managé
@@ -366,7 +366,7 @@ export default function Facturation() {
                         )}
                       </span>
                     ) : (
-                      <span className="text-[11.5px] text-g-300">—</span>
+                      <span className="text-[11.5px] text-g-500">—</span>
                     ),
                 },
                 {
@@ -532,7 +532,7 @@ export default function Facturation() {
             </div>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Économie possible en passant à l’annuel"
@@ -616,7 +616,7 @@ export default function Facturation() {
             une refacturation interne réelle et un tableau reconstitué à la main tous les trimestres.
           </Callout>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Par Espace Cloud"
@@ -648,7 +648,7 @@ export default function Facturation() {
                 </Button>
               }
             />
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Field label="Grouper par">
                 <Select defaultValue="centre-de-cout">
                   <option value="centre-de-cout">Centre de coût</option>
@@ -690,7 +690,7 @@ export default function Facturation() {
       )}
 
       {onglet === 'paiement' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Moyens de paiement"

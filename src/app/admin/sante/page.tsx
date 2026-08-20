@@ -81,7 +81,7 @@ export default function SantePlateforme() {
       />
 
       {incidentsOuverts.length > 0 && (
-        <Callout ton="err" titre={`${incidentsOuverts.length} incident en cours`}>
+        <Callout ton="err" titre={`${incidentsOuverts.length} incident${incidentsOuverts.length > 1 ? 's' : ''} en cours`}>
           {incidentsOuverts.map((i) => i.titre).join(' · ')}. Chaque incident ouvert doit porter une
           communication publique à jour : un client qui constate une panne sans rien lire sur la page
           de statut ouvre un ticket, ce qui charge le support au pire moment.
@@ -270,7 +270,7 @@ export default function SantePlateforme() {
                   </span>
                 }
               />
-              <div className="grid gap-4 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
                 <div className="lg:col-span-2">
                   <MicroLabel className="mb-2">Communications publiées</MicroLabel>
                   <Timeline
@@ -344,7 +344,7 @@ export default function SantePlateforme() {
 
       {onglet === 'socles' && (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {BACKENDS.map((b) => (
               <BackendGauge key={b.id} backend={b} />
             ))}
@@ -443,7 +443,7 @@ export default function SantePlateforme() {
 
       {onglet === 'jobs' && (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <StatTile libelle="En file" valeur={JOBS_PLATEFORME.filter((j) => j.statut === 'queued').length} ton="info" />
             <StatTile libelle="En cours" valeur={JOBS_PLATEFORME.filter((j) => j.statut === 'running').length} ton="info" />
             <StatTile libelle="Terminés" valeur={JOBS_PLATEFORME.filter((j) => j.statut === 'done').length} ton="ok" />
@@ -575,7 +575,7 @@ export default function SantePlateforme() {
       )}
 
       {onglet === 'alertes' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Alertes de plateforme"
@@ -693,7 +693,7 @@ export default function SantePlateforme() {
         }
       >
         <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Type">
               <Select defaultValue="incident">
                 <option value="incident">Incident en cours</option>

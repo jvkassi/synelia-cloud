@@ -241,7 +241,7 @@ export function RpoRtoGauge({
           <p
             className={cn(
               'tnum mt-0.5 text-[17px] font-bold [font-family:var(--font-display)]',
-              jamaisMesure ? 'text-g-300' : conforme ? 'text-ok' : 'text-err',
+              jamaisMesure ? 'text-g-500' : conforme ? 'text-ok' : 'text-err',
             )}
           >
             {jamaisMesure ? '—' : dureeMin(constateMin)}
@@ -322,7 +322,7 @@ export function DrPlanSummary({ plan, className }: { plan: DRPlan; className?: s
         sousTitre={`${SITE_COURT[plan.siteSource]} → ${SITE_COURT[plan.siteRepli]} · réplication ${plan.replication.mode === 'continu' ? 'continue' : 'planifiée'}`}
         actions={<HealthBadge etat={plan.statut} size="sm" />}
       />
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <RpoRtoGauge libelle="RPO" cibleMin={plan.rpoCibleMin} constateMin={plan.rpoConstateMin} />
         <RpoRtoGauge libelle="RTO" cibleMin={plan.rtoCibleMin} constateMin={plan.rtoConstateMin} />
       </div>

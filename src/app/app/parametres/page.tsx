@@ -54,7 +54,7 @@ export default function Parametres() {
       <Tabs tabs={ONGLETS} active={onglet} onChange={setOnglet} />
 
       {onglet === 'organisation' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Identité"
@@ -64,7 +64,7 @@ export default function Parametres() {
               <Field label="Raison sociale">
                 <Input defaultValue={ORG_COURANTE.nom} />
               </Field>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Pays">
                   <Select defaultValue={ORG_COURANTE.pays}>
                     <option value="Côte d’Ivoire">Côte d’Ivoire</option>
@@ -79,7 +79,7 @@ export default function Parametres() {
                   <Input defaultValue={ORG_COURANTE.secteur ?? ''} />
                 </Field>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Numéro de contribuable" hint="figure sur la facture, sert au régime de TVA">
                   <Input defaultValue={ORG_COURANTE.tva ?? ''} />
                 </Field>
@@ -188,7 +188,7 @@ export default function Parametres() {
       )}
 
       {onglet === 'preferences' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Affichage et régionalisation"
@@ -316,7 +316,7 @@ export default function Parametres() {
 
       {onglet === 'api' && (
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Jetons d’accès programmatique"
@@ -402,7 +402,7 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
               titre="Limites d’appel"
               sousTitre="Les mêmes pour tous, quelle que soit la taille de l’organisation."
             />
-            <div className="grid gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
               <StatTile libelle="Lectures" valeur="600" unite="/min" detail="Par jeton" />
               <StatTile libelle="Écritures" valeur="60" unite="/min" detail="Par jeton" />
               <StatTile libelle="Actions destructives" valeur="10" unite="/min" detail="Par organisation" ton="warn" />
@@ -418,7 +418,7 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
       )}
 
       {onglet === 'notifications' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Ce que nous vous envoyons"
@@ -512,7 +512,7 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
                 titre="Fenêtres de maintenance"
                 sousTitre="Nous planifions nos interventions dans la fenêtre que vous nous indiquez, sauf urgence de sécurité."
               />
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Jour préféré">
                   <Select defaultValue="dimanche">
                     <option value="samedi">Samedi</option>
@@ -587,7 +587,7 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
             </Callout>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Export complet"

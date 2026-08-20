@@ -32,7 +32,7 @@ export function SkeletonTable({ lignes = 6, colonnes = 5 }: { lignes?: number; c
 
 export function SkeletonCards({ nombre = 3, hauteur = 'h-32' }: { nombre?: number; hauteur?: string }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: nombre }).map((_, i) => (
         <div key={i} className="rounded-[10px] border border-g-300 bg-white p-4">
           <Skeleton className="h-4 w-1/2" />

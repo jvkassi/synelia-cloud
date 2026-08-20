@@ -75,7 +75,9 @@ export function Logo({
 /** Badge de contexte fournisseur, à côté du logo (§8.1). */
 export function BadgeFournisseur() {
   return (
-    <span className="rounded-[4px] border border-p-400/60 bg-white/10 px-1.5 py-0.5 text-[9.5px] font-bold tracking-[.08em] text-p-300">
+    // Masqué sur les écrans étroits : la barre supérieure n'a pas la place et
+    // le fond sombre suffit déjà à distinguer l'espace fournisseur.
+    <span className="hidden rounded-[4px] border border-p-400/60 bg-white/10 px-1.5 py-0.5 text-[9.5px] font-bold tracking-[.08em] text-p-300 sm:inline-block">
       FOURNISSEUR
     </span>
   )

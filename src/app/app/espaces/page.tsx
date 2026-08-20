@@ -202,7 +202,7 @@ export default function ListeEspaces() {
         </div>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Callout ton="warn" titre="EC-DBA-01 approche de son plafond de stockage">
           7,1 To utilisés sur 8 To, soit 89 %. Le devis DEV-0418 propose une extension à 12 To
           accompagnée de 16 vCPU supplémentaires, applicable à chaud et sans interruption. Il est en

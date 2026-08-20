@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { ExternalLink, Plus, ShieldAlert } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, surfaceMarque } from '@/lib/utils'
 import { dateCourte, goHumain, relatif } from '@/lib/format'
 import { HEBERGEMENTS } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -72,7 +72,7 @@ export default function Web() {
           action={{ libelle: 'Voir le catalogue', href: '/app/marketplace' }}
         />
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
           {HEBERGEMENTS.map((h) => {
             const t = TYPE_LABEL[h.type]
             const majEnAttente = h.versions?.extensionsAMettreAJour ?? 0
@@ -81,8 +81,11 @@ export default function Web() {
                 <div className="flex items-start justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-2.5">
                     <span
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[7px] text-[10px] font-bold text-white"
-                      style={{ background: t.teinte }}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[7px] text-[10px] font-bold"
+                      style={{
+                        background: surfaceMarque(t.teinte).fond,
+                        color: surfaceMarque(t.teinte).texte,
+                      }}
                     >
                       {t.nom.slice(0, 2).toUpperCase()}
                     </span>
@@ -253,7 +256,7 @@ export default function Web() {
         </div>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Callout ton="violet" titre="Nous ne construisons pas d’éditeur de contenu">
           Écrire un article, gérer un catalogue produits, régler un thème : ces écrans existent déjà
           dans WordPress et PrestaShop, et ils sont bien meilleurs que ce que nous pourrions faire.

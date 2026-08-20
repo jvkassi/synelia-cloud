@@ -156,7 +156,7 @@ export function FicheService({ slug }: { slug: string }) {
         </Callout>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]">
         <div className="min-w-0 space-y-5">
           {/* Bloc 2 — ce que vous obtenez */}
           <Card>
@@ -164,7 +164,7 @@ export function FicheService({ slug }: { slug: string }) {
               titre="Ce que vous obtenez"
               sousTitre={`L’interface de ${service.solutionOSS}, telle que ses auteurs l’ont conçue.`}
             />
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {service.captures.map((c, i) => (
                 <div
                   key={c}
@@ -323,7 +323,7 @@ export function FicheService({ slug }: { slug: string }) {
           </Card>
 
           {/* Bloc 5 — sauvegarde et réversibilité */}
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Card>
               <CardHeader
                 titre={

@@ -174,7 +174,7 @@ export function VueOrganisation({ id }: { id: string }) {
       <Tabs tabs={ONGLETS} active={onglet} onChange={setOnglet} />
 
       {onglet === 'synthese' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader titre="Fiche" />
             <KeyValueList
@@ -487,7 +487,7 @@ export function VueOrganisation({ id }: { id: string }) {
 
       {onglet === 'facturation' && (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <StatTile
               libelle="CA mensuel"
               valeur={org.caMensuel ? money(org.caMensuel) : '—'}
@@ -731,7 +731,7 @@ export function VueOrganisation({ id }: { id: string }) {
                             {t.slaRestantMin} min
                           </span>
                         ) : (
-                          <span className="text-[11.5px] text-g-300">—</span>
+                          <span className="text-[11.5px] text-g-500">—</span>
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-[11.5px] text-g-500">
@@ -806,7 +806,7 @@ export function VueOrganisation({ id }: { id: string }) {
       )}
 
       {onglet === 'administration' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Plan de service et limites"
@@ -1003,7 +1003,7 @@ export function VueOrganisation({ id }: { id: string }) {
               placeholder="Ticket SYN-8814 — diagnostic de la latence signalée sur app-metier, lecture des métriques et journaux de l’environnement de production."
             />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Durée" hint="l’accès expire automatiquement">
               <Select defaultValue="4">
                 <option value="1">1 heure</option>

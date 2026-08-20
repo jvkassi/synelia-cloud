@@ -229,7 +229,7 @@ export function VueApplication({ id }: { id: string }) {
             />
           ) : (
             <>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {composants.map((c) => (
                   <ComponentCard key={c.id} composant={c} />
                 ))}
@@ -451,7 +451,7 @@ export function VueApplication({ id }: { id: string }) {
       {/* Observabilité */}
       {onglet === 'observabilite' && env && (
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {envs.map((e) => (
               <Card key={e.id}>
                 <CardHeader
@@ -478,7 +478,7 @@ export function VueApplication({ id }: { id: string }) {
                       <p
                         className={cn(
                           'tnum mt-0.5 text-[14px] font-bold',
-                          m.v > m.s ? 'text-err' : m.v === 0 ? 'text-g-300' : 'text-ink',
+                          m.v > m.s ? 'text-err' : m.v === 0 ? 'text-g-500' : 'text-ink',
                         )}
                       >
                         {m.v}
@@ -698,7 +698,7 @@ function OngletVariables({
         </div>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader titre="Héritage depuis l’organisation" />
           <div className="space-y-2">
@@ -870,7 +870,7 @@ function OngletDomaines({
         </div>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader titre="Redirections" />
           <div className="space-y-2">
@@ -936,7 +936,7 @@ function OngletProgressif({
           titre="Stratégie de déploiement"
           sousTitre={`Appliquée à l’environnement ${env.nom}.`}
         />
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {(
             [
               ['rolling', 'Rolling', 'Remplace les instances une par une. Simple, sans ressources supplémentaires, mais les deux versions coexistent quelques instants.'],
@@ -972,7 +972,7 @@ function OngletProgressif({
               max={50}
               unite="%"
             />
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Seuil de taux 5xx" hint="au-delà, rollback">
                 <Input
                   type="number"
@@ -1095,7 +1095,7 @@ function OngletProtection({
             description="Interdit tout déploiement sur une plage donnée. Utile en période de clôture comptable, pendant une campagne commerciale, ou autour des jours fériés."
           />
           {gel && (
-            <div className="ml-6 grid gap-3 sm:grid-cols-2">
+            <div className="ml-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Début du gel">
                 <Input type="datetime-local" defaultValue="2026-08-28T18:00" />
               </Field>
@@ -1112,7 +1112,7 @@ function OngletProtection({
             description="Une authentification HTTP simple protège l’environnement, en plus de l’application elle-même. À réserver aux environnements de préproduction et de recette — jamais à la production."
           />
           {motDePasse && (
-            <div className="ml-6 grid gap-3 sm:grid-cols-2">
+            <div className="ml-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field label="Identifiant">
                 <Input defaultValue="preprod" />
               </Field>
@@ -1283,7 +1283,7 @@ function OngletTaches({ composants }: { composants: (typeof COMPOSANTS)[number][
                   </div>
                   <div className="rounded-[6px] bg-g-050 px-2.5 py-2">
                     <p className="type-micro text-g-500">Débit</p>
-                    <p className="tnum mt-0.5 text-[14px] font-bold text-g-300">0 msg/s</p>
+                    <p className="tnum mt-0.5 text-[14px] font-bold text-g-500">0 msg/s</p>
                   </div>
                   <div className="rounded-[6px] bg-g-050 px-2.5 py-2">
                     <p className="type-micro text-g-500">Échecs 24 h</p>

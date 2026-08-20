@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1fr_44%]">
+    <div className="grid grid-cols-1 min-h-screen lg:grid-cols-[1fr_44%]">
       <div className="flex flex-col">
         <header className="flex h-[72px] shrink-0 items-center px-6">
           <Link href="/">

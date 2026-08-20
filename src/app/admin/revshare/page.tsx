@@ -217,7 +217,7 @@ export default function Revshare() {
             </div>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Évolution du partage versé"
@@ -356,7 +356,7 @@ export default function Revshare() {
             </ol>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Exemple chiffré"
@@ -538,7 +538,7 @@ export default function Revshare() {
             </Callout>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Provision de trésorerie"

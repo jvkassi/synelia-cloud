@@ -162,7 +162,7 @@ export default function Observabilite() {
             }
           />
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Derniers événements"
@@ -317,7 +317,7 @@ export default function Observabilite() {
 
       {onglet === 'evenements' && (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <StatTile
               libelle="Critiques"
               valeur={EVENEMENTS_SUPERVISION.filter((e) => e.gravite === 'critique').length}
@@ -475,7 +475,7 @@ export default function Observabilite() {
             </div>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Nouvelle règle"
@@ -492,7 +492,7 @@ export default function Observabilite() {
                     <option value="sauvegarde">Sauvegarde en échec</option>
                   </Select>
                 </Field>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Seuil" hint="en pourcentage">
                     <Input type="number" defaultValue={85} />
                   </Field>
@@ -586,7 +586,7 @@ function Jauge({ valeur, seuil }: { valeur: number; seuil: number }) {
       <span
         className={cn(
           'tnum text-[11.5px] font-semibold',
-          valeur >= seuil ? 'text-err' : valeur === 0 ? 'text-g-300' : 'text-g-700',
+          valeur >= seuil ? 'text-err' : valeur === 0 ? 'text-g-500' : 'text-g-700',
         )}
       >
         {pct(valeur)}

@@ -135,7 +135,7 @@ export function VueEspace({ id }: { id: string }) {
             />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card className="lg:col-span-2">
               <CardHeader
                 titre="Consommation du quota"

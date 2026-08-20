@@ -110,7 +110,7 @@ export default function MarketplaceAdmin() {
             « disponible », pas « certifiée ».
           </Callout>
 
-          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
             {CATALOGUE.map((c) => {
               const instances = PARC_INSTANCES.filter((i) => i.catalogSlug === c.slug)
               return (
@@ -437,7 +437,7 @@ export default function MarketplaceAdmin() {
                   }
                 />
 
-                <div className="grid gap-2 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                   {c.vagues.map((v) => (
                     <div
                       key={v.numero}
@@ -609,7 +609,7 @@ export default function MarketplaceAdmin() {
             </Callout>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Orchestrateur de provisioning"

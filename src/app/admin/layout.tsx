@@ -5,7 +5,9 @@ import { ToastHost } from '@/components/app/toasts'
 import { AdminMobileNav, AdminSidebar } from '@/components/admin/sidebar'
 
 export const metadata: Metadata = {
-  title: { default: 'Espace fournisseur', template: '%s · Espace fournisseur Synelia Cloud' },
+  // `default` ne s'applique plus qu'à /admin lui-même : chaque sous-segment
+  // nomme son propre onglet, la page cliente racine ne pouvant pas le faire.
+  title: { default: 'Vue plateforme · Espace fournisseur', template: '%s · Espace fournisseur Synelia Cloud' },
   description:
     'Pilotage de la plateforme : organisations, revendeurs, capacité et backends, catalogue, marketplace, finance, audit et conformité.',
 }

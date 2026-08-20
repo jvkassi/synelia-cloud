@@ -147,7 +147,7 @@ export default function ListePra() {
         </div>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Callout ton="ok" titre="PRA-DBA-PROD : les chiffres tiennent">
           RPO constaté de 11 minutes pour une cible de 15, RTO constaté de 3 h 12 pour une cible de
           4 h. La progression est nette depuis l’exercice de janvier, qui avait échoué sur un groupe

@@ -224,7 +224,7 @@ export default function Support() {
                   masquable: true,
                   rendu: (t) =>
                     t.ressourcesLiees.length === 0 ? (
-                      <span className="text-[11.5px] text-g-300">—</span>
+                      <span className="text-[11.5px] text-g-500">—</span>
                     ) : (
                       <span className="flex flex-wrap gap-1">
                         {t.ressourcesLiees.slice(0, 2).map((r) => (
@@ -247,7 +247,7 @@ export default function Support() {
                   cle: (t) => t.slaRestantMin ?? 99999,
                   rendu: (t) =>
                     t.slaRestantMin === undefined ? (
-                      <span className="text-[11.5px] text-g-300">—</span>
+                      <span className="text-[11.5px] text-g-500">—</span>
                     ) : (
                       <span
                         className={cn(
@@ -300,7 +300,7 @@ export default function Support() {
 
       {onglet === 'sla' && (
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card>
               <CardHeader titre="Disponibilité globale" sousTitre="Trente derniers jours, toutes ressources." />
               <div className="flex justify-center py-2">
@@ -456,7 +456,7 @@ export default function Support() {
             ))}
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {articles.map((a) => (
               <Card key={a.id} hover className="flex flex-col">
                 <div className="flex items-start justify-between gap-2">
@@ -488,7 +488,7 @@ export default function Support() {
       )}
 
       {onglet === 'contact' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Nous joindre"
@@ -629,7 +629,7 @@ export default function Support() {
           <Field label="Sujet" hint="une phrase qui décrit le problème, pas la solution supposée">
             <Input placeholder="Latence élevée sur l’API de facturation depuis 14 h 10" />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Gravité" hint="détermine l’engagement de réponse">
               <Select defaultValue="majeure">
                 <option value="critique">Critique — production indisponible</option>

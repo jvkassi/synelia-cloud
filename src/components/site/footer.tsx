@@ -65,7 +65,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-g-300 bg-g-050">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-        <div className="grid gap-8 lg:grid-cols-[1.4fr_repeat(5,1fr)]">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.4fr_repeat(5,1fr)]">
           <div>
             <Logo />
             <p className="mt-3 max-w-xs text-[12.5px] leading-relaxed text-g-500">
@@ -112,7 +112,7 @@ export function SiteFooter() {
             © 2026 Synelia Group Afrique · Cocody, Abidjan, Côte d’Ivoire · Données hébergées à
             Abidjan (Synertech Vallon) et Grand-Bassam (VITIB) · TVA 18 % · Prix en FCFA (XOF)
             <br />
-            <span className="text-g-300">
+            <span className="text-g-500">
               Maquette de démonstration — organisations, ressources, factures et incidents entièrement fictifs.
             </span>
           </p>

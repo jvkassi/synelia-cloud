@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { Link2, Send, Sparkles, Trash2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, surfaceMarque } from '@/lib/utils'
 import { ROLE_LABEL, type Role } from '@/lib/types'
 import { GROUPES_RBAC, MATRICE_RBAC, ROLES_ORDRE, type Permission } from '@/lib/rbac'
 import { BRIQUES_CANVAS, SUGGESTIONS_COPILOTE, REPONSES_COPILOTE } from '@/lib/mock/paas'
@@ -14,7 +14,7 @@ import { Card, CardHeader } from '@/components/composition/card'
 const SYMBOLES: Record<Permission, { glyphe: string; classe: string; titre: string }> = {
   full: { glyphe: '●', classe: 'text-ok', titre: 'Autorisé' },
   read: { glyphe: '◐', classe: 'text-warn', titre: 'Lecture seule' },
-  none: { glyphe: '—', classe: 'text-g-300', titre: 'Interdit' },
+  none: { glyphe: '—', classe: 'text-g-500', titre: 'Interdit' },
 }
 
 /**
@@ -124,7 +124,7 @@ export function RoleMatrix({
           <span className="text-[14px] font-bold text-warn">◐</span> lecture seule
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="text-[14px] font-bold text-g-300">—</span> interdit
+          <span className="text-[14px] font-bold text-g-500">—</span> interdit
         </span>
         <span className="ml-auto">
           Une action interdite n’est jamais masquée : elle est désactivée avec une infobulle qui
@@ -213,7 +213,7 @@ export function TopologyCanvas({
   const noeudSelectionne = noeuds.find((n) => n.id === selection)
 
   return (
-    <div className={cn('grid gap-4 lg:grid-cols-[240px_1fr]', className)}>
+    <div className={cn('grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]', className)}>
       <Card className="lg:max-h-[560px] lg:overflow-y-auto">
         <MicroLabel className="mb-2.5">Briques disponibles</MicroLabel>
         <div className="space-y-1.5">
@@ -313,8 +313,11 @@ export function TopologyCanvas({
                 )}
               >
                 <span
-                  className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[10px] font-bold text-white"
-                  style={{ background: b?.teinte ?? '#4B2882' }}
+                  className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[10px] font-bold"
+                  style={{
+                    background: surfaceMarque(b?.teinte ?? '#4B2882').fond,
+                    color: surfaceMarque(b?.teinte ?? '#4B2882').texte,
+                  }}
                 >
                   {(b?.nom ?? '?').slice(0, 2).toUpperCase()}
                 </span>
@@ -348,7 +351,7 @@ export function TopologyCanvas({
                 </IconButton>
               </div>
             </div>
-            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <Input defaultValue={noeudSelectionne.nom} aria-label="Nom du composant" />
               <Input defaultValue="1" suffix="vCPU" aria-label="vCPU" />
               <Input defaultValue="1024" suffix="Mo" aria-label="Mémoire" />

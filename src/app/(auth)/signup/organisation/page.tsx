@@ -47,7 +47,7 @@ export default function CreationOrganisation() {
           />
         </Field>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Pays" required>
             <Select value={pays} onChange={(e) => setPays(e.target.value)}>
               {PAYS.map((p) => (
@@ -69,7 +69,7 @@ export default function CreationOrganisation() {
           </Field>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Numéro de TVA" hint="facultatif">
             <Input
               value={tva}

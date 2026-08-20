@@ -4,7 +4,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Check, ChevronRight, Copy, Eye, EyeOff } from 'lucide-react'
-import { cn, initials } from '@/lib/utils'
+import { cn, initials, surfaceMarque } from '@/lib/utils'
 import { Tooltip } from './overlay'
 
 export function Avatar({
@@ -43,10 +43,14 @@ export function Avatar({
       className={cn(
         'inline-flex shrink-0 items-center justify-center rounded-full font-bold [font-family:var(--font-display)]',
         dims,
-        teinte ? 'text-white' : 'bg-p-100 text-p-700',
+        teinte ? undefined : 'bg-p-100 text-p-700',
         className,
       )}
-      style={teinte ? { background: teinte } : undefined}
+      style={
+        teinte
+          ? { background: surfaceMarque(teinte).fond, color: surfaceMarque(teinte).texte }
+          : undefined
+      }
     >
       {initials(nom)}
     </span>
@@ -73,11 +77,13 @@ export function SolutionLogo({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center justify-center font-bold text-white [font-family:var(--font-display)]',
+        'inline-flex shrink-0 items-center justify-center font-bold [font-family:var(--font-display)]',
         dims,
         className,
       )}
-      style={{ background: teinte }}
+      // `surfaceMarque` choisit l'encre lisible sur la teinte de la solution
+      // sans renoncer à la couleur, qui sert à la reconnaître d'un coup d'œil.
+      style={{ background: surfaceMarque(teinte).fond, color: surfaceMarque(teinte).texte }}
       aria-hidden
     >
       {initiales}
@@ -312,7 +318,7 @@ export function Pagination({
           .filter((p) => p === 1 || p === pages || Math.abs(p - page) <= 1)
           .map((p, i, arr) => (
             <span key={p} className="flex items-center gap-1">
-              {i > 0 && arr[i - 1] !== p - 1 && <span className="px-0.5 text-g-300">…</span>}
+              {i > 0 && arr[i - 1] !== p - 1 && <span className="px-0.5 text-g-500">…</span>}
               <button
                 type="button"
                 onClick={() => onChange(p)}

@@ -47,12 +47,19 @@ export function Popover({
   children,
   align = 'right',
   width = 'w-72',
+  label,
   className,
 }: {
   trigger: (open: boolean) => ReactNode
   children: ReactNode | ((close: () => void) => ReactNode)
   align?: 'left' | 'right'
   width?: string
+  /**
+   * Nom accessible du déclencheur. Obligatoire en pratique : un déclencheur
+   * qui ne contient qu'une icône est annoncé « bouton » sans plus par un
+   * lecteur d'écran, ce qui le rend inutilisable.
+   */
+  label: string
   className?: string
 }) {
   const [open, setOpen] = useState(false)
@@ -74,7 +81,14 @@ export function Popover({
 
   return (
     <div ref={ref} className={cn('relative', className)}>
-      <button type="button" onClick={() => setOpen((v) => !v)} className="block">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="block"
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
         {trigger(open)}
       </button>
       {open && (

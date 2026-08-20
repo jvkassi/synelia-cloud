@@ -191,7 +191,7 @@ export default function ListeClusters() {
         }}
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Callout ton="violet" titre="Mono-master ou haute disponibilité : le vrai arbitrage">
           Un control plane mono-master coûte trois fois moins cher, et pour un cluster de recette ou
           de développement c’est le choix rationnel : une indisponibilité de l’API pendant une

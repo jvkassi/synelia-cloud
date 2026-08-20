@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, surfaceMarque } from '@/lib/utils'
 import { ButtonLink } from '@/components/ui/button'
 import { MicroLabel } from '@/components/ui/badge'
 
@@ -306,8 +306,8 @@ export function CarrouselLogos({
             className="flex w-40 shrink-0 items-center gap-2.5 rounded-[10px] border border-g-300 bg-white px-3 py-2.5"
           >
             <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[10.5px] font-bold text-white"
-              style={{ background: l.teinte }}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[10.5px] font-bold"
+              style={{ background: surfaceMarque(l.teinte).fond, color: surfaceMarque(l.teinte).texte }}
             >
               {l.initiales}
             </span>

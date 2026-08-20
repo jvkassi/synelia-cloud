@@ -28,12 +28,10 @@ export default function StockageObjet() {
       cle: (b) => b.nom,
       rendu: (b) => (
         <span className="block">
-          <Link
-            href={`/app/objet/${b.id}`}
-            className="block font-mono text-[12.5px] font-semibold text-ink hover:text-p-700"
-          >
-            {b.nom}
-          </Link>
+          {/* Pas de lien ici : le DataTable enveloppe déjà la première colonne
+              dans le lien de la ligne, et deux <a> imbriqués sont du HTML
+              invalide — React refuse alors d'hydrater la table. */}
+          <span className="block font-mono text-[12.5px] font-semibold text-ink">{b.nom}</span>
           <span className="block text-[11px] text-g-500">
             {b.policy === 'prive'
               ? 'Privé'
@@ -197,7 +195,7 @@ export default function StockageObjet() {
         }}
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader
             titre="Clés d’accès"

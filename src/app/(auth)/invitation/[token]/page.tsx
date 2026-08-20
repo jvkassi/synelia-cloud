@@ -53,7 +53,7 @@ export default async function PageInvitation({
         <MicroLabel>Portée de l’invitation</MicroLabel>
         <div className="mt-2.5 flex flex-wrap items-center gap-2">
           <Badge tone="violet">{ROLE_LABEL[invitation.role]}</Badge>
-          <span className="text-g-300">sur</span>
+          <span className="text-g-500">sur</span>
           <Badge tone="neutral">
             {invitation.porteeType} · <span className="font-mono">{invitation.porteeLabel}</span>
           </Badge>
@@ -64,7 +64,7 @@ export default async function PageInvitation({
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-[10px] border border-[#B7E3D0] bg-ok-bg p-4">
           <MicroLabel className="text-ok">Ce que vous pourrez faire</MicroLabel>
           <ul className="mt-2.5 space-y-1.5">

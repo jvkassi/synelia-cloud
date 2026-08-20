@@ -75,7 +75,7 @@ export default function Lanceur() {
           actionSecondaire={{ libelle: 'Contacter le support', href: '/app/support' }}
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {services.map((s) => (
             <AppLauncherTile
               key={s.id}
@@ -86,7 +86,7 @@ export default function Lanceur() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {RACCOURCIS.map((r) => (
           <Link
             key={r.href}

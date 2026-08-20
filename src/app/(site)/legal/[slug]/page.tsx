@@ -29,7 +29,7 @@ export default async function PageLegale({
   return (
     <SiteSection>
       <Container>
-        <div className="grid gap-10 lg:grid-cols-[220px_1fr]">
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[220px_1fr]">
           <aside className="lg:sticky lg:top-24 lg:self-start">
             <MicroLabel className="mb-3">Documents légaux</MicroLabel>
             <nav className="space-y-0.5">
@@ -75,7 +75,7 @@ export default async function PageLegale({
               {page.sections.map((s, i) => (
                 <section key={s.titre} id={slugify(s.titre)}>
                   <h2 className="type-h2">
-                    <span className="tnum mr-2 text-g-300">{i + 1}.</span>
+                    <span className="tnum mr-2 text-g-500">{i + 1}.</span>
                     {s.titre}
                   </h2>
                   <p className="mt-3 text-[14px] leading-[1.75] text-g-700">{s.texte}</p>

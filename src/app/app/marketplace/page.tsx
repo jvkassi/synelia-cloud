@@ -68,7 +68,7 @@ export default function MarketplaceClient() {
       />
 
       <Card className="border-p-300 bg-p-050">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Promesse
             titre="Souveraineté du socle"
             texte="Chaque instance tourne sur nos sites d’Abidjan ou de Grand-Bassam. Vous choisissez le site à la souscription."
@@ -141,7 +141,7 @@ export default function MarketplaceClient() {
                 <h2 className="type-h2">{CATEGORIE_LABEL[cat]}</h2>
                 <span className="tnum text-[12px] text-g-500">{services.length}</span>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {services.map((s) => (
                   <div key={s.slug} className="relative">
                     {dejaSouscrits.has(s.slug) && (
@@ -172,7 +172,7 @@ export default function MarketplaceClient() {
             </p>
           </div>
         </div>
-        <ol className="grid gap-x-6 gap-y-2.5 sm:grid-cols-2 lg:grid-cols-3">
+        <ol className="grid grid-cols-1 gap-x-6 gap-y-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {CONTRAT_INTEGRATION.map((c) => (
             <li key={c.num} className="flex items-start gap-2.5">
               <span className="tnum mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-p-100 text-[10.5px] font-bold text-p-700">

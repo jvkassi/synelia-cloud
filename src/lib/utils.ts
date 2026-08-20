@@ -126,3 +126,49 @@ export function initials(name: string): string {
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('')
 }
+
+// ─── Lisibilité des teintes de marque ─────────────────────────────────
+
+/** Luminance relative d'une couleur `#rrggbb`, au sens WCAG. */
+function luminance(hex: string): number {
+  const canal = (i: number) => {
+    const v = parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) / 255
+    return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)
+  }
+  return 0.2126 * canal(0) + 0.7152 * canal(1) + 0.0722 * canal(2)
+}
+
+/** Assombrit une couleur dans l'espace linéaire jusqu'à la luminance visée. */
+function assombrir(hex: string, luminanceVisee: number): string {
+  const depart = luminance(hex)
+  if (depart <= luminanceVisee) return hex
+  const facteur = luminanceVisee / depart
+  const canal = (i: number) => {
+    const v = parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16) / 255
+    const lin = (v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)) * facteur
+    const srgb = lin <= 0.0031308 ? lin * 12.92 : 1.055 * Math.pow(lin, 1 / 2.4) - 0.055
+    return Math.round(Math.min(1, Math.max(0, srgb)) * 255)
+      .toString(16)
+      .padStart(2, '0')
+  }
+  return `#${canal(0)}${canal(1)}${canal(2)}`
+}
+
+/**
+ * Rend lisible une vignette portant les initiales d'une marque amont.
+ *
+ * Les teintes des solutions et des revendeurs sont imposées par leur charte :
+ * un bleu clair ou un jaune ne tiennent pas 4,5:1 face au blanc. Plutôt que
+ * de renoncer à la couleur — elle sert à reconnaître la solution d'un coup
+ * d'œil — on choisit le texte qui passe : encre sombre sur une teinte claire,
+ * blanc sur une teinte assombrie juste assez. Fonction pure : même entrée,
+ * même sortie côté serveur et côté client.
+ */
+export function surfaceMarque(teinte: string): { fond: string; texte: string } {
+  const ENCRE = '#12081f'
+  const l = luminance(teinte)
+  // (l + 0,05) / (0,0039 + 0,05) ≥ 4,5 → l ≥ 0,193 : l'encre sombre suffit.
+  if (l >= 0.193) return { fond: teinte, texte: ENCRE }
+  // Sinon, blanc sur teinte ramenée à 1,05 / 4,6 − 0,05 ≈ 0,178.
+  return { fond: assombrir(teinte, 0.178), texte: '#ffffff' }
+}

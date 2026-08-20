@@ -104,7 +104,7 @@ export default function Smtp() {
 
       {onglet === 'apercu' && (
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card>
               <CardHeader titre="Quotas" sousTitre="Trois limites, pour trois types d’abus différents." />
               <div className="space-y-3.5">
@@ -213,7 +213,7 @@ export default function Smtp() {
               titre="Connexion au relais"
               sousTitre="Chiffrement obligatoire. Le port 25 est fermé : il ne sert qu’aux échanges entre serveurs de courrier et attire les abus."
             />
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div className="space-y-3">
                 <CopyField label="Hôte" value="smtp.synelia.cloud" />
                 <CopyField label="Port (STARTTLS)" value="587" />
@@ -306,7 +306,7 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
       )}
 
       {onglet === 'authentification' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Authentification du domaine"
@@ -507,7 +507,7 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
       )}
 
       {onglet === 'webhooks' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Webhooks"

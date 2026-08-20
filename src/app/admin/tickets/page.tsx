@@ -214,7 +214,7 @@ export default function TicketsAdmin() {
                   cle: (t) => t.slaRestantMin ?? 99999,
                   rendu: (t) =>
                     t.slaRestantMin === undefined ? (
-                      <span className="text-[11.5px] text-g-300">—</span>
+                      <span className="text-[11.5px] text-g-500">—</span>
                     ) : (
                       <span
                         className={cn(
@@ -414,7 +414,7 @@ export default function TicketsAdmin() {
                               {sesCritiques.length}
                             </Badge>
                           ) : (
-                            <span className="text-[11.5px] text-g-300">0</span>
+                            <span className="text-[11.5px] text-g-500">0</span>
                           )}
                         </td>
                         <td className="w-40 px-3 py-2.5">
@@ -449,7 +449,7 @@ export default function TicketsAdmin() {
             </div>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Volume de tickets sur 30 jours"
@@ -611,7 +611,7 @@ export default function TicketsAdmin() {
             </Callout>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Règles de qualification"

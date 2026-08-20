@@ -159,7 +159,7 @@ export function VueHebergement({ id }: { id: string }) {
       <Tabs tabs={ONGLETS} active={onglet} onChange={setOnglet} />
 
       {onglet === 'apercu' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader titre="Caractéristiques" />
             <KeyValueList
@@ -302,7 +302,7 @@ export function VueHebergement({ id }: { id: string }) {
               titre="Environnement d’exécution"
               sousTitre="Changer de version de PHP redémarre le moteur. Comptez quelques secondes d’indisponibilité."
             />
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Field label="Version de PHP" hint="8.1 est en fin de support de sécurité">
                 <Select defaultValue={h.runtime.php}>
                   <option value="8.1">PHP 8.1 (fin de support décembre 2026)</option>
@@ -451,7 +451,7 @@ export function VueHebergement({ id }: { id: string }) {
                     </ButtonLink>
                   }
                 />
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <StatTile libelle="Dernier clonage" valeur="il y a 2 j" detail={dateCourte('2026-08-17')} />
                   <StatTile libelle="Écarts de fichiers" valeur={18} detail="Depuis le clonage" ton="warn" />
                   <StatTile libelle="Écarts en base" valeur={4} detail="Tables modifiées" ton="warn" />
@@ -536,7 +536,7 @@ export function VueHebergement({ id }: { id: string }) {
 
       {onglet === 'securite' && (
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader titre="Protections actives" />
               <div className="space-y-3.5">
@@ -632,7 +632,7 @@ export function VueHebergement({ id }: { id: string }) {
       )}
 
       {onglet === 'bases' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Bases de données"
@@ -729,7 +729,7 @@ export function VueHebergement({ id }: { id: string }) {
 
       {onglet === 'sauvegardes' && (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <StatTile libelle="Dernière sauvegarde" valeur="il y a 12 h" detail={dateHeure('2026-08-19T03:00:00Z')} ton="ok" />
             <StatTile libelle="Points de restauration" valeur={30} detail="Conservation 30 jours" />
             <StatTile libelle="Copie hors site" valeur="Grand-Bassam" ton="ok" detail="À 42 km d’Abidjan" />
@@ -822,7 +822,7 @@ export function VueHebergement({ id }: { id: string }) {
               { titre: 'Erreurs 5xx', unite: '', min: 0, max: 4, seuil: 5, couleur: 'var(--color-err)' },
             ]}
           />
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader titre="Pages les plus consultées" sousTitre="Sur les dernières 24 heures." />
               <div className="space-y-1.5">

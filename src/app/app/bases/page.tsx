@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Plus } from 'lucide-react'
-import { cn, seededSeries } from '@/lib/utils'
+import { cn, seededSeries, surfaceMarque } from '@/lib/utils'
 import { dateCourte, goHumain, money, num, pct } from '@/lib/format'
 import { BASES_MANAGEES } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -96,7 +96,7 @@ export default function BasesManagees() {
             />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {bases.map((b) => {
               const m = MOTEURS[b.moteur]
               return (
@@ -112,8 +112,11 @@ export default function BasesManagees() {
                   <div className="flex items-start justify-between gap-2">
                     <span className="flex items-center gap-2.5">
                       <span
-                        className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[10px] font-bold text-white"
-                        style={{ background: m.teinte }}
+                        className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[10px] font-bold"
+                        style={{
+                          background: surfaceMarque(m.teinte).fond,
+                          color: surfaceMarque(m.teinte).texte,
+                        }}
                       >
                         {m.nom.slice(0, 2).toUpperCase()}
                       </span>
@@ -168,7 +171,7 @@ export default function BasesManagees() {
               <Tabs tabs={ONGLETS} active={onglet} onChange={setOnglet} />
 
               {onglet === 'connexion' && (
-                <div className="grid gap-4 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <Card>
                     <CardHeader
                       titre="Chaîne de connexion"
@@ -284,7 +287,7 @@ export default function BasesManagees() {
 
               {onglet === 'sauvegardes' && (
                 <div className="space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
                     <StatTile
                       libelle="Dernière sauvegarde complète"
                       valeur="il y a 13 h"
@@ -310,7 +313,7 @@ export default function BasesManagees() {
                       titre="Restauration à un instant précis"
                       sousTitre="La journalisation continue permet de revenir à n’importe quel instant de la fenêtre, à la seconde près."
                     />
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <Field label="Instant cible" hint="heure GMT">
                         <Input type="datetime-local" defaultValue="2026-08-19T14:00" />
                       </Field>
@@ -339,7 +342,7 @@ export default function BasesManagees() {
 
               {onglet === 'metriques' && (
                 <div className="space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
                     <StatTile
                       libelle="Connexions"
                       valeur={`${base.connexions.actives}/${base.connexions.max}`}

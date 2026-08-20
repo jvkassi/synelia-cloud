@@ -319,7 +319,7 @@ export default function Organisations() {
         </div>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Callout ton="violet" titre="Le cloisonnement s’applique aussi à nous">
           Un membre de nos équipes ne voit pas les données d’une organisation sans élévation
           nominative, bornée dans le temps, et visible dans le journal d’audit du client. Ce n’est pas
@@ -363,7 +363,7 @@ export default function Organisations() {
           <Field label="Raison sociale">
             <Input placeholder="Nom de l’entreprise" />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Pays">
               <Select defaultValue="Côte d’Ivoire">
                 <option value="Côte d’Ivoire">Côte d’Ivoire</option>
@@ -379,7 +379,7 @@ export default function Organisations() {
               <Input placeholder="Banque, industrie, administration…" />
             </Field>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Type de relation">
               <Select defaultValue="direct">
                 <option value="direct">Client direct</option>
@@ -398,7 +398,7 @@ export default function Organisations() {
               </Select>
             </Field>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Plan de service">
               <Select defaultValue="standard">
                 <option value="standard">Standard</option>

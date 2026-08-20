@@ -355,7 +355,7 @@ export default function AuditAdmin() {
             )}
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Historique des élévations"
@@ -470,7 +470,7 @@ export default function AuditAdmin() {
             regardons un par un.
           </Callout>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card className="lg:col-span-2">
               <CardHeader
                 titre="Actions refusées"
@@ -635,14 +635,14 @@ export default function AuditAdmin() {
             </Callout>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Export du journal"
                 sousTitre="Pour un audit, une certification, ou une réquisition judiciaire."
               />
               <div className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Du">
                     <Input type="date" defaultValue="2026-07-19" />
                   </Field>

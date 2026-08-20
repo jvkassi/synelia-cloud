@@ -165,7 +165,7 @@ export default function Equipe() {
                               Active
                             </Badge>
                           ) : (
-                            <span className="text-[11.5px] text-g-300">—</span>
+                            <span className="text-[11.5px] text-g-500">—</span>
                           )}
                         </td>
                         <td className="px-3 py-2.5 text-[11.5px] text-g-500">
@@ -199,7 +199,7 @@ export default function Equipe() {
             </div>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader titre="Répartition par équipe" />
               <div className="space-y-2">
@@ -282,7 +282,7 @@ export default function Equipe() {
             <RoleMatrix roles={ROLES_FOURNISSEUR} />
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Rôles fournisseur"
@@ -413,7 +413,7 @@ export default function Equipe() {
                             {x.n} appel{x.n > 1 ? 's' : ''}
                           </Badge>
                         ) : (
-                          <span className="text-[11.5px] text-g-300">—</span>
+                          <span className="text-[11.5px] text-g-500">—</span>
                         )}
                       </td>
                       <td className="px-3 py-2.5">
@@ -440,7 +440,7 @@ export default function Equipe() {
             </Callout>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Règles d’astreinte"
@@ -539,7 +539,7 @@ export default function Equipe() {
       )}
 
       {onglet === 'acces' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Politique d’accès de l’équipe"
@@ -814,7 +814,7 @@ export default function Equipe() {
           <Field label="Adresse professionnelle" hint="doit appartenir au domaine synelia.tech">
             <Input type="email" placeholder="prenom.nom@synelia.tech" />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Équipe">
               <Select defaultValue="">
                 <option value="">Sélectionner…</option>

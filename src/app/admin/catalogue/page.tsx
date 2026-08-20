@@ -220,7 +220,7 @@ export default function Catalogue() {
                     <span
                       className={cn(
                         'tnum text-[12px] font-semibold',
-                        o.souscriptionsActives === 0 ? 'text-g-300' : 'text-ink',
+                        o.souscriptionsActives === 0 ? 'text-g-500' : 'text-ink',
                       )}
                     >
                       {o.souscriptionsActives}
@@ -378,7 +378,7 @@ export default function Catalogue() {
             </div>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Règles de tarification"
@@ -475,7 +475,7 @@ export default function Catalogue() {
               </p>
             </Card>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {depreciees.map((o) => (
                 <Card key={o.id} className="border-warn/30">
                   <CardHeader
@@ -574,7 +574,7 @@ export default function Catalogue() {
         }
       >
         <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Nom commercial">
               <Input defaultValue={edition?.nom ?? ''} placeholder="Cloud Pro" />
             </Field>
@@ -602,7 +602,7 @@ export default function Catalogue() {
             />
           </Field>
           <MicroLabel className="pt-2">Tarification par canal</MicroLabel>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Field label="Prix direct" hint="publié sur la vitrine">
               <Input type="number" defaultValue={edition?.prix.direct ?? 0} suffix="FCFA" />
             </Field>

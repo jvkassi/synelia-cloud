@@ -47,7 +47,7 @@ export default async function PageSuiviTache({
         }
       />
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
         <div className="min-w-0 space-y-4">
           <JobTracker job={job} />
 

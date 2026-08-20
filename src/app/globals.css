@@ -21,12 +21,21 @@
   /* ─── Magenta : accent unique, réservé aux moments clés ───────────── */
   --color-m-600: #c0297a;
   --color-m-700: #a0206a;
+  /**
+   * Même magenta, éclairci pour rester lisible sur un fond violet foncé :
+   * m-600 sur p-900 ne donne que 2,81:1, sous le seuil de 3:1 exigé pour
+   * un grand texte. Réservé aux mêmes trois usages que m-600 (§1.1),
+   * uniquement lorsque le fond est sombre.
+   */
+  --color-m-400: #e766a6;
   --color-m-050: #fcedf4;
 
   /* ─── Sémantique ──────────────────────────────────────────────────── */
-  --color-ok: #1b8f62;
+  /* Valeurs choisies pour tenir 4,5:1 sur blanc, g-050, p-050 et leur
+     propre fond teinté — un badge « ok » posé sur ok-bg reste lisible. */
+  --color-ok: #15704d;
   --color-ok-bg: #e8f6f0;
-  --color-warn: #b8690b;
+  --color-warn: #8f5008;
   --color-warn-bg: #fdf3e4;
   --color-err: #c0392b;
   --color-err-bg: #fbebe9;
@@ -36,7 +45,10 @@
   /* ─── Neutres ─────────────────────────────────────────────────────── */
   --color-ink: #2b1b4d;
   --color-g-700: #43434f;
-  --color-g-500: #77778a;
+  /* #77778a ne donnait que 4,38:1 sur blanc et 4,03:1 sur p-050 : sous le
+     seuil AA pour du texte courant, or g-500 porte tous les sous-titres. */
+  --color-g-500: #67677c;
+  /* Réservé aux bordures et aux séparateurs, jamais au texte porteur de sens. */
   --color-g-300: #c8c8d4;
   --color-g-100: #efeff4;
   --color-g-050: #f8f8fb;

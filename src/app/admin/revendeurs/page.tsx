@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Handshake, Palette, Plus, TrendingUp } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, surfaceMarque } from '@/lib/utils'
 import { money, num, pct } from '@/lib/format'
 import { MODELE_PARTENAIRE, ORGANISATIONS, RELEVES_REVSHARE, RESELLERS } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -103,8 +103,11 @@ export default function Revendeurs() {
                   titre={
                     <span className="flex flex-wrap items-center gap-2.5">
                       <span
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] text-[11px] font-bold text-white"
-                        style={{ background: r.theme.primary }}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[7px] text-[11px] font-bold"
+                        style={{
+                          background: surfaceMarque(r.theme.primary).fond,
+                          color: surfaceMarque(r.theme.primary).texte,
+                        }}
                       >
                         {r.nom.slice(0, 2).toUpperCase()}
                       </span>
@@ -124,9 +127,9 @@ export default function Revendeurs() {
                   }
                 />
 
-                <div className="grid gap-4 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
                   <div className="lg:col-span-2">
-                    <div className="grid gap-3 sm:grid-cols-4">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
                       <StatTile
                         libelle="CA apporté"
                         valeur={money(r.caGenere)}
@@ -256,7 +259,7 @@ export default function Revendeurs() {
 
       {onglet === 'modele' && (
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             {MODELE_PARTENAIRE.map((m) => (
               <Card key={m.niveau} className="flex flex-col">
                 <CardHeader
@@ -289,7 +292,7 @@ export default function Revendeurs() {
               sousTitre="Au-delà de la remise, ce qui fait qu’un partenaire peut réellement vendre."
               actions={<TrendingUp size={15} className="text-p-700" />}
             />
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {[
                 {
                   t: 'Portail sous sa marque',
@@ -343,7 +346,7 @@ export default function Revendeurs() {
             contractuellement.
           </Callout>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader titre="Ce que nous nous interdisons" />
               <div className="space-y-2">
@@ -479,7 +482,7 @@ export default function Revendeurs() {
           <Field label="Raison sociale du partenaire">
             <Input placeholder="Nom de l’entreprise partenaire" />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Niveau de partenariat">
               <Select defaultValue="revendeur">
                 {MODELE_PARTENAIRE.map((m) => (
@@ -496,7 +499,7 @@ export default function Revendeurs() {
           <Field label="Domaine du portail sous sa marque" hint="il devra créer un CNAME vers nos serveurs">
             <Input placeholder="cloud.partenaire.ci" />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Couleur principale">
               <Input type="color" defaultValue="#1B3A5C" className="h-10" />
             </Field>

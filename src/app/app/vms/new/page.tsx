@@ -276,7 +276,7 @@ export default function NouvellesVms() {
             </Select>
           </Field>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {(
               [
                 {
@@ -364,7 +364,7 @@ export default function NouvellesVms() {
         <div className="space-y-4">
           {mode === 'identique' ? (
             <>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label="Préfixe de nommage" hint="un numéro sera ajouté">
                   <Input
                     value={prefixe}
@@ -407,7 +407,7 @@ export default function NouvellesVms() {
                   </div>
                 </Card>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {FLAVORS.map((f) => (
                     <button
                       key={f.id}
@@ -658,7 +658,7 @@ export default function NouvellesVms() {
                 description="Calendrier hebdomadaire d’extinction et de démarrage. Économie appréciable sur les environnements de test et de recette."
               />
               {planification && (
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <Field label="Démarrage" hint="jours ouvrés">
                     <Input type="time" defaultValue="07:00" />
                   </Field>

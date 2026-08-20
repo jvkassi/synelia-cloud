@@ -158,7 +158,7 @@ export default function Sites() {
                     </span>
                   }
                 />
-                <div className="grid gap-4 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
                   <div className="lg:col-span-2">
                     <KeyValueList
                       colonnes={2}
@@ -270,7 +270,7 @@ export default function Sites() {
             ]}
           />
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Chaîne électrique"
@@ -359,7 +359,7 @@ export default function Sites() {
               sousTitre="Ce que nous mesurons, et ce que nous ne prétendons pas."
               actions={<Fuel size={15} className="text-g-500" />}
             />
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {[
                 {
                   t: 'Ce que nous mesurons',
@@ -459,7 +459,7 @@ export default function Sites() {
             </Callout>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader titre="Adressage et autonomie" />
               <KeyValueList

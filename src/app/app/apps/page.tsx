@@ -67,7 +67,7 @@ export default function Applications() {
       {ANOMALIES.length > 0 && (
         <section className="space-y-3">
           <MicroLabel className="text-m-600">Détection d’anomalie</MicroLabel>
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {ANOMALIES.map((a) => (
               <AnomalieCard key={a.id} anomalie={a} />
             ))}
@@ -82,7 +82,7 @@ export default function Applications() {
           action={{ libelle: 'Créer une application', href: '/app/apps/new' }}
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {APPLICATIONS.map((app) => {
             const envs = envsDeLApp(app.id)
             const prod = envs.find((e) => e.nom === 'Production')
@@ -230,7 +230,7 @@ export default function Applications() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Callout ton="violet" titre="L’emplacement réel d’exécution, exposé">
           Peu de plateformes vous disent sur quelles machines ou dans quels pods tourne réellement
           votre composant. Nous l’affichons, parce qu’un incident de production commence toujours par
@@ -275,7 +275,7 @@ function Sante({
       <p
         className={cn(
           'tnum mt-0.5 text-[12.5px] font-bold',
-          alerte ? 'text-err' : valeur === 0 ? 'text-g-300' : 'text-ink',
+          alerte ? 'text-err' : valeur === 0 ? 'text-g-500' : 'text-ink',
         )}
       >
         {valeur}

@@ -46,7 +46,7 @@ export default async function FicheProduit({
           <h1 className="mt-3 text-[32px] font-bold leading-[1.1] [font-family:var(--font-display)] text-white sm:text-[44px]">
             {f.nom}
           </h1>
-          <p className="mt-3 max-w-2xl text-[18px] font-semibold leading-snug text-m-600 sm:text-[22px]">
+          <p className="mt-3 max-w-2xl text-[18px] font-semibold leading-snug text-m-400 sm:text-[22px]">
             {f.accroche}
           </p>
           <p className="mt-4 max-w-2xl text-[14.5px] leading-relaxed text-p-300">{f.resume}</p>
@@ -68,7 +68,7 @@ export default async function FicheProduit({
       {/* Ce que c'est, en trois puces */}
       <SiteSection className="!py-10">
         <Container>
-          <div className="grid gap-5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
             {f.puces.map((p, i) => (
               <div key={p} className="flex gap-3">
                 <span className="tnum mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-p-100 text-[12px] font-bold text-p-700">
@@ -177,7 +177,7 @@ export default async function FicheProduit({
             mensuellement dans votre espace client. Les fenêtres de maintenance annoncées au moins
             sept jours à l’avance sont exclues du calcul.
           </p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <StatTile libelle="Disponibilité engagée" valeur={f.sla.dispo} ton="ok" />
             <StatTile libelle="Première réponse" valeur={f.sla.reponse} />
             <StatTile libelle="Résolution visée" valeur={f.sla.resolution} />

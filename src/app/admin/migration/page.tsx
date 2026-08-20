@@ -244,7 +244,7 @@ export default function Migration() {
             </div>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {enSortie.map((b) => (
               <Card key={b.id} className="border-warn/30">
                 <CardHeader
@@ -370,7 +370,7 @@ export default function Migration() {
                   </span>
                 }
               />
-              <div className="grid gap-4 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
                 <div className="lg:col-span-2">
                   <div className="flex flex-wrap items-center gap-3 rounded-[8px] border border-g-300 px-3.5 py-3">
                     <span className="font-mono text-[13px] font-bold text-ink">{v.source}</span>
@@ -629,7 +629,7 @@ export default function Migration() {
             </ol>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Ce que le client conserve"

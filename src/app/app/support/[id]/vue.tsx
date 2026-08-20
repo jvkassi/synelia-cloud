@@ -180,7 +180,7 @@ export function VueTicket({ id }: { id: string }) {
       <Tabs tabs={ONGLETS} active={onglet} onChange={setOnglet} />
 
       {onglet === 'echanges' && (
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
             {t.messages.map((m, i) => (
               <Card
@@ -387,7 +387,7 @@ export function VueTicket({ id }: { id: string }) {
             />
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Journaux joints"
@@ -466,7 +466,7 @@ export function VueTicket({ id }: { id: string }) {
       )}
 
       {onglet === 'chronologie' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Chronologie du ticket"

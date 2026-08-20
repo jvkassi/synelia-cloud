@@ -319,7 +319,7 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
 
           <div>
             <MicroLabel className="mb-2">Couche de répartition</MicroLabel>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {(
                 [
                   ['l4', 'Couche 4 — TCP / UDP', 'Répartition au niveau transport, sans lecture du contenu. Adaptée aux bases de données, aux protocoles non HTTP et aux besoins de latence minimale.'],
@@ -344,7 +344,7 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
 
           <div>
             <MicroLabel className="mb-2">Exposition</MicroLabel>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {(
                 [
                   ['public', 'Public', 'Joignable depuis Internet via une IP publique. Le groupe de sécurité et le WAF filtrent le trafic entrant.'],
@@ -460,7 +460,7 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
             <div className="space-y-4">
               {layer === 'l7' ? (
                 <>
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <Field label="Port HTTPS">
                       <Input
                         type="number"
@@ -489,7 +489,7 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
                   />
                 </>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Protocole">
                     <Select defaultValue="TCP">
                       <option value="TCP">TCP</option>
@@ -629,7 +629,7 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
               titre="Health check"
               sousTitre="Détermine quand une cible est retirée du pool, et quand elle y revient."
             />
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Protocole">
                 <Select defaultValue={layer === 'l7' ? 'HTTPS' : 'TCP'}>
                   {layer === 'l7' ? (

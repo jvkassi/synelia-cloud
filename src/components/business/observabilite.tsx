@@ -158,7 +158,7 @@ export function GrilleSparkCharts({
         <DegradedState source="supervision" />
       ) : (
         <>
-          <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
             {defs.map((m) => (
               <SparkChart
                 key={m.titre}
@@ -306,7 +306,8 @@ export function LogPeek({
     INFO: 'text-[#9DB4D4]',
     WARN: 'text-[#E8B84B]',
     ERROR: 'text-[#F08278]',
-    DEBUG: 'text-[#8A83A8]',
+    // #8A83A8 ne donnait que 4,31:1 sur le fond p-900 du journal.
+    DEBUG: 'text-[#9A93BE]',
   }
 
   return (
@@ -333,7 +334,7 @@ export function LogPeek({
       </div>
       <div className="max-h-72 overflow-auto rounded-[8px] border border-g-300 bg-p-900 px-3 py-2.5">
         {visibles.length === 0 ? (
-          <p className="py-3 text-center font-mono text-[12px] text-[#8A83A8]">
+          <p className="py-3 text-center font-mono text-[12px] text-[#9A93BE]">
             Aucune ligne ne correspond au filtre.
           </p>
         ) : (
@@ -341,7 +342,7 @@ export function LogPeek({
             <tbody>
               {visibles.map((l, i) => (
                 <tr key={i}>
-                  <td className="whitespace-nowrap pr-3 align-top text-[#6E6796]">{heure(l.ts)}</td>
+                  <td className="whitespace-nowrap pr-3 align-top text-[#9A93BE]">{heure(l.ts)}</td>
                   <td
                     className={cn('whitespace-nowrap pr-3 align-top font-semibold', couleurs[l.niveau])}
                   >

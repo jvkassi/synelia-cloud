@@ -85,6 +85,7 @@ export function TopBar({ portee = 'client' }: { portee?: 'client' | 'fournisseur
         <Popover
           align="left"
           width="w-72"
+          label="Changer d’organisation"
           trigger={() => (
             <span className="hidden items-center gap-2 rounded-[6px] border border-g-300 px-2.5 py-1.5 text-[12.5px] font-semibold text-g-700 transition-colors hover:border-p-400 hover:bg-p-050 md:flex">
               <Building2 size={13} className="text-p-700" />
@@ -130,13 +131,14 @@ export function TopBar({ portee = 'client' }: { portee?: 'client' | 'fournisseur
         </Popover>
       )}
 
-      <div className="flex flex-1 justify-center">
+      <div className="flex min-w-0 flex-1 justify-center">
         <RechercheGlobale portee={portee} />
       </div>
 
       {/* Centre de tâches (§1.6) */}
       <Popover
         width="w-80"
+        label="Centre de tâches"
         trigger={() => (
           <span
             className={cn(
@@ -224,6 +226,7 @@ export function TopBar({ portee = 'client' }: { portee?: 'client' | 'fournisseur
       {/* Notifications */}
       <Popover
         width="w-80"
+        label="Notifications"
         trigger={() => (
           <span
             className={cn(
@@ -271,6 +274,7 @@ export function TopBar({ portee = 'client' }: { portee?: 'client' | 'fournisseur
       {/* Sélecteur de rôle simulé (§4.1) */}
       <Popover
         width="w-64"
+        label="Changer le rôle simulé"
         trigger={() => (
           <span
             className={cn(
@@ -318,6 +322,7 @@ export function TopBar({ portee = 'client' }: { portee?: 'client' | 'fournisseur
       {/* Avatar et menu */}
       <Popover
         width="w-64"
+        label="Mon compte"
         trigger={() => (
           <span className="block">
             <Avatar nom={UTILISATEUR_COURANT.nom} size="sm" />

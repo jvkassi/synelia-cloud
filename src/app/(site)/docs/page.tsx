@@ -131,7 +131,7 @@ export default function Docs() {
               action={{ libelle: 'Ouvrir un ticket', href: '/entreprises#contact' }}
             />
           ) : (
-            <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-7 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {resultats.map((s) => (
                 <Card key={s.titre}>
                   <CardHeader
@@ -168,9 +168,11 @@ export default function Docs() {
             titre="Provisionner par API ou par Terraform"
             chapeau="Tout ce que fait le portail est disponible par API. Les clés d’API ont une portée limitée et une valeur affichée une seule fois à la création."
           />
-          <div className="mt-8 grid gap-5 lg:grid-cols-3">
+          <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-3">
             {EXEMPLES.map((e) => (
-              <div key={e.titre}>
+              // `min-w-0` : sans lui, la colonne de la grille s'élargit à la
+              // ligne de code la plus longue et pousse la page hors de l'écran.
+              <div key={e.titre} className="min-w-0">
                 <div className="mb-2.5 flex items-center gap-2">
                   <Terminal size={14} className="text-p-700" />
                   <MicroLabel>{e.titre}</MicroLabel>
@@ -193,7 +195,7 @@ export default function Docs() {
 
       <SiteSection>
         <Container>
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Documentation contractuelle et d’exploitation"

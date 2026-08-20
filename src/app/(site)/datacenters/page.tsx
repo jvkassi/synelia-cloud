@@ -28,7 +28,7 @@ export default function Datacenters() {
           <>
             Deux sites,
             <br />
-            <span className="text-m-600">un seul territoire.</span>
+            <span className="text-m-400">un seul territoire.</span>
           </>
         }
         chapeau="Synertech Vallon à Cocody pour la production, le parc technologique VITIB de Grand-Bassam pour le repli et l’archivage immuable. Quarante-cinq kilomètres, deux chemins de fibre distincts, une latence mesurée de 4 à 6 millisecondes."
@@ -201,7 +201,7 @@ export default function Datacenters() {
                 />
               </div>
 
-              <div className="mt-5 grid gap-5 lg:grid-cols-2">
+              <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
                 <Card>
                   <CardHeader titre="Infrastructure physique" />
                   <div className="space-y-3.5">
@@ -300,7 +300,7 @@ export default function Datacenters() {
             haute disponibilité intra-site, l’anti-affinité garantit la répartition de vos machines
             sur des hôtes physiques distincts.
           </Callout>
-          <div className="mt-5 grid gap-4 sm:grid-cols-3">
+          <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
             {[
               {
                 t: 'Intra-site',

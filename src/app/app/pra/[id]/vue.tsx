@@ -103,7 +103,7 @@ export function VuePra({ id }: { id: string }) {
         }
       />
 
-      <div className="grid gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         <RpoRtoGauge libelle="RPO" cibleMin={plan.rpoCibleMin} constateMin={plan.rpoConstateMin} />
         <RpoRtoGauge libelle="RTO" cibleMin={plan.rtoCibleMin} constateMin={plan.rtoConstateMin} />
         <StatTile
@@ -317,7 +317,7 @@ export function VuePra({ id }: { id: string }) {
       {/* ─── Bascule ─────────────────────────────────────────────────── */}
       {onglet === 'bascule' && (
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card className="border-2 border-[#BFD6EE]">
               <div className="flex items-start gap-3">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-info-bg text-info">

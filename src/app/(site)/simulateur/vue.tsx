@@ -187,7 +187,7 @@ function Configurateur() {
   const { tva, total } = ventilationTva(sousTotal - reduction)
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
       <div className="min-w-0 space-y-5">
         <SegmentedControl
           value={volet}
@@ -443,7 +443,7 @@ function Comparateur() {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[380px_1fr]">
         <Card>
           <CardHeader
             titre={
@@ -507,7 +507,7 @@ function Comparateur() {
         </Card>
 
         <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Card className="border-g-300">
               <MicroLabel>{reference.nom}</MicroLabel>
               <p className="tnum mt-2 text-[26px] font-bold leading-none [font-family:var(--font-display)] text-g-700">

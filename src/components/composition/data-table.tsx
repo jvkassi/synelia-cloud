@@ -60,6 +60,11 @@ export function DataTable<T extends { id: string }>({
   parPage?: number
   chargement?: boolean
   vide?: { titre: string; phrase: string; action?: { libelle: string; href: string } }
+  /**
+   * Lien de la ligne. La première colonne visible est alors enveloppée dans un
+   * `<a>` : son `rendu` ne doit pas contenir de lien à son tour, deux ancres
+   * imbriquées étant du HTML invalide que React refuse d'hydrater.
+   */
   href?: (ligne: T) => string
   densiteInitiale?: 'compacte' | 'confortable'
   exportable?: boolean
@@ -162,6 +167,7 @@ export function DataTable<T extends { id: string }>({
           {colonnes.some((c) => c.masquable) && (
             <Popover
               width="w-56"
+              label="Choisir les colonnes affichées"
               trigger={() => (
                 <span className="inline-flex h-8 items-center gap-1.5 rounded-[6px] border border-g-300 px-2.5 text-[12px] font-semibold text-g-700 hover:bg-g-050">
                   <Columns3 size={13} /> Colonnes

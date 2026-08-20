@@ -119,7 +119,7 @@ export default function Capacite() {
 
       {onglet === 'socles' && (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {BACKENDS.map((b) => (
               <BackendGauge key={b.id} backend={b} />
             ))}
@@ -293,7 +293,7 @@ export default function Capacite() {
             />
             {espace && (
               <>
-                <div className="mb-4 grid gap-3 sm:grid-cols-4">
+                <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
                   <StatTile
                     libelle="Processeur"
                     valeur={`${espace.usage.vcpu}/${espace.quota.vcpu}`}
@@ -376,7 +376,7 @@ export default function Capacite() {
                         </td>
                         <td className="px-3 py-2.5">
                           {pls.length === 0 ? (
-                            <span className="text-[11.5px] text-g-300">Placement automatique</span>
+                            <span className="text-[11.5px] text-g-500">Placement automatique</span>
                           ) : (
                             <span className="flex flex-wrap gap-1">
                               {pls.map((p) => {
@@ -480,7 +480,7 @@ export default function Capacite() {
             </div>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Croissance observée"
@@ -693,7 +693,7 @@ export default function Capacite() {
             </div>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Callout ton="violet" titre="La souveraineté a aussi un intérêt économique">
               Les socles libres affichent des marges de 49 à 57 %, les socles propriétaires de 24 à
               31 %. La différence, c’est le coût des licences. La trajectoire de sortie n’est donc pas

@@ -71,7 +71,7 @@ export function DeploymentPipeline({
               onClick={() => setOuvert(estOuvert ? null : e.nom)}
               className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-g-050"
             >
-              <span className="tnum text-[11px] font-bold text-g-300">{i + 1}</span>
+              <span className="tnum text-[11px] font-bold text-g-500">{i + 1}</span>
               <IconeEtat statut={e.statut} />
               <span className="min-w-0 flex-1">
                 <span className="block text-[13px] font-semibold text-ink">{meta.titre}</span>
@@ -186,7 +186,7 @@ export function SecurityFindings({
   const labels = { eleve: 'Élevé', moyen: 'Moyen', faible: 'Faible' }
 
   return (
-    <div className={cn('grid gap-3 sm:grid-cols-2', className)}>
+    <div className={cn('grid grid-cols-1 gap-3 sm:grid-cols-2', className)}>
       {findings.map((f) => {
         const fait = corriges.includes(f.titre)
         return (

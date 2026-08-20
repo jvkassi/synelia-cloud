@@ -119,7 +119,7 @@ export function VueLb({ id }: { id: string }) {
             ]}
           />
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader titre="Configuration" />
               <KeyValueList
@@ -299,7 +299,7 @@ export function VueLb({ id }: { id: string }) {
 
           <Card>
             <CardHeader titre="Health check" />
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Field label="Protocole">
                 <Select defaultValue={lb.healthCheck.protocole}>
                   <option value={lb.healthCheck.protocole}>{lb.healthCheck.protocole}</option>
@@ -478,7 +478,7 @@ export function VueLb({ id }: { id: string }) {
             )}
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader titre="Réécriture d’URL" />
               <div className="space-y-3">
@@ -616,7 +616,7 @@ export function VueLb({ id }: { id: string }) {
               même adresse source. Prévoyez une liste d’adresses exemptées pour vos sites clients
               connus.
             </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <StatTile
                 libelle="Requêtes bloquées 24 h"
                 valeur={num(1842)}
@@ -652,7 +652,7 @@ export function VueLb({ id }: { id: string }) {
             />
             <LogPeek lignes={LOGS_EXECUTION} max={20} titre="Requêtes récentes" />
           </Card>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <StatTile
               libelle="Rétention des journaux"
               valeur="30 j"

@@ -149,7 +149,7 @@ export default function FacturationAdmin() {
 
       {onglet === 'revenus' && (
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card className="lg:col-span-2">
               <CardHeader
                 titre="Revenu mensuel récurrent"
@@ -173,7 +173,7 @@ export default function FacturationAdmin() {
                 <span>Sept. 2025</span>
                 <span>Août 2026</span>
               </div>
-              <div className="mt-4 grid gap-3 border-t border-g-100 pt-4 sm:grid-cols-4">
+              <div className="mt-4 grid grid-cols-1 gap-3 border-t border-g-100 pt-4 sm:grid-cols-4">
                 <div>
                   <MicroLabel className="text-g-500">Revenu récurrent</MicroLabel>
                   <p className="tnum mt-0.5 text-[15px] font-bold text-ink">{money(caMensuel)}</p>
@@ -428,7 +428,7 @@ export default function FacturationAdmin() {
             </Callout>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Factures du cycle en cours"
@@ -600,7 +600,7 @@ export default function FacturationAdmin() {
             </div>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card>
               <CardHeader titre="Efficacité du recouvrement" sousTitre="Douze derniers mois." />
               <KeyValueList
@@ -663,7 +663,7 @@ export default function FacturationAdmin() {
 
       {onglet === 'rentabilite' && (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <StatTile libelle="Revenu porté" valeur={money(revenuInfra)} ton="ok" />
             <StatTile libelle="Coût d’infrastructure" valeur={money(coutInfra)} />
             <StatTile
@@ -770,7 +770,7 @@ export default function FacturationAdmin() {
             </div>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Callout ton="violet" titre="Le chiffre qui décide de la trajectoire">
               Socles libres : 49 à 57 % de marge. Socles propriétaires : 24 à 31 %. L’écart, ce sont les
               licences. Sortir du propriétaire améliore la marge de vingt points sur la capacité

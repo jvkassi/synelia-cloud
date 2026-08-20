@@ -9,6 +9,13 @@ export interface EntreeMegamenu {
   nom: string
   slug: string
   resume: string
+  /**
+   * Destination réelle de l'entrée. Par défaut la fiche produit `/offres/<slug>`.
+   * Les solutions du marketplace n'ont pas de fiche produit : elles ont leur
+   * page de service, qui décrit le contrat d'intégration. On l'indique ici
+   * plutôt que de laisser le mégamenu pointer vers une page inexistante.
+   */
+  href?: string
 }
 
 export const MEGAMENU: Array<{ colonne: string; entrees: EntreeMegamenu[] }> = [
@@ -36,12 +43,12 @@ export const MEGAMENU: Array<{ colonne: string; entrees: EntreeMegamenu[] }> = [
   {
     colonne: 'Applications',
     entrees: [
-      { nom: 'Marketplace', slug: 'marketplace', resume: 'Solutions open source opérées par Synelia.' },
-      { nom: 'Drive Pro', slug: 'drive-pro', resume: 'Partage de fichiers et édition collaborative.' },
-      { nom: 'Email Pro', slug: 'email-pro', resume: 'Messagerie, agenda et contacts partagés.' },
-      { nom: 'GED', slug: 'ged', resume: 'Indexation, OCR, workflows, coffre réglementaire.' },
-      { nom: 'Visio & chat', slug: 'visio', resume: 'Réunions et fils de discussion persistants.' },
-      { nom: 'ERP / CRM', slug: 'erp', resume: 'Gestion intégrée et relation client.' },
+      { nom: 'Marketplace', slug: 'marketplace', resume: 'Solutions open source opérées par Synelia.', href: '/marketplace' },
+      { nom: 'Drive Pro', slug: 'drive-pro', resume: 'Partage de fichiers et édition collaborative.', href: '/marketplace/drive-pro' },
+      { nom: 'Email Pro', slug: 'email-pro', resume: 'Messagerie, agenda et contacts partagés.', href: '/marketplace/email-pro' },
+      { nom: 'GED', slug: 'ged', resume: 'Indexation, OCR, workflows, coffre réglementaire.', href: '/marketplace/ged' },
+      { nom: 'Visio & chat', slug: 'visio', resume: 'Réunions et fils de discussion persistants.', href: '/marketplace/visio' },
+      { nom: 'ERP / CRM', slug: 'erp', resume: 'Gestion intégrée et relation client.', href: '/marketplace/erp' },
     ],
   },
   {
@@ -49,7 +56,7 @@ export const MEGAMENU: Array<{ colonne: string; entrees: EntreeMegamenu[] }> = [
     entrees: [
       { nom: 'Hébergement web', slug: 'hebergement-web', resume: 'Mutualisé PHP et Node, certificats inclus.' },
       { nom: 'WordPress managé', slug: 'wordpress', resume: 'Mises à jour maîtrisées, cache, WAF, staging.' },
-      { nom: 'PrestaShop managé', slug: 'prestashop', resume: 'Boutique avec paiements mobile money.' },
+      { nom: 'PrestaShop managé', slug: 'prestashop', resume: 'Boutique avec paiements mobile money.', href: '/marketplace/prestashop' },
       { nom: 'Noms de domaine', slug: 'domaines', resume: 'Enregistrement, transfert, WHOIS protégé.' },
       { nom: 'DNS managé', slug: 'dns', resume: 'Zones, DNSSEC, DNS secondaire.' },
       { nom: 'Relais SMTP', slug: 'smtp', resume: 'Envoi transactionnel, SPF/DKIM/DMARC, réputation.' },
@@ -923,6 +930,546 @@ export const FICHES_PRODUIT: FicheProduit[] = [
       { question: 'Puis-je installer les extensions que je veux ?', reponse: 'Oui. Nous n’imposons pas de liste blanche. Nous signalons en revanche les extensions connues pour dégrader les performances ou présenter des vulnérabilités ouvertes.' },
       { question: 'Qui applique les mises à jour ?', reponse: 'Vous choisissez : automatique après sauvegarde, ou soumis à votre validation avec un rapport de ce qui va changer. Dans les deux cas un retour arrière est disponible.' },
       { question: 'Le portail contient-il un éditeur de contenu ?', reponse: 'Non, délibérément. Vous éditez dans WordPress, dont l’écosystème est incomparablement plus riche que ce que nous pourrions reconstruire.' },
+    ],
+  },
+  {
+    slug: 'reseau-vpn',
+    nom: 'Réseau privé & VPN',
+    surtitre: 'Calcul & réseau',
+    accroche: 'Vos machines se parlent entre elles, pas au reste du monde.',
+    resume:
+      'Chaque Espace Cloud reçoit une plage privée qui n’appartient qu’à vous. Vous y découpez autant de réseaux que votre architecture en demande, puis vous les reliez à vos sites et à vos équipes — tunnel IPsec pour un bureau, accès SSL nominatif pour une personne.',
+    puces: [
+      'Segmentation par VLAN dédiés, sans voisinage avec d’autres clients',
+      'Tunnel IPsec site-à-site vers vos bureaux, en redondance active/passive',
+      'Accès VPN SSL nominatif, révocable en une action, journalisé',
+    ],
+    paliers: [
+      { nom: 'Inclus', specs: 'Réseaux privés, VLAN, DNS interne, groupes de sécurité', prix: 0, unite: 'inclus dans l’Espace Cloud' },
+      { nom: 'IPsec site-à-site', specs: 'Par tunnel · redondance incluse · 500 Mbit/s', prix: 18000, unite: '/mois' },
+      { nom: 'VPN SSL nominatif', specs: 'Par accès · MFA obligatoire · révocation immédiate', prix: 2500, unite: '/accès/mois', recommande: true },
+      { nom: 'Interconnexion opérateur', specs: 'Lien dédié vers votre MPLS ou votre datacenter', prix: null, surDevis: true, unite: '' },
+    ],
+    caracteristiques: [
+      {
+        theme: 'Segmentation',
+        items: [
+          { libelle: 'Plage allouée', valeur: 'Un /20 privé par Espace Cloud, découpable librement' },
+          { libelle: 'Réseaux privés', valeur: 'Illimités dans la plage, chacun sur son VLAN' },
+          { libelle: 'Groupes de sécurité', valeur: 'Règles par port, protocole et source, appliquées à l’interface' },
+          { libelle: 'Peering inter-espaces', valeur: 'Entre deux Espaces Cloud de la même organisation, même site ou non' },
+        ],
+      },
+      {
+        theme: 'Accès distant',
+        items: [
+          { libelle: 'IPsec', valeur: 'IKEv2, AES-256-GCM, PFS, redémarrage automatique du tunnel' },
+          { libelle: 'VPN SSL', valeur: 'WireGuard, un profil par personne, MFA via Keycloak' },
+          { libelle: 'Révocation', valeur: 'Immédiate, sans redémarrer le service ni couper les autres accès' },
+          { libelle: 'Journal', valeur: 'Connexions, déconnexions et refus, conservés 12 mois' },
+        ],
+      },
+      {
+        theme: 'Exploitation',
+        items: [
+          { libelle: 'Supervision du tunnel', valeur: 'Sonde incluse, alerte à la première minute d’interruption' },
+          { libelle: 'Débit constaté', valeur: 'Mesuré en continu et affiché dans le portail sur 24 h, 7 j et 30 j' },
+          { libelle: 'Changement de configuration', valeur: 'Prévisualisé avant application, réversible' },
+        ],
+      },
+    ],
+    sla: {
+      dispo: '99,95 % sur le plan réseau de l’Espace Cloud',
+      reponse: '30 min en gravité critique',
+      resolution: '4 h en gravité critique',
+      credits: 'Appliqués automatiquement, sans réclamation',
+    },
+    architecture: {
+      titre: 'Raccordement d’un siège et de collaborateurs nomades',
+      couches: [
+        { nom: 'Siège', elements: ['Tunnel IPsec redondant vers Abidjan', 'Routage des deux plages, sans NAT'] },
+        { nom: 'Nomades', elements: ['Profils WireGuard nominatifs', 'MFA Keycloak à chaque session'] },
+        { nom: 'Espace Cloud', elements: ['Réseau d’administration séparé du réseau applicatif', 'Groupes de sécurité par rôle de machine'] },
+        { nom: 'Contrôle', elements: ['Journal des accès distants', 'Alerte sur tunnel interrompu'] },
+      ],
+    },
+    faq: [
+      { question: 'Puis-je choisir mes plages d’adresses ?', reponse: 'Oui. Une plage vous est proposée à la création pour éviter les collisions avec vos réseaux existants, et vous pouvez la remplacer par celle de votre plan d’adressage.' },
+      { question: 'Le VPN SSL passe-t-il par une console à nous ?', reponse: 'Non. Vous téléchargez un profil de configuration depuis le portail et l’ouvrez dans le client WireGuard officiel. Nous ne reconstruisons pas de client VPN.' },
+      { question: 'Que se passe-t-il si mon tunnel tombe la nuit ?', reponse: 'La sonde déclenche une alerte selon la règle d’escalade que vous avez définie. Le tunnel tente de se rétablir seul, et l’incident reste visible dans l’historique même après rétablissement.' },
+    ],
+  },
+  {
+    slug: 'ip-antiddos',
+    nom: 'IP & anti-DDoS',
+    surtitre: 'Calcul & réseau',
+    accroche: 'Une adresse publique, filtrée avant d’arriver chez vous.',
+    resume:
+      'Les adresses publiques que nous attribuons passent par un filtrage volumétrique permanent, en amont de votre Espace Cloud. Une attaque est absorbée à l’entrée du réseau : vos machines n’en voient que l’ombre dans les graphiques.',
+    puces: [
+      'Filtrage volumétrique permanent, sans surcoût et sans activation à demander',
+      'Adresses flottantes, réassignables d’une machine à l’autre en quelques secondes',
+      'PTR modifiable, indispensable pour la réputation d’un envoi de courrier',
+    ],
+    paliers: [
+      { nom: 'Adresse publique', specs: 'IPv4 · PTR modifiable · anti-DDoS inclus', prix: 3500, unite: '/mois' },
+      { nom: 'Adresse flottante', specs: 'Réassignable à chaud entre ressources d’une même organisation', prix: 4500, unite: '/mois', recommande: true },
+      { nom: 'Bloc /29', specs: '8 adresses, dont 6 utilisables', prix: 22000, unite: '/mois' },
+      { nom: 'Protection applicative renforcée', specs: 'Analyse L7, scrubbing sur signature, accompagnement pendant l’attaque', prix: null, surDevis: true, unite: '' },
+    ],
+    caracteristiques: [
+      {
+        theme: 'Adressage',
+        items: [
+          { libelle: 'IPv4', valeur: 'Attribution immédiate depuis nos plages annoncées localement' },
+          { libelle: 'IPv6', valeur: 'Préfixe /64 fourni sans supplément' },
+          { libelle: 'PTR', valeur: 'Modifiable depuis le portail, propagation en quelques minutes' },
+          { libelle: 'Flottante', valeur: 'Bascule entre deux ressources sans changer de configuration côté machine' },
+        ],
+      },
+      {
+        theme: 'Protection',
+        items: [
+          { libelle: 'Capacité de filtrage', valeur: '40 Gbit/s mutualisés à Abidjan, 20 Gbit/s à Grand-Bassam' },
+          { libelle: 'Déclenchement', valeur: 'Automatique sur seuil de trafic, sans intervention de votre part' },
+          { libelle: 'Attaques couvertes', valeur: 'SYN flood, UDP flood, amplification DNS et NTP, réflexion' },
+          { libelle: 'Filtrage applicatif', valeur: 'Via le WAF du load balancer pour les attaques L7' },
+        ],
+      },
+      {
+        theme: 'Visibilité',
+        items: [
+          { libelle: 'Trafic', valeur: 'Entrée et sortie sur 24 h, 7 j et 30 j dans le portail' },
+          { libelle: 'Événements de filtrage', valeur: 'Listés avec date, volume absorbé et durée' },
+          { libelle: 'Analyse détaillée', valeur: 'Dans Grafana, via le lien de sortie du portail' },
+        ],
+      },
+    ],
+    sla: {
+      dispo: '99,99 % sur l’annonce des adresses',
+      reponse: '30 min en gravité critique',
+      resolution: '4 h en gravité critique',
+      credits: 'Appliqués automatiquement',
+    },
+    architecture: {
+      titre: 'Chemin d’un paquet entrant',
+      couches: [
+        { nom: 'Bordure', elements: ['Annonce BGP de nos plages', 'Détection volumétrique sur seuil'] },
+        { nom: 'Filtrage', elements: ['Scrubbing des flux malveillants', 'Trafic légitime réinjecté sans détour visible'] },
+        { nom: 'Exposition', elements: ['Adresse flottante portée par le load balancer', 'WAF OWASP pour la couche applicative'] },
+        { nom: 'Espace Cloud', elements: ['Groupes de sécurité en dernière barrière', 'Machines sans adresse publique directe'] },
+      ],
+    },
+    faq: [
+      { question: 'L’anti-DDoS est-il une option payante ?', reponse: 'Non. Il est actif en permanence sur toutes les adresses que nous attribuons, y compris celles des offres d’entrée de gamme. Seule l’analyse applicative renforcée fait l’objet d’un devis.' },
+      { question: 'Mon site sera-t-il coupé pendant une attaque ?', reponse: 'Le filtrage vise précisément à l’éviter : le trafic malveillant est écarté en bordure et le trafic légitime continue de passer. Une attaque très ciblée sur la couche applicative demande en revanche un réglage du WAF, que nous menons avec vous.' },
+      { question: 'Puis-je conserver mon adresse en changeant de machine ?', reponse: 'Oui, c’est l’usage d’une adresse flottante : vous la détachez d’une ressource et l’attachez à une autre, sans passer par un changement DNS ni attendre une propagation.' },
+    ],
+  },
+  {
+    slug: 'volumes',
+    nom: 'Volumes',
+    surtitre: 'Stockage & protection',
+    accroche: 'Du disque que vous étendez sans arrêter la machine.',
+    resume:
+      'Quatre familles de disques, du NVMe pour une base transactionnelle au stockage d’archive pour ce qu’on garde sans le relire souvent. Toutes chiffrées au repos, toutes extensibles à chaud, toutes attachables à une machine ou à un cluster.',
+    puces: [
+      'Extension à chaud, sans redémarrage ni fenêtre de maintenance',
+      'Chiffrement au repos systématique, clés gérées par nos soins ou par les vôtres',
+      'Instantanés à la demande, indépendants du plan de sauvegarde',
+    ],
+    paliers: [
+      { nom: 'Archive', specs: 'HDD · lecture peu fréquente · 60 Mo/s', prix: 300, unite: '/Go/mois' },
+      { nom: 'Standard', specs: 'SSD · 3 000 IOPS · usage général', prix: 700, unite: '/Go/mois', recommande: true },
+      { nom: 'Performance', specs: 'NVMe · 25 000 IOPS · bases et journaux', prix: 1400, unite: '/Go/mois' },
+      { nom: 'Performance dédiée', specs: 'NVMe local, IOPS garanties, latence sous la milliseconde', prix: null, surDevis: true, unite: '' },
+    ],
+    caracteristiques: [
+      {
+        theme: 'Cycle de vie',
+        items: [
+          { libelle: 'Extension', valeur: 'À chaud, par palier de 10 Go, facturée au prorata journalier' },
+          { libelle: 'Réduction', valeur: 'Impossible en place — passage par un nouveau volume et une copie' },
+          { libelle: 'Détachement', valeur: 'Le volume survit à la suppression de la machine si vous le décidez' },
+          { libelle: 'Changement de famille', valeur: 'Par copie en ligne, la machine reste disponible' },
+        ],
+      },
+      {
+        theme: 'Protection',
+        items: [
+          { libelle: 'Chiffrement', valeur: 'AES-256 au repos, activé par défaut' },
+          { libelle: 'Clés', valeur: 'Gérées par Synelia, ou par vous via le coffre de secrets' },
+          { libelle: 'Instantanés', valeur: 'À la demande ou planifiés, restauration sur un nouveau volume' },
+          { libelle: 'Sauvegarde', valeur: 'Rattachable au plan Cloud Backup par étiquette' },
+        ],
+      },
+      {
+        theme: 'Localisation',
+        items: [
+          { libelle: 'Sites', valeur: 'Abidjan et Grand-Bassam, choisis à la création' },
+          { libelle: 'Redondance interne', valeur: 'Trois copies dans le site, sur des châssis distincts' },
+          { libelle: 'Réplication inter-site', valeur: 'Optionnelle, incluse dans les offres PRA' },
+        ],
+      },
+    ],
+    sla: {
+      dispo: '99,99 % sur la disponibilité du volume',
+      reponse: '30 min en gravité critique',
+      resolution: '4 h en gravité critique',
+      credits: 'Appliqués automatiquement',
+    },
+    architecture: {
+      titre: 'Répartition des disques d’une application transactionnelle',
+      couches: [
+        { nom: 'Système', elements: ['Volume Standard 40 Go par machine'] },
+        { nom: 'Données', elements: ['Volume Performance NVMe pour la base', 'Volume Performance séparé pour les journaux'] },
+        { nom: 'Documents', elements: ['Volume Standard pour les pièces jointes récentes', 'Bascule vers le stockage objet au-delà de 90 jours'] },
+        { nom: 'Protection', elements: ['Instantané avant chaque mise en production', 'Plan de sauvegarde immuable sur les volumes de données'] },
+      ],
+    },
+    faq: [
+      { question: 'Combien de temps prend une extension ?', reponse: 'L’allocation est immédiate côté plateforme. Il reste à étendre le système de fichiers dans la machine, opération que la documentation détaille pour Linux et Windows.' },
+      { question: 'Un instantané remplace-t-il une sauvegarde ?', reponse: 'Non, et nous le disons clairement dans le portail. Un instantané vit sur le même site que le volume. Une sauvegarde Cloud Backup est immuable et copiée hors site.' },
+      { question: 'Puis-je attacher un volume à deux machines ?', reponse: 'Pas en écriture simultanée avec un système de fichiers classique. Pour un besoin partagé, orientez-vous vers le stockage objet S3 ou une base managée.' },
+    ],
+  },
+  {
+    slug: 'bases-managees',
+    nom: 'Bases managées',
+    surtitre: 'Stockage & protection',
+    accroche: 'Le moteur est à vous, l’exploitation est à nous.',
+    resume:
+      'PostgreSQL, MySQL, MariaDB, MongoDB et Redis, installés, sauvegardés, supervisés et mis à jour par nos équipes. Vous vous connectez avec vos outils habituels — psql, DBeaver, votre ORM. Nous ne reconstruisons pas de client SQL dans le portail.',
+    puces: [
+      'Haute disponibilité à deux nœuds avec bascule automatique',
+      'Restauration à un instant précis, jusqu’à 30 jours en arrière',
+      'Mises à jour mineures appliquées en fenêtre annoncée, majeures sur votre validation',
+    ],
+    paliers: [
+      { nom: 'Développement', specs: '2 vCPU · 4 Go · 50 Go · nœud unique', prix: 12000, unite: '/mois' },
+      { nom: 'Production', specs: '4 vCPU · 16 Go · 200 Go · 2 nœuds HA', prix: 48000, unite: '/mois', recommande: true },
+      { nom: 'Production+', specs: '8 vCPU · 32 Go · 500 Go · 2 nœuds HA + réplique de lecture', prix: 96000, unite: '/mois' },
+      { nom: 'Sur mesure', specs: 'Dimensionnement, réplication inter-site, SLA renforcé', prix: null, surDevis: true, unite: '' },
+    ],
+    caracteristiques: [
+      {
+        theme: 'Moteurs',
+        items: [
+          { libelle: 'PostgreSQL', valeur: '15, 16 et 17 — extensions PostGIS, pgvector, pg_stat_statements' },
+          { libelle: 'MySQL / MariaDB', valeur: 'MySQL 8.4 · MariaDB 11.4' },
+          { libelle: 'MongoDB', valeur: '7.0 en jeu de réplicas' },
+          { libelle: 'Redis', valeur: '7.4, en cache ou en file de messages, persistance optionnelle' },
+        ],
+      },
+      {
+        theme: 'Disponibilité',
+        items: [
+          { libelle: 'Bascule', valeur: 'Automatique, moins de 30 secondes constatées' },
+          { libelle: 'Répliques de lecture', valeur: 'Jusqu’à trois, dans le même site ou dans l’autre' },
+          { libelle: 'Point de connexion', valeur: 'Nom stable, inchangé après une bascule' },
+          { libelle: 'Maintenance', valeur: 'Fenêtre que vous choisissez, annoncée sept jours avant' },
+        ],
+      },
+      {
+        theme: 'Protection et accès',
+        items: [
+          { libelle: 'Sauvegarde', valeur: 'Complète quotidienne et journaux continus' },
+          { libelle: 'Restauration', valeur: 'À un instant précis, sur une nouvelle instance, sans écraser l’originale' },
+          { libelle: 'Réseau', valeur: 'Accessible depuis vos réseaux privés uniquement, exposition publique sur liste d’adresses' },
+          { libelle: 'Chiffrement', valeur: 'TLS obligatoire en transit, AES-256 au repos' },
+        ],
+      },
+    ],
+    sla: {
+      dispo: '99,9 % en nœud unique, 99,95 % en haute disponibilité',
+      reponse: '30 min en gravité critique',
+      resolution: '4 h en gravité critique',
+      credits: 'Appliqués automatiquement',
+    },
+    architecture: {
+      titre: 'Base de production d’une application métier',
+      couches: [
+        { nom: 'Application', elements: ['Pool de connexions vers le point d’entrée stable'] },
+        { nom: 'Moteur', elements: ['PostgreSQL 17 primaire', 'Nœud secondaire synchrone, bascule automatique'] },
+        { nom: 'Lecture', elements: ['Réplique asynchrone dédiée aux rapports'] },
+        { nom: 'Protection', elements: ['Sauvegarde complète quotidienne', 'Archivage continu des journaux', 'Test de restauration mensuel daté'] },
+      ],
+    },
+    faq: [
+      { question: 'Ai-je un accès superutilisateur ?', reponse: 'Vous disposez d’un compte propriétaire de vos bases, capable de créer schémas, rôles et extensions de la liste supportée. Le compte de réplication et de supervision reste sous notre responsabilité.' },
+      { question: 'Y a-t-il un explorateur de tables dans le portail ?', reponse: 'Non, volontairement. Le portail donne la chaîne de connexion, la santé, les sauvegardes et les journaux lents. Pour interroger vos données, vos outils font mieux que ce que nous écririons.' },
+      { question: 'Comment se passe une montée de version majeure ?', reponse: 'Nous préparons une instance en version cible depuis une restauration, vous validez sur cette copie, puis nous basculons dans une fenêtre convenue. L’ancienne instance reste disponible sept jours.' },
+    ],
+  },
+  {
+    slug: 'hebergement-web',
+    nom: 'Hébergement web',
+    surtitre: 'Web',
+    accroche: 'Mettre un site en ligne sans administrer un serveur.',
+    resume:
+      'Un hébergement mutualisé PHP et Node, avec certificat, sauvegarde quotidienne et préproduction. Vous déployez par Git ou par SFTP, nous nous occupons du socle, des versions de langage et de la sécurité du serveur.',
+    puces: [
+      'Déploiement par Git avec journal immuable de chaque livraison',
+      'Certificat émis et renouvelé automatiquement, y compris sur vos domaines',
+      'Bases MariaDB et PostgreSQL incluses, sauvegardées avec le site',
+    ],
+    paliers: [
+      { nom: 'Démarrage', specs: '1 site · 10 Go · PHP 8.3 ou Node 22 · 1 base', prix: 4500, unite: '/mois' },
+      { nom: 'Pro', specs: '5 sites · 50 Go · préproduction · 5 bases', prix: 12000, unite: '/mois', recommande: true },
+      { nom: 'Agence', specs: '25 sites · 200 Go · préproduction par site · bases illimitées', prix: 38000, unite: '/mois' },
+      { nom: 'Dédié', specs: 'Ressources garanties, versions figées, SLA renforcé', prix: null, surDevis: true, unite: '' },
+    ],
+    caracteristiques: [
+      {
+        theme: 'Exécution',
+        items: [
+          { libelle: 'PHP', valeur: '8.1 à 8.4, changement de version en une action' },
+          { libelle: 'Node', valeur: '20, 22 et 24, processus surveillé et redémarré' },
+          { libelle: 'Tâches planifiées', valeur: 'Cron avec historique des exécutions et sortie consultable' },
+          { libelle: 'Limites', valeur: 'Mémoire, temps d’exécution et taille d’envoi ajustables' },
+        ],
+      },
+      {
+        theme: 'Livraison',
+        items: [
+          { libelle: 'Git', valeur: 'Déploiement sur poussée, avec commande de construction' },
+          { libelle: 'SFTP et SSH', valeur: 'Clés uniquement, mot de passe refusé' },
+          { libelle: 'Préproduction', valeur: 'Copie du site et de sa base, publiable ou jetable' },
+          { libelle: 'Retour arrière', valeur: 'Vers l’une des dix dernières livraisons' },
+        ],
+      },
+      {
+        theme: 'Exploitation',
+        items: [
+          { libelle: 'Certificats', valeur: 'Émission et renouvellement automatiques, alerte à 21 jours' },
+          { libelle: 'Sauvegarde', valeur: 'Quotidienne, fichiers et base, conservée 30 jours' },
+          { libelle: 'Journaux', valeur: 'Vingt dernières lignes dans le portail, historique complet dans VictoriaLogs' },
+          { libelle: 'Trafic', valeur: 'Visites et bande passante sur 24 h, 7 j et 30 j' },
+        ],
+      },
+    ],
+    sla: {
+      dispo: '99,9 %',
+      reponse: '60 min en gravité critique',
+      resolution: '8 h en gravité critique',
+      credits: 'Appliqués automatiquement',
+    },
+    architecture: {
+      titre: 'Site vitrine avec préproduction',
+      couches: [
+        { nom: 'Exposition', elements: ['Certificat automatique', 'Redirection HTTP vers HTTPS', 'Cache statique en bordure'] },
+        { nom: 'Exécution', elements: ['Pool PHP 8.3 isolé du voisinage', 'Tâches planifiées avec historique'] },
+        { nom: 'Données', elements: ['Base MariaDB 11.4', 'Volume fichiers sauvegardé'] },
+        { nom: 'Cycle de vie', elements: ['Préproduction sur sous-domaine dédié', 'Livraison Git avec retour arrière'] },
+      ],
+    },
+    faq: [
+      { question: 'Puis-je héberger une application autre que PHP ou Node ?', reponse: 'Sur l’hébergement mutualisé, non : seuls PHP et Node sont proposés. Pour Python, Go, Java ou un conteneur, la plateforme applicative ou une machine virtuelle sont les bonnes portes.' },
+      { question: 'Le voisinage peut-il ralentir mon site ?', reponse: 'Chaque site s’exécute dans un pool isolé avec ses propres limites. Un voisin saturant son pool ne consomme pas le vôtre. Le palier Dédié va plus loin en garantissant les ressources.' },
+      { question: 'Y a-t-il un explorateur de fichiers dans le portail ?', reponse: 'Non. Vous passez par SFTP, SSH ou Git, avec vos outils. Le portail donne les accès, l’état des livraisons, les certificats et les sauvegardes.' },
+    ],
+  },
+  {
+    slug: 'domaines',
+    nom: 'Noms de domaine',
+    surtitre: 'Web',
+    accroche: 'Enregistrer, transférer, et ne jamais perdre la main.',
+    resume:
+      'Enregistrement et transfert des extensions africaines et internationales, avec protection des coordonnées, verrouillage contre le transfert sortant et renouvellement surveillé. Le domaine reste à votre nom : nous en sommes le bureau d’enregistrement, pas le propriétaire.',
+    puces: [
+      'Le titulaire est votre organisation, jamais Synelia',
+      'Verrouillage contre le transfert et alerte avant chaque échéance',
+      'Zone DNS créée automatiquement, prête à recevoir vos enregistrements',
+    ],
+    paliers: [
+      { nom: '.ci', specs: 'Extension ivoirienne · 1 an · WHOIS protégé', prix: 18000, unite: '/an', recommande: true },
+      { nom: '.com / .net / .org', specs: '1 an · WHOIS protégé · verrouillage inclus', prix: 9500, unite: '/an' },
+      { nom: '.africa', specs: '1 an · WHOIS protégé', prix: 15000, unite: '/an' },
+      { nom: 'Portefeuille', specs: 'À partir de 50 domaines, gestion déléguée et facturation unique', prix: null, surDevis: true, unite: '' },
+    ],
+    caracteristiques: [
+      {
+        theme: 'Enregistrement',
+        items: [
+          { libelle: 'Extensions', valeur: '.ci, .africa, .com, .net, .org, .info, .biz, .tech, .store' },
+          { libelle: 'Titulaire', valeur: 'Votre organisation, avec contact administratif et technique distincts' },
+          { libelle: 'Durée', valeur: 'De un à dix ans selon l’extension' },
+          { libelle: 'Transfert entrant', valeur: 'Guidé, avec vérification du code d’autorisation' },
+        ],
+      },
+      {
+        theme: 'Protection',
+        items: [
+          { libelle: 'WHOIS', valeur: 'Coordonnées masquées par défaut quand l’extension le permet' },
+          { libelle: 'Verrouillage', valeur: 'Transfert sortant refusé tant que vous ne le levez pas' },
+          { libelle: 'Renouvellement', valeur: 'Automatique, avec alerte à 60, 30 et 7 jours' },
+          { libelle: 'Expiration', valeur: 'Période de rachat affichée, jamais silencieuse' },
+        ],
+      },
+      {
+        theme: 'Raccordement',
+        items: [
+          { libelle: 'Zone DNS', valeur: 'Créée avec le domaine, modifiable immédiatement' },
+          { libelle: 'Serveurs de noms', valeur: 'Les nôtres par défaut, les vôtres si vous préférez' },
+          { libelle: 'Vérification de propriété', valeur: 'Enregistrement TXT posé en une action pour les services managés' },
+        ],
+      },
+    ],
+    sla: {
+      dispo: '99,99 % sur la résolution des zones hébergées',
+      reponse: '4 h ouvrées sur une demande d’enregistrement',
+      resolution: 'Selon les délais du registre concerné',
+      credits: 'Sans objet — le registre fixe les délais de traitement',
+    },
+    architecture: {
+      titre: 'Mise en service d’un domaine pour une organisation',
+      couches: [
+        { nom: 'Registre', elements: ['Enregistrement au nom de votre organisation', 'Verrouillage du transfert sortant'] },
+        { nom: 'DNS', elements: ['Zone créée automatiquement', 'Serveurs de noms Synelia sur deux sites'] },
+        { nom: 'Services', elements: ['Vérification de propriété pour Drive, messagerie et sites', 'Certificats émis après validation'] },
+        { nom: 'Surveillance', elements: ['Alerte d’échéance à 60, 30 et 7 jours', 'Journal des changements de titulaire'] },
+      ],
+    },
+    faq: [
+      { question: 'Le domaine m’appartient-il vraiment ?', reponse: 'Oui. Le titulaire déclaré au registre est votre organisation. Nous sommes l’intermédiaire technique. Vous pouvez demander le code de transfert à tout moment, sans justification.' },
+      { question: 'Puis-je garder mes serveurs de noms actuels ?', reponse: 'Oui. Nous enregistrons le domaine et vous laissez pointer vers vos serveurs. La zone chez nous reste alors inactive, sans facturation supplémentaire.' },
+      { question: 'Que se passe-t-il si j’oublie de renouveler ?', reponse: 'Le renouvellement est automatique par défaut. Si vous l’avez désactivé, trois alertes précèdent l’échéance, puis le domaine entre dans la période de rachat du registre, dont la date limite est affichée dans le portail.' },
+    ],
+  },
+  {
+    slug: 'dns',
+    nom: 'DNS managé',
+    surtitre: 'Web',
+    accroche: 'Des zones qui résolvent, même quand un site tombe.',
+    resume:
+      'Vos zones sont servies depuis nos deux sites, avec DNSSEC, un historique de chaque modification et un mode secondaire si votre serveur maître reste chez vous. Une erreur de zone se voit avant publication, pas après.',
+    puces: [
+      'Prévisualisation du différentiel avant chaque publication de zone',
+      'DNSSEC activable en une action, rotation des clés automatique',
+      'Mode secondaire par transfert AXFR si votre maître reste chez vous',
+    ],
+    paliers: [
+      { nom: 'Inclus', specs: 'Zones des domaines enregistrés chez Synelia', prix: 0, unite: 'inclus avec le domaine' },
+      { nom: 'Zone externe', specs: 'Domaine enregistré ailleurs, hébergé chez nous', prix: 2500, unite: '/zone/mois', recommande: true },
+      { nom: 'Secondaire', specs: 'Votre maître, nos serveurs en réplique', prix: 3500, unite: '/zone/mois' },
+      { nom: 'Trafic élevé', specs: 'Au-delà de 50 millions de requêtes par mois', prix: null, surDevis: true, unite: '' },
+    ],
+    caracteristiques: [
+      {
+        theme: 'Zones',
+        items: [
+          { libelle: 'Types d’enregistrement', valeur: 'A, AAAA, CNAME, MX, TXT, SRV, CAA, NS, PTR' },
+          { libelle: 'Publication', valeur: 'Différentiel affiché, puis publication explicite' },
+          { libelle: 'Historique', valeur: 'Chaque version conservée, comparable, restaurable' },
+          { libelle: 'Import et export', valeur: 'Fichier de zone standard, dans les deux sens' },
+        ],
+      },
+      {
+        theme: 'Robustesse',
+        items: [
+          { libelle: 'Serveurs de noms', valeur: 'Quatre, répartis sur Abidjan et Grand-Bassam' },
+          { libelle: 'DNSSEC', valeur: 'Signature de la zone et publication du DS chez le registre' },
+          { libelle: 'Anycast', valeur: 'Sur la façade publique, résolution servie par le nœud le plus proche' },
+          { libelle: 'Propagation', valeur: 'Quelques secondes sur nos serveurs, puis selon le TTL choisi' },
+        ],
+      },
+      {
+        theme: 'Contrôle',
+        items: [
+          { libelle: 'Cohérence', valeur: 'Contrôles bloquants — CNAME à la racine, MX pointant sur un CNAME, SPF en double' },
+          { libelle: 'Journal', valeur: 'Auteur, date et contenu de chaque modification' },
+          { libelle: 'Droits', valeur: 'Modification réservée aux rôles habilités, refus journalisé' },
+          { libelle: 'Requêtes', valeur: 'Volume sur 24 h, 7 j et 30 j, détail dans Grafana' },
+        ],
+      },
+    ],
+    sla: {
+      dispo: '99,99 % sur la résolution',
+      reponse: '30 min en gravité critique',
+      resolution: '2 h en gravité critique',
+      credits: 'Appliqués automatiquement',
+    },
+    architecture: {
+      titre: 'Zone d’une organisation multi-services',
+      couches: [
+        { nom: 'Racine', elements: ['A vers le load balancer du site public', 'CAA restreignant l’émission de certificats'] },
+        { nom: 'Messagerie', elements: ['MX vers la messagerie managée', 'SPF, DKIM et DMARC en TXT'] },
+        { nom: 'Services', elements: ['CNAME vers Drive, visio et GED', 'TXT de vérification de propriété'] },
+        { nom: 'Protection', elements: ['DNSSEC actif, DS publié au registre', 'Historique des versions de zone'] },
+      ],
+    },
+    faq: [
+      { question: 'Puis-je héberger une zone dont le domaine est enregistré ailleurs ?', reponse: 'Oui. Vous créez la zone chez nous, vous recopiez vos enregistrements — ou vous importez le fichier de zone — puis vous changez les serveurs de noms chez votre bureau d’enregistrement actuel.' },
+      { question: 'Le DNSSEC risque-t-il de casser ma résolution ?', reponse: 'Mal enchaînée, une activation DNSSEC rend un domaine injoignable. C’est pourquoi nous signons la zone, vérifions la chaîne, puis publions l’enregistrement DS au registre dans cet ordre, avec un contrôle à chaque étape.' },
+      { question: 'Combien de temps pour qu’un changement soit visible ?', reponse: 'Nos serveurs servent la nouvelle valeur en quelques secondes. Ce que voient vos visiteurs dépend ensuite du TTL de l’enregistrement, que le portail affiche avant publication pour éviter les surprises.' },
+    ],
+  },
+  {
+    slug: 'smtp',
+    nom: 'Relais SMTP',
+    surtitre: 'Web',
+    accroche: 'Vos courriers transactionnels arrivent, et vous le vérifiez.',
+    resume:
+      'Un relais d’envoi pour les messages que vos applications émettent — confirmation de commande, réinitialisation de mot de passe, facture. Authentification SPF, DKIM et DMARC guidée, réputation surveillée, et le détail de ce qui a été remis ou rejeté.',
+    puces: [
+      'Assistant SPF, DKIM et DMARC, avec vérification effective de la publication',
+      'Taux de remise, de rejet et de plainte suivis sur 24 h, 7 j et 30 j',
+      'Adresse d’envoi dédiée à partir du palier Croissance, réputation isolée',
+    ],
+    paliers: [
+      { nom: 'Essentiel', specs: '10 000 courriers/mois · adresse mutualisée', prix: 3500, unite: '/mois' },
+      { nom: 'Croissance', specs: '100 000 courriers/mois · adresse dédiée', prix: 14000, unite: '/mois', recommande: true },
+      { nom: 'Volume', specs: '1 000 000 courriers/mois · deux adresses dédiées', prix: 68000, unite: '/mois' },
+      { nom: 'Au-delà', specs: 'Volume négocié, accompagnement de la montée en réputation', prix: null, surDevis: true, unite: '' },
+    ],
+    caracteristiques: [
+      {
+        theme: 'Envoi',
+        items: [
+          { libelle: 'Protocoles', valeur: 'SMTP authentifié sur 587 et 465, ou API HTTPS' },
+          { libelle: 'Débit', valeur: '60 messages par seconde, relevable sur demande' },
+          { libelle: 'Pièces jointes', valeur: '25 Mo par message' },
+          { libelle: 'File d’attente', valeur: 'Réessais progressifs sur 48 h avant abandon' },
+        ],
+      },
+      {
+        theme: 'Authentification',
+        items: [
+          { libelle: 'SPF', valeur: 'Enregistrement fourni, publication vérifiée par le portail' },
+          { libelle: 'DKIM', valeur: 'Clé 2048 bits générée par domaine, rotation annuelle' },
+          { libelle: 'DMARC', valeur: 'Assistant de passage de none à quarantine puis reject' },
+          { libelle: 'Rapports', valeur: 'Agrégats DMARC reçus et résumés dans le portail' },
+        ],
+      },
+      {
+        theme: 'Suivi',
+        items: [
+          { libelle: 'États', valeur: 'Remis, différé, rejeté, plainte — par message et par domaine destinataire' },
+          { libelle: 'Journaux', valeur: 'Vingt dernières lignes dans le portail, historique dans VictoriaLogs' },
+          { libelle: 'Liste de suppression', valeur: 'Adresses invalides écartées automatiquement, consultable' },
+          { libelle: 'Alertes', valeur: 'Sur taux de rejet ou de plainte au-delà du seuil que vous fixez' },
+        ],
+      },
+    ],
+    sla: {
+      dispo: '99,95 % sur l’acceptation des messages',
+      reponse: '60 min en gravité critique',
+      resolution: '4 h en gravité critique',
+      credits: 'Appliqués automatiquement',
+    },
+    architecture: {
+      titre: 'Envoi transactionnel d’une application métier',
+      couches: [
+        { nom: 'Application', elements: ['Appel API HTTPS ou SMTP authentifié', 'Identifiant de message conservé de votre côté'] },
+        { nom: 'Relais', elements: ['Signature DKIM du domaine expéditeur', 'File d’attente avec réessais progressifs'] },
+        { nom: 'Réputation', elements: ['Adresse d’envoi dédiée', 'Liste de suppression appliquée avant remise'] },
+        { nom: 'Retour', elements: ['États de remise consultables', 'Rapports DMARC agrégés', 'Alerte sur taux de plainte'] },
+      ],
+    },
+    faq: [
+      { question: 'Est-ce une messagerie pour mes collaborateurs ?', reponse: 'Non. Le relais SMTP sert les envois automatiques de vos applications. Pour les boîtes de vos équipes, avec agenda et contacts partagés, c’est Email Pro qu’il faut regarder.' },
+      { question: 'Puis-je envoyer une campagne marketing ?', reponse: 'Techniquement oui, mais la réputation d’une adresse transactionnelle se dégrade vite avec des envois de masse. Nous recommandons une adresse dédiée distincte, et nous surveillons le taux de plainte de près.' },
+      { question: 'Que faire si mes messages partent en indésirable ?', reponse: 'Le portail commence par vérifier que SPF, DKIM et DMARC sont réellement publiés et alignés, ce qui règle la majorité des cas. Ensuite viennent le contenu, le volume et l’ancienneté de l’adresse, points sur lesquels le support niveau 2 intervient.' },
     ],
   },
 ]

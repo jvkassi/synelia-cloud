@@ -271,7 +271,7 @@ function OngletPlans() {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Fréquence">
               <Select defaultValue={plan?.frequence ?? 'quotidien'}>
                 <option value="horaire">Horaire</option>
@@ -547,7 +547,7 @@ function AssistantRestauration() {
         <Stepper etapes={ETAPES_RESTAURATION} courante={etape} onChange={setEtape} />
       </Card>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_320px]">
         <div className="min-w-0 space-y-4">
           <h2 className="type-h2">
             <span className="tnum mr-2 text-g-500">{etape}/4</span>
@@ -561,7 +561,7 @@ function AssistantRestauration() {
                 produit : restaurer une machine entière pour récupérer un seul fichier coûte des
                 heures et perturbe la production.
               </p>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {GRANULARITES.map((g) => (
                   <button
                     key={g.id}
@@ -992,7 +992,7 @@ function OngletConformite() {
         </div>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Callout ton="err" titre="GED · Mayan : sauvegarde en échec">
           La dernière sauvegarde réussie remonte au 17 août, soit un RPO constaté de plus de 37
           heures pour une cible de 24 heures. L’instance est encore en provisioning, ce qui explique

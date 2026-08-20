@@ -154,7 +154,7 @@ export function AssistantSouscription({ slug }: { slug: string }) {
             Le palier détermine le dimensionnement et les fonctionnalités disponibles. Il se change
             à chaud à tout moment, avec application immédiate du prorata.
           </p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {service.paliers.map((p) => (
               <button
                 key={p.code}
@@ -207,7 +207,7 @@ export function AssistantSouscription({ slug }: { slug: string }) {
       {/* ─── Étape 2 : mode & site ────────────────────────────────────── */}
       {etape === 2 && (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {(['dedie', 'mutualise'] as const)
               .filter((m) => service.modes.includes(m))
               .map((m) => (
@@ -244,7 +244,7 @@ export function AssistantSouscription({ slug }: { slug: string }) {
 
           <div>
             <MicroLabel className="mb-2">Site d’hébergement</MicroLabel>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {(['ABJ', 'GBM'] as Site[]).map((s) => (
                 <button
                   key={s}

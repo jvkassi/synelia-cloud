@@ -189,7 +189,7 @@ function Dimensionnement({
   const stockageTotal = service.siegesSouscrits * 500
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_340px]">
       <div className="min-w-0 space-y-4">
         <Card>
           <CardHeader
@@ -197,7 +197,7 @@ function Dimensionnement({
             sousTitre={`${palier.nom} — ${palier.specs}`}
             actions={<Badge tone="violet">{money(service.coutMensuel)}/mois</Badge>}
           />
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             {catalogue.paliers.map((p) => (
               <button
                 key={p.code}
@@ -251,7 +251,7 @@ function Dimensionnement({
             titre="Consommation"
             sousTitre="Mesurée par nos sondes sur l’instance, actualisée toutes les cinq minutes."
           />
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <StatTile
               libelle="Stockage utilisé"
               valeur={goHumain(stockageUtilise).split(' ')[0]}
@@ -581,7 +581,7 @@ function OngletDomaine({ service }: { service: Service }) {
   const [verifie, setVerifie] = useState(true)
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <Card>
         <CardHeader titre="Domaine actuel" />
         <KeyValueList
@@ -716,7 +716,7 @@ function OngletSso({ service, catalogue }: { service: Service; catalogue: Catalo
   const [resultat, setResultat] = useState<null | 'ok'>(null)
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <Card>
         <CardHeader
           titre="État de la fédération"
@@ -851,7 +851,7 @@ function OngletParametres({ service, catalogue }: { service: Service; catalogue:
         exclusivement dans {catalogue.solutionOSS}.
       </Callout>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader titre="Politiques appliquées" sousTitre="Valeurs actuellement en vigueur." />
           <div className="space-y-3">
@@ -978,7 +978,7 @@ function OngletSauvegarde({ service, catalogue }: { service: Service; catalogue:
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader
             titre="Plan appliqué"
@@ -1186,7 +1186,7 @@ function OngletSupervision({ service, catalogue }: { service: Service; catalogue
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatTile
           libelle="Disponibilité 30 jours"
           valeur={service.uptime30j > 0 ? pct(service.uptime30j, 2) : '—'}
@@ -1217,7 +1217,7 @@ function OngletSupervision({ service, catalogue }: { service: Service; catalogue
         ]}
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader
             titre="Événements de supervision"
@@ -1297,7 +1297,7 @@ function OngletVersions({ service, catalogue }: { service: Service; catalogue: C
   ]
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
       <div className="min-w-0 space-y-4">
         <Card>
           <CardHeader
@@ -1450,7 +1450,7 @@ function OngletReversibilite({ service, catalogue }: { service: Service; catalog
   const [confirme, setConfirme] = useState(false)
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <Card>
         <CardHeader
           titre="Format d’export"

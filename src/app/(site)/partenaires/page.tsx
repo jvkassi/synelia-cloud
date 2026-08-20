@@ -75,7 +75,7 @@ export default function Partenaires() {
           <>
             Vendez du cloud souverain
             <br />
-            <span className="text-m-600">sous votre marque.</span>
+            <span className="text-m-400">sous votre marque.</span>
           </>
         }
         chapeau="Trois niveaux de partenariat, une grille d’achat dédiée, et un portail que vous pouvez entièrement thématiser à vos couleurs et à votre domaine. Vos clients ne voient jamais Synelia — et vous ne voyez que vos clients."
@@ -96,7 +96,7 @@ export default function Partenaires() {
             titre="Choisissez votre degré d’intégration"
             chapeau="Du simple apport d’affaires à l’intégration complète dans votre catalogue et votre facturation."
           />
-          <div className="mt-8 grid gap-5 lg:grid-cols-3">
+          <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-3">
             {MODELE_PARTENAIRE.map((m, i) => (
               <div
                 key={m.niveau}
@@ -149,7 +149,7 @@ export default function Partenaires() {
             titre="Une hiérarchie à trois niveaux, cloisonnée"
             chapeau="Le cloisonnement n’est pas un réglage d’affichage : il est appliqué au niveau du modèle de rôles. Un Reseller Admin ne peut techniquement pas atteindre un tenant qui ne lui est pas rattaché."
           />
-          <div className="mt-8 grid items-stretch gap-4 lg:grid-cols-3">
+          <div className="mt-8 grid grid-cols-1 items-stretch gap-4 lg:grid-cols-3">
             {[
               {
                 niveau: 'Synelia',
@@ -197,7 +197,7 @@ export default function Partenaires() {
             surtitre="Votre portail"
             titre="Ce que vous pilotez, sans passer par nous"
           />
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {PILOTAGE.map((p) => (
               <div key={p.titre} className="rounded-[10px] border border-g-300 bg-white p-4">
                 <span className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-p-100 text-p-700">
@@ -302,7 +302,7 @@ export default function Partenaires() {
           />
           <Card className="mt-8">
             <form className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Raison sociale" required>
                   <Input placeholder="Votre société" />
                 </Field>
@@ -316,7 +316,7 @@ export default function Partenaires() {
                   </Select>
                 </Field>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Contact" required>
                   <Input placeholder="Nom et fonction" autoComplete="name" />
                 </Field>
@@ -334,7 +334,7 @@ export default function Partenaires() {
                   ))}
                 </Select>
               </Field>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Nombre de clients actifs" hint="ordre de grandeur">
                   <Input type="number" min={0} placeholder="25" />
                 </Field>

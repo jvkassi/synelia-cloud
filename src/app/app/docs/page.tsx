@@ -159,7 +159,7 @@ export default function Docs() {
 
       {onglet === 'guides' && (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {SECTIONS_DOCS.map((s) => (
               <NavCard
                 key={s.titre}
@@ -176,7 +176,7 @@ export default function Docs() {
               titre="Guides pratiques"
               sousTitre="Des procédures complètes, testées, avec les écrans réels et les pièges connus."
             />
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {articles.map((a) => (
                 <div
                   key={a.id}
@@ -224,7 +224,7 @@ export default function Docs() {
 
       {onglet === 'api' && (
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card>
               <CardHeader titre="Principes" sousTitre="Aucune surprise pour qui a déjà consommé une API REST." />
               <KeyValueList
@@ -323,7 +323,7 @@ export default function Docs() {
               titre="Codes de réponse"
               sousTitre="Un message d’erreur porte toujours un identifiant de corrélation, à citer dans un ticket."
             />
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {[
                 { c: '200', d: 'Requête traitée' },
                 { c: '201', d: 'Ressource créée — l’en-tête Location porte son adresse' },
@@ -365,7 +365,7 @@ export default function Docs() {
 
       {onglet === 'cli' && (
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Installation"
@@ -524,7 +524,7 @@ resource "synelia_backup_plan" "quotidien" {
             />
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Le coût apparaît dans le plan"
@@ -557,7 +557,7 @@ Changements de coût :
 
             <Card>
               <CardHeader titre="Ressources disponibles" sousTitre="Couverture du fournisseur, version 1.4." />
-              <div className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2">
                 {[
                   'synelia_espace',
                   'synelia_vm',
@@ -601,7 +601,7 @@ Changements de coût :
 
       {onglet === 'reference' && (
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader titre="Gabarits de machines" sousTitre="Rapport processeur / mémoire par famille." />
               <div className="overflow-x-auto rounded-[8px] border border-g-300">
@@ -663,7 +663,7 @@ Changements de coût :
               titre="Codes des sites physiques"
               sousTitre="Le site apparaît sur chaque ressource du portail et dans chaque réponse de l’API."
             />
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               {[
                 {
                   code: 'ABJ',

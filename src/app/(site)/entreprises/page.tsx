@@ -53,7 +53,7 @@ export default function Entreprises() {
           <>
             Pour les DSI qui doivent
             <br />
-            <span className="text-m-600">prouver, pas promettre.</span>
+            <span className="text-m-400">prouver, pas promettre.</span>
           </>
         }
         chapeau="Appels d’offres, audits, comités de sécurité : à un moment, il faut produire des preuves. Attestations de résidence, rapports d’exercice PRA avec RTO constaté, matrice de rôles publiée, journal d’audit qui enregistre aussi les refus. C’est ce que nous construisons."
@@ -65,7 +65,7 @@ export default function Entreprises() {
             surtitre="Nos engagements sur mesure"
             titre="Quatre chantiers que nous menons pour les grands comptes"
           />
-          <div className="mt-8 grid gap-5 sm:grid-cols-2">
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
             {OFFRES_ENTREPRISE.map((o) => (
               <Card key={o.titre} className="flex flex-col">
                 <h3 className="type-h3">{o.titre}</h3>
@@ -102,7 +102,7 @@ export default function Entreprises() {
                 </span>
                 <div className="min-w-0">
                   <h3 className="text-[16px] font-bold [font-family:var(--font-display)] text-ink">
-                    <span className="tnum mr-2 text-g-300">0{i + 1}</span>
+                    <span className="tnum mr-2 text-p-600">0{i + 1}</span>
                     {a.titre}
                   </h3>
                   <p className="mt-2 text-[13.5px] leading-relaxed text-g-700">{a.texte}</p>
@@ -126,7 +126,7 @@ export default function Entreprises() {
       {/* Formulaire de mise en relation */}
       <SiteSection id="contact">
         <Container>
-          <div className="grid gap-8 lg:grid-cols-[1fr_1.15fr]">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_1.15fr]">
             <div>
               <MicroLabel className="text-m-600">Mise en relation</MicroLabel>
               <h2 className="mt-3 text-[26px] font-bold leading-tight [font-family:var(--font-display)] text-ink sm:text-[32px]">
@@ -162,7 +162,7 @@ export default function Entreprises() {
 
             <Card className="lg:p-6">
               <form className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Nom et prénom" required>
                     <Input name="nom" placeholder="Aïcha Koné" autoComplete="name" />
                   </Field>
@@ -170,7 +170,7 @@ export default function Entreprises() {
                     <Input name="fonction" placeholder="Directrice des systèmes d’information" />
                   </Field>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="E-mail professionnel" required>
                     <Input
                       name="email"
@@ -186,7 +186,7 @@ export default function Entreprises() {
                 <Field label="Organisation" required>
                   <Input name="organisation" placeholder="Nom de votre organisation" />
                 </Field>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Pays" required>
                     <Select name="pays" defaultValue={PAYS[0]}>
                       {PAYS.map((p) => (

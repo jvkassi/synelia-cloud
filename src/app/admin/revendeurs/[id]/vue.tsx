@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { ExternalLink, Palette, Percent, Plus } from 'lucide-react'
-import { cn, trendSeries } from '@/lib/utils'
+import { cn, surfaceMarque, trendSeries } from '@/lib/utils'
 import { dateCourte, money, moneyPerMonth, num, pct } from '@/lib/format'
 import { OFFRES, ORGANISATIONS, RELEVES_REVSHARE, RESELLERS } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -55,8 +55,11 @@ export function VueRevendeur({ id }: { id: string }) {
         titre={
           <span className="flex flex-wrap items-center gap-2.5">
             <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[7px] text-[12px] font-bold text-white"
-              style={{ background: r.theme.primary }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[7px] text-[12px] font-bold"
+              style={{
+                background: surfaceMarque(r.theme.primary).fond,
+                color: surfaceMarque(r.theme.primary).texte,
+              }}
             >
               {r.nom.slice(0, 2).toUpperCase()}
             </span>
@@ -123,7 +126,7 @@ export function VueRevendeur({ id }: { id: string }) {
       <Tabs tabs={ONGLETS} active={onglet} onChange={setOnglet} />
 
       {onglet === 'synthese' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader titre="Fiche partenaire" />
             <KeyValueList
@@ -151,7 +154,7 @@ export function VueRevendeur({ id }: { id: string }) {
                 titre="Ce que le partenaire porte"
                 sousTitre="La répartition des rôles, telle qu’elle figure au contrat."
               />
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-[8px] border border-m-600/30 bg-m-050 p-3.5">
                   <MicroLabel className="text-m-600">Le partenaire</MicroLabel>
                   <ul className="mt-2 space-y-1.5">
@@ -317,7 +320,7 @@ export function VueRevendeur({ id }: { id: string }) {
             </div>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Callout ton="violet" titre="Nous n’imposons pas de prix de vente">
               Fixer le prix de revente d’un partenaire serait à la fois contestable juridiquement et
               contre-productif : c’est lui qui connaît son marché, sa structure de coûts et la valeur
@@ -447,7 +450,7 @@ export function VueRevendeur({ id }: { id: string }) {
       )}
 
       {onglet === 'marque' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Identité du portail"
@@ -464,12 +467,20 @@ export function VueRevendeur({ id }: { id: string }) {
             <div className="overflow-hidden rounded-[8px] border border-g-300">
               <div
                 className="flex items-center justify-between px-4 py-3"
-                style={{ background: r.theme.primary }}
+                style={{ background: surfaceMarque(r.theme.primary).fond }}
               >
-                <span className="text-[13px] font-bold text-white">{r.nom}</span>
                 <span
-                  className="rounded-[5px] px-2.5 py-1 text-[11px] font-semibold text-white"
-                  style={{ background: r.theme.accent }}
+                  className="text-[13px] font-bold"
+                  style={{ color: surfaceMarque(r.theme.primary).texte }}
+                >
+                  {r.nom}
+                </span>
+                <span
+                  className="rounded-[5px] px-2.5 py-1 text-[11px] font-semibold"
+                  style={{
+                    background: surfaceMarque(r.theme.accent).fond,
+                    color: surfaceMarque(r.theme.accent).texte,
+                  }}
                 >
                   Ouvrir
                 </span>
@@ -628,7 +639,7 @@ export function VueRevendeur({ id }: { id: string }) {
             )}
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Comment le partage est calculé"

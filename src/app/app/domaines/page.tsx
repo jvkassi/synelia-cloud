@@ -259,7 +259,7 @@ export default function Domaines() {
       )}
 
       {onglet === 'zones' && (
-        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
           {ZONES_DNS.map((z) => (
             <Card key={z.id} hover className="flex flex-col">
               <div className="flex items-start justify-between gap-3">
@@ -321,7 +321,7 @@ export default function Domaines() {
       )}
 
       {onglet === 'transfert' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Transférer un domaine vers Synelia"
@@ -420,7 +420,7 @@ export default function Domaines() {
       )}
 
       {onglet === 'nouveau' && (
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <CardHeader
               titre="Vérifier la disponibilité"
@@ -537,7 +537,7 @@ export default function Domaines() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader titre="Serveurs de noms Synelia" sousTitre="À renseigner chez un autre bureau d’enregistrement si vous gardez le domaine ailleurs." />
           <div className="space-y-2">

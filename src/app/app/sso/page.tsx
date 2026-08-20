@@ -117,7 +117,7 @@ export default function Sso() {
               titre="Le trajet d’une connexion"
               sousTitre="Comprendre où se trouve le mot de passe est la première question de sécurité que pose un DSI. Voici la réponse, sans détour."
             />
-            <div className="grid gap-3 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
               {[
                 {
                   n: 1,
@@ -179,7 +179,7 @@ export default function Sso() {
             </Callout>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Fédération configurée"
@@ -263,7 +263,7 @@ export default function Sso() {
               titre="Protocole"
               sousTitre="Un seul protocole à la fois. Changer de protocole exige de reconfigurer la fédération de bout en bout."
             />
-            <div className="grid gap-2.5 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
               {PROTOCOLES.map((p) => (
                 <button
                   key={p.id}
@@ -305,7 +305,7 @@ export default function Sso() {
                   sousTitre="Copiez ces valeurs dans la déclaration d’application de votre annuaire. Elles ne changeront pas."
                   className="mb-0"
                 />
-                <div className="grid gap-3 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                   <CopyField
                     label="URL de redirection"
                     value="https://identite.synelia.cloud/realms/org-dba/broker/entra/endpoint"
@@ -337,7 +337,7 @@ export default function Sso() {
                   className="mb-0"
                 />
                 {protocole === 'oidc' && (
-                  <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                     <Field
                       label="URL de découverte"
                       hint="se termine par /.well-known/openid-configuration"
@@ -375,7 +375,7 @@ export default function Sso() {
                     >
                       <MonoTextarea rows={6} placeholder="<EntityDescriptor …>" />
                     </Field>
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <Field label="Format de l’identifiant">
                         <Select defaultValue="email">
                           <option value="email">Adresse électronique</option>
@@ -396,7 +396,7 @@ export default function Sso() {
                       tunnel IPsec ou une interconnexion depuis un de vos Espaces Cloud. Comptez une
                       demi-journée de mise en place avec nos équipes.
                     </Callout>
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <Field label="Serveur" hint="joignable depuis un de vos espaces">
                         <Input placeholder="ldaps://dc01.interne.dba.africa:636" />
                       </Field>
@@ -544,7 +544,7 @@ export default function Sso() {
             </Callout>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Sans correspondance"
@@ -642,7 +642,7 @@ export default function Sso() {
               titre="Ce que le raccordement change concrètement"
               sousTitre="Sur un départ, sur une arrivée, sur un audit."
             />
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {[
                 {
                   t: 'Une arrivée',
@@ -678,7 +678,7 @@ export default function Sso() {
       )}
 
       {onglet === 'journal' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Connexions récentes"

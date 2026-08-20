@@ -145,7 +145,7 @@ users:
             />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card className="lg:col-span-2">
               <CardHeader
                 titre="Accès au cluster"
@@ -333,7 +333,7 @@ users:
                   </div>
                 }
               />
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Field label="Nombre de nœuds">
                   <Input type="number" defaultValue={p.nodes} min={0} max={40} />
                 </Field>
@@ -352,7 +352,7 @@ users:
                 </Field>
               </div>
 
-              <div className="mt-4 grid gap-4 border-t border-g-100 pt-4 sm:grid-cols-2">
+              <div className="mt-4 grid grid-cols-1 gap-4 border-t border-g-100 pt-4 sm:grid-cols-2">
                 <div>
                   <MicroLabel className="mb-1.5">Étiquettes</MicroLabel>
                   <div className="flex flex-wrap gap-1.5">
@@ -475,7 +475,7 @@ users:
       {/* Registre */}
       {onglet === 'registre' && (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <StatTile libelle="Dépôts" valeur={IMAGES_REGISTRE.length} />
             <StatTile
               libelle="Étiquettes"
@@ -538,7 +538,7 @@ users:
             </div>
             <div className="mt-4 border-t border-g-100 pt-4">
               <MicroLabel className="mb-2">Rétention des étiquettes</MicroLabel>
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <Field label="Conserver au minimum">
                   <Input type="number" defaultValue={10} suffix="étiquettes" />
                 </Field>

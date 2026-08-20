@@ -48,12 +48,12 @@ export default function MarketplacePublic() {
           <>
             Des logiciels libres,
             <br />
-            <span className="text-m-600">opérés comme un service.</span>
+            <span className="text-m-400">opérés comme un service.</span>
           </>
         }
         chapeau="Vous pourriez installer chacune de ces solutions vous-même. Ce que nous vendons, c’est l’exploitation : provisioning, dimensionnement à chaud, fédération d’identité, sauvegarde immuable avec restauration testée, supervision avec engagement, montées de version qualifiées, et réversibilité documentée."
         enfants={
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
             {[
               { v: `${CATALOGUE.length}`, l: 'solutions au catalogue' },
               { v: `${CATALOGUE.filter((c) => c.certifie).length}`, l: 'certifiées Synelia' },
@@ -137,7 +137,7 @@ export default function MarketplacePublic() {
               action={{ libelle: 'Proposer une solution', href: '/entreprises#contact' }}
             />
           ) : (
-            <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {resultats.map((s) => (
                 <CatalogCard key={s.slug} service={s} href={`/marketplace/${s.slug}`} />
               ))}
@@ -153,7 +153,7 @@ export default function MarketplacePublic() {
             titre="Neuf capacités, livrées avec chaque service"
             chapeau="Cette liste est le contrat. L’écran d’administration d’un service dans votre espace client en est la matérialisation exacte, capacité par capacité — c’est ce qui rend le catalogue extensible sans nouveau développement d’interface."
           />
-          <ol className="mt-9 grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ol className="mt-9 grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
             {CONTRAT_INTEGRATION.map((c) => (
               <li key={c.num} className="flex items-start gap-3">
                 <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-p-700 text-[11px] font-bold text-white">
@@ -171,7 +171,7 @@ export default function MarketplacePublic() {
 
       <SiteSection>
         <Container>
-          <div className="grid gap-8 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
             <div>
               <MicroLabel className="text-m-600">Notre ligne de conduite</MicroLabel>
               <h2 className="mt-3 text-[24px] font-bold leading-tight [font-family:var(--font-display)] text-ink sm:text-[30px]">
@@ -222,7 +222,7 @@ export default function MarketplacePublic() {
                     Le portail : {x.fait}
                   </p>
                   <p className="mt-1.5 flex items-start gap-2 text-[12.5px] leading-snug text-g-500">
-                    <span className="mt-0.5 shrink-0 font-bold text-g-300">—</span>
+                    <span className="mt-0.5 shrink-0 font-bold text-g-500">—</span>
                     Le portail ne fait pas : {x.pas}
                   </p>
                 </div>

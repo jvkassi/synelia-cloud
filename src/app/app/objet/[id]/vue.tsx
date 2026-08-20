@@ -265,7 +265,7 @@ export function VueBucket({ id }: { id: string }) {
             />
             {bucket.versioning ? (
               <>
-                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <StatTile
                     libelle="Versions conservées"
                     valeur={num(Math.round(bucket.objets * 1.34))}
@@ -442,7 +442,7 @@ export function VueBucket({ id }: { id: string }) {
             </div>
 
             {bucket.objectLock?.actif && (
-              <div className="mt-4 grid gap-3 border-t border-g-100 pt-4 sm:grid-cols-3">
+              <div className="mt-4 grid grid-cols-1 gap-3 border-t border-g-100 pt-4 sm:grid-cols-3">
                 <StatTile
                   libelle="Objets sous rétention"
                   valeur={num(Math.round(bucket.objets * 0.92))}

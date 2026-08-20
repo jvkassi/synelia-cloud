@@ -413,7 +413,7 @@ export default function Registre() {
                           </td>
                           <td className="px-3 py-2.5">
                             {t.utilise.length === 0 ? (
-                              <span className="text-[11.5px] text-g-300">Aucun environnement</span>
+                              <span className="text-[11.5px] text-g-500">Aucun environnement</span>
                             ) : (
                               <span className="flex flex-wrap gap-1">
                                 {t.utilise.map((e) => (
@@ -465,7 +465,7 @@ export default function Registre() {
       )}
 
       {onglet === 'acces' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Se connecter au registre"
@@ -541,7 +541,7 @@ docker push registry.abj.synelia.cloud/org-dba/mon-app:v1.0.0`}
             titre="Règles de rétention"
             sousTitre="La rétention libère de l’espace sans jamais toucher à une étiquette utilisée par un environnement en marche."
           />
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Conserver les N dernières étiquettes par dépôt" hint="au-delà, les plus anciennes sont purgées">
               <Input type="number" defaultValue={20} />
             </Field>
@@ -630,7 +630,7 @@ docker push registry.abj.synelia.cloud/org-dba/mon-app:v1.0.0`}
 
           <Card>
             <CardHeader titre="Dérogation temporaire" sousTitre="Une dérogation est nominative, datée et journalisée dans l’audit." />
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Field label="Règle">
                 <Select defaultValue="cosign">
                   <option value="cosign">Image signée par Cosign</option>

@@ -207,7 +207,7 @@ export default function Deploiements() {
                 cle: (d) => d.findings.length,
                 rendu: (d) => {
                   if (d.findings.length === 0)
-                    return <span className="text-[11.5px] text-g-300">—</span>
+                    return <span className="text-[11.5px] text-g-500">—</span>
                   const crit = d.findings.filter((f) => f.severite === 'eleve').length
                   return (
                     <span className="flex items-center justify-center gap-1">
@@ -338,7 +338,7 @@ export default function Deploiements() {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Callout ton="violet" titre="Le retour arrière ne reconstruit rien">
           Chaque déploiement conserve son artefact. Un retour arrière repromeut l’artefact précédent
           tel quel — pas de rebuild, pas de dépendance à récupérer, pas de surprise de version. C’est

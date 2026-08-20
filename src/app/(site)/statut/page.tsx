@@ -343,7 +343,7 @@ export default function Statut() {
               />
               <Button>S’abonner</Button>
             </div>
-            <div className="mt-4 grid gap-3 border-t border-g-100 pt-4 sm:grid-cols-2">
+            <div className="mt-4 grid grid-cols-1 gap-3 border-t border-g-100 pt-4 sm:grid-cols-2">
               <div className="flex items-start gap-2.5">
                 <Webhook size={14} className="mt-0.5 shrink-0 text-p-700" />
                 <div>

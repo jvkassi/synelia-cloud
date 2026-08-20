@@ -79,7 +79,7 @@ export default async function FicheServicePublique({
                   </h1>
                 </div>
               </div>
-              <p className="mt-4 text-[15px] font-semibold text-m-600">{s.pitch}</p>
+              <p className="mt-4 text-[15px] font-semibold text-m-400">{s.pitch}</p>
               <p className="mt-2.5 text-[14px] leading-relaxed text-p-300">{s.description}</p>
               <div className="mt-5 flex flex-wrap items-center gap-2">
                 <Badge tone={s.certifie ? 'ok' : 'neutral'}>
@@ -131,7 +131,7 @@ export default async function FicheServicePublique({
             L’interface de {s.solutionOSS}, telle que ses auteurs l’ont conçue — avec son écosystème,
             ses applications mobiles et sa documentation. Nous n’en réimplémentons aucun écran.
           </p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
             {s.captures.map((c, i) => (
               <figure key={c} className="overflow-hidden rounded-[10px] border border-g-300 bg-g-050">
                 <div
@@ -198,7 +198,7 @@ export default async function FicheServicePublique({
             <Badge tone="violet">Inclus dans le prix affiché</Badge>
           </div>
 
-          <ol className="mt-8 grid gap-x-8 gap-y-5 lg:grid-cols-2">
+          <ol className="mt-8 grid grid-cols-1 gap-x-8 gap-y-5 lg:grid-cols-2">
             {CONTRAT_INTEGRATION.map((c) => (
               <li key={c.num} className="flex items-start gap-3.5">
                 <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ok text-white">
@@ -232,7 +232,7 @@ export default async function FicheServicePublique({
               ? 'Le mode dédié majore de 20 % le prix affiché. Prix hors taxes, TVA 18 % à la facturation.'
               : 'Ce service n’existe qu’en mode dédié. Prix hors taxes, TVA 18 % à la facturation.'}
           </p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {s.paliers.map((p) => (
               <div
                 key={p.code}
@@ -286,7 +286,7 @@ export default async function FicheServicePublique({
       {/* Blocs 5 et 6 */}
       <SiteSection fond="clair">
         <Container>
-          <div className="grid gap-5 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
             <Card>
               <CardHeader
                 titre={

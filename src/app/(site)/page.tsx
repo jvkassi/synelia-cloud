@@ -48,7 +48,7 @@ export default function Accueil() {
           aria-hidden
         />
         <Container className="relative py-16 sm:py-24">
-          <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
             <div>
               <MicroLabel className="text-p-300">
                 Infrastructure cloud · Côte d’Ivoire
@@ -58,7 +58,7 @@ export default function Accueil() {
                 <br />
                 vos applications,
                 <br />
-                <span className="text-m-600">sur votre territoire.</span>
+                <span className="text-m-400">sur votre territoire.</span>
               </h1>
               <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-p-300">
                 Synelia Cloud provisionne, dimensionne, sauvegarde et supervise votre infrastructure
@@ -119,7 +119,7 @@ export default function Accueil() {
             titre="Par quoi commencez-vous ?"
             chapeau="La plupart des plateformes vous font choisir entre de l’infrastructure brute et des logiciels prêts à l’emploi. Ici, les deux cohabitent dans le même portail, avec la même facturation, les mêmes rôles et la même sauvegarde."
           />
-          <div className="mt-10 grid gap-5 lg:grid-cols-2">
+          <div className="mt-10 grid grid-cols-1 gap-5 lg:grid-cols-2">
             {PORTES_ENTREE.map((p, i) => (
               <div
                 key={p.titre}
@@ -171,7 +171,7 @@ export default function Accueil() {
             titre="Des prix d’entrée affichés, pas des « nous contacter »"
             chapeau="Chaque produit publie son palier d’entrée. Les configurations sur mesure existent, mais vous savez d’abord à quoi vous avez affaire."
           />
-          <div className="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-9 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {CARTES_PRODUIT.map((c) => (
               <Link
                 key={c.slug}
@@ -207,7 +207,7 @@ export default function Accueil() {
       {/* ─── 5 · Bloc PRA ─────────────────────────────────────────────── */}
       <SiteSection fond="clair" className="border-y border-p-300 !bg-p-050">
         <Container>
-          <div className="grid items-center gap-10 lg:grid-cols-[1fr_0.9fr]">
+          <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1fr_0.9fr]">
             <div>
               <MicroLabel className="text-m-600">Produit d’appel</MicroLabel>
               <h2 className="mt-3 text-[28px] font-bold leading-tight [font-family:var(--font-display)] text-ink sm:text-[36px]">
@@ -257,14 +257,14 @@ export default function Accueil() {
             titre="Trois questions auxquelles nous répondons par écrit"
             chapeau="La souveraineté n’est pas un argument, c’est une série de vérifications. Voici les nôtres, et ce que nous documentons pour chacune."
           />
-          <div className="mt-9 grid gap-5 lg:grid-cols-3">
+          <div className="mt-9 grid grid-cols-1 gap-5 lg:grid-cols-3">
             {BLOC_SOUVERAINETE.map((b, i) => (
               <div key={b.titre} className="flex flex-col">
                 <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-p-100 text-p-700">
                   <ShieldCheck size={18} />
                 </span>
                 <h3 className="mt-4 text-[17px] font-bold [font-family:var(--font-display)] text-ink">
-                  <span className="tnum mr-1.5 text-g-300">0{i + 1}</span>
+                  <span className="tnum mr-1.5 text-g-500">0{i + 1}</span>
                   {b.titre}
                 </h3>
                 <p className="mt-2.5 flex-1 text-[13.5px] leading-relaxed text-g-700">{b.texte}</p>
@@ -299,7 +299,7 @@ export default function Accueil() {
               }))}
             />
           </div>
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
             {[
               {
                 titre: 'Provisionné et dimensionné',
@@ -333,7 +333,7 @@ export default function Accueil() {
             titre="Trois chiffres, trois contextes réels"
             chapeau="Les organisations concernées sont anonymisées, les ordres de grandeur sont ceux que nous constatons."
           />
-          <div className="mt-9 grid gap-5 lg:grid-cols-3">
+          <div className="mt-9 grid grid-cols-1 gap-5 lg:grid-cols-3">
             {ETUDES_CAS.map((e) => (
               <article
                 key={e.client}

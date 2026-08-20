@@ -263,7 +263,7 @@ export default function Securite() {
 
       {onglet === 'posture' && (
         <div className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Points de contrôle"
@@ -509,14 +509,14 @@ export default function Securite() {
       )}
 
       {onglet === 'export' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Export du journal"
               sousTitre="Pour un audit, une certification, ou une remise à votre commissaire aux comptes."
             />
             <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Du">
                   <Input type="date" defaultValue="2026-07-19" />
                 </Field>

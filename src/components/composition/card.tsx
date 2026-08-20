@@ -40,12 +40,14 @@ export function CardHeader({
   className?: string
 }) {
   return (
-    <div className={cn('mb-3.5 flex items-start justify-between gap-4', className)}>
-      <div className="min-w-0">
+    <div className={cn('mb-3.5 flex flex-wrap items-start justify-between gap-x-4 gap-y-2', className)}>
+      <div className="min-w-0 flex-1">
         <h3 className="type-h3">{titre}</h3>
         {sousTitre && <p className="mt-0.5 text-[12.5px] text-g-500">{sousTitre}</p>}
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      {/* `flex-wrap` sans `shrink-0` : un groupe d'actions large descend sous
+          le titre au lieu de pousser la carte hors de l'écran. */}
+      {actions && <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>}
     </div>
   )
 }
@@ -67,12 +69,12 @@ export function Section({
   return (
     <section className={cn('space-y-3', className)}>
       {(titre || actions) && (
-        <div className="flex items-end justify-between gap-4">
-          <div className="min-w-0">
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+          <div className="min-w-0 flex-1">
             {titre && <h2 className="type-h2">{titre}</h2>}
             {sousTitre && <p className="mt-0.5 text-[13px] text-g-500">{sousTitre}</p>}
           </div>
-          {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+          {actions && <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>}
         </div>
       )}
       {children}
@@ -107,7 +109,12 @@ export function PageHeader({
           )}
           {meta && <div className="mt-2.5 flex flex-wrap items-center gap-2">{meta}</div>}
         </div>
-        {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+        {/* Pas de `shrink-0` : sur un écran étroit ce bloc doit pouvoir se
+            réduire et passer à la ligne, sinon deux boutons côte à côte
+            débordent de la largeur de l'écran. */}
+        {actions && (
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:justify-end">{actions}</div>
+        )}
       </div>
     </header>
   )

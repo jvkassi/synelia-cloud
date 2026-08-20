@@ -32,7 +32,7 @@ export default function Souverainete() {
           <>
             Trois niveaux.
             <br />
-            <span className="text-m-600">Deux atteints, un en transition.</span>
+            <span className="text-m-400">Deux atteints, un en transition.</span>
           </>
         }
         chapeau="« Cloud souverain » ne veut rien dire tant qu’on ne précise pas de quelle souveraineté on parle. Il y en a trois : celle des données, celle des opérations, celle du logiciel. Voici notre position sur chacune — y compris là où nous ne sommes pas encore arrivés."
@@ -144,7 +144,7 @@ export default function Souverainete() {
             chapeau="Un modèle de droits explicite, publié, avec onze rôles. Et un journal d’audit qui enregistre non seulement les actions réussies, mais aussi les refus."
           />
 
-          <div className="mt-8 grid gap-5 lg:grid-cols-3">
+          <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-3">
             <Card>
               <span className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-p-100 text-p-700">
                 <ScrollText size={17} />
@@ -231,7 +231,7 @@ export default function Souverainete() {
                                   ? 'text-ok'
                                   : p === 'read'
                                     ? 'text-warn'
-                                    : 'text-g-300',
+                                    : 'text-g-500',
                               )}
                             >
                               {p === 'full' ? '●' : p === 'read' ? '◐' : '—'}
@@ -247,7 +247,7 @@ export default function Souverainete() {
             <p className="mt-2.5 text-[11.5px] text-g-500">
               <span className="font-bold text-ok">●</span> autorisé ·{' '}
               <span className="font-bold text-warn">◐</span> lecture seule ·{' '}
-              <span className="font-bold text-g-300">—</span> interdit
+              <span className="font-bold text-g-500">—</span> interdit
             </p>
           </Card>
         </Container>

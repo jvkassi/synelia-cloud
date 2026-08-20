@@ -282,7 +282,7 @@ export function VueZone({ zoneId }: { zoneId: string }) {
       )}
 
       {onglet === 'modeles' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {MODELES_DNS.map((m) => (
             <Card key={m.id} hover className="flex flex-col">
               <CardHeader
@@ -317,7 +317,7 @@ export function VueZone({ zoneId }: { zoneId: string }) {
       )}
 
       {onglet === 'dnssec' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Signature de la zone"
@@ -401,7 +401,7 @@ export function VueZone({ zoneId }: { zoneId: string }) {
       )}
 
       {onglet === 'serveurs' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Serveurs de noms de cette zone"
@@ -547,7 +547,7 @@ export function VueZone({ zoneId }: { zoneId: string }) {
           <Field label="Valeur" hint="adresse IP, nom de domaine cible, ou contenu textuel">
             <Input defaultValue={enEdition?.valeur ?? ''} placeholder="203.0.113.10" />
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="TTL" hint="secondes — 300 pendant une migration, 3 600 en régime stable">
               <Select defaultValue={String(enEdition?.ttl ?? 3600)}>
                 <option value="60">60 s — bascule imminente</option>
@@ -646,7 +646,7 @@ export function VueZone({ zoneId }: { zoneId: string }) {
         }}
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Callout ton="violet" titre="Baisser le TTL avant une migration">
           Vingt-quatre heures avant de changer une adresse, passez le TTL de l’enregistrement
           concerné à 300 secondes. Le jour de la bascule, la propagation prendra cinq minutes plutôt

@@ -74,9 +74,9 @@ export default function VuePlateforme() {
       />
 
       {(incidentsOuverts.length > 0 || satures.length > 0) && (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {incidentsOuverts.length > 0 && (
-            <Callout ton="err" titre={`${incidentsOuverts.length} incident en cours`}>
+            <Callout ton="err" titre={`${incidentsOuverts.length} incident${incidentsOuverts.length > 1 ? 's' : ''} en cours`}>
               {incidentsOuverts[0].titre} — {incidentsOuverts[0].services.join(', ')} sur{' '}
               {incidentsOuverts[0].sites.map((x) => SITE_COURT[x]).join(' et ')}.{' '}
               {incidentsOuverts[0].mises_a_jour.length} mise
@@ -141,7 +141,7 @@ export default function VuePlateforme() {
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader
             titre="Capacité par socle technique"
@@ -152,7 +152,7 @@ export default function VuePlateforme() {
               </ButtonLink>
             }
           />
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {BACKENDS.map((b) => (
               <BackendGauge key={b.id} backend={b} />
             ))}
@@ -219,7 +219,7 @@ export default function VuePlateforme() {
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2" padding={false}>
           <div className="border-b border-g-100 px-4 py-3.5">
             <CardHeader
@@ -401,7 +401,7 @@ export default function VuePlateforme() {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
         <NavCard
           titre="Santé plateforme"
           description="Incidents, socles, jobs et communication publique sur la page de statut."
@@ -428,7 +428,7 @@ export default function VuePlateforme() {
         />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader
             titre="Tickets en risque d’engagement"

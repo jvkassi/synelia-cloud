@@ -211,7 +211,7 @@ export default function Stockage() {
         }}
       />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <p className="type-micro mb-3 text-g-500">Grille tarifaire des classes</p>
           <div className="space-y-2">

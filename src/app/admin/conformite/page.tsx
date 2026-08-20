@@ -164,7 +164,7 @@ export default function Conformite() {
                               {t.echecs}
                             </Badge>
                           ) : (
-                            <span className="text-[11.5px] text-g-300">0</span>
+                            <span className="text-[11.5px] text-g-500">0</span>
                           )}
                         </td>
                         <td className="px-3 py-2.5">
@@ -196,7 +196,7 @@ export default function Conformite() {
             </div>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Échecs de restauration analysés"
@@ -364,7 +364,7 @@ export default function Conformite() {
                   </Badge>
                 }
               />
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div>
                   <MicroLabel className="mb-2">Décomposition du temps de reprise</MicroLabel>
                   <div className="space-y-2">
@@ -546,7 +546,7 @@ export default function Conformite() {
             )}
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Fenêtres de correctifs"
@@ -712,7 +712,7 @@ export default function Conformite() {
             </div>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Constats encore ouverts"
@@ -835,7 +835,7 @@ export default function Conformite() {
             un régulateur.
           </Callout>
 
-          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
             {c.attestations.map((a) => (
               <Card key={a.id} className="flex flex-col" hover>
                 <CardHeader
@@ -956,7 +956,7 @@ export default function Conformite() {
               ))}
             </Select>
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Période couverte — du">
               <Input type="date" defaultValue="2026-01-01" />
             </Field>

@@ -94,7 +94,7 @@ export function SiteHeader() {
       {/* Mégamenu Produits — quatre colonnes (§2.1) */}
       {menu === 'produits' && (
         <div className="absolute inset-x-0 top-full hidden animate-fade-in border-b border-g-300 bg-white shadow-[0_16px_40px_rgba(43,27,77,.12)] lg:block">
-          <div className="mx-auto grid max-w-7xl gap-8 px-6 py-7 md:grid-cols-4">
+          <div className="mx-auto grid grid-cols-1 max-w-7xl gap-8 px-6 py-7 md:grid-cols-4">
             {MEGAMENU.map((col) => (
               <div key={col.colonne}>
                 <p className="type-micro mb-3 text-m-600">{col.colonne}</p>
@@ -102,7 +102,7 @@ export function SiteHeader() {
                   {col.entrees.map((e) => (
                     <li key={e.slug}>
                       <Link
-                        href={`/offres/${e.slug}`}
+                        href={e.href ?? `/offres/${e.slug}`}
                         onClick={() => setMenu(null)}
                         className="group block"
                       >
@@ -139,7 +139,7 @@ export function SiteHeader() {
 
       {menu === 'ressources' && (
         <div className="absolute inset-x-0 top-full hidden animate-fade-in border-b border-g-300 bg-white shadow-[0_16px_40px_rgba(43,27,77,.12)] lg:block">
-          <div className="mx-auto grid max-w-4xl gap-x-8 gap-y-3.5 px-6 py-7 md:grid-cols-2">
+          <div className="mx-auto grid grid-cols-1 max-w-4xl gap-x-8 gap-y-3.5 px-6 py-7 md:grid-cols-2">
             {RESSOURCES.map((r) => (
               <Link key={r.href} href={r.href} onClick={() => setMenu(null)} className="group block">
                 <span className="block text-[13px] font-semibold text-ink group-hover:text-p-700">
@@ -163,7 +163,7 @@ export function SiteHeader() {
                   {col.entrees.map((e) => (
                     <li key={e.slug}>
                       <Link
-                        href={`/offres/${e.slug}`}
+                        href={e.href ?? `/offres/${e.slug}`}
                         onClick={() => setMobile(false)}
                         className="block py-1 text-[13px] text-ink"
                       >

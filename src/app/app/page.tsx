@@ -112,7 +112,7 @@ export default function TableauDeBord() {
       </div>
 
       {/* ─── Bande 2 : capacité et disponibilité ─────────────────────── */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader
             titre="Capacité souscrite contre consommée"
@@ -211,7 +211,7 @@ export default function TableauDeBord() {
       </div>
 
       {/* ─── Bande 3 : services, santé, facturation ──────────────────── */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Section
           titre="Mes services managés"
           actions={
@@ -223,7 +223,7 @@ export default function TableauDeBord() {
             </Link>
           }
         >
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
             {servicesVedette.map((svc) => (
               <ServiceCard
                 key={svc.id}
@@ -398,7 +398,7 @@ export default function TableauDeBord() {
         />
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {CATALOGUE.slice(0, 4).map((c) => (
           <Link
             key={c.slug}

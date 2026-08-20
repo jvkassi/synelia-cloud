@@ -82,13 +82,13 @@ export default function MesServices() {
         />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {services.map((s) => (
           <ServiceCard key={s.id} service={s} catalogue={serviceCatalogue(s.catalogSlug)} />
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Callout
           ton="violet"
           titre="Pourquoi « Ouvrir » est magenta"

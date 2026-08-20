@@ -159,7 +159,7 @@ export default function NouvelleApplication() {
             <Input value={nomApp} onChange={(e) => setNomApp(e.target.value)} className="font-mono" />
           </Field>
 
-          <div className="grid gap-3 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
             {(
               [
                 {
@@ -210,7 +210,7 @@ export default function NouvelleApplication() {
           {source === 'git' && (
             <Card>
               <CardHeader titre="Dépôt et branche" />
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Dépôt">
                   <Select
                     value={depot}
@@ -252,7 +252,7 @@ export default function NouvelleApplication() {
           {source === 'image' && (
             <Card>
               <CardHeader titre="Image du registre" />
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Image">
                   <Input value={image} onChange={(e) => setImage(e.target.value)} className="font-mono" />
                 </Field>
@@ -403,7 +403,7 @@ export default function NouvelleApplication() {
       {/* Étape 4 — Cible & ressources */}
       {etape === 4 && (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {(
               [
                 ['k8s', 'Kubernetes', 'Chaque composant devient un déploiement dans un namespace dédié. Autoscaling horizontal, mise à jour progressive, isolation réseau par NetworkPolicy.'],
@@ -434,7 +434,7 @@ export default function NouvelleApplication() {
 
           <Card>
             <CardHeader titre="Emplacement" />
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Espace Cloud">
                 <Select value={espaceId} onChange={(e) => setEspaceId(e.target.value)}>
                   {ESPACES.map((e) => (

@@ -273,7 +273,7 @@ export default function Membres() {
       )}
 
       {onglet === 'invitations' && (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Card>
             <CardHeader
               titre="Invitations en attente"
@@ -371,7 +371,7 @@ export default function Membres() {
             <RoleMatrix roles={ROLES_CLIENT} roleSurligne={roleSurligne} />
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
                 titre="Choisir le bon rôle"
@@ -512,7 +512,7 @@ export default function Membres() {
             </div>
           </Card>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader titre="Attributions par espace" />
               <div className="space-y-2">
