@@ -201,28 +201,17 @@ export function RechercheGlobale({ portee = 'client' }: { portee?: 'client' | 'f
         type="button"
         onClick={() => setOuvert(true)}
         aria-label="Rechercher (⌘K)"
+        title="Rechercher — ⌘K"
         className={cn(
-          // Sous 640 px la barre se réduit à sa loupe : le libellé complet
-          // pousserait l'en-tête au-delà de la largeur de l'écran.
-          'flex h-8 w-8 shrink-0 items-center justify-center gap-2 rounded-[6px] border text-left transition-colors',
-          'sm:w-full sm:max-w-md sm:justify-start sm:px-2.5',
+          // Bouton-loupe et non champ large : la barre supérieure porte déjà les
+          // univers et le contexte. La palette s'ouvre au clic comme au ⌘K.
+          'flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] transition-colors',
           portee === 'client'
-            ? 'border-g-300 bg-g-050 text-g-500 hover:border-p-400 hover:bg-white'
-            : 'border-white/15 bg-white/10 text-p-300 hover:bg-white/15',
+            ? 'text-p-300 hover:bg-white/10'
+            : 'text-p-300 hover:bg-white/10',
         )}
       >
-        <Search size={13} className="shrink-0" />
-        <span className="hidden min-w-0 flex-1 truncate text-[12.5px] sm:block">
-          Rechercher une organisation, une ressource, une facture…
-        </span>
-        <kbd
-          className={cn(
-            'hidden shrink-0 rounded border px-1 py-px font-mono text-[10px] sm:block',
-            portee === 'client' ? 'border-g-300 bg-white' : 'border-white/20 bg-white/10',
-          )}
-        >
-          ⌘K
-        </kbd>
+        <Search size={16} />
       </button>
 
       {ouvert && (

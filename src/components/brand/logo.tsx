@@ -35,6 +35,7 @@ export function Logo({
   variante = 'clair',
   contexte,
   size = 28,
+  compact = false,
   className,
 }: {
   /** `clair` sur fond blanc, `sombre` sur fond violet. */
@@ -42,12 +43,16 @@ export function Logo({
   /** Badge de contexte, par exemple `FOURNISSEUR`. */
   contexte?: string
   size?: number
+  /** Réduit la marque à son symbole sous 640 px, pour les barres denses. */
+  compact?: boolean
   className?: string
 }) {
   return (
     <span className={cn('inline-flex items-center gap-2.5', className)}>
       <LogoMark size={size} className={variante === 'sombre' ? '[&>rect]:fill-white/12' : ''} />
-      <span className="flex flex-col leading-none">
+      {/* Le nom disparaît sous 640 px : la barre supérieure y porte déjà le
+          sélecteur d'univers, et le symbole seul suffit à identifier le portail. */}
+      <span className={cn('flex-col leading-none', compact ? 'hidden sm:flex' : 'flex')}>
         <span
           className={cn(
             'text-[15px] font-extrabold tracking-tight [font-family:var(--font-display)]',

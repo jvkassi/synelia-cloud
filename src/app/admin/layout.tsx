@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { AppProvider } from '@/components/app/contexte'
 import { TopBar } from '@/components/app/topbar'
 import { ToastHost } from '@/components/app/toasts'
-import { AdminMobileNav, AdminSidebar } from '@/components/admin/sidebar'
 
 export const metadata: Metadata = {
   // `default` ne s'applique plus qu'à /admin lui-même : chaque sous-segment
@@ -17,13 +16,9 @@ export default function EspaceFournisseurLayout({ children }: { children: React.
     <AppProvider roleInitial="provider_admin">
       <div className="min-h-screen bg-white">
         <TopBar portee="fournisseur" />
-        <div className="flex">
-          <AdminSidebar />
-          <main className="min-w-0 flex-1 bg-g-050">
-            <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-7">{children}</div>
-          </main>
-        </div>
-        <AdminMobileNav />
+        <main className="bg-g-050">
+          <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-7">{children}</div>
+        </main>
         <ToastHost />
       </div>
     </AppProvider>

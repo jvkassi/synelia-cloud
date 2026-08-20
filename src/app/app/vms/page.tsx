@@ -150,7 +150,7 @@ export default function ListeVms() {
           { label: 'Machines virtuelles' },
         ]}
         titre="Machines virtuelles"
-        sousTitre={`Machines de l’espace ${espace.code} (${SITE_COURT[espace.site]}). Changez d’espace depuis le sélecteur en tête du groupe Infrastructure de la barre latérale.`}
+        sousTitre={`Machines de l’espace ${espace.code} (${SITE_COURT[espace.site]}). Changez d’espace depuis le sélecteur de contexte, en haut à droite.`}
         actions={
           <GatedAction autorise={autorise('vm.create_delete')} message={refus('vm.create_delete')}>
             <ButtonLink href="/app/vms/new" iconBefore={<Plus size={14} />}>
