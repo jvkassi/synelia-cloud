@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { GitCommitHorizontal, RotateCcw, ShieldCheck } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { dateHeure, duree, relatif } from '@/lib/format'
 import { APPLICATIONS, DEPLOIEMENTS, ENVIRONNEMENTS, appById, envById } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
@@ -353,17 +352,5 @@ export default function Deploiements() {
         </Callout>
       </div>
     </div>
-  )
-}
-
-/** Petite bande d'état, utilisée dans les vignettes de la page. */
-export function BandeStatut({ statut }: { statut: Deployment['statut'] }) {
-  return (
-    <span
-      className={cn(
-        'inline-block h-1 w-full rounded-full',
-        statut === 'live' ? 'bg-ok' : statut === 'failed' ? 'bg-err' : 'bg-info',
-      )}
-    />
   )
 }
