@@ -70,9 +70,8 @@ export default function Lanceur() {
       {services.length === 0 ? (
         <EmptyState
           titre="Aucun siège ne vous a encore été attribué"
-          phrase="Un siège vous donne accès à un service managé. Demandez à votre administrateur d’organisation de vous en attribuer, ou parcourez le catalogue pour découvrir ce qui est disponible."
-          action={{ libelle: 'Parcourir les modèles', href: '/app/modeles' }}
-          actionSecondaire={{ libelle: 'Contacter le support', href: '/app/support' }}
+          phrase="Un siège vous donne accès à un service managé. Demandez à votre administrateur d’organisation de vous en attribuer : lui seul peut le faire, depuis la fiche du service."
+          action={{ libelle: 'Contacter le support', href: '/app/support' }}
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

@@ -8,7 +8,49 @@ import { money, relatif } from '@/lib/format'
 import { SITE_COURT, type ServiceProjet, type TypeServiceProjet } from '@/lib/types'
 import { MOTEUR_LABEL, TYPE_SERVICE_LABEL, domainesDuService } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
-import { Card } from '@/components/composition/card'
+import { Card, PageHeader } from '@/components/composition/card'
+import type { Projet } from '@/lib/types'
+
+/**
+ * En-tête commun aux sections d'un projet.
+ *
+ * Les sept sections d'Applications décrivent le même objet sous sept angles :
+ * le fil d'Ariane et le nom du projet doivent donc être identiques partout,
+ * sinon on doute d'être resté sur le même projet en changeant d'onglet.
+ */
+export function EnteteProjet({
+  projet,
+  section,
+  titre,
+  sousTitre,
+  actions,
+  meta,
+}: {
+  projet: Projet
+  /** Nom de la section, dernier maillon du fil. Absent sur la fiche du projet. */
+  section?: string
+  titre?: ReactNode
+  sousTitre?: ReactNode
+  actions?: ReactNode
+  meta?: ReactNode
+}) {
+  return (
+    <PageHeader
+      fil={[
+        { label: 'Espace client', href: '/app' },
+        { label: 'Applications', href: '/app/applications' },
+        section
+          ? { label: projet.nom, href: `/app/applications/projets/${projet.id}` }
+          : { label: projet.nom },
+        ...(section ? [{ label: section }] : []),
+      ]}
+      titre={titre ?? projet.nom}
+      sousTitre={sousTitre}
+      actions={actions}
+      meta={meta}
+    />
+  )
+}
 
 /** Icône par type de service — le même repère visuel dans tout l'univers. */
 export const ICONE_TYPE: Record<TypeServiceProjet, ReactNode> = {
@@ -66,7 +108,7 @@ export function couleurStatut(statut: ServiceProjet['statut']): string {
  */
 export function CarteService({ service }: { service: ServiceProjet }) {
   const domaines = domainesDuService(service.id)
-  const href = `/app/projets/${service.projetId}/${service.id}`
+  const href = `/app/applications/projets/${service.projetId}/${service.id}`
 
   return (
     <Card hover className="flex flex-col">

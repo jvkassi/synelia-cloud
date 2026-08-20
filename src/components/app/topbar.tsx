@@ -25,8 +25,10 @@ import {
   UNIVERS_FOURNISSEUR,
   sectionActive,
   universActif,
+  type SectionNav,
   type UniversNav,
 } from '@/lib/navigation'
+import { PROJETS } from '@/lib/mock/projets'
 import { Avatar } from '@/components/ui/display'
 import { Badge } from '@/components/ui/badge'
 import { Popover } from '@/components/ui/overlay'
@@ -188,6 +190,20 @@ function BarreUnivers({
 
 // ─── Barre 2 : les sections de l'univers courant ───────────────────────
 
+/**
+ * Les sections de l'univers Applications partagent un seul panneau — le projet.
+ * Changer d'onglet ne doit donc pas reperdre le projet ouvert : on le reporte
+ * dans l'adresse de la section visée. Ailleurs, chaque section a sa propre
+ * ressource et la question ne se pose pas.
+ */
+function hrefSection(section: SectionNav, chemin: string): string {
+  if (!section.href.startsWith('/app/applications/')) return section.href
+  const segment = chemin.split('/')[4]
+  return segment && PROJETS.some((p) => p.id === segment)
+    ? `${section.href}/${segment}`
+    : section.href
+}
+
 function BarreSections({
   portee,
   univers,
@@ -215,7 +231,7 @@ function BarreSections({
         {univers.sections.map((s) => (
           <li key={s.href} className="flex">
             <Link
-              href={s.href}
+              href={hrefSection(s, pathname)}
               className={cn(
                 'relative flex items-center whitespace-nowrap px-3 py-2.5 text-[12.5px] font-semibold transition-colors',
                 s.href === active?.href

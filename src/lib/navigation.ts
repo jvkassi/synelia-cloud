@@ -64,10 +64,20 @@ export const UNIVERS_CLIENT: UniversNav[] = [
     id: 'applications',
     nom: 'Applications',
     sections: [
-      { nom: 'Projets', href: '/app/projets', aussi: ['/app/routage'] },
-      { nom: 'Bibliothèque de modèles', href: '/app/modeles' },
-      { nom: 'Déploiements', href: '/app/deploiements' },
-      { nom: "Registre d'images", href: '/app/registre' },
+      // Même patron maître-détail que Web Cloud, à une différence près : les
+      // sections ne listent pas chacune leur ressource, elles partagent un seul
+      // panneau — le projet. C'est la maille de cet univers : on choisit le
+      // projet une fois, puis on change d'angle sans le reperdre.
+      // « Accueil » n'a pas de panneau : c'est un tableau de bord, il ne porte
+      // sur aucun projet en particulier.
+      { nom: 'Accueil', href: '/app/applications' },
+      { nom: 'Projets', href: '/app/applications/projets', aussi: ['/app/applications/nouveau'] },
+      { nom: 'Déploiements', href: '/app/applications/deploiements' },
+      { nom: 'Observabilité', href: '/app/applications/observabilite' },
+      { nom: 'Backup', href: '/app/applications/backup' },
+      { nom: 'Domaines & routage', href: '/app/applications/routage' },
+      { nom: 'Variables & secrets', href: '/app/applications/variables' },
+      { nom: 'Paramètres', href: '/app/applications/parametres' },
     ],
   },
   {

@@ -95,6 +95,24 @@ modèle ; `topbar.tsx` le rend.
 les load balancers, pas le réseau. Le champ `aussi` rattache les routes sans
 onglet propre (`/app/dns` → Domaines, `/app/taches` → Tableau de bord).
 
+### Applications, en maître-détail sur le projet
+
+Huit sections : `Accueil · Projets · Déploiements · Observabilité · Backup ·
+Domaines & routage · Variables & secrets · Paramètres`, toutes sous
+`/app/applications/`.
+
+Web Cloud donne à chaque section son propre panneau ; ici c'est **un seul
+panneau partagé — le projet** (`CadreProjet`, monté dans chaque `layout.tsx`).
+Les huit sections décrivent le même objet sous huit angles, donc changer
+d'onglet ne doit pas redemander de quel projet on parle : `hrefSection()` dans
+`topbar.tsx` reporte le projet courant dans l'adresse de la section visée.
+Accueil n'a pas de panneau — c'est un tableau de bord.
+
+L'univers est **en pleine largeur**, comme Web Cloud (`Conteneur`).
+
+La fiche d'un projet n'a plus d'onglets : variables, domaines et paramètres
+étaient des onglets dans un onglet, ils sont devenus des sections.
+
 ### Web Cloud, en maître-détail
 
 Neuf sections : `Accueil · Domaines · Hébergement Web · Databases · Emails ·
@@ -122,6 +140,8 @@ aucune page ne dit tout ce qui le concerne.
 | Socle du PaaS | Kubernetes managé via OpenStack Magnum, namespace par projet. Sans effet sur la maquette. |
 | Sauvegardes | Un onglet par ressource **et** une section transverse `Sauvegardes & PRA` dans Infrastructure, qui porte les plans réutilisables, la restauration granulaire et le tableau de conformité 3-2-1 qu'on montre à un auditeur. |
 | Marketplace | Supprimé en tant qu'univers. Le partagé (messagerie, drive, CMS) est passé dans Web Cloud, attaché au domaine ; le dédié est devenu des modèles déployables dans un projet. |
+| Bibliothèque de modèles | Plus de section ni de fiche : les modèles se choisissent à l'étape « Source » de `/app/applications/nouveau`, à côté de Git, image Docker et canvas. Une fiche de modèle qu'on ne peut pas déployer depuis elle-même était un détour. Le jeu de données `mock/modeles.ts` reste : les services en portent le `modeleSlug` et leur configuration en dépend. |
+| Registre d'images | Supprimé. Un explorateur de dépôts et d'étiquettes est l'écran principal d'un registre — donc hors périmètre. Ce qui compte (image, étiquette, signature, résultat de l'analyse) est déjà sur la fiche du déploiement. |
 | Applications web | Section à part de `Hébergement Web` : « installer WordPress » et « régler PHP » ne sont pas la même intention. |
 | Bases mutualisées | Aucun accès distant, présenté comme une propriété de l'offre et non un réglage. Une base mutualisée n'a pas à être joignable depuis Internet. |
 | Sortie du propriétaire | Les socles VMware et Hyper-V restent dans le jeu de données avec `enSortie`, et `/souverainete` publie la trajectoire de sortie datée. Assumer la transition plutôt que la cacher. |
@@ -181,7 +201,7 @@ utile avant de s'engager.
 
 ## Branche
 
-Le travail va sur `claude/marketplace-admin-vercel-x4f2mh`, poussé directement,
+Le travail va sur `claude/univers-nav-restructure-1968bj`, poussé directement,
 sans pull request. Déploiement :
 `npx vercel@latest --prod --yes --archive=tgz --token "$VERCEL_TOKEN"` — un
 `fetch failed` au premier essai est fréquent, le second passe.

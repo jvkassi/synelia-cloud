@@ -41,7 +41,7 @@ export default async function PageSuiviTache({
         titre="Suivi du provisioning"
         sousTitre="L’orchestrateur exécute les tâches séquentiellement. Vous pouvez quitter cette page à tout moment : le centre de tâches conserve le suivi et une notification signalera la fin."
         actions={
-          <ButtonLink href="/app/projets" variant="secondary" iconBefore={<ArrowLeft size={14} />}>
+          <ButtonLink href="/app/applications/projets" variant="secondary" iconBefore={<ArrowLeft size={14} />}>
             Retour à mes services
           </ButtonLink>
         }

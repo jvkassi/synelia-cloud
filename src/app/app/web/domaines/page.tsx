@@ -311,7 +311,7 @@ export default function PortefeuilleWebCloud() {
         </div>
         <p className="mt-3 text-[12px] text-g-500">
           Besoin d’isolation stricte, de conteneurs ou d’une base managée à part ?{' '}
-          <Link href="/app/projets" className="font-semibold text-p-700 hover:text-m-600">
+          <Link href="/app/applications/projets" className="font-semibold text-p-700 hover:text-m-600">
             Les projets applicatifs
           </Link>{' '}
           répondent à ce besoin — {num(SITES_WEB.length)} sites mutualisés ne remplacent pas une
