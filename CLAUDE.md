@@ -326,9 +326,40 @@ seulement quand le choix n'est pas évident. Les textes d'interface disent ce qu
 le produit fait **et ce qu'il ne fait pas** : c'est souvent l'information la plus
 utile avant de s'engager.
 
-## Branche
+## Branches et intégration
 
-Le travail va sur `claude/univers-nav-restructure-1968bj`, poussé directement,
-sans pull request. Déploiement :
+`main` est la branche d'intégration : **tout travail y est fusionné dès qu'il
+est terminé**, sans pull request. Le travail lui-même se fait sur une branche
+`claude/<sujet>`, poussée elle aussi.
+
+La séquence, à la fin de chaque changement :
+
+```
+bun run typecheck && bun run lint && bun run build   # avant tout
+git push -u origin claude/<sujet>
+git checkout main && git pull && git merge claude/<sujet>
+```
+
+**Résolvez les conflits, ne les reportez pas.** Cinq branches parallèles ont
+déjà divergé assez pour qu'une fusion tardive coûte une demi-journée. Deux
+règles apprises à cette occasion :
+
+- **Un conflit fusionné automatiquement n'est pas un conflit résolu.** Git a
+  accepté sans broncher `panneauEspace: true` (branche A) au-dessus des huit
+  sections d'Applications (branche B) : le fichier compilait, l'univers portait
+  deux panneaux et aucune ligne n'était marquée en conflit. Après toute fusion
+  qui touche `navigation.ts`, `conteneur.tsx` ou `topbar.tsx`, relisez le
+  résultat — le compilateur ne voit pas ce genre de contradiction.
+- **Quand deux branches répondent différemment à la même question de
+  conception, tranchez et écrivez pourquoi** dans le message de fusion et dans
+  ce fichier. Ne gardez pas les deux réponses « en attendant ».
+
+Après la fusion, rejouez `typecheck`, `lint`, `build` **et** l'audit du rendu :
+c'est la fusion, pas la branche, qui casse.
+
+Déploiement, depuis `main` :
 `bunx vercel@latest --prod --yes --archive=tgz --token "$VERCEL_TOKEN"` — un
-`fetch failed` au premier essai est fréquent, le second passe.
+`fetch failed` est fréquent et ne dit rien de la construction : le déploiement
+est créé côté Vercel et continue. Vérifiez avec
+`bunx vercel@latest inspect <url> --token "$VERCEL_TOKEN"` plutôt que de
+relancer, sinon vous empilez les déploiements.
