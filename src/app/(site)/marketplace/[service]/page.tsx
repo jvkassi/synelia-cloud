@@ -109,7 +109,7 @@ export default async function FicheServicePublique({
                 href="/signup"
                 fullWidth
                 size="lg"
-                className="mt-4 bg-white text-p-700 hover:bg-p-050"
+                variant="inverse" className="mt-4"
                 iconAfter={<ArrowRight size={15} />}
               >
                 Souscrire

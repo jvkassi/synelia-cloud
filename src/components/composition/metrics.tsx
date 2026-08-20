@@ -88,6 +88,8 @@ export function StatTile({
   }
   const varTon =
     variation === undefined ? undefined : variation > 0 ? 'ok' : variation < 0 ? 'err' : 'neutral'
+  const longueurValeur =
+    typeof valeur === 'string' || typeof valeur === 'number' ? String(valeur).length : 0
 
   return (
     <div
@@ -97,11 +99,22 @@ export function StatTile({
       )}
     >
       <p className="type-micro text-g-500">{libelle}</p>
-      <div className="mt-1.5 flex items-baseline gap-1.5">
-        <span className="tnum text-[24px] font-bold leading-none [font-family:var(--font-display)] text-ink">
+      <div className="mt-1.5 flex min-w-0 items-baseline gap-1.5">
+        <span
+          className={cn(
+            'tnum min-w-0 font-bold leading-none [font-family:var(--font-display)] text-ink',
+            // Un montant en francs CFA dépasse facilement la largeur d'une tuile :
+            // on réduit le corps plutôt que de tronquer le chiffre.
+            longueurValeur > 15
+              ? 'text-[17px]'
+              : longueurValeur > 11
+                ? 'text-[20px]'
+                : 'text-[24px]',
+          )}
+        >
           {valeur}
         </span>
-        {unite && <span className="text-[12.5px] font-semibold text-g-500">{unite}</span>}
+        {unite && <span className="shrink-0 text-[12.5px] font-semibold text-g-500">{unite}</span>}
       </div>
       {variation !== undefined && (
         <p

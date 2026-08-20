@@ -2,7 +2,14 @@ import Link from 'next/link'
 import type { ComponentProps, ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'accent'
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'ghost'
+  | 'danger'
+  | 'accent'
+  | 'inverse'
+  | 'ghostInverse'
 export type ButtonSize = 'sm' | 'md' | 'lg'
 
 const VARIANTS: Record<ButtonVariant, string> = {
@@ -17,6 +24,16 @@ const VARIANTS: Record<ButtonVariant, string> = {
   /** Réservé au bouton « Ouvrir » d'un service managé (§1.1). */
   accent:
     'bg-m-600 text-white border border-transparent hover:bg-m-700 active:bg-m-700 shadow-[0_1px_2px_rgba(192,41,122,.24)]',
+  /**
+   * Action principale posée sur un fond violet foncé — héros, bandeau d'appel
+   * final. Défini ici plutôt que surchargé par `className` : deux utilitaires
+   * de couleur concurrents se départagent par l'ordre de la feuille de style,
+   * pas par l'ordre des classes, ce qui rend le libellé invisible une fois sur deux.
+   */
+  inverse: 'bg-white text-p-700 border border-transparent hover:bg-p-050 active:bg-p-100',
+  /** Action secondaire sur fond violet foncé. */
+  ghostInverse:
+    'bg-transparent text-white border border-p-400 hover:bg-white/10 active:bg-white/15',
 }
 
 const SIZES: Record<ButtonSize, string> = {

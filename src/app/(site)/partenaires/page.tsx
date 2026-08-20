@@ -81,7 +81,7 @@ export default function Partenaires() {
         chapeau="Trois niveaux de partenariat, une grille d’achat dédiée, et un portail que vous pouvez entièrement thématiser à vos couleurs et à votre domaine. Vos clients ne voient jamais Synelia — et vous ne voyez que vos clients."
         actions={
           <>
-            <Button size="lg" className="bg-white text-p-700 hover:bg-p-050">
+            <Button size="lg" variant="inverse">
               Devenir partenaire
             </Button>
             <Badge tone="ok">Aucun volume minimum la première année</Badge>

@@ -70,7 +70,7 @@ export default function Accueil() {
                 <ButtonLink
                   href="/offres/espace-cloud"
                   size="lg"
-                  className="bg-white text-p-700 hover:bg-p-050"
+                  variant="inverse"
                   iconAfter={<ArrowRight size={15} />}
                 >
                   Découvrir les offres
@@ -78,8 +78,7 @@ export default function Accueil() {
                 <ButtonLink
                   href="/entreprises#contact"
                   size="lg"
-                  variant="ghost"
-                  className="border border-p-400 text-white hover:bg-white/10"
+                  variant="ghostInverse"
                 >
                   Parler à un architecte
                 </ButtonLink>

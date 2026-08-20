@@ -66,14 +66,13 @@ export default function Tarifs() {
         chapeau="Tous les montants sont hors taxes. La TVA au taux en vigueur de 18 % s’ajoute à la facturation. La facturation est mensuelle, à terme échu, avec prorata journalier sur toute création ou suppression en cours de mois."
         actions={
           <>
-            <ButtonLink href="/simulateur" size="lg" className="bg-white text-p-700 hover:bg-p-050">
+            <ButtonLink href="/simulateur" size="lg" variant="inverse">
               Estimer mon budget
             </ButtonLink>
             <ButtonLink
               href="/entreprises#contact"
               size="lg"
-              variant="ghost"
-              className="border border-p-400 text-white hover:bg-white/10"
+              variant="ghostInverse"
             >
               Demander un devis
             </ButtonLink>

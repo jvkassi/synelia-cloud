@@ -51,14 +51,13 @@ export default async function FicheProduit({
           </p>
           <p className="mt-4 max-w-2xl text-[14.5px] leading-relaxed text-p-300">{f.resume}</p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
-            <ButtonLink href="/signup" size="lg" className="bg-white text-p-700 hover:bg-p-050">
+            <ButtonLink href="/signup" size="lg" variant="inverse">
               Créer un compte
             </ButtonLink>
             <ButtonLink
               href="/entreprises#contact"
               size="lg"
-              variant="ghost"
-              className="border border-p-400 text-white hover:bg-white/10"
+              variant="ghostInverse"
             >
               Demander un devis
             </ButtonLink>

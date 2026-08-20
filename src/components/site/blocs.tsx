@@ -157,15 +157,14 @@ export function AppelFinal({
           <ButtonLink
             href={primaire.href}
             size="lg"
-            className="bg-white text-p-700 hover:bg-p-050"
+            variant="inverse"
           >
             {primaire.libelle}
           </ButtonLink>
           <ButtonLink
             href={secondaire.href}
             size="lg"
-            variant="ghost"
-            className="border border-p-400 text-white hover:bg-white/10"
+            variant="ghostInverse"
           >
             {secondaire.libelle}
           </ButtonLink>
