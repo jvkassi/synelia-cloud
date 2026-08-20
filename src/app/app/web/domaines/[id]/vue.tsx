@@ -1,9 +1,11 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { ArrowRightLeft, Globe, Lock, ServerCog, ShieldCheck } from 'lucide-react'
 import { dateCourte } from '@/lib/format'
-import { abonnementDeLEntree, type EntreeWebCloud } from '@/lib/mock'
+import { SITE_LABEL } from '@/lib/types'
+import { abonnementDeLEntree, entreeWebCloudById, sitesDeLHebergement } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { CopyField, GatedAction, Tabs } from '@/components/ui/display'
@@ -20,10 +22,14 @@ import { useApp } from '@/components/app/contexte'
  * onglets d'un hébergement en les grisant serait pire que de ne pas les
  * afficher — le client croirait avoir perdu quelque chose.
  */
-export function FicheSansHebergement({ entree }: { entree: EntreeWebCloud }) {
+export function VueDomaine({ id }: { id: string }) {
   const { autorise, refus } = useApp()
   const [onglet, setOnglet] = useState('apercu')
+
+  const entree = entreeWebCloudById(id)
+  if (!entree) return null
   const d = entree.domaine
+  const h = entree.hebergement
   const abonnement = abonnementDeLEntree(entree)
 
   const onglets = [
@@ -36,15 +42,24 @@ export function FicheSansHebergement({ entree }: { entree: EntreeWebCloud }) {
       <PageHeader
         fil={[
           { label: 'Espace client', href: '/app' },
-          { label: 'Domaines', href: '/app/web' },
+          { label: 'Domaines', href: '/app/web/domaines' },
           { label: entree.nom },
         ]}
         titre={<span className="break-words font-mono">{entree.nom}</span>}
-        sousTitre="Ce nom vous appartient, mais aucun serveur ne lui est encore attaché. Vous pouvez lui en attacher un, ou laisser sa zone pointer ailleurs."
+        sousTitre={
+          h
+            ? `Ce nom est servi par ${h.serveur.nom}, à ${SITE_LABEL[h.serveur.site]}. Les sites, les bases, la messagerie et les sauvegardes qui s’y rattachent ont chacun leur section.`
+            : 'Ce nom vous appartient, mais aucun serveur ne lui est encore attaché. Vous pouvez lui en attacher un, ou laisser sa zone pointer ailleurs.'
+        }
         meta={
           <>
-            <Badge tone="neutral">{d?.extension}</Badge>
-            <Badge tone="ok">Enregistré</Badge>
+            {d && <Badge tone="neutral">{d.extension}</Badge>}
+            {entree.provisoire ? (
+              <Badge tone="warn">Nom provisoire</Badge>
+            ) : (
+              <Badge tone="ok">Enregistré</Badge>
+            )}
+            {h && <Badge tone="violet">{h.palier}</Badge>}
             {entree.zone ? (
               <Badge tone="violet">Zone gérée chez nous</Badge>
             ) : (
@@ -55,9 +70,15 @@ export function FicheSansHebergement({ entree }: { entree: EntreeWebCloud }) {
         }
         actions={
           <>
-            <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-              <Button iconBefore={<ServerCog size={14} />}>Attacher un hébergement</Button>
-            </GatedAction>
+            {h ? (
+              <ButtonLink href={`/app/web/hebergement/${h.id}`} iconBefore={<ServerCog size={14} />}>
+                Gérer l’hébergement
+              </ButtonLink>
+            ) : (
+              <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
+                <Button iconBefore={<ServerCog size={14} />}>Attacher un hébergement</Button>
+              </GatedAction>
+            )}
             <GatedAction autorise={autorise('network.manage')} message={refus('network.manage')}>
               <Button variant="secondary" iconBefore={<ArrowRightLeft size={14} />}>
                 Transférer
@@ -126,6 +147,43 @@ export function FicheSansHebergement({ entree }: { entree: EntreeWebCloud }) {
               />
             </Card>
 
+            {h ? (
+            <Card>
+              <CardHeader
+                titre="Le serveur qui sert ce nom"
+                sousTitre="Un domaine est attaché à un serveur et à un seul. Chaque sujet a sa section dans la barre du haut."
+                actions={
+                  <ButtonLink href={`/app/web/hebergement/${h.id}`} variant="secondary" size="sm">
+                    Ouvrir la fiche
+                  </ButtonLink>
+                }
+              />
+              <KeyValueList
+                items={[
+                  { cle: 'Serveur', valeur: h.serveur.nom },
+                  { cle: 'Gabarit', valeur: `${h.serveur.vcpu} vCPU · ${h.serveur.ramGo} Go · ${h.serveur.diskGo} Go` },
+                  { cle: 'Adresse IPv4', valeur: h.serveur.ip },
+                  { cle: 'Site physique', valeur: SITE_LABEL[h.serveur.site] },
+                  { cle: 'Serveur web', valeur: h.serveur.serveurWeb },
+                  { cle: 'PHP par défaut', valeur: h.php.versionDefaut },
+                ]}
+              />
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-g-100 pt-3">
+                {[
+                  { l: `${sitesDeLHebergement(h.id).length} applications`, href: '/app/web/applications' },
+                  { l: 'Bases de données', href: '/app/web/bases' },
+                  { l: 'Messagerie', href: '/app/web/emails' },
+                  { l: 'Drive', href: '/app/web/drive' },
+                  { l: 'Certificats', href: '/app/web/ssl' },
+                  { l: 'Sauvegardes', href: '/app/web/backup' },
+                ].map((x) => (
+                  <ButtonLink key={x.l} href={x.href} variant="ghost" size="sm">
+                    {x.l}
+                  </ButtonLink>
+                ))}
+              </div>
+            </Card>
+            ) : (
             <Card>
               <CardHeader
                 titre="Lui attacher un hébergement"
@@ -141,10 +199,11 @@ export function FicheSansHebergement({ entree }: { entree: EntreeWebCloud }) {
                 <MicroLabel>Adresse à viser depuis un DNS externe</MicroLabel>
                 <CopyField value="102.176.20.13" mono className="mt-1.5" />
               </div>
-              <ButtonLink href="/app/web" variant="secondary" size="sm" className="mt-4">
+              <ButtonLink href="/app/web/hebergement" variant="secondary" size="sm" className="mt-4">
                 Comparer les paliers d’hébergement
               </ButtonLink>
             </Card>
+            )}
           </div>
 
           <div className="space-y-4">
@@ -166,14 +225,20 @@ export function FicheSansHebergement({ entree }: { entree: EntreeWebCloud }) {
                 sousTitre="Ce qui pourrait tourner sur ce nom."
               />
               <ul className="space-y-2.5 text-[12.5px]">
-                <Associe libelle="Hébergement" etat="Aucun" action="Attacher" />
-                <Associe libelle="Messagerie partagée" etat="Aucune" action="Activer" />
-                <Associe libelle="Drive partagé" etat="Aucun" action="Activer" />
+                <Associe
+                  libelle="Hébergement"
+                  etat={h ? `${h.palier} · ${h.serveur.nom}` : 'Aucun'}
+                  action={h ? 'Gérer' : 'Attacher'}
+                  href={h ? `/app/web/hebergement/${h.id}` : '/app/web/hebergement'}
+                />
+                <Associe libelle="Messagerie" etat="Voir la section" action="Ouvrir" href="/app/web/emails" />
+                <Associe libelle="Drive" etat="Voir la section" action="Ouvrir" href="/app/web/drive" />
                 <Associe
                   libelle="Zone DNS"
                   etat={entree.zone ? 'Gérée chez nous' : 'Externe'}
                   action={entree.zone ? 'Modifier' : 'Rapatrier'}
                 />
+                <Associe libelle="Sauvegardes" etat="Voir la section" action="Ouvrir" href="/app/web/backup" />
               </ul>
             </Card>
           </div>
@@ -225,10 +290,12 @@ function Associe({
   libelle,
   etat,
   action,
+  href,
 }: {
   libelle: string
   etat: string
   action: string
+  href?: string
 }) {
   return (
     <li className="flex items-center justify-between gap-2 border-b border-g-100 pb-2 last:border-0 last:pb-0">
@@ -236,12 +303,13 @@ function Associe({
         <span className="block truncate font-semibold text-ink">{libelle}</span>
         <span className="block text-[11.5px] text-g-500">{etat}</span>
       </span>
-      <button
-        type="button"
-        className="shrink-0 text-[12px] font-semibold text-p-700 hover:text-m-600"
-      >
-        {action} →
-      </button>
+      {href ? (
+        <Link href={href} className="shrink-0 text-[12px] font-semibold text-p-700 hover:text-m-600">
+          {action} →
+        </Link>
+      ) : (
+        <span className="shrink-0 text-[12px] font-semibold text-g-500">{action}</span>
+      )}
     </li>
   )
 }

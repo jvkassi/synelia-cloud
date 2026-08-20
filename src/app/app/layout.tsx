@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { AppProvider } from '@/components/app/contexte'
 import { TopBar } from '@/components/app/topbar'
 import { ToastHost } from '@/components/app/toasts'
+import { Conteneur } from '@/components/app/conteneur'
 
 export const metadata: Metadata = {
   title: { default: 'Espace client', template: '%s · Espace client Synelia Cloud' },
@@ -15,7 +16,7 @@ export default function EspaceClientLayout({ children }: { children: React.React
       <div className="min-h-screen bg-white">
         <TopBar portee="client" />
         <main className="bg-g-050">
-          <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-7">{children}</div>
+          <Conteneur>{children}</Conteneur>
         </main>
         <ToastHost />
       </div>

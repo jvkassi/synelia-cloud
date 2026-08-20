@@ -1,0 +1,34 @@
+'use client'
+
+import { HEBERGEMENTS, ORG_COURANTE, nomServi } from '@/lib/mock'
+import type { Tone } from '@/components/ui/badge'
+import { CadreSection } from '@/components/app/cadre-webcloud'
+
+/** Panneau de la section — liste les hébergements de l'organisation. */
+export function CadreHebergement({ children }: { children: React.ReactNode }) {
+  const entrees = HEBERGEMENTS.filter((h) => h.orgId === ORG_COURANTE.id).map((h) => ({
+    id: h.id,
+    nom: nomServi(h),
+    sousTitre: `${h.palier} · ${h.serveur.nom}`,
+    etat:
+      h.statut === 'en_ligne' ? 'Actif' : h.statut === 'maintenance' ? 'Maintenance' : 'Suspendu',
+    ton: (h.statut === 'en_ligne' ? 'ok' : 'warn') as Tone,
+    href: `/app/web/hebergement/${h.id}`,
+    motsCles: [h.serveur.nom, h.serveur.ip, `PHP ${h.php.versionDefaut}`],
+  }))
+
+  return (
+    <CadreSection
+      titre="Hébergements"
+      base="/app/web/hebergement"
+      entrees={entrees}
+      actionPrincipale={{ libelle: 'Commander', href: '/app/web/hebergement' }}
+      placeholderRecherche="Rechercher un hébergement…"
+      compteur={(visibles, total) =>
+        visibles === total ? `${total} hébergement${total > 1 ? 's' : ''}` : `${visibles} sur ${total}`
+      }
+    >
+      {children}
+    </CadreSection>
+  )
+}

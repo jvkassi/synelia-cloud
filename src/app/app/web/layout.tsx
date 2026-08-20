@@ -1,12 +1,18 @@
 import type { Metadata } from 'next'
-import { CadreWebCloud } from '@/components/app/cadre-webcloud'
 
+/**
+ * Racine de Web Cloud — sans panneau de sélection.
+ *
+ * « Accueil » est un tableau de bord : il ne porte pas sur une ressource, donc
+ * rien à sélectionner. Chaque autre section apporte son propre panneau via son
+ * layout, ce qui évite d'en afficher un vide ici.
+ */
 export const metadata: Metadata = {
-  title: 'Domaines',
+  title: { default: 'Web Cloud', template: '%s · Web Cloud Synelia' },
   description:
-    'Un domaine, un serveur : sites, bases, accès fichiers, PHP, services partagés, zone DNS, certificats et sauvegardes au même endroit.',
+    'Domaines, hébergement mutualisé, bases de données, messagerie, drive, applications, certificats et sauvegardes.',
 }
 
 export default function LayoutWebCloud({ children }: { children: React.ReactNode }) {
-  return <CadreWebCloud>{children}</CadreWebCloud>
+  return children
 }

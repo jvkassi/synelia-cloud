@@ -11,3 +11,6 @@ next-env.d.ts
 .DS_Store
 npm-debug.log*
 pnpm-debug.log*
+
+# Le gestionnaire de paquets est bun : bun.lock fait foi.
+package-lock.json

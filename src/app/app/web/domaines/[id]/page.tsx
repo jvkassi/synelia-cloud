@@ -10,7 +10,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params
   const e = entreeWebCloudById(decodeURIComponent(id))
-  return { title: e ? `${e.nom} · Web Cloud` : 'Domaine introuvable' }
+  return { title: e ? `${e.nom} · Domaine` : 'Domaine introuvable' }
 }
 
 export default async function PageDomaine({ params }: { params: Promise<{ id: string }> }) {

@@ -13,6 +13,7 @@ export * from './marketplace'
 export * from './commerce'
 export * from './web'
 export * from './hebergement'
+export * from './webcloud'
 export * from './ops'
 export * from './vitrine'
 

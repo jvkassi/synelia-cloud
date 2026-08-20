@@ -74,11 +74,18 @@ export const UNIVERS_CLIENT: UniversNav[] = [
     id: 'web',
     nom: 'Web Cloud',
     sections: [
-      // Un domaine et son serveur sont une seule chose dans notre modèle : les
-      // séparer en deux sections ferait réapparaître le même nom dans deux
-      // listes, ce que le panneau de sélection existe précisément pour éviter.
-      { nom: 'Domaines', href: '/app/web' },
-      { nom: 'Services partagés', href: '/app/services-partages' },
+      // « Accueil » est la seule section sans panneau de sélection : c'est un
+      // tableau de bord, il ne porte pas sur une ressource en particulier.
+      // Toutes les autres suivent le même patron maître-détail.
+      { nom: 'Accueil', href: '/app/web' },
+      { nom: 'Domaines', href: '/app/web/domaines' },
+      { nom: 'Hébergement Web', href: '/app/web/hebergement' },
+      { nom: 'Databases', href: '/app/web/bases' },
+      { nom: 'Emails', href: '/app/web/emails' },
+      { nom: 'Drive', href: '/app/web/drive' },
+      { nom: 'Applications', href: '/app/web/applications' },
+      { nom: 'SSL', href: '/app/web/ssl' },
+      { nom: 'Backup', href: '/app/web/backup' },
       { nom: 'Relais SMTP', href: '/app/smtp' },
     ],
   },

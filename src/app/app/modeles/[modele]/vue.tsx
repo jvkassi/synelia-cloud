@@ -601,7 +601,7 @@ export function VueModele({ slug }: { slug: string }) {
                   : 'Ce modèle n’a pas d’équivalent partagé : il demande une instance isolée pour fonctionner correctement.'}
               </p>
               <ButtonLink
-                href="/app/services-partages"
+                href="/app/web/emails"
                 variant="ghost"
                 size="sm"
                 className="mt-2"

@@ -18,13 +18,6 @@ export interface EntreeSelecteur {
   motsCles?: string[]
 }
 
-export interface FiltreSelecteur {
-  id: string
-  libelle: string
-  /** Prédicat appliqué à la liste. `undefined` pour « tout ». */
-  test?: (entree: EntreeSelecteur) => boolean
-}
-
 /**
  * Panneau de sélection de ressource — le patron maître-détail.
  *
@@ -42,7 +35,6 @@ export function SelecteurRessource({
   actionPrincipale,
   entrees,
   actifId,
-  filtres,
   placeholderRecherche = 'Rechercher…',
   compteur,
   lienBas,
@@ -52,7 +44,6 @@ export function SelecteurRessource({
   actionPrincipale?: { libelle: string; href: string }
   entrees: EntreeSelecteur[]
   actifId?: string
-  filtres?: FiltreSelecteur[]
   placeholderRecherche?: string
   /** Formate le pied du panneau. Par défaut : « n éléments ». */
   compteur?: (visibles: number, total: number) => string
@@ -60,18 +51,16 @@ export function SelecteurRessource({
   className?: string
 }) {
   const [q, setQ] = useState('')
-  const [filtre, setFiltre] = useState(filtres?.[0]?.id ?? 'tous')
 
   const visibles = useMemo(() => {
-    const test = filtres?.find((f) => f.id === filtre)?.test
     const terme = q.trim().toLowerCase()
-    return entrees.filter((e) => {
-      if (test && !test(e)) return false
-      if (!terme) return true
-      const champs = [e.nom, e.sousTitre ?? '', ...(e.motsCles ?? [])]
-      return champs.some((c) => c.toLowerCase().includes(terme))
-    })
-  }, [entrees, filtres, filtre, q])
+    if (!terme) return entrees
+    return entrees.filter((e) =>
+      [e.nom, e.sousTitre ?? '', ...(e.motsCles ?? [])].some((c) =>
+        c.toLowerCase().includes(terme),
+      ),
+    )
+  }, [entrees, q])
 
   return (
     <div className={cn('flex h-full flex-col', className)}>
@@ -84,32 +73,6 @@ export function SelecteurRessource({
             <Plus size={14} />
             {actionPrincipale.libelle}
           </Link>
-        </div>
-      )}
-
-      {filtres && filtres.length > 1 && (
-        <div
-          role="tablist"
-          aria-label={`Filtrer ${titre.toLowerCase()}`}
-          className="mx-3 mb-2.5 flex rounded-[6px] bg-g-100 p-0.5"
-        >
-          {filtres.map((f) => (
-            <button
-              key={f.id}
-              type="button"
-              role="tab"
-              aria-selected={f.id === filtre}
-              onClick={() => setFiltre(f.id)}
-              className={cn(
-                'flex-1 rounded-[5px] px-2 py-1 text-[11.5px] font-semibold transition-colors',
-                f.id === filtre
-                  ? 'bg-white text-p-700 shadow-[0_1px_2px_rgba(43,27,77,.06)]'
-                  : 'text-g-500 hover:text-g-700',
-              )}
-            >
-              {f.libelle}
-            </button>
-          ))}
         </div>
       )}
 

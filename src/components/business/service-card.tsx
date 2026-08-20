@@ -111,7 +111,7 @@ export function ServiceCard({
           </span>
         )}
         <ButtonLink
-          href={hrefAdmin ?? '/app/services-partages'}
+          href={hrefAdmin ?? '/app/web/emails'}
           variant="secondary"
           size="sm"
           iconBefore={<Settings2 size={13} />}
