@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { AppProvider } from '@/components/app/contexte'
+import { AtelierProvider } from '@/components/app/atelier'
 import { TopBar } from '@/components/app/topbar'
 import { ToastHost } from '@/components/app/toasts'
 
@@ -14,13 +15,15 @@ export const metadata: Metadata = {
 export default function EspaceFournisseurLayout({ children }: { children: React.ReactNode }) {
   return (
     <AppProvider roleInitial="provider_admin">
-      <div className="min-h-screen bg-white">
-        <TopBar portee="fournisseur" />
-        <main className="bg-g-050">
-          <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-7">{children}</div>
-        </main>
-        <ToastHost />
-      </div>
+      <AtelierProvider>
+        <div className="min-h-screen bg-white">
+          <TopBar portee="fournisseur" />
+          <main className="bg-g-050">
+            <div className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 sm:py-7">{children}</div>
+          </main>
+          <ToastHost />
+        </div>
+      </AtelierProvider>
     </AppProvider>
   )
 }

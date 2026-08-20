@@ -2,21 +2,22 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, ArrowUpRight, Clock, UserCheck } from 'lucide-react'
+import { AlertTriangle, ArrowUpRight, Clock, Plus, UserCheck } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
-import { dateHeure, dureeMin, pct, relatif } from '@/lib/format'
-import { EQUIPE_SYNELIA, ORGANISATIONS, TICKETS_PLATEFORME } from '@/lib/mock'
+import { MAINTENANT, dateHeure, dureeMin, pct, relatif } from '@/lib/format'
+
 import { ROLE_LABEL } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Avatar, GatedAction, Tabs } from '@/components/ui/display'
-import { Field, MonoTextarea, Select, Switch } from '@/components/ui/field'
+import { Field, Input, MonoTextarea, Select, Switch } from '@/components/ui/field'
 import { Drawer, Modal } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { Timeline } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
+import { useActe, useAtelier } from '@/components/app/atelier'
 import type { Ticket } from '@/lib/types'
 
 const ONGLETS = [
@@ -55,19 +56,218 @@ const TON_GRAVITE: Record<Ticket['gravite'], 'err' | 'warn' | 'info' | 'neutral'
   question: 'neutral',
 }
 
+/** Engagements par gravité, en minutes — première réponse puis résolution. */
+const ENGAGEMENTS: Record<Ticket['gravite'], { premiereReponseMin: number; resolutionMin: number }> =
+  {
+    critique: { premiereReponseMin: 30, resolutionMin: 240 },
+    majeure: { premiereReponseMin: 120, resolutionMin: 480 },
+    mineure: { premiereReponseMin: 480, resolutionMin: 2880 },
+    question: { premiereReponseMin: 480, resolutionMin: 2880 },
+  }
+
+const OUVERTURE_VIDE = {
+  orgId: '',
+  sujet: '',
+  gravite: 'majeure' as Ticket['gravite'],
+  service: '',
+  contenu: '',
+}
+
 export default function TicketsAdmin() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const { tickets, organisations, equipe } = useAtelier()
+  const acte = useActe()
+
   const [onglet, setOnglet] = useState('file')
   const [detail, setDetail] = useState<Ticket | null>(null)
   const [assignation, setAssignation] = useState<Ticket | null>(null)
+  const [ouverture, setOuverture] = useState(false)
+  const [brouillon, setBrouillon] = useState(OUVERTURE_VIDE)
+  const [reponse, setReponse] = useState('')
+  const [intervenant, setIntervenant] = useState('')
+  const [notifications, setNotifications] = useState({ intervenant: true, responsable: false })
 
+  const TICKETS_PLATEFORME = tickets.liste
+  const EQUIPE_SYNELIA = equipe.liste
   const ouverts = TICKETS_PLATEFORME.filter((t) => !['resolu', 'ferme'].includes(t.statut))
   const nonAssignes = ouverts.filter((t) => !t.assigneA)
   const critiques = ouverts.filter((t) => t.gravite === 'critique')
   const enRisque = ouverts.filter((t) => (t.slaRestantMin ?? 9999) < 120)
   const enAttente = TICKETS_PLATEFORME.filter((t) => t.statut === 'attente_client')
 
-  const orgNom = (id: string) => ORGANISATIONS.find((o) => o.id === id)?.nom ?? id
+  const orgNom = (id: string) => organisations.parId(id)?.nom ?? id
+
+  // Le ticket ouvert dans le tiroir doit refléter les échanges qu'on vient
+  // d'y ajouter : on le relit dans le registre.
+  const ouvert = detail ? (tickets.parId(detail.id) ?? null) : null
+
+  const numeroLibre = () => {
+    const nums = TICKETS_PLATEFORME.map((t) => Number(t.numero.replace(/\D+/g, '')) || 0)
+    return `TCK-${Math.max(4000, ...nums) + 1}`
+  }
+
+  const brouillonValide =
+    brouillon.orgId !== '' && brouillon.sujet.trim().length >= 6 && brouillon.contenu.trim() !== ''
+
+  const ouvrirTicket = () => {
+    const numero = numeroLibre()
+    const engagement = ENGAGEMENTS[brouillon.gravite]
+    acte({
+      faire: () =>
+        tickets.ajouter({
+          id: `tck-${numero.toLowerCase()}`,
+          orgId: brouillon.orgId,
+          numero,
+          sujet: brouillon.sujet.trim(),
+          gravite: brouillon.gravite,
+          statut: 'ouvert',
+          slaCible: engagement,
+          slaRestantMin: engagement.premiereReponseMin,
+          ressourcesLiees: [],
+          service: brouillon.service.trim() || undefined,
+          createdAt: MAINTENANT,
+          messages: [
+            {
+              auteur: 'Jean-Vincent Kassi',
+              role: 'synelia',
+              date: MAINTENANT,
+              contenu: brouillon.contenu.trim(),
+            },
+          ],
+        }),
+      titre: `${numero} ouvert`,
+      detail: `${orgNom(brouillon.orgId)} · engagement de première réponse ${dureeMin(engagement.premiereReponseMin)}. Le ticket entre dans la file non assignée.`,
+      action: 'ticket.create',
+      cible: numero,
+      orgId: brouillon.orgId,
+      orgNom: orgNom(brouillon.orgId),
+    })
+    setBrouillon(OUVERTURE_VIDE)
+    setOuverture(false)
+  }
+
+  const assigner = (t: Ticket) => {
+    acte({
+      faire: () =>
+        tickets.modifier(t.id, {
+          assigneA: intervenant,
+          statut: t.statut === 'ouvert' ? 'en_cours' : t.statut,
+        }),
+      titre: `${t.numero} assigné à ${intervenant}`,
+      detail: notifications.responsable
+        ? 'L’intervenant et son responsable d’équipe sont notifiés. Le ticket apparaît dans sa file.'
+        : 'L’intervenant est notifié et le ticket apparaît dans sa file.',
+      action: 'ticket.assign',
+      cible: t.numero,
+      orgId: t.orgId,
+      orgNom: orgNom(t.orgId),
+    })
+    setAssignation(null)
+    setIntervenant('')
+  }
+
+  const repondre = (t: Ticket) => {
+    const contenu = reponse.trim()
+    acte({
+      faire: () =>
+        tickets.modifier(t.id, (courant) => ({
+          messages: [
+            ...courant.messages,
+            {
+              auteur: 'Jean-Vincent Kassi',
+              role: 'synelia' as const,
+              date: MAINTENANT,
+              contenu,
+            },
+          ],
+          // Répondre arrête l'horloge de première réponse : c'est tout
+          // l'intérêt de la mesurer.
+          statut: courant.statut === 'ouvert' ? ('en_cours' as const) : courant.statut,
+          slaRestantMin: undefined,
+        })),
+      titre: `Réponse envoyée sur ${t.numero}`,
+      detail: 'Le client est notifié. L’horloge de première réponse est arrêtée.',
+      action: 'ticket.reply',
+      cible: t.numero,
+      orgId: t.orgId,
+      orgNom: orgNom(t.orgId),
+    })
+    setReponse('')
+  }
+
+  const changerStatut = (t: Ticket, statut: Ticket['statut']) => {
+    const messages: Record<string, { titre: string; detail: string }> = {
+      attente_client: {
+        titre: `${t.numero} en attente du client`,
+        detail:
+          'L’horloge de résolution est suspendue le temps de sa réponse. Elle reprend dès qu’il écrit.',
+      },
+      resolu: {
+        titre: `${t.numero} résolu`,
+        detail:
+          'Le client peut réouvrir le ticket pendant sept jours d’un simple message, sans en créer un nouveau.',
+      },
+      ferme: {
+        titre: `${t.numero} fermé`,
+        detail: 'Il reste consultable dans l’historique de l’organisation.',
+      },
+    }
+    const m = messages[statut] ?? { titre: `${t.numero} mis à jour`, detail: '' }
+    acte({
+      faire: () =>
+        tickets.modifier(t.id, {
+          statut,
+          slaRestantMin: statut === 'attente_client' ? undefined : t.slaRestantMin,
+        }),
+      ton: statut === 'resolu' ? 'ok' : 'info',
+      titre: m.titre,
+      detail: m.detail,
+      action: `ticket.${statut}`,
+      cible: t.numero,
+      orgId: t.orgId,
+      orgNom: orgNom(t.orgId),
+    })
+  }
+
+  const escalader = (t: Ticket) => {
+    const suivante: Record<Ticket['gravite'], Ticket['gravite']> = {
+      question: 'mineure',
+      mineure: 'majeure',
+      majeure: 'critique',
+      critique: 'critique',
+    }
+    const gravite = suivante[t.gravite]
+    if (gravite === t.gravite) {
+      acte({
+        ton: 'warn',
+        titre: `${t.numero} est déjà critique`,
+        detail:
+          'Il n’existe pas de gravité au-dessus. Ce qui reste, c’est de l’escalader humainement : appeler l’astreinte de niveau 3.',
+        action: 'ticket.escalate',
+        cible: t.numero,
+        resultat: 'refuse',
+        orgId: t.orgId,
+        orgNom: orgNom(t.orgId),
+      })
+      return
+    }
+    const engagement = ENGAGEMENTS[gravite]
+    acte({
+      faire: () =>
+        tickets.modifier(t.id, {
+          gravite,
+          slaCible: engagement,
+          slaRestantMin: Math.min(t.slaRestantMin ?? engagement.premiereReponseMin, engagement.premiereReponseMin),
+        }),
+      ton: 'warn',
+      titre: `${t.numero} escaladé en ${LIBELLE_GRAVITE[gravite].toLowerCase()}`,
+      detail: `Engagement de résolution ramené à ${dureeMin(engagement.resolutionMin)}. Le responsable d’équipe est notifié.`,
+      action: 'ticket.escalate',
+      cible: t.numero,
+      orgId: t.orgId,
+      orgNom: orgNom(t.orgId),
+    })
+  }
 
   return (
     <div className="space-y-5">
@@ -92,9 +292,20 @@ export default function TicketsAdmin() {
           </>
         }
         actions={
-          <ButtonLink variant="secondary" external href="https://centreon.synelia.cloud">
-            Console de supervision
-          </ButtonLink>
+          <>
+            <Button
+              iconBefore={<Plus size={14} />}
+              onClick={() => {
+                setBrouillon(OUVERTURE_VIDE)
+                setOuverture(true)
+              }}
+            >
+              Ouvrir un ticket
+            </Button>
+            <ButtonLink variant="secondary" external href="https://centreon.synelia.cloud">
+              Console de supervision
+            </ButtonLink>
+          </>
         }
       />
 
@@ -339,7 +550,10 @@ export default function TicketsAdmin() {
                             size="sm"
                             variant={t.assigneA ? 'ghost' : 'secondary'}
                             iconBefore={<UserCheck size={12} />}
-                            onClick={() => setAssignation(t)}
+                            onClick={() => {
+                              setIntervenant(t.assigneA ?? '')
+                              setAssignation(t)
+                            }}
                           >
                             {t.assigneA ? 'Réassigner' : 'Assigner'}
                           </Button>
@@ -697,57 +911,60 @@ export default function TicketsAdmin() {
       )}
 
       <Drawer
-        open={detail !== null}
-        onClose={() => setDetail(null)}
-        title={detail ? `${detail.numero} — ${detail.sujet}` : ''}
+        open={ouvert !== null}
+        onClose={() => {
+          setDetail(null)
+          setReponse('')
+        }}
+        title={ouvert ? `${ouvert.numero} — ${ouvert.sujet}` : ''}
         size="lg"
       >
-        {detail && (
+        {ouvert && (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge tone={TON_GRAVITE[detail.gravite]} dot>
-                {LIBELLE_GRAVITE[detail.gravite]}
+              <Badge tone={TON_GRAVITE[ouvert.gravite]} dot>
+                {LIBELLE_GRAVITE[ouvert.gravite]}
               </Badge>
-              <Badge tone={TON_STATUT[detail.statut]} dot size="sm">
-                {LIBELLE_STATUT[detail.statut]}
+              <Badge tone={TON_STATUT[ouvert.statut]} dot size="sm">
+                {LIBELLE_STATUT[ouvert.statut]}
               </Badge>
               <Link
-                href={`/admin/organisations/${detail.orgId}`}
+                href={`/admin/organisations/${ouvert.orgId}`}
                 className="text-[12px] font-semibold text-p-700 hover:text-m-600"
               >
-                {orgNom(detail.orgId)}
+                {orgNom(ouvert.orgId)}
               </Link>
             </div>
 
             <KeyValueList
               colonnes={2}
               items={[
-                { cle: 'Ouvert le', valeur: dateHeure(detail.createdAt) },
-                { cle: 'Assigné à', valeur: detail.assigneA ?? 'Non assigné' },
+                { cle: 'Ouvert le', valeur: dateHeure(ouvert.createdAt) },
+                { cle: 'Assigné à', valeur: ouvert.assigneA ?? 'Non assigné' },
                 {
                   cle: 'Engagement de réponse',
-                  valeur: dureeMin(detail.slaCible.premiereReponseMin),
+                  valeur: dureeMin(ouvert.slaCible.premiereReponseMin),
                 },
                 {
                   cle: 'Engagement de résolution',
-                  valeur: dureeMin(detail.slaCible.resolutionMin),
+                  valeur: dureeMin(ouvert.slaCible.resolutionMin),
                 },
                 {
                   cle: 'Temps restant',
                   valeur:
-                    detail.slaRestantMin !== undefined
-                      ? dureeMin(detail.slaRestantMin)
+                    ouvert.slaRestantMin !== undefined
+                      ? dureeMin(ouvert.slaRestantMin)
                       : 'Engagement tenu',
                 },
-                { cle: 'Périmètre', valeur: detail.service ?? '—' },
+                { cle: 'Périmètre', valeur: ouvert.service ?? '—' },
               ]}
             />
 
-            {detail.ressourcesLiees.length > 0 && (
+            {ouvert.ressourcesLiees.length > 0 && (
               <div>
                 <MicroLabel className="mb-1.5">Ressources liées</MicroLabel>
                 <div className="flex flex-wrap gap-1">
-                  {detail.ressourcesLiees.map((r) => (
+                  {ouvert.ressourcesLiees.map((r) => (
                     <Badge key={r} tone="neutral" size="sm">
                       {r}
                     </Badge>
@@ -764,7 +981,7 @@ export default function TicketsAdmin() {
             <div>
               <MicroLabel className="mb-2">Échanges</MicroLabel>
               <div className="space-y-2.5">
-                {detail.messages.map((m, i) => (
+                {ouvert.messages.map((m, i) => (
                   <div
                     key={i}
                     className={cn(
@@ -784,28 +1001,59 @@ export default function TicketsAdmin() {
               </div>
             </div>
 
-            {!['resolu', 'ferme'].includes(detail.statut) && (
+            {!['resolu', 'ferme'].includes(ouvert.statut) && (
               <div>
                 <MicroLabel className="mb-2">Répondre</MicroLabel>
-                <MonoTextarea rows={4} placeholder="Votre réponse au client…" />
+                <MonoTextarea
+                  rows={4}
+                  value={reponse}
+                  onChange={(e) => setReponse(e.target.value)}
+                  placeholder="Votre réponse au client…"
+                />
                 <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                  <Button
-                    onClick={() =>
-                      pousser({
-                        ton: 'ok',
-                        titre: 'Réponse envoyée',
-                        detail: 'Le client est notifié. L’horloge de première réponse est arrêtée.',
-                      })
-                    }
-                  >
+                  <Button disabled={reponse.trim() === ''} onClick={() => repondre(ouvert)}>
                     Envoyer
                   </Button>
-                  <Button variant="secondary">Marquer en attente client</Button>
-                  <Button variant="ghost">Résoudre</Button>
-                  <Button variant="ghost" iconBefore={<ArrowUpRight size={12} />}>
+                  <Button
+                    variant="secondary"
+                    disabled={ouvert.statut === 'attente_client'}
+                    onClick={() => changerStatut(ouvert, 'attente_client')}
+                  >
+                    Marquer en attente client
+                  </Button>
+                  <Button variant="ghost" onClick={() => changerStatut(ouvert, 'resolu')}>
+                    Résoudre
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    iconBefore={<ArrowUpRight size={12} />}
+                    onClick={() => escalader(ouvert)}
+                  >
                     Escalader
                   </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setIntervenant(ouvert.assigneA ?? '')
+                      setAssignation(ouvert)
+                    }}
+                  >
+                    {ouvert.assigneA ? 'Réassigner' : 'Assigner'}
+                  </Button>
                 </div>
+              </div>
+            )}
+
+            {['resolu', 'ferme'].includes(ouvert.statut) && (
+              <div className="flex flex-wrap gap-1.5 border-t border-g-100 pt-4">
+                {ouvert.statut === 'resolu' && (
+                  <Button variant="secondary" onClick={() => changerStatut(ouvert, 'ferme')}>
+                    Fermer le ticket
+                  </Button>
+                )}
+                <Button variant="ghost" onClick={() => changerStatut(ouvert, 'en_cours')}>
+                  Réouvrir
+                </Button>
               </div>
             )}
           </div>
@@ -823,14 +1071,8 @@ export default function TicketsAdmin() {
               Annuler
             </Button>
             <Button
-              onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: 'Ticket assigné',
-                  detail: 'L’intervenant est notifié et le ticket apparaît dans sa file.',
-                })
-                setAssignation(null)
-              }}
+              disabled={intervenant === ''}
+              onClick={() => assignation && assigner(assignation)}
             >
               Assigner
             </Button>
@@ -848,8 +1090,11 @@ export default function TicketsAdmin() {
                   : 'sans engagement en cours'}
               </p>
             </div>
-            <Field label="Intervenant" hint="la charge actuelle est indiquée pour chacun">
-              <Select defaultValue="">
+            <Field label="Intervenant" required hint="la charge actuelle est indiquée pour chacun">
+              <Select
+                value={intervenant}
+                onChange={(e) => setIntervenant(e.target.value)}
+              >
                 <option value="">Sélectionner…</option>
                 {EQUIPE_SYNELIA.map((m) => {
                   const siens = ouverts.filter((t) => t.assigneA === m.nom).length
@@ -863,12 +1108,15 @@ export default function TicketsAdmin() {
             </Field>
             <div className="space-y-3">
               <Switch
-                checked
+                checked={notifications.intervenant}
+                onChange={(v) => setNotifications((n) => ({ ...n, intervenant: v }))}
                 label="Notifier l’intervenant"
                 description="Courriel immédiat, plus un SMS si le ticket est critique."
               />
               <Switch
-                checked={assignation.gravite === 'critique'}
+                checked={assignation.gravite === 'critique' || notifications.responsable}
+                disabled={assignation.gravite === 'critique'}
+                onChange={(v) => setNotifications((n) => ({ ...n, responsable: v }))}
                 label="Notifier le responsable d’équipe"
                 description="Systématique sur un ticket critique : il doit savoir qui porte quoi à tout moment."
               />
@@ -885,6 +1133,96 @@ export default function TicketsAdmin() {
             )}
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={ouverture}
+        onClose={() => setOuverture(false)}
+        title="Ouvrir un ticket pour une organisation"
+        description="À utiliser quand un client nous saisit par un autre canal — téléphone, courriel, rendez-vous. Le ticket doit exister pour que l’engagement se mesure."
+        size="md"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setOuverture(false)}>
+              Annuler
+            </Button>
+            <Button disabled={!brouillonValide} onClick={ouvrirTicket}>
+              Ouvrir le ticket
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Field label="Organisation" required>
+            <Select
+              value={brouillon.orgId}
+              onChange={(e) => setBrouillon((b) => ({ ...b, orgId: e.target.value }))}
+            >
+              <option value="">Sélectionner…</option>
+              {organisations.liste
+                .filter((o) => o.statut !== 'fermee')
+                .map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.nom}
+                  </option>
+                ))}
+            </Select>
+          </Field>
+          <Field
+            label="Sujet"
+            required
+            hint="ce que le client constate, pas ce qu’on suppose"
+            error={
+              brouillon.sujet !== '' && brouillon.sujet.trim().length < 6
+                ? 'Six caractères au minimum.'
+                : undefined
+            }
+          >
+            <Input
+              value={brouillon.sujet}
+              onChange={(e) => setBrouillon((b) => ({ ...b, sujet: e.target.value }))}
+              placeholder="Latence élevée sur l’application métier depuis 14 h"
+              autoFocus
+            />
+          </Field>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="Gravité" hint="elle détermine l’engagement">
+              <Select
+                value={brouillon.gravite}
+                onChange={(e) =>
+                  setBrouillon((b) => ({ ...b, gravite: e.target.value as Ticket['gravite'] }))
+                }
+              >
+                {(['critique', 'majeure', 'mineure', 'question'] as const).map((g) => (
+                  <option key={g} value={g}>
+                    {LIBELLE_GRAVITE[g]} — réponse sous{' '}
+                    {dureeMin(ENGAGEMENTS[g].premiereReponseMin)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Périmètre" hint="service ou ressource concerné">
+              <Input
+                value={brouillon.service}
+                onChange={(e) => setBrouillon((b) => ({ ...b, service: e.target.value }))}
+                placeholder="Espace Cloud, Drive Pro, hébergement web…"
+              />
+            </Field>
+          </div>
+          <Field label="Première note" required hint="ce que le client a dit, dans ses mots">
+            <MonoTextarea
+              rows={4}
+              value={brouillon.contenu}
+              onChange={(e) => setBrouillon((b) => ({ ...b, contenu: e.target.value }))}
+              placeholder="Appel de 14 h 20 : les utilisateurs constatent des temps de réponse de plusieurs secondes sur l’application métier depuis le début d’après-midi."
+            />
+          </Field>
+          <Callout ton="info" titre="Un ticket ouvert par nous compte comme les autres">
+            L’engagement court à partir de maintenant, et le client voit le ticket dans son propre
+            espace. Ouvrir le ticket après avoir traité le problème n’a aucun intérêt : c’est
+            précisément ce qui rend les statistiques d’engagement mensongères.
+          </Callout>
+        </div>
       </Modal>
     </div>
   )
