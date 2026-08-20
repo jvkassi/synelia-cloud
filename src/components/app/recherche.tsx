@@ -91,7 +91,7 @@ function entreesClient(): Entree[] {
       id: d.id,
       label: d.nom,
       categorie: 'Domaines',
-      href: '/app/domaines',
+      href: '/app/web',
       meta: `expire le ${d.expiration}`,
     })),
     ...FACTURES.map((f) => ({

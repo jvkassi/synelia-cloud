@@ -620,7 +620,7 @@ export default function Sso() {
                         Mot de passe distinct
                       </Badge>
                     )}
-                    <ButtonLink size="sm" variant="ghost" href="/app/web/services">
+                    <ButtonLink size="sm" variant="ghost" href="/app/services-partages">
                       Administrer
                     </ButtonLink>
                   </span>

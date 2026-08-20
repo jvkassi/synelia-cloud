@@ -11,11 +11,16 @@
 import type {
   BaseHebergement,
   CompteFichiers,
+  DnsZone,
+  Domaine,
   ServicePartage,
   SiteWeb,
   TachePlanifieeWeb,
   WebHosting,
 } from '../types'
+import { MAINTENANT } from '../format'
+import { ORG_COURANTE } from './orgs'
+import { DOMAINES, ZONES_DNS } from './web'
 
 const EXTENSIONS_PHP = [
   { nom: 'mysqli', active: true, requisePar: 'WordPress, PrestaShop' },
@@ -163,9 +168,67 @@ export const HEBERGEMENTS: WebHosting[] = [
     statut: 'en_ligne',
     cree: '2026-08-08',
   },
+  {
+    id: 'heb-dba-labo',
+    orgId: 'org-dba',
+    // Deuxième hébergement de l'organisation courante, encore sans nom acheté :
+    // le sélecteur doit savoir présenter une entrée qui n'a pas de domaine.
+    domaine: null,
+    domaineProvisoire: 'dba-labo.heberge.synelia.cloud',
+    palier: 'Démarrage',
+    serveur: {
+      nom: 'web-dba-04',
+      vcpu: 2,
+      ramGo: 4,
+      diskGo: 40,
+      ip: '102.176.21.34',
+      ipv6: '2c0f:f0e0:21::22',
+      site: 'GBM',
+      os: 'Debian 12',
+      serveurWeb: 'Apache 2.4.62',
+      statut: 'en_ligne',
+      chargeCpuPct: 4,
+      ramUtiliseePct: 19,
+      uptimeJours: 6,
+    },
+    php: {
+      versionDefaut: '8.4',
+      versionsDisponibles: ['8.1', '8.2', '8.3', '8.4'],
+      extensions: EXTENSIONS_PHP,
+      limites: { memoryLimitMo: 256, uploadMaxMo: 64, maxExecutionS: 60, opcache: true },
+    },
+    acces: { ftp: false, sftp: true, ftps: false, ssh: true, portSsh: 2222 },
+    espaceUtiliseGo: 0.8,
+    espaceTotalGo: 40,
+    sauvegarde: {
+      frequence: 'quotidienne',
+      heure: '04:30',
+      retentionJours: 14,
+      destination: 'Bucket immuable — Grand-Bassam',
+      immuable: true,
+      derniere: '2026-08-19T04:31:00Z',
+      taille: '310 Mo',
+      statut: 'ok',
+    },
+    statut: 'en_ligne',
+    cree: '2026-08-13',
+  },
 ]
 
 export const SITES_WEB: SiteWeb[] = [
+  {
+    id: 'site-labo',
+    hebergementId: 'heb-dba-labo',
+    hote: 'dba-labo.heberge.synelia.cloud',
+    racine: '/var/www/labo',
+    type: 'php',
+    phpVersion: '8.4',
+    ssl: { etat: 'actif', emetteur: "Let's Encrypt", expire: '2026-11-11' },
+    espaceMo: 760,
+    visitesMois: 210,
+    securite: { waf: true, bruteForce: true, scanMalware: false },
+    statut: 'en_ligne',
+  },
   {
     id: 'site-www',
     hebergementId: 'heb-dba',
@@ -588,3 +651,143 @@ export const baseHebergementById = (id: string) => BASES_HEBERGEMENT.find((b) =>
 
 /** Nom servi par l'hébergement : le domaine du client, ou le nom provisoire. */
 export const nomServi = (h: WebHosting) => h.domaine ?? h.domaineProvisoire
+
+// ─── Entrée Web Cloud : l'entité maîtresse du panneau ─────────────────
+
+/**
+ * Une ligne du sélecteur Web Cloud.
+ *
+ * Chez la plupart des fournisseurs, un même nom apparaît dans trois listes —
+ * domaines, hébergement, messagerie — parce que les trois sont vendus
+ * séparément. Nous attachons un domaine à un serveur et à un seul : il n'y a
+ * donc qu'une entité, et une seule fiche qui dit tout ce qui la concerne.
+ *
+ * Deux origines possibles pour une entrée : un nom de domaine détenu par
+ * l'organisation, ou un hébergement qui tourne avant l'achat du nom — auquel
+ * cas c'est son nom technique provisoire qui sert d'identifiant.
+ */
+export interface EntreeWebCloud {
+  /** Nom servi, qui sert aussi de segment d'URL. */
+  id: string
+  nom: string
+  /** Nom technique, en attendant que le client achète le sien. */
+  provisoire: boolean
+  hebergement?: WebHosting
+  domaine?: Domaine
+  zone?: DnsZone
+  /** Deuxième ligne du sélecteur : ce qui distingue l'entrée d'un coup d'œil. */
+  sousTitre: string
+  etat: string
+  ton: 'ok' | 'warn' | 'err' | 'neutral'
+}
+
+/** Jours restants avant une date, à la date figée de la démonstration. */
+export function joursAvant(iso: string, reference: string = MAINTENANT): number {
+  const jour = 86_400_000
+  return Math.round((new Date(iso).getTime() - new Date(reference).getTime()) / jour)
+}
+
+function etatEntree(
+  hebergement: WebHosting | undefined,
+  domaine: Domaine | undefined,
+): { etat: string; ton: EntreeWebCloud['ton'] } {
+  if (hebergement && hebergement.statut !== 'en_ligne') {
+    return { etat: hebergement.statut === 'maintenance' ? 'Maintenance' : 'Suspendu', ton: 'warn' }
+  }
+  // Une échéance proche sans renouvellement automatique est le seul risque
+  // qu'un client ne voit jamais venir : elle prime sur l'état du serveur.
+  if (domaine) {
+    const jours = joursAvant(domaine.expiration)
+    if (jours <= 0) return { etat: 'Expiré', ton: 'err' }
+    if (jours <= 30 && !domaine.renouvellementAuto) return { etat: `${jours} j`, ton: 'err' }
+    if (jours <= 90 && !domaine.renouvellementAuto) return { etat: `${jours} j`, ton: 'warn' }
+  }
+  return { etat: 'Actif', ton: 'ok' }
+}
+
+/** Entrées Web Cloud d'une organisation, domaines et hébergements confondus. */
+export function entreesWebCloud(orgId: string = ORG_COURANTE.id): EntreeWebCloud[] {
+  const domaines = DOMAINES.filter((d) => d.orgId === orgId)
+  const hebergements = HEBERGEMENTS.filter((h) => h.orgId === orgId)
+
+  const depuisDomaines = domaines.map<EntreeWebCloud>((d) => {
+    const hebergement = hebergements.find((h) => h.domaine === d.nom)
+    const zone = d.zoneId ? ZONES_DNS.find((z) => z.id === d.zoneId) : undefined
+    const sousTitre = hebergement
+      ? `${hebergement.palier} · ${hebergement.serveur.nom}`
+      : zone
+        ? 'Sans hébergement · zone chez nous'
+        : 'Sans hébergement · DNS externe'
+    return { id: d.nom, nom: d.nom, provisoire: false, hebergement, domaine: d, zone, sousTitre, ...etatEntree(hebergement, d) }
+  })
+
+  // Les hébergements sans domaine ferment la liste : ce sont des chantiers.
+  const orphelins = hebergements
+    .filter((h) => h.domaine === null)
+    .map<EntreeWebCloud>((h) => ({
+      id: h.domaineProvisoire,
+      nom: h.domaineProvisoire,
+      provisoire: true,
+      hebergement: h,
+      sousTitre: `${h.palier} · ${h.serveur.nom} · nom provisoire`,
+      ...etatEntree(h, undefined),
+    }))
+
+  return [...depuisDomaines, ...orphelins]
+}
+
+export const entreeWebCloudById = (id: string, orgId?: string) =>
+  entreesWebCloud(orgId).find((e) => e.id === id)
+
+/**
+ * L'abonnement à afficher pour une entrée Web Cloud.
+ *
+ * Deux horloges cohabitent : celle du nom de domaine, annuelle, et celle de
+ * l'hébergement, mensuelle. On montre celle du nom quand il y en a un — c'est
+ * celle qu'on oublie, et celle dont l'oubli coupe le service — et celle de
+ * l'hébergement pour une entrée encore sans nom.
+ */
+export function abonnementDeLEntree(entree: EntreeWebCloud) {
+  const jour = 86_400_000
+
+  if (entree.domaine) {
+    const d = entree.domaine
+    const echeance = new Date(d.expiration).getTime()
+    const restants = joursAvant(d.expiration)
+    // La période en cours est celle qui contient aujourd'hui. Un domaine
+    // enregistré pour plusieurs années a une échéance lointaine : retirer une
+    // seule année placerait le début de période dans le futur, et la barre
+    // afficherait 0 % alors que la période est déjà bien entamée.
+    const annees = Math.max(1, Math.ceil(restants / 365))
+    return {
+      offre: `Nom de domaine ${d.extension}`,
+      prixMensuel: undefined as number | undefined,
+      debut: new Date(echeance - annees * 365 * jour).toISOString().slice(0, 10),
+      echeance: d.expiration,
+      joursRestants: restants,
+      renouvellementAuto: d.renouvellementAuto,
+      frequence: annees > 1 ? `Tous les ans · ${annees} ans souscrits` : 'Tous les ans',
+    }
+  }
+
+  if (entree.hebergement) {
+    const h = entree.hebergement
+    return {
+      offre: `Hébergement ${h.palier}`,
+      prixMensuel: PRIX_PALIER[h.palier] as number | undefined,
+      debut: '2026-08-01',
+      echeance: '2026-08-31',
+      joursRestants: joursAvant('2026-08-31'),
+      renouvellementAuto: true,
+      frequence: 'Mensuelle',
+    }
+  }
+  return null
+}
+
+/** Tarifs mensuels des paliers d'hébergement, en francs CFA. */
+export const PRIX_PALIER: Record<string, number> = {
+  Démarrage: 4500,
+  Pro: 12000,
+  Agence: 38000,
+}

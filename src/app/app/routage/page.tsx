@@ -408,7 +408,7 @@ export default function Routage() {
                     Le routage applicatif ne gère pas vos zones. Pour héberger un domaine et ses
                     enregistrements chez nous, voyez{' '}
                     <Link
-                      href="/app/domaines"
+                      href="/app/web"
                       className="font-semibold text-p-700 hover:text-m-600"
                     >
                       Domaines &amp; DNS

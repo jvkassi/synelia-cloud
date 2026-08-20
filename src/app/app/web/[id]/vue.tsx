@@ -28,9 +28,10 @@ import {
   CATALOGUE_PARTAGE,
   LOGS_EXECUTION,
   TYPE_SITE_LABEL,
+  abonnementDeLEntree,
   basesDeLHebergement,
   comptesDeLHebergement,
-  hebergementById,
+  entreeWebCloudById,
   nomServi,
   partagesDeLHebergement,
   sitesDeLHebergement,
@@ -47,6 +48,9 @@ import { StatTile, QuotaBar, HealthBadge } from '@/components/composition/metric
 import { EmptyState } from '@/components/composition/states'
 import { GrilleSparkCharts, LogPeek } from '@/components/business/observabilite'
 import { ConfigurationServicePanel } from '@/components/business/configuration-service'
+import { CarteAbonnement } from '@/components/business/abonnement'
+import { EditeurZone } from '@/components/business/editeur-zone'
+import { FicheSansHebergement } from './sans-hebergement'
 import { useApp } from '@/components/app/contexte'
 
 const ONGLETS = [
@@ -70,29 +74,36 @@ const TEINTE_SITE: Record<string, string> = {
   laravel: '#FF2D20',
 }
 
-export function VueHebergement({ id }: { id: string }) {
+export function VueDomaine({ id }: { id: string }) {
   const { autorise, refus, pousser } = useApp()
   const [onglet, setOnglet] = useState('apercu')
   const [siteOuvert, setSiteOuvert] = useState<SiteWeb | null>(null)
   const [baseOuverte, setBaseOuverte] = useState<BaseHebergement | null>(null)
   const [partageOuvert, setPartageOuvert] = useState<string | null>(null)
 
-  const h = hebergementById(id)
-  if (!h) return null
+  const entree = entreeWebCloudById(id)
+  if (!entree) return null
 
-  const sites = sitesDeLHebergement(id)
-  const bases = basesDeLHebergement(id)
-  const comptes = comptesDeLHebergement(id)
-  const taches = tachesDeLHebergement(id)
-  const partages = partagesDeLHebergement(id)
+  // Un domaine peut exister sans serveur : il est alors garé, ou sa zone pointe
+  // ailleurs. Sa fiche se réduit au registre, à la zone et à ce qu'on peut y
+  // attacher — inutile de montrer dix onglets vides.
+  if (!entree.hebergement) return <FicheSansHebergement entree={entree} />
+
+  const h = entree.hebergement
+  const sites = sitesDeLHebergement(h.id)
+  const bases = basesDeLHebergement(h.id)
+  const comptes = comptesDeLHebergement(h.id)
+  const taches = tachesDeLHebergement(h.id)
+  const partages = partagesDeLHebergement(h.id)
   const nom = nomServi(h)
+  const abonnement = abonnementDeLEntree(entree)
 
   return (
     <div className="space-y-5">
       <PageHeader
         fil={[
           { label: 'Espace client', href: '/app' },
-          { label: 'Hébergements web', href: '/app/web' },
+          { label: 'Domaines', href: '/app/web' },
           { label: nom },
         ]}
         titre={<span className="break-words font-mono">{nom}</span>}
@@ -131,7 +142,7 @@ export function VueHebergement({ id }: { id: string }) {
           ton="warn"
           titre="L’hébergement tourne sur un nom provisoire"
           action={
-            <ButtonLink href="/app/domaines" size="sm" variant="secondary">
+            <ButtonLink href="/app/web" size="sm" variant="secondary">
               Acheter un domaine
             </ButtonLink>
           }
@@ -173,7 +184,8 @@ export function VueHebergement({ id }: { id: string }) {
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-2">
+            <div className="space-y-4 lg:col-span-2">
+            <Card>
               <CardHeader
                 titre="Le serveur de cet hébergement"
                 sousTitre="Un domaine est attaché à un serveur et à un seul. Tout ce qui est installé ici partage ces ressources — c’est la contrepartie du prix."
@@ -218,6 +230,20 @@ export function VueHebergement({ id }: { id: string }) {
                 gérée chez nous, l’onglet DNS le fait en une action.
               </Callout>
             </Card>
+            </div>
+
+            <div className="space-y-4">
+            {abonnement && (
+              <CarteAbonnement
+                offre={abonnement.offre}
+                prixMensuel={abonnement.prixMensuel}
+                debut={abonnement.debut}
+                echeance={abonnement.echeance}
+                joursRestants={abonnement.joursRestants}
+                renouvellementAuto={abonnement.renouvellementAuto}
+                frequence={abonnement.frequence}
+              />
+            )}
 
             <Card>
               <CardHeader
@@ -245,6 +271,7 @@ export function VueHebergement({ id }: { id: string }) {
                 ))}
               </div>
             </Card>
+            </div>
           </div>
 
           <Card>
@@ -710,7 +737,7 @@ export function VueHebergement({ id }: { id: string }) {
             <EmptyState
               titre="Aucun service partagé sur ce domaine"
               phrase="Une messagerie sur votre domaine se met en service en quelques minutes : nous créons les enregistrements MX, SPF, DKIM et DMARC, et vous n’avez qu’à créer les boîtes."
-              action={{ libelle: 'Voir le catalogue partagé', href: '/app/web/services' }}
+              action={{ libelle: 'Voir le catalogue partagé', href: '/app/services-partages' }}
             />
           ) : (
             <div className="space-y-4">
@@ -840,55 +867,21 @@ export function VueHebergement({ id }: { id: string }) {
 
       {onglet === 'dns' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {entree.zone ? (
+            /* L’éditeur complet, ici même : « sélectionner puis modifier »
+               n’a de sens que si la modification se fait sur la fiche. */
+            <EditeurZone zoneId={entree.zone.id} />
+          ) : (
             <Card>
-              <CardHeader
-                titre="Zone DNS"
-                sousTitre={
-                  h.domaine
-                    ? 'La zone est servie par nos quatre serveurs de noms, répartis sur les deux sites.'
-                    : 'Aucune zone tant que le domaine n’est pas enregistré.'
-                }
-                actions={
-                  h.domaine ? (
-                    <ButtonLink href="/app/dns/zone-1" variant="secondary" size="sm">
-                      Éditer la zone
-                    </ButtonLink>
-                  ) : undefined
-                }
+              <EmptyState
+                titre="Pas encore de zone"
+                phrase="Enregistrez votre nom de domaine, et la zone sera créée automatiquement avec les enregistrements de cet hébergement déjà renseignés."
+                action={{ libelle: 'Chercher un domaine', href: '/app/web' }}
               />
-              {h.domaine ? (
-                <div className="space-y-2">
-                  {[
-                    { t: 'A', n: '@', v: h.serveur.ip },
-                    { t: 'A', n: 'www', v: h.serveur.ip },
-                    { t: 'AAAA', n: '@', v: h.serveur.ipv6 },
-                    { t: 'MX', n: '@', v: 'mail.synelia.cloud (priorité 10)' },
-                    { t: 'TXT', n: '@', v: 'v=spf1 include:_spf.synelia.cloud ~all' },
-                    { t: 'CNAME', n: 'drive', v: 'drive.partage.synelia.cloud' },
-                  ].map((e, i) => (
-                    <div
-                      key={`${e.t}-${e.n}-${i}`}
-                      className="flex flex-wrap items-center gap-2 rounded-[6px] border border-g-300 px-2.5 py-1.5"
-                    >
-                      <Badge tone="neutral" size="sm">
-                        {e.t}
-                      </Badge>
-                      <span className="font-mono text-[12px] font-semibold text-ink">{e.n}</span>
-                      <span className="min-w-0 flex-1 truncate font-mono text-[11.5px] text-g-500">
-                        {e.v}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState
-                  titre="Pas encore de zone"
-                  phrase="Enregistrez votre nom de domaine, et la zone sera créée automatiquement avec les enregistrements de cet hébergement déjà renseignés."
-                  action={{ libelle: 'Chercher un domaine', href: '/app/domaines' }}
-                />
-              )}
             </Card>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
             <Card>
               <CardHeader

@@ -341,7 +341,7 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                         {a.etat === 'valide' ? 'Valide' : a.etat}
                       </Badge>
                     </span>
-                    <ButtonLink size="sm" variant="ghost" href="/app/domaines">
+                    <ButtonLink size="sm" variant="ghost" href="/app/web">
                       Voir dans la zone DNS
                     </ButtonLink>
                   </div>

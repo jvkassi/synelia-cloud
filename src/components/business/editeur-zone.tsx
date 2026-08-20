@@ -1,7 +1,20 @@
 'use client'
 
+
 import { useMemo, useState } from 'react'
-import { Download, Pencil, Plus, ShieldCheck, Trash2, Upload, Wand2 } from 'lucide-react'
+import {
+  Clock,
+  Download,
+  FileCode,
+  History,
+  Pencil,
+  Plus,
+  RotateCcw,
+  ShieldCheck,
+  Trash2,
+  Upload,
+  Wand2,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateHeure, duree, num } from '@/lib/format'
 import { MODELES_DNS, ZONES_DNS } from '@/lib/mock'
@@ -10,7 +23,7 @@ import { Button, ButtonLink, IconButton } from '@/components/ui/button'
 import { CodeBlock, CopyField, GatedAction, Tabs } from '@/components/ui/display'
 import { Field, Input, MonoTextarea, Select, Switch } from '@/components/ui/field'
 import { ConfirmDialog, Drawer, Modal, Tooltip } from '@/components/ui/overlay'
-import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
+import { Card, CardHeader, Callout, KeyValueList } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
 import type { DnsZone } from '@/lib/types'
@@ -36,7 +49,7 @@ const EXPLICATIONS: Record<string, string> = {
   NS: 'Délègue un sous-domaine à d’autres serveurs de noms.',
 }
 
-export function VueZone({ zoneId }: { zoneId: string }) {
+export function EditeurZone({ zoneId }: { zoneId: string }) {
   const { autorise, refus, pousser } = useApp()
   const [onglet, setOnglet] = useState('enregistrements')
   const [filtre, setFiltre] = useState<string>('tous')
@@ -77,51 +90,6 @@ export function VueZone({ zoneId }: { zoneId: string }) {
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        fil={[
-          { label: 'Espace client', href: '/app' },
-          { label: 'Domaines', href: '/app/domaines' },
-          { label: zone.domaine },
-        ]}
-        titre={<span className="font-mono">{zone.domaine}</span>}
-        sousTitre="Éditeur de zone DNS. Chaque type d’enregistrement est expliqué là où vous le choisissez : la plupart des pannes DNS viennent d’un CNAME posé sur l’apex ou d’un SPF dupliqué, pas d’une méconnaissance du protocole."
-        meta={
-          <>
-            <Badge tone={zone.dnssec ? 'ok' : 'warn'} dot size="sm">
-              {zone.dnssec ? 'DNSSEC actif' : 'DNSSEC inactif'}
-            </Badge>
-            <Badge tone="neutral" size="sm">
-              {zone.enregistrements.length} enregistrements
-            </Badge>
-            <Badge tone="neutral" size="sm">
-              Série 2026081904
-            </Badge>
-          </>
-        }
-        actions={
-          <>
-            <Select
-              value={zone.domaine}
-              onChange={(e) => {
-                const cible = ZONES_DNS.find((z) => z.domaine === e.target.value)
-                if (cible) window.location.href = `/app/dns/${cible.id}`
-              }}
-              className="w-auto"
-            >
-              {domaines.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </Select>
-            <GatedAction autorise={autorise('network.manage')} message={refus('network.manage')}>
-              <Button iconBefore={<Plus size={14} />} onClick={() => setAjout(true)}>
-                Ajouter un enregistrement
-              </Button>
-            </GatedAction>
-          </>
-        }
-      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
@@ -185,12 +153,30 @@ export function VueZone({ zoneId }: { zoneId: string }) {
                 ))}
               </div>
             </div>
+            {/*
+              Les quatre issues de secours d'un opérateur de zone : régler le TTL
+              par défaut plutôt que ligne par ligne, coller un fichier de zone
+              entier, relire ce qui a changé, et revenir en arrière. Sans elles,
+              corriger dix-neuf enregistrements se fait à la souris.
+            */}
             <div className="flex flex-wrap items-center gap-1.5">
+              <Button size="sm" variant="ghost" iconBefore={<Clock size={12} />}>
+                TTL par défaut
+              </Button>
+              <Button size="sm" variant="ghost" iconBefore={<FileCode size={12} />}>
+                Mode textuel
+              </Button>
+              <Button size="sm" variant="ghost" iconBefore={<History size={12} />}>
+                Historique
+              </Button>
               <Button size="sm" variant="ghost" iconBefore={<Download size={12} />}>
                 Exporter
               </Button>
               <Button size="sm" variant="ghost" iconBefore={<Upload size={12} />}>
                 Importer
+              </Button>
+              <Button size="sm" variant="ghost" iconBefore={<RotateCcw size={12} />}>
+                Réinitialiser
               </Button>
             </div>
           </div>

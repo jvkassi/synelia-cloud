@@ -1,14 +1,12 @@
 import type { Metadata } from 'next'
+import { CadreWebCloud } from '@/components/app/cadre-webcloud'
 
-/**
- * Une page « use client » ne peut pas exporter `metadata`. Ce layout minimal
- * n'existe que pour nommer l'onglet du navigateur — il n'ajoute aucun rendu.
- */
 export const metadata: Metadata = {
-  title: 'Hébergement web',
-  description: 'Sites hébergés, versions de langage, certificats et préproduction.',
+  title: 'Domaines',
+  description:
+    'Un domaine, un serveur : sites, bases, accès fichiers, PHP, services partagés, zone DNS, certificats et sauvegardes au même endroit.',
 }
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return children
+export default function LayoutWebCloud({ children }: { children: React.ReactNode }) {
+  return <CadreWebCloud>{children}</CadreWebCloud>
 }

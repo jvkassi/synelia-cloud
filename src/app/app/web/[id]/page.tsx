@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { HEBERGEMENTS, nomServi } from '@/lib/mock'
-import { VueHebergement } from './vue'
+import { entreeWebCloudById } from '@/lib/mock'
+import { VueDomaine } from './vue'
 
 export async function generateMetadata({
   params,
@@ -9,12 +9,13 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  const h = HEBERGEMENTS.find((x) => x.id === id)
-  return { title: h ? `${nomServi(h)} · Hébergement web` : 'Hébergement introuvable' }
+  const e = entreeWebCloudById(decodeURIComponent(id))
+  return { title: e ? `${e.nom} · Web Cloud` : 'Domaine introuvable' }
 }
 
-export default async function PageHebergement({ params }: { params: Promise<{ id: string }> }) {
+export default async function PageDomaine({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  if (!HEBERGEMENTS.some((h) => h.id === id)) notFound()
-  return <VueHebergement id={id} />
+  const nom = decodeURIComponent(id)
+  if (!entreeWebCloudById(nom)) notFound()
+  return <VueDomaine id={nom} />
 }

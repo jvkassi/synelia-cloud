@@ -33,7 +33,7 @@ const JALONS = [
     detail:
       'Assistant DNS guidé : nous affichons les enregistrements exacts à créer et vérifions la propagation pour vous.',
     fait: false,
-    actions: [{ libelle: 'Configurer un domaine', href: '/app/domaines' }],
+    actions: [{ libelle: 'Configurer un domaine', href: '/app/web' }],
   },
   {
     id: 'sauvegardes',
