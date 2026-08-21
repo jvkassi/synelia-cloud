@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { AlertTriangle, ArrowUpRight, Clock, UserCheck } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
-import { dateHeure, dureeMin, pct, relatif } from '@/lib/format'
+import { dateHeure, dureeMin, MAINTENANT, pct, relatif } from '@/lib/format'
 import { EQUIPE_SYNELIA, ORGANISATIONS, TICKETS_PLATEFORME } from '@/lib/mock'
 import { ROLE_LABEL } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -17,6 +17,8 @@ import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { Timeline } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import type { Ticket } from '@/lib/types'
 
 const ONGLETS = [
@@ -56,16 +58,53 @@ const TON_GRAVITE: Record<Ticket['gravite'], 'err' | 'warn' | 'info' | 'neutral'
 }
 
 export default function TicketsAdmin() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const tickets = useCollection<Ticket>('tickets-plateforme', TICKETS_PLATEFORME)
+  const executer = useOperation()
   const [onglet, setOnglet] = useState('file')
-  const [detail, setDetail] = useState<Ticket | null>(null)
-  const [assignation, setAssignation] = useState<Ticket | null>(null)
+  const [detailId, setDetailId] = useState<string | null>(null)
+  const [assignationId, setAssignationId] = useState<string | null>(null)
+  const [reponse, setReponse] = useState('')
+  const [intervenant, setIntervenant] = useState('')
+  const [notifierIntervenant, setNotifierIntervenant] = useState(true)
+  const [notifierResponsable, setNotifierResponsable] = useState(false)
 
-  const ouverts = TICKETS_PLATEFORME.filter((t) => !['resolu', 'ferme'].includes(t.statut))
+  // Relus dans la collection : un ticket résolu depuis le tiroir doit s'y voir.
+  const detail = tickets.items.find((t) => t.id === detailId) ?? null
+  const assignation = tickets.items.find((t) => t.id === assignationId) ?? null
+
+  const ouverts = tickets.items.filter((t) => !['resolu', 'ferme'].includes(t.statut))
   const nonAssignes = ouverts.filter((t) => !t.assigneA)
   const critiques = ouverts.filter((t) => t.gravite === 'critique')
   const enRisque = ouverts.filter((t) => (t.slaRestantMin ?? 9999) < 120)
-  const enAttente = TICKETS_PLATEFORME.filter((t) => t.statut === 'attente_client')
+  const enAttente = tickets.items.filter((t) => t.statut === 'attente_client')
+
+  /** Une réponse de notre côté arrête l'horloge de première réponse. */
+  const repondre = (t: Ticket, statut: Ticket['statut'], titre: string, detailToast: string) => {
+    executer({
+      action: 'org.dashboard.view',
+      ton: statut === 'resolu' ? 'ok' : 'info',
+      titre,
+      detail: detailToast,
+      effet: () =>
+        tickets.modifier(t.id, (courant) => ({
+          statut,
+          slaRestantMin: undefined,
+          messages: reponse.trim()
+            ? [
+                ...courant.messages,
+                {
+                  auteur: EQUIPE_SYNELIA[0].nom,
+                  role: 'synelia' as const,
+                  date: MAINTENANT,
+                  contenu: reponse.trim(),
+                },
+              ]
+            : courant.messages,
+        })),
+    })
+    setReponse('')
+  }
 
   const orgNom = (id: string) => ORGANISATIONS.find((o) => o.id === id)?.nom ?? id
 
@@ -160,7 +199,7 @@ export default function TicketsAdmin() {
         <Card padding={false}>
           <div className="p-4">
             <DataTable<Ticket>
-              lignes={[...TICKETS_PLATEFORME].sort(
+              lignes={[...tickets.items].sort(
                 (a, b) => (a.slaRestantMin ?? 99999) - (b.slaRestantMin ?? 99999),
               )}
               exportable
@@ -327,7 +366,7 @@ export default function TicketsAdmin() {
                   aligne: 'right',
                   rendu: (t) => (
                     <span className="flex items-center justify-end gap-1.5">
-                      <Button size="sm" variant="ghost" onClick={() => setDetail(t)}>
+                      <Button size="sm" variant="ghost" onClick={() => setDetailId(t.id)}>
                         Ouvrir
                       </Button>
                       {!['resolu', 'ferme'].includes(t.statut) && (
@@ -339,7 +378,7 @@ export default function TicketsAdmin() {
                             size="sm"
                             variant={t.assigneA ? 'ghost' : 'secondary'}
                             iconBefore={<UserCheck size={12} />}
-                            onClick={() => setAssignation(t)}
+                            onClick={() => setAssignationId(t.id)}
                           >
                             {t.assigneA ? 'Réassigner' : 'Assigner'}
                           </Button>
@@ -698,7 +737,7 @@ export default function TicketsAdmin() {
 
       <Drawer
         open={detail !== null}
-        onClose={() => setDetail(null)}
+        onClose={() => setDetailId(null)}
         title={detail ? `${detail.numero} — ${detail.sujet}` : ''}
         size="lg"
       >
@@ -787,24 +826,111 @@ export default function TicketsAdmin() {
             {!['resolu', 'ferme'].includes(detail.statut) && (
               <div>
                 <MicroLabel className="mb-2">Répondre</MicroLabel>
-                <MonoTextarea rows={4} placeholder="Votre réponse au client…" />
+                <MonoTextarea
+                  rows={4}
+                  placeholder="Votre réponse au client…"
+                  value={reponse}
+                  onChange={(e) => setReponse(e.target.value)}
+                />
                 <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                   <Button
+                    disabled={reponse.trim().length === 0}
                     onClick={() =>
-                      pousser({
-                        ton: 'ok',
-                        titre: 'Réponse envoyée',
-                        detail: 'Le client est notifié. L’horloge de première réponse est arrêtée.',
-                      })
+                      repondre(
+                        detail,
+                        'en_cours',
+                        'Réponse envoyée',
+                        'Le client est notifié. L’horloge de première réponse est arrêtée.',
+                      )
                     }
                   >
                     Envoyer
                   </Button>
-                  <Button variant="secondary">Marquer en attente client</Button>
-                  <Button variant="ghost">Résoudre</Button>
-                  <Button variant="ghost" iconBefore={<ArrowUpRight size={12} />}>
-                    Escalader
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      repondre(
+                        detail,
+                        'attente_client',
+                        `${detail.numero} passe en attente client`,
+                        'L’horloge d’engagement est suspendue tant que le client n’a pas répondu. Elle repart à sa réponse.',
+                      )
+                    }
+                  >
+                    Marquer en attente client
                   </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() =>
+                      repondre(
+                        detail,
+                        'resolu',
+                        `${detail.numero} résolu`,
+                        'Le client peut réouvrir le ticket pendant sept jours d’un simple message : la résolution est la nôtre, la clôture est la sienne.',
+                      )
+                    }
+                  >
+                    Résoudre
+                  </Button>
+                  <BoutonFormulaire
+                    libelle="Escalader"
+                    variant="ghost"
+                    size="md"
+                    icone={<ArrowUpRight size={12} />}
+                    titre={`Escalader ${detail.numero}`}
+                    description="Escalader ne fait pas avancer le ticket tout seul : cela change qui le porte et, sur un ticket critique, réveille l’astreinte. À utiliser quand la compétence manque, pas quand le temps manque."
+                    libelleValider="Escalader"
+                    champs={[
+                      {
+                        id: 'niveau',
+                        label: 'Vers',
+                        type: 'select',
+                        options: [
+                          { value: 'n2', label: 'Niveau 2 — expertise infrastructure' },
+                          { value: 'n3', label: 'Niveau 3 — astreinte, réveil immédiat' },
+                          { value: 'editeur', label: 'Éditeur de la solution amont' },
+                        ],
+                      },
+                      {
+                        id: 'motif',
+                        label: 'Motif de l’escalade',
+                        type: 'zone',
+                        obligatoire: true,
+                        placeholder:
+                          'Comportement du répartiteur de charge non expliqué par les journaux ; la compétence réseau de niveau 2 est nécessaire pour aller plus loin.',
+                      },
+                    ]}
+                    operation={(v) => ({
+                      ton: 'warn',
+                      titre: `${detail.numero} escaladé`,
+                      detail:
+                        v.niveau === 'n3'
+                          ? 'L’astreinte est réveillée immédiatement, quelle que soit l’heure.'
+                          : v.niveau === 'editeur'
+                            ? 'Un dossier est ouvert chez l’éditeur amont, avec les journaux joints. Notre engagement continue de courir : le client n’a pas à subir le délai d’un tiers.'
+                            : 'Le ticket entre dans la file du niveau 2, avec son historique complet.',
+                      effet: () =>
+                        tickets.modifier(detail.id, (courant) => ({
+                          gravite: v.niveau === 'n3' ? 'critique' : courant.gravite,
+                          assigneA: v.niveau === 'n3' ? EQUIPE_SYNELIA[3].nom : courant.assigneA,
+                          messages: [
+                            ...courant.messages,
+                            {
+                              auteur: EQUIPE_SYNELIA[0].nom,
+                              role: 'synelia' as const,
+                              date: MAINTENANT,
+                              contenu: `Escalade ${
+                                v.niveau === 'n3'
+                                  ? 'niveau 3 (astreinte)'
+                                  : v.niveau === 'editeur'
+                                    ? 'vers l’éditeur amont'
+                                    : 'niveau 2'
+                              } — ${String(v.motif)}`,
+                            },
+                          ],
+                        })),
+                    })}
+                  />
                 </div>
               </div>
             )}
@@ -814,22 +940,32 @@ export default function TicketsAdmin() {
 
       <Modal
         open={assignation !== null}
-        onClose={() => setAssignation(null)}
+        onClose={() => setAssignationId(null)}
         title={`Assigner ${assignation?.numero ?? ''}`}
         size="md"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setAssignation(null)}>
+            <Button variant="ghost" onClick={() => setAssignationId(null)}>
               Annuler
             </Button>
             <Button
+              disabled={!intervenant}
               onClick={() => {
-                pousser({
+                if (!assignation) return
+                executer({
                   ton: 'ok',
-                  titre: 'Ticket assigné',
-                  detail: 'L’intervenant est notifié et le ticket apparaît dans sa file.',
+                  titre: `${assignation.numero} assigné à ${intervenant}`,
+                  detail: notifierIntervenant
+                    ? 'L’intervenant est notifié et le ticket apparaît dans sa file.'
+                    : 'Le ticket apparaît dans sa file, sans notification : il faut le lui dire de vive voix.',
+                  effet: () =>
+                    tickets.modifier(assignation.id, {
+                      assigneA: intervenant,
+                      statut: assignation.statut === 'ouvert' ? 'en_cours' : assignation.statut,
+                    }),
                 })
-                setAssignation(null)
+                setIntervenant('')
+                setAssignationId(null)
               }}
             >
               Assigner
@@ -848,8 +984,8 @@ export default function TicketsAdmin() {
                   : 'sans engagement en cours'}
               </p>
             </div>
-            <Field label="Intervenant" hint="la charge actuelle est indiquée pour chacun">
-              <Select defaultValue="">
+            <Field label="Intervenant" hint="la charge actuelle est indiquée pour chacun" required>
+              <Select value={intervenant} onChange={(e) => setIntervenant(e.target.value)}>
                 <option value="">Sélectionner…</option>
                 {EQUIPE_SYNELIA.map((m) => {
                   const siens = ouverts.filter((t) => t.assigneA === m.nom).length
@@ -863,12 +999,15 @@ export default function TicketsAdmin() {
             </Field>
             <div className="space-y-3">
               <Switch
-                checked
+                checked={notifierIntervenant}
+                onChange={setNotifierIntervenant}
                 label="Notifier l’intervenant"
                 description="Courriel immédiat, plus un SMS si le ticket est critique."
               />
               <Switch
-                checked={assignation.gravite === 'critique'}
+                checked={notifierResponsable || assignation.gravite === 'critique'}
+                onChange={setNotifierResponsable}
+                disabled={assignation.gravite === 'critique'}
                 label="Notifier le responsable d’équipe"
                 description="Systématique sur un ticket critique : il doit savoir qui porte quoi à tout moment."
               />

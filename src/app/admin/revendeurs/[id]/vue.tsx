@@ -5,7 +5,14 @@ import Link from 'next/link'
 import { ExternalLink, Palette, Percent, Plus } from 'lucide-react'
 import { cn, surfaceMarque, trendSeries } from '@/lib/utils'
 import { dateCourte, money, moneyPerMonth, num, pct } from '@/lib/format'
-import { OFFRES, ORGANISATIONS, RELEVES_REVSHARE, RESELLERS } from '@/lib/mock'
+import {
+  OFFRES,
+  ORGANISATIONS,
+  RELEVES_REVSHARE,
+  RESELLERS,
+  type ReleveRevshare,
+} from '@/lib/mock'
+import type { Reseller } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { CopyField, GatedAction, Tabs } from '@/components/ui/display'
@@ -13,6 +20,8 @@ import { Field, Input, Select, Switch } from '@/components/ui/field'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'synthese', label: 'Synthèse' },
@@ -23,12 +32,26 @@ const ONGLETS = [
 ]
 
 export function VueRevendeur({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const partenaires = useCollection<Reseller>('revendeurs', RESELLERS)
+  const lesReleves = useCollection<ReleveRevshare>('releves-revshare', RELEVES_REVSHARE)
   const [onglet, setOnglet] = useState('synthese')
+  const [deduireAvoirs, setDeduireAvoirs] = useState(true)
+  const [surEncaisse, setSurEncaisse] = useState(true)
+  const [tauxPartage, setTauxPartage] = useState(0)
+  const [periodicite, setPeriodicite] = useState('mensuel')
+  const [delaiVersement, setDelaiVersement] = useState(15)
+  const [theme, setTheme] = useState<Record<string, boolean>>({
+    couleurs: true,
+    domaine: true,
+    courriels: true,
+    factures: true,
+  })
 
-  const r = RESELLERS.find((x) => x.id === id)!
+  const r = partenaires.items.find((x) => x.id === id)!
   const clients = ORGANISATIONS.filter((o) => r.clientsFinaux.includes(o.id))
-  const releves = RELEVES_REVSHARE.filter((x) => x.reseller === r.nom)
+  const releves = lesReleves.items.filter((x) => x.reseller === r.nom)
   const orgRevendeur = ORGANISATIONS.find((o) => o.id === r.orgId)
 
   const caMensuelClients = clients.reduce((a, o) => a + (o.caMensuel ?? 0), 0)
@@ -232,9 +255,50 @@ export function VueRevendeur({ id }: { id: string }) {
                     autorise={autorise('reseller.manage')}
                     message={refus('reseller.manage')}
                   >
-                    <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />}>
-                      Ajouter une offre
-                    </Button>
+                    <BoutonFormulaire
+                      libelle="Ajouter une offre"
+                      icone={<Plus size={13} />}
+                      action="reseller.manage"
+                      titre={`Ajouter une offre à la grille de ${r.nom}`}
+                      description="Le prix d’achat est celui que nous facturons au partenaire. Le prix de vente reste le sien : nous ne l’imposons pas."
+                      champs={[
+                        {
+                          id: 'offre',
+                          label: 'Offre',
+                          type: 'select',
+                          options: OFFRES.filter(
+                            (o) => !r.grille.some((g) => g.offerId === o.id),
+                          ).map((o) => ({
+                            value: o.id,
+                            label: `${o.nom} · public ${money(o.prix.direct)}`,
+                          })),
+                        },
+                        { id: 'achat', label: 'Prix d’achat partenaire', type: 'nombre', demi: true, min: 1, suffixe: 'FCFA' },
+                        { id: 'vente', label: 'Prix de vente conseillé', type: 'nombre', demi: true, min: 1, suffixe: 'FCFA' },
+                      ]}
+                      valeursDepart={{ achat: 100000, vente: 140000 }}
+                      libelleValider="Ajouter"
+                      operation={(v) => {
+                        const offre = OFFRES.find((o) => o.id === v.offre)
+                        return {
+                          titre: `${offre?.nom ?? 'Offre'} ajoutée à la grille`,
+                          detail: `Achat ${money(Number(v.achat))} · vente ${money(Number(v.vente))} — marge partenaire ${Math.round(((Number(v.vente) - Number(v.achat)) / Number(v.vente)) * 100)} %`,
+                          effet: () =>
+                            offre
+                              ? partenaires.modifier(r.id, (x) => ({
+                                  grille: [
+                                    ...x.grille,
+                                    {
+                                      offerId: offre.id,
+                                      prixAchat: Number(v.achat),
+                                      prixVente: Number(v.vente),
+                                    },
+                                  ],
+                                }))
+                              : undefined,
+                        }
+                      }}
+                    />
                   </GatedAction>
                 }
               />
@@ -307,9 +371,34 @@ export function VueRevendeur({ id }: { id: string }) {
                             autorise={autorise('reseller.manage')}
                             message={refus('reseller.manage')}
                           >
-                            <Button size="sm" variant="ghost">
-                              Modifier
-                            </Button>
+                            <BoutonFormulaire
+                              libelle="Modifier"
+                              variant="ghost"
+                              action="reseller.manage"
+                              titre={`Modifier ${offre?.nom ?? 'l’offre'}`}
+                              description="Un changement de prix d’achat s’applique à la prochaine échéance, jamais rétroactivement."
+                              champs={[
+                                { id: 'achat', label: 'Prix d’achat partenaire', type: 'nombre', demi: true, min: 1, suffixe: 'FCFA' },
+                                { id: 'vente', label: 'Prix de vente pratiqué', type: 'nombre', demi: true, min: 1, suffixe: 'FCFA' },
+                              ]}
+                              valeursDepart={{ achat: g.prixAchat, vente: g.prixVente }}
+                              operation={(v) => ({
+                                titre: `Grille de ${offre?.nom ?? 'l’offre'} modifiée`,
+                                detail: `Marge partenaire ${Math.round(((Number(v.vente) - Number(v.achat)) / Number(v.vente)) * 100)} % · effet à la prochaine échéance`,
+                                effet: () =>
+                                  partenaires.modifier(r.id, (x) => ({
+                                    grille: x.grille.map((y) =>
+                                      y.offerId === g.offerId
+                                        ? {
+                                            ...y,
+                                            prixAchat: Number(v.achat),
+                                            prixVente: Number(v.vente),
+                                          }
+                                        : y,
+                                    ),
+                                  })),
+                              })}
+                            />
                           </GatedAction>
                         </td>
                       </tr>
@@ -506,36 +595,52 @@ export function VueRevendeur({ id }: { id: string }) {
             />
             <div className="space-y-3.5">
               <Switch
-                checked
+                checked={theme.couleurs}
+                onChange={(v) => setTheme((t) => ({ ...t, couleurs: v }))}
                 label="Logo et couleurs du portail"
                 description="En-tête, boutons principaux, accents. La structure des écrans reste identique."
               />
               <Switch
-                checked
+                checked={theme.domaine}
+                onChange={(v) => setTheme((t) => ({ ...t, domaine: v }))}
                 label="Domaine dédié avec certificat"
                 description="Certificat émis et renouvelé automatiquement pour le domaine du partenaire."
               />
               <Switch
-                checked
+                checked={theme.courriels}
+                onChange={(v) => setTheme((t) => ({ ...t, courriels: v }))}
                 label="Modèles de courriels"
                 description="Notifications, invitations, alertes : envoyées sous le nom et le domaine du partenaire."
               />
               <Switch
-                checked
+                checked={theme.factures}
+                onChange={(v) => setTheme((t) => ({ ...t, factures: v }))}
                 label="En-tête des factures"
                 description="Les factures émises au client final portent l’identité du partenaire."
               />
               <Switch
                 checked={false}
+                disabled
                 label="Structure des écrans"
                 description="Non personnalisable. Quand un incident survient, nos équipes et les leurs doivent regarder le même écran et se comprendre immédiatement."
               />
               <Switch
                 checked={false}
+                disabled
                 label="Mentions légales de l’exploitant"
                 description="Non masquable. La localisation des données et l’identité de l’exploitant technique restent visibles."
               />
             </div>
+            <BoutonAction
+              libelle="Appliquer au portail du partenaire"
+              size="md"
+              className="mt-4"
+              operation={{
+                action: 'reseller.manage',
+                titre: `Thématisation du portail de ${r.nom} appliquée`,
+                detail: `${Object.values(theme).filter(Boolean).length} éléments sur 4 sont sous sa marque. La structure des écrans et les mentions de l’exploitant restent les nôtres.`,
+              }}
+            />
           </Card>
         </div>
       )}
@@ -591,9 +696,16 @@ export function VueRevendeur({ id }: { id: string }) {
                         </td>
                         <td className="px-3 py-2.5 text-right">
                           <span className="flex items-center justify-end gap-1.5">
-                            <Button size="sm" variant="ghost">
-                              Détail
-                            </Button>
+                            <BoutonAction
+                              libelle="Détail"
+                              variant="ghost"
+                              operation={{
+                                action: 'reseller.manage',
+                                ton: 'info',
+                                titre: `Relevé de ${x.periode}`,
+                                detail: `CA apporté ${money(x.caGenere)} · ${x.revsharePct} % · ${money(x.montant)} à verser. Le détail ligne par ligne est dans Revshare partenaires.`,
+                              }}
+                            />
                             {x.statut !== 'réglé' && (
                               <GatedAction
                                 autorise={autorise('reseller.manage')}
@@ -603,10 +715,22 @@ export function VueRevendeur({ id }: { id: string }) {
                                   size="sm"
                                   variant="secondary"
                                   onClick={() =>
-                                    pousser({
-                                      ton: 'ok',
+                                    executer({
+                                      action: 'reseller.manage',
                                       titre: `Partage de ${x.periode} validé`,
                                       detail: `${money(x.montant)} seront versés à ${r.nom} sous 15 jours, avec le relevé détaillé ligne par ligne.`,
+                                      job: {
+                                        type: 'revshare.paiement',
+                                        label: `Versement ${r.nom} · ${x.periode}`,
+                                        etapes: [
+                                          'Figer le relevé et ses lignes',
+                                          'Envoyer le relevé au partenaire',
+                                          'Ordonner le virement',
+                                        ],
+                                        dureeEtapeMs: 1100,
+                                      },
+                                      effetFinal: () =>
+                                        lesReleves.modifier(x.id, { statut: 'réglé' }),
                                     })
                                   }
                                 >
@@ -684,40 +808,65 @@ export function VueRevendeur({ id }: { id: string }) {
               />
               <div className="space-y-4">
                 <Field label="Taux de partage" hint="pourcentage du CA encaissé reversé au partenaire">
-                  <Input type="number" defaultValue={r.revsharePct} suffix="%" />
+                  <Input
+                    type="number"
+                    min={0}
+                    max={40}
+                    value={tauxPartage || r.revsharePct}
+                    suffix="%"
+                    onChange={(e) => setTauxPartage(Number(e.target.value))}
+                  />
                 </Field>
                 <Field label="Périodicité du versement">
-                  <Select defaultValue="mensuel">
+                  <Select value={periodicite} onChange={(e) => setPeriodicite(e.target.value)}>
                     <option value="mensuel">Mensuelle</option>
                     <option value="trimestriel">Trimestrielle</option>
                   </Select>
                 </Field>
                 <Field label="Délai de versement après validation" hint="jours">
-                  <Input type="number" defaultValue={15} />
+                  <Input
+                    type="number"
+                    min={0}
+                    value={delaiVersement}
+                    onChange={(e) => setDelaiVersement(Number(e.target.value))}
+                  />
                 </Field>
                 <div className="space-y-3">
                   <Switch
-                    checked
+                    checked={surEncaisse}
+                    onChange={setSurEncaisse}
                     label="Calcul sur le chiffre d’affaires encaissé"
                     description="Et non facturé. Un partage versé sur une facture impayée devrait être récupéré ensuite, ce qui empoisonne la relation."
                   />
                   <Switch
-                    checked
+                    checked={deduireAvoirs}
+                    onChange={setDeduireAvoirs}
                     label="Déduire les avoirs de service de l’assiette"
                     description="Cohérent : nous ne reversons pas un partage sur un montant que nous avons crédité au client."
                   />
                   <Switch
                     checked
+                    disabled
                     label="Relevé détaillé ligne par ligne"
                     description="Non désactivable. Un partenaire doit pouvoir vérifier son relevé, pas le prendre pour argent comptant."
                   />
                 </div>
               </div>
-              <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
-                <Button className="mt-4" variant="secondary">
-                  Enregistrer — préavis de 6 mois
-                </Button>
-              </GatedAction>
+              <BoutonAction
+                libelle="Enregistrer — préavis de 6 mois"
+                size="md"
+                className="mt-4"
+                operation={{
+                  action: 'reseller.manage',
+                  ton: 'warn',
+                  titre: `Règles de partage de ${r.nom} enregistrées`,
+                  detail: `${tauxPartage || r.revsharePct} % du chiffre d’affaires ${
+                    surEncaisse ? 'encaissé' : 'facturé'
+                  }, versement ${periodicite === 'mensuel' ? 'mensuel' : 'trimestriel'} à ${delaiVersement} jours. Effet dans six mois : les conditions d’un partenaire ne changent pas du jour au lendemain.`,
+                  effet: () =>
+                    partenaires.modifier(r.id, { revsharePct: tauxPartage || r.revsharePct }),
+                }}
+              />
             </Card>
           </div>
         </div>

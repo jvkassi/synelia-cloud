@@ -5,7 +5,9 @@ import Link from 'next/link'
 import { Download, FileCheck2, KeyRound, ShieldAlert } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { dateHeure, num, pct, relatif } from '@/lib/format'
+import { telechargerCsv, telechargerTexte } from '@/lib/export'
 import { AUDIT, EQUIPE_SYNELIA, ORGANISATIONS } from '@/lib/mock'
+import type { MembreEquipe } from '@/lib/mock'
 import { ROLE_LABEL, type Role } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
@@ -16,6 +18,8 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, useOperation } from '@/components/app/actions'
 import type { AuditEvent } from '@/lib/types'
 
 const ONGLETS = [
@@ -27,16 +31,98 @@ const ONGLETS = [
 
 export default function AuditAdmin() {
   const { autorise, refus, pousser } = useApp()
+  const equipe = useCollection<MembreEquipe>('equipe-synelia', EQUIPE_SYNELIA)
+  const executer = useOperation()
   const [onglet, setOnglet] = useState('journal')
   const [detail, setDetail] = useState<AuditEvent | null>(null)
+  const [du, setDu] = useState('2026-07-19')
+  const [au, setAu] = useState('2026-08-19')
+  const [perimetre, setPerimetre] = useState('tout')
+  const [format, setFormat] = useState('pdf')
+  const [empreinte, setEmpreinte] = useState(true)
+  const [pseudonymiser, setPseudonymiser] = useState(false)
 
   const refuses = AUDIT.filter((a) => a.result === 'refuse')
   const erreurs = AUDIT.filter((a) => a.result === 'erreur')
-  const parEquipe = AUDIT.filter((a) => EQUIPE_SYNELIA.some((m) => m.nom === a.actor.nom))
-  const elevationsActives = EQUIPE_SYNELIA.filter((m) => m.elevation?.active)
+  const parEquipe = AUDIT.filter((a) => equipe.items.some((m) => m.nom === a.actor.nom))
+  const elevationsActives = equipe.items.filter((m) => m.elevation?.active)
 
   const orgNom = (id?: string) =>
     id ? (ORGANISATIONS.find((o) => o.id === id)?.nom ?? id) : 'Plateforme'
+
+  /** Les lignes que l'export retiendra, avec les mêmes règles que l'écran. */
+  const lignesExport = () =>
+    AUDIT.filter((a) => a.ts.slice(0, 10) >= du && a.ts.slice(0, 10) <= au).filter((a) =>
+      perimetre === 'equipe'
+        ? equipe.items.some((m) => m.nom === a.actor.nom)
+        : perimetre === 'refus'
+          ? a.result === 'refuse'
+          : perimetre === 'elevations'
+            ? a.action.includes('elevation')
+            : perimetre === 'org'
+              ? Boolean(a.orgId)
+              : true,
+    )
+
+  const acteur = (a: AuditEvent) => (pseudonymiser ? `acteur-${a.actor.id}` : a.actor.nom)
+
+  const genererExport = () => {
+    const lignes = lignesExport()
+    if (format === 'csv') {
+      telechargerCsv(
+        `audit-${du}-${au}`,
+        ['Horodatage', 'Acteur', 'Rôle', 'Organisation', 'Périmètre', 'Action', 'Cible', 'Résultat', 'IP'],
+        lignes.map((a) => [
+          a.ts,
+          acteur(a),
+          ROLE_LABEL[a.role] ?? a.role,
+          a.orgNom ?? orgNom(a.orgId),
+          a.scope.label,
+          a.action,
+          a.target,
+          a.result,
+          a.ip ?? '',
+        ]),
+      )
+      pousser({
+        ton: 'ok',
+        titre: `${lignes.length} entrées exportées en CSV`,
+        detail: empreinte
+          ? 'L’empreinte de chaînage est en dernière colonne du fichier d’accompagnement.'
+          : 'Export sans empreinte de chaînage : un tiers ne pourra pas vérifier qu’il n’a pas été modifié.',
+      })
+      return
+    }
+    if (format === 'json') {
+      telechargerTexte(
+        `audit-${du}-${au}.json`,
+        JSON.stringify(
+          {
+            periode: { du, au },
+            perimetre,
+            entrees: lignes.map((a) => ({ ...a, actor: { ...a.actor, nom: acteur(a) } })),
+            ...(empreinte ? { empreinteChainage: 'sha256:9f2c…c41e' } : {}),
+          },
+          null,
+          2,
+        ),
+        'application/json',
+      )
+      pousser({
+        ton: 'ok',
+        titre: `${lignes.length} entrées exportées en JSON`,
+        detail: 'Structure stable, adaptée à un collecteur ou à un traitement automatisé.',
+      })
+      return
+    }
+    // PDF signé et syslog ne se fabriquent pas dans le navigateur : la
+    // maquette dit ce qui se passerait, elle ne prétend pas le faire.
+    pousser({
+      ton: 'info',
+      titre: format === 'pdf' ? 'Export PDF signé en préparation' : 'Flux syslog en préparation',
+      detail: `${lignes.length} entrées du ${du} au ${au}. Le lien de téléchargement arrive par courriel dans quelques minutes, valable 24 heures.`,
+    })
+  }
 
   return (
     <div className="space-y-5">
@@ -44,11 +130,33 @@ export default function AuditAdmin() {
         titre="Journal d’audit de la plateforme"
         sousTitre="Toutes les actions, y compris celles de nos propres équipes et celles qui ont été refusées. Les lignes concernant une organisation apparaissent aussi dans son journal à elle : nous ne tenons pas un registre séparé que le client ne verrait pas."
         actions={
-          <GatedAction autorise={autorise('compliance.export')} message={refus('compliance.export')}>
-            <Button variant="secondary" iconBefore={<Download size={14} />}>
-              Exporter
-            </Button>
-          </GatedAction>
+          <BoutonAction
+            libelle="Exporter le journal"
+            size="md"
+            icone={<Download size={14} />}
+            operation={{
+              action: 'compliance.export',
+              titre: `${AUDIT.length} entrées exportées en CSV`,
+              detail:
+                'Export brut du journal affiché. L’onglet Intégrité et export permet de borner la période, de choisir le format et de pseudonymiser les acteurs.',
+              effet: () =>
+                telechargerCsv(
+                  'audit-plateforme',
+                  ['Horodatage', 'Acteur', 'Rôle', 'Organisation', 'Périmètre', 'Action', 'Cible', 'Résultat', 'IP'],
+                  AUDIT.map((a) => [
+                    a.ts,
+                    a.actor.nom,
+                    ROLE_LABEL[a.role] ?? a.role,
+                    a.orgNom ?? orgNom(a.orgId),
+                    a.scope.label,
+                    a.action,
+                    a.target,
+                    a.result,
+                    a.ip ?? '',
+                  ]),
+                ),
+            }}
+          />
         }
         meta={
           <>
@@ -186,7 +294,7 @@ export default function AuditAdmin() {
                         <span className="truncate text-[11.5px] font-semibold text-ink">
                           {a.actor.nom}
                         </span>
-                        {EQUIPE_SYNELIA.some((m) => m.nom === a.actor.nom) && (
+                        {equipe.items.some((m) => m.nom === a.actor.nom) && (
                           <Badge tone="violet" size="sm">
                             Synelia
                           </Badge>
@@ -334,10 +442,13 @@ export default function AuditAdmin() {
                             size="sm"
                             variant="secondary"
                             onClick={() =>
-                              pousser({
+                              executer({
+                                action: 'reseller.manage',
                                 ton: 'info',
                                 titre: `Élévation de ${m.nom} révoquée`,
-                                detail: 'L’accès est coupé immédiatement. La révocation est journalisée.',
+                                detail:
+                                  'L’accès est coupé immédiatement. La révocation est journalisée dans le journal du client comme dans le nôtre.',
+                                effet: () => equipe.modifier(m.id, { elevation: { active: false } }),
                               })
                             }
                           >
@@ -644,14 +755,14 @@ export default function AuditAdmin() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Du">
-                    <Input type="date" defaultValue="2026-07-19" />
+                    <Input type="date" value={du} onChange={(e) => setDu(e.target.value)} />
                   </Field>
                   <Field label="Au">
-                    <Input type="date" defaultValue="2026-08-19" />
+                    <Input type="date" value={au} onChange={(e) => setAu(e.target.value)} />
                   </Field>
                 </div>
                 <Field label="Périmètre">
-                  <Select defaultValue="tout">
+                  <Select value={perimetre} onChange={(e) => setPerimetre(e.target.value)}>
                     <option value="tout">Toute la plateforme</option>
                     <option value="org">Une organisation précise</option>
                     <option value="equipe">Actions de nos équipes uniquement</option>
@@ -659,8 +770,11 @@ export default function AuditAdmin() {
                     <option value="elevations">Élévations de privilège uniquement</option>
                   </Select>
                 </Field>
-                <Field label="Format">
-                  <Select defaultValue="pdf">
+                <Field
+                  label="Format"
+                  hint="CSV et JSON sont produits ici même ; le PDF signé et le flux syslog sont fabriqués côté serveur"
+                >
+                  <Select value={format} onChange={(e) => setFormat(e.target.value)}>
                     <option value="csv">CSV — pour un tableur</option>
                     <option value="json">JSON — pour un traitement automatisé</option>
                     <option value="pdf">PDF signé — pour une remise formelle</option>
@@ -669,28 +783,29 @@ export default function AuditAdmin() {
                 </Field>
                 <div className="space-y-3">
                   <Switch
-                    checked
+                    checked={empreinte}
+                    onChange={setEmpreinte}
                     label="Inclure l’empreinte de chaînage"
                     description="Permet à un tiers de vérifier que l’export n’a pas été modifié après extraction."
                   />
                   <Switch
-                    checked={false}
+                    checked={pseudonymiser}
+                    onChange={setPseudonymiser}
                     label="Pseudonymiser les acteurs"
                     description="Remplace les noms par des identifiants stables. Utile pour une remise à un tiers qui n’a pas besoin de l’identité des personnes."
                   />
                 </div>
+                <p className="text-[11.5px] text-g-500">
+                  {lignesExport().length} entrée{lignesExport().length > 1 ? 's' : ''} dans la
+                  sélection, sur {AUDIT.length} au journal.
+                </p>
               </div>
               <GatedAction autorise={autorise('compliance.export')} message={refus('compliance.export')}>
                 <Button
                   className="mt-4"
                   iconBefore={<FileCheck2 size={14} />}
-                  onClick={() =>
-                    pousser({
-                      ton: 'ok',
-                      titre: 'Export en préparation',
-                      detail: 'Le lien de téléchargement arrive par courriel dans quelques minutes, valable 24 heures.',
-                    })
-                  }
+                  disabled={du > au}
+                  onClick={genererExport}
                 >
                   Générer l’export
                 </Button>
@@ -760,7 +875,7 @@ synelia-audit verify audit-plateforme-2026-07-19_2026-08-19.csv \\
               <Badge tone="neutral" size="sm">
                 {detail.id}
               </Badge>
-              {EQUIPE_SYNELIA.some((m) => m.nom === detail.actor.nom) && (
+              {equipe.items.some((m) => m.nom === detail.actor.nom) && (
                 <Badge tone="violet" size="sm">
                   Action d’une équipe Synelia
                 </Badge>

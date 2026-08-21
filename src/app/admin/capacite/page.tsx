@@ -12,7 +12,7 @@ import {
   SYNTHESE_PLATEFORME,
   VMS,
 } from '@/lib/mock'
-import { BACKEND_LABEL, SITE_COURT, type Backend } from '@/lib/types'
+import { BACKEND_LABEL, SITE_COURT, type Backend, type Placement } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
@@ -36,12 +36,29 @@ export default function Capacite() {
   const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
   const socles = useCollection<Backend>('backends', BACKENDS)
+  const placements = useCollection<Placement>('placements', PLACEMENTS)
   const [onglet, setOnglet] = useState('socles')
   const [espaceId, setEspaceId] = useState(ESPACES[0]?.id ?? '')
   const [rebalance, setRebalance] = useState(false)
+  const [repartition, setRepartition] = useState<Array<{ backendId: string; percent: number }>>([])
 
   const espace = ESPACES.find((e) => e.id === espaceId)
-  const placementsEspace = PLACEMENTS.filter((p) => p.espaceId === espaceId)
+  const placementsEspace = placements.items.filter((p) => p.espaceId === espaceId)
+
+  /** Remplace la répartition de l'espace courant par celle qui vient d'être réglée. */
+  const appliquerRepartition = (parts: Array<{ backendId: string; percent: number }>) => {
+    if (parts.length === 0) return
+    placements.supprimer(placementsEspace.map((p) => p.id))
+    placements.creer(
+      parts.map((part) => ({
+        id: placements.identifiant('pl'),
+        espaceId,
+        backendId: part.backendId,
+        percent: part.percent,
+      })),
+      'fin',
+    )
+  }
   const satures = socles.items.filter((b) => (b.saturation?.j30 ?? 0) > 85)
   const enSortie = socles.items.filter((b) => b.enSortie?.actif)
 
@@ -422,12 +439,15 @@ export default function Capacite() {
                 </div>
 
                 <PlacementSlider
-                  backends={BACKENDS.filter((b) => b.statut === 'en_ligne')}
+                  key={espaceId}
+                  backends={socles.items.filter((b) => b.statut === 'en_ligne')}
                   initial={
                     placementsEspace.length > 0
                       ? placementsEspace.map((p) => ({ backendId: p.backendId, percent: p.percent }))
                       : [{ backendId: BACKENDS[1].id, percent: 100 }]
                   }
+                  onChange={setRepartition}
+                  onAppliquer={appliquerRepartition}
                 />
 
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-g-100 pt-4">
@@ -482,7 +502,7 @@ export default function Capacite() {
                 </thead>
                 <tbody>
                   {ESPACES.map((e) => {
-                    const pls = PLACEMENTS.filter((p) => p.espaceId === e.id)
+                    const pls = placements.items.filter((p) => p.espaceId === e.id)
                     return (
                       <tr key={e.id} className="border-b border-g-100 last:border-0">
                         <td className="px-3 py-2.5 font-mono text-[12px] font-semibold text-ink">
@@ -878,10 +898,21 @@ export default function Capacite() {
           'Le client verra le changement de socle sur chacune de ses machines, et l’opération apparaîtra dans son journal d’audit',
         ]}
         onConfirm={() => {
-          pousser({
-            ton: 'ok',
+          executer({
+            action: 'capacity.manage',
             titre: 'Rééquilibrage appliqué',
             detail: `Le placement de ${espace?.code} est mis à jour. Les migrations à chaud démarrent maintenant ; les autres sont planifiées dans la fenêtre de maintenance du client.`,
+            job: {
+              type: 'capacite.rebalance',
+              label: `Rééquilibrage · ${espace?.code ?? 'espace'}`,
+              etapes: [
+                'Calculer le plan de migration',
+                'Migrer les machines à chaud',
+                'Planifier les redémarrages nécessaires',
+                'Vérifier l’équilibre atteint',
+              ],
+            },
+            effetFinal: () => appliquerRepartition(repartition),
           })
           setRebalance(false)
         }}

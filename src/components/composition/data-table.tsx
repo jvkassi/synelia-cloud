@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, ChevronsUpDown, Columns3, Download } from 'lucide-react'
+import { telechargerCsv } from '@/lib/export'
 import { cn } from '@/lib/utils'
 import { Button, IconButton } from '@/components/ui/button'
 import { SearchInput, SegmentedControl, Select } from '@/components/ui/field'
@@ -47,6 +48,7 @@ export function DataTable<T extends { id: string }>({
   href,
   densiteInitiale = 'confortable',
   exportable,
+  nomExport,
   className,
 }: {
   lignes: T[]
@@ -68,6 +70,8 @@ export function DataTable<T extends { id: string }>({
   href?: (ligne: T) => string
   densiteInitiale?: 'compacte' | 'confortable'
   exportable?: boolean
+  /** Nom du fichier produit par l'export, sans extension. */
+  nomExport?: string
   className?: string
 }) {
   const [q, setQ] = useState('')
@@ -124,24 +128,11 @@ export function DataTable<T extends { id: string }>({
    */
   const exporterCsv = () => {
     const colonnesExportables = visibles.filter((c) => c.cle)
-    const echappe = (v: string | number) => {
-      const t = String(v)
-      return /[";\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t
-    }
-    const contenu = [
-      colonnesExportables.map((c) => echappe(c.entete)).join(';'),
-      ...filtrees.map((l) => colonnesExportables.map((c) => echappe(c.cle!(l))).join(';')),
-    ].join('\n')
-
-    // Point-virgule et BOM : c'est ce qu'attend un tableur configuré en français.
-    const url = URL.createObjectURL(
-      new Blob([`\ufeff${contenu}`], { type: 'text/csv;charset=utf-8' }),
+    telechargerCsv(
+      nomExport ?? 'export',
+      colonnesExportables.map((c) => c.entete),
+      filtrees.map((l) => colonnesExportables.map((c) => c.cle!(l))),
     )
-    const lien = document.createElement('a')
-    lien.href = url
-    lien.download = 'export.csv'
-    lien.click()
-    URL.revokeObjectURL(url)
   }
 
   if (chargement) return <SkeletonTable colonnes={visibles.length} />

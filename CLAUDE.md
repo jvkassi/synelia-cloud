@@ -123,6 +123,20 @@ Les lectures des sélecteurs de `src/lib/mock/` (`vmsDeLEspace`, `messageriesDeL
 donnent le **périmètre** ; l'état vient de l'atelier. Le motif est :
 `const perimetre = new Set(selecteur().map((x) => x.id))` puis filtrer les items.
 
+### Les exports
+
+`src/lib/export.ts` produit un fichier réel : `telechargerCsv` (point-virgule et
+BOM, ce qu'attend un tableur en français) et `telechargerTexte`. `DataTable`
+l'utilise pour son icône d'export ; le simulateur de la vitrine, le journal
+d'audit et la facturation fournisseur en descendent leurs jeux de données. Ce que
+le navigateur ne sait pas fabriquer — un PDF signé, un flux syslog — reste une
+notification qui dit ce qui se passerait, sans prétendre le faire.
+
+Les formulaires de la vitrine passent par `FormulaireSite`
+(`src/components/site/formulaire.tsx`) : champs obligatoires réellement exigés,
+accusé de réception avec référence, et la phrase qui dit qu'aucun courriel ne
+part d'une maquette.
+
 ## Architecture de la navigation
 
 Deux barres, pas de barre latérale de navigation. `src/lib/navigation.ts` porte le
@@ -198,19 +212,18 @@ lien, deux ancres imbriquées étant du HTML que React refuse d'hydrater.
 2. **Fiche revendeur** — il manque *Périmètre de catalogue* et *API & intégration*.
 3. **`/admin/catalogue`** — le cahier demande un découpage par famille (Espace
    Cloud, images VM, clusters, stacks, web) ; on a un tableau unique.
-4. **Espace fournisseur** — les écrans `/admin` restent en lecture : leurs
-   boutons ne sont pas branchés sur l'atelier, contrairement à tout l'espace
-   client. Les primitives sont là, c'est du câblage.
-5. **Anglais** — aucun mécanisme d'internationalisation ; tous les libellés sont
+4. **Anglais** — aucun mécanisme d'internationalisation ; tous les libellés sont
    en français en dur. Le cahier ne demande que la structure, pas la traduction.
    C'est le seul chantier de la liste qui se compte en jours.
-6. **Lanceur comme page d'accueil** — l'écran existe et l'explique, mais aucun
+5. **Lanceur comme page d'accueil** — l'écran existe et l'explique, mais aucun
    réglage ne le fixe pour les membres au rôle purement utilisateur.
 
 Fait depuis : l'assistant `/app/kubernetes/new` (cinq étapes), l'onglet
 *Sessions actives* de `/app/securite` et sa politique d'organisation, le centre
-de tâches `/app/taches`, et le glisser-déposer de composition de serveurs qui
-livre réellement ses lots (`/app/vms/composer`).
+de tâches `/app/taches`, le glisser-déposer de composition de serveurs qui livre
+réellement ses lots (`/app/vms/composer`), et le câblage complet de l'espace
+fournisseur sur l'atelier — organisations, catalogue, capacité, marketplace,
+tickets, équipe, conformité, recouvrement, revendeurs.
 
 ## Style d'écriture
 

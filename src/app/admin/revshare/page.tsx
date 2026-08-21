@@ -5,7 +5,12 @@ import Link from 'next/link'
 import { Download, Percent, Send } from 'lucide-react'
 import { cn, trendSeries } from '@/lib/utils'
 import { dateCourte, money, num, pct } from '@/lib/format'
-import { ORGANISATIONS, RELEVES_REVSHARE, RESELLERS } from '@/lib/mock'
+import {
+  ORGANISATIONS,
+  RELEVES_REVSHARE,
+  RESELLERS,
+  type ReleveRevshare,
+} from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
@@ -14,6 +19,8 @@ import { Drawer } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'releves', label: 'Relevés' },
@@ -22,15 +29,44 @@ const ONGLETS = [
 ]
 
 export default function Revshare() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const releves = useCollection<ReleveRevshare>('releves-revshare', RELEVES_REVSHARE)
   const [onglet, setOnglet] = useState('releves')
-  const [detail, setDetail] = useState<(typeof RELEVES_REVSHARE)[number] | null>(null)
+  const [detailId, setDetail] = useState<string | null>(null)
+  const detail = releves.items.find((r) => r.id === detailId) ?? null
+  const [assietteEncaisse, setAssietteEncaisse] = useState(true)
+  const [deduireAvoirs, setDeduireAvoirs] = useState(true)
+  const [deduireRemises, setDeduireRemises] = useState(true)
+  const [delaiContestation, setDelaiContestation] = useState(true)
+  const [compenserNegatif, setCompenserNegatif] = useState(false)
+  const [simPartenaire, setSimPartenaire] = useState(RESELLERS[0]?.id ?? '')
+  const [simTaux, setSimTaux] = useState(25)
 
-  const aRegler = RELEVES_REVSHARE.filter((r) => r.statut !== 'réglé')
-  const regles = RELEVES_REVSHARE.filter((r) => r.statut === 'réglé')
+  /** Validation d'un relevé : versement sous 15 jours, statut réglé à la fin. */
+  const valider = (r: ReleveRevshare) =>
+    executer({
+      action: 'reseller.manage',
+      titre: `Relevé de ${r.periode} validé`,
+      detail: `${money(r.montant)} seront versés à ${r.reseller} sous 15 jours, avec le relevé détaillé.`,
+      job: {
+        type: 'revshare.paiement',
+        label: `Versement ${r.reseller} · ${r.periode}`,
+        etapes: [
+          'Figer le relevé et ses lignes',
+          'Envoyer le relevé au partenaire',
+          'Ordonner le virement',
+        ],
+        dureeEtapeMs: 1100,
+      },
+      effetFinal: () => releves.modifier(r.id, { statut: 'réglé' }),
+    })
+
+  const aRegler = releves.items.filter((r) => r.statut !== 'réglé')
+  const regles = releves.items.filter((r) => r.statut === 'réglé')
   const totalDu = aRegler.reduce((a, r) => a + r.montant, 0)
   const totalVerse = regles.reduce((a, r) => a + r.montant, 0)
-  const caApporte = RELEVES_REVSHARE.reduce((a, r) => a + r.caGenere, 0)
+  const caApporte = releves.items.reduce((a, r) => a + r.caGenere, 0)
 
   return (
     <div className="space-y-5">
@@ -39,9 +75,16 @@ export default function Revshare() {
         sousTitre="Ce que nous reversons à nos partenaires, calculé sur le chiffre d’affaires réellement encaissé et non facturé. Le relevé est détaillé ligne par ligne : un partenaire doit pouvoir le vérifier, pas nous croire sur parole."
         actions={
           <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
-            <Button variant="secondary" iconBefore={<Download size={14} />}>
-              Exporter les relevés
-            </Button>
+            <BoutonAction
+              libelle="Exporter les relevés"
+              size="md"
+              icone={<Download size={14} />}
+              operation={{
+                action: 'reseller.manage',
+                titre: 'Export des relevés préparé',
+                detail: `${releves.items.length} relevés, avec le détail des lignes et des déductions.`,
+              }}
+            />
           </GatedAction>
         }
         meta={
@@ -128,7 +171,7 @@ export default function Revshare() {
                   </tr>
                 </thead>
                 <tbody>
-                  {RELEVES_REVSHARE.map((r) => (
+                  {releves.items.map((r) => (
                     <tr key={`${r.reseller}-${r.periode}`} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2.5 text-[12.5px] font-semibold text-ink">
                         {r.periode}
@@ -166,12 +209,20 @@ export default function Revshare() {
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         <span className="flex items-center justify-end gap-1.5">
-                          <Button size="sm" variant="ghost" onClick={() => setDetail(r)}>
+                          <Button size="sm" variant="ghost" onClick={() => setDetail(r.id)}>
                             Détail
                           </Button>
-                          <Button size="sm" variant="ghost" iconBefore={<Download size={12} />}>
-                            PDF
-                          </Button>
+                          <BoutonAction
+                            libelle="PDF"
+                            variant="ghost"
+                            icone={<Download size={12} />}
+                            operation={{
+                              action: 'reseller.manage',
+                              ton: 'info',
+                              titre: `Relevé de ${r.periode} téléchargé`,
+                              detail: `${money(r.montant)} · détail ligne par ligne, comme le partenaire le reçoit`,
+                            }}
+                          />
                           {r.statut !== 'réglé' && (
                             <GatedAction
                               autorise={autorise('reseller.manage')}
@@ -181,13 +232,7 @@ export default function Revshare() {
                                 size="sm"
                                 variant="secondary"
                                 iconBefore={<Send size={12} />}
-                                onClick={() =>
-                                  pousser({
-                                    ton: 'ok',
-                                    titre: `Relevé de ${r.periode} validé`,
-                                    detail: `${money(r.montant)} seront versés à ${r.reseller} sous 15 jours, avec le relevé détaillé.`,
-                                  })
-                                }
+                                onClick={() => valider(r)}
                               >
                                 Valider
                               </Button>
@@ -426,41 +471,54 @@ export default function Revshare() {
               />
               <div className="space-y-3.5">
                 <Switch
-                  checked
+                  checked={assietteEncaisse}
+                  onChange={setAssietteEncaisse}
                   label="Assiette sur le chiffre d’affaires encaissé"
                   description="Et non facturé. Le décalage est porté par les deux parties, ce qui évite les régularisations à rebours."
                 />
                 <Switch
-                  checked
+                  checked={deduireAvoirs}
+                  onChange={setDeduireAvoirs}
                   label="Déduire les avoirs de service"
                   description="Symétrique : nous ne facturons pas le partenaire pour notre propre manquement, nous ne lui reversons pas un partage sur un montant crédité."
                 />
                 <Switch
-                  checked
+                  checked={deduireRemises}
+                  onChange={setDeduireRemises}
                   label="Déduire les remises commerciales exceptionnelles"
                   description="Au prorata. L’effort commercial est partagé dans les deux sens."
                 />
                 <Switch
                   checked
+                  disabled
                   label="Relevé détaillé ligne par ligne"
                   description="Non désactivable. C’est la condition d’une relation vérifiable."
                 />
                 <Switch
-                  checked
+                  checked={delaiContestation}
+                  onChange={setDelaiContestation}
                   label="Délai de contestation de 15 jours"
                   description="Passé ce délai, le relevé est réputé accepté et le versement part."
                 />
                 <Switch
-                  checked={false}
+                  checked={compenserNegatif}
+                  onChange={setCompenserNegatif}
                   label="Compenser un partage négatif sur la période suivante"
                   description="Cas rare : un mois où les avoirs dépassent les encaissements. Nous préférons ne rien reverser plutôt que de créer une dette du partenaire envers nous."
                 />
               </div>
-              <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
-                <Button className="mt-4" variant="secondary">
-                  Enregistrer — préavis de 6 mois
-                </Button>
-              </GatedAction>
+              <BoutonAction
+                libelle="Enregistrer — préavis de 6 mois"
+                size="md"
+                className="mt-4"
+                operation={{
+                  action: 'reseller.manage',
+                  ton: 'warn',
+                  titre: 'Règles de partage enregistrées',
+                  detail:
+                    'Elles prennent effet dans six mois : un partenaire ne voit pas ses conditions changer du jour au lendemain.',
+                }}
+              />
             </Card>
           </div>
         </div>
@@ -572,7 +630,10 @@ export default function Revshare() {
               />
               <div className="space-y-4">
                 <Field label="Partenaire">
-                  <Select defaultValue={RESELLERS[0]?.id}>
+                  <Select
+                    value={simPartenaire}
+                    onChange={(e) => setSimPartenaire(e.target.value)}
+                  >
                     {RESELLERS.map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.nom} — taux actuel {r.revsharePct} %
@@ -581,16 +642,35 @@ export default function Revshare() {
                   </Select>
                 </Field>
                 <Field label="Nouveau taux" hint="préavis contractuel de 6 mois avant application">
-                  <Input type="number" defaultValue={25} suffix="%" />
+                  <Input
+                    type="number"
+                    min={0}
+                    max={40}
+                    value={simTaux}
+                    suffix="%"
+                    onChange={(e) => setSimTaux(Number(e.target.value))}
+                  />
                 </Field>
                 <div className="rounded-[8px] border border-p-300 bg-p-050 p-3.5">
                   <MicroLabel className="text-p-700">Effet estimé</MicroLabel>
                   <div className="mt-2 space-y-1.5">
-                    {[
-                      { l: 'Partage annuel actuel (22 %)', v: money(3_273_600) },
-                      { l: 'Partage annuel au nouveau taux (25 %)', v: money(3_720_000) },
-                      { l: 'Coût supplémentaire annuel', v: money(446_400) },
-                    ].map((x, i) => (
+                    {(() => {
+                      const partenaire = RESELLERS.find((r) => r.id === simPartenaire)
+                      const assiette = (partenaire?.caGenere ?? 0) * 12
+                      const actuel = Math.round((assiette * (partenaire?.revsharePct ?? 0)) / 100)
+                      const nouveau = Math.round((assiette * simTaux) / 100)
+                      return [
+                        {
+                          l: `Partage annuel actuel (${partenaire?.revsharePct ?? 0} %)`,
+                          v: money(actuel),
+                        },
+                        { l: `Partage annuel au nouveau taux (${simTaux} %)`, v: money(nouveau) },
+                        {
+                          l: nouveau >= actuel ? 'Coût supplémentaire annuel' : 'Économie annuelle',
+                          v: money(Math.abs(nouveau - actuel)),
+                        },
+                      ]
+                    })().map((x, i) => (
                       <div key={x.l} className="flex items-baseline justify-between gap-3">
                         <span className="text-[12px] text-g-700">{x.l}</span>
                         <span
@@ -604,6 +684,11 @@ export default function Revshare() {
                       </div>
                     ))}
                   </div>
+                  <p className="mt-2 border-t border-p-300/60 pt-2 text-[11px] leading-relaxed text-g-700">
+                    Calculé à volume constant, sur douze fois le chiffre d’affaires mensuel apporté
+                    par ce partenaire. Un changement de taux ne s’applique qu’après six mois de
+                    préavis.
+                  </p>
                 </div>
                 <Callout ton="info" titre="Une hausse de taux se justifie par un engagement">
                   Augmenter le partage d’un partenaire sans contrepartie revient à réduire sa propre
@@ -706,15 +791,35 @@ export default function Revshare() {
             </div>
 
             <div className="flex flex-wrap gap-1.5">
-              <Button variant="secondary" iconBefore={<Download size={13} />}>
-                Télécharger le relevé
-              </Button>
-              <Button variant="ghost" iconBefore={<Download size={13} />}>
-                Détail des lignes en CSV
-              </Button>
+              <BoutonAction
+                libelle="Télécharger le relevé"
+                size="md"
+                icone={<Download size={13} />}
+                operation={{
+                  action: 'reseller.manage',
+                  ton: 'info',
+                  titre: `Relevé de ${detail.periode} téléchargé`,
+                  detail: `${money(detail.montant)} · ${detail.reseller}`,
+                }}
+              />
+              <BoutonAction
+                libelle="Détail des lignes en CSV"
+                variant="ghost"
+                size="md"
+                icone={<Download size={13} />}
+                operation={{
+                  action: 'reseller.manage',
+                  ton: 'info',
+                  titre: 'Détail des lignes exporté',
+                  detail:
+                    'Numéro de facture, date de règlement et déductions appliquées : le partenaire rapproche ligne par ligne.',
+                }}
+              />
               {detail.statut !== 'réglé' && (
                 <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
-                  <Button iconBefore={<Send size={13} />}>Valider le versement</Button>
+                  <Button iconBefore={<Send size={13} />} onClick={() => valider(detail)}>
+                    Valider le versement
+                  </Button>
                 </GatedAction>
               )}
             </div>

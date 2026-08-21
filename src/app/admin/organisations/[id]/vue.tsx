@@ -4,9 +4,11 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Ban, KeyRound, Pause, Play, ShieldAlert, UserCog } from 'lucide-react'
 import { cn, trendSeries } from '@/lib/utils'
-import { dateCourte, dateHeure, goHumain, money, num, pct, relatif } from '@/lib/format'
+import { dateCourte, dateHeure, goHumain, MAINTENANT, money, num, pct, relatif } from '@/lib/format'
 import {
   AUDIT,
+  ELEVATIONS,
+  EQUIPE_SYNELIA,
   ESPACES,
   FACTURES,
   IMPAYES,
@@ -23,8 +25,10 @@ import {
   ROLE_LABEL,
   SITE_COURT,
   type Invoice,
+  type Organisation,
   type Role,
 } from '@/lib/types'
+import type { Elevation } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Avatar, GatedAction, Tabs } from '@/components/ui/display'
@@ -47,44 +51,29 @@ const ONGLETS = [
   { id: 'administration', label: 'Administration' },
 ]
 
-interface Elevation {
-  id: string
-  qui: string
-  quand: string
-  duree: string
-  motif: string
-  actif: boolean
-}
-
-const ELEVATIONS: Elevation[] = [
-  {
-    id: 'elv-1',
-    qui: 'Jean-Vincent Kassi',
-    quand: '2026-08-19T13:00:00Z',
-    duree: '4 h',
-    motif: 'Ticket SYN-8814 — diagnostic de latence sur app-metier',
-    actif: true,
-  },
-  {
-    id: 'elv-2',
-    qui: 'Aïcha Bamba',
-    quand: '2026-08-12T09:20:00Z',
-    duree: '2 h',
-    motif: 'Ticket SYN-8702 — restauration accompagnée',
-    actif: false,
-  },
-]
-
 export function VueOrganisation({ id }: { id: string }) {
   const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
   const lesFactures = useCollection<Invoice>('factures', FACTURES)
   const elevations = useCollection<Elevation>(`elevations-${id}`, ELEVATIONS)
+  const orgs = useCollection<Organisation>('organisations', ORGANISATIONS)
   const [onglet, setOnglet] = useState('synthese')
   const [elevation, setElevation] = useState(false)
   const [suspension, setSuspension] = useState(false)
+  const [motifElevation, setMotifElevation] = useState('')
+  const [dureeElevation, setDureeElevation] = useState('4')
+  const [perimetreElevation, setPerimetreElevation] = useState('lecture')
+  const [ticketElevation, setTicketElevation] = useState('')
+  const [libreService, setLibreService] = useState(true)
+  const [marketplaceOuverte, setMarketplaceOuverte] = useState(true)
+  const [soclesSouverains, setSoclesSouverains] = useState(false)
+  const [planService, setPlanService] = useState('')
+  const [plafond, setPlafond] = useState(0)
+  const [quotaEspaces, setQuotaEspaces] = useState(10)
 
-  const org = ORGANISATIONS.find((o) => o.id === id)!
+  // L'organisation vient de la collection : suspendre depuis cet écran doit se
+  // voir dans la liste, et une organisation créée dans la session doit s'ouvrir.
+  const org = orgs.items.find((o) => o.id === id)!
   const reseller = RESELLERS.find((r) => r.id === org.resellerId)
   const membres = membresDeLOrg(org.id)
   const factures = lesFactures.items.filter((f) => f.orgId === org.id)
@@ -927,7 +916,10 @@ export function VueOrganisation({ id }: { id: string }) {
             />
             <div className="space-y-4">
               <Field label="Plan de service">
-                <Select defaultValue={org.tenantPlan ?? 'Standard'}>
+                <Select
+                  value={planService || (org.tenantPlan ?? 'Standard')}
+                  onChange={(e) => setPlanService(e.target.value)}
+                >
                   <option value="Standard">Standard</option>
                   <option value="Avancé">Avancé — support prioritaire</option>
                   <option value="Entreprise">Entreprise — interlocuteur dédié</option>
@@ -937,43 +929,66 @@ export function VueOrganisation({ id }: { id: string }) {
                 label="Plafond de dépense mensuelle"
                 hint="au-delà, la création de nouvelles ressources est bloquée et le client averti"
               >
-                <Input type="number" defaultValue={org.caMensuel ? org.caMensuel * 2 : 500000} />
+                <Input
+                  type="number"
+                  min={0}
+                  value={plafond || (org.caMensuel ? org.caMensuel * 2 : 500000)}
+                  onChange={(e) => setPlafond(Number(e.target.value))}
+                />
               </Field>
               <Field label="Quota maximal d’Espaces Cloud">
-                <Input type="number" defaultValue={10} />
+                <Input
+                  type="number"
+                  min={org.espaces ?? 0}
+                  value={quotaEspaces}
+                  onChange={(e) => setQuotaEspaces(Number(e.target.value))}
+                />
               </Field>
               <div className="space-y-3">
                 <Switch
-                  checked
+                  checked={libreService}
+                  onChange={setLibreService}
                   label="Autoriser le libre-service"
                   description="Le client peut créer et supprimer ses propres ressources sans passer par nous. Désactiver revient à imposer un ticket pour chaque création."
                 />
                 <Switch
-                  checked
+                  checked={marketplaceOuverte}
+                  onChange={setMarketplaceOuverte}
                   label="Autoriser la marketplace"
                   description="Souscription en autonomie aux services managés du catalogue."
                 />
                 <Switch
-                  checked={false}
+                  checked={soclesSouverains}
+                  onChange={setSoclesSouverains}
                   label="Restreindre aux socles souverains"
                   description="Les ressources de cette organisation ne seront placées que sur des socles libres et localisés en Côte d’Ivoire. À activer pour les organisations soumises à une contrainte réglementaire."
                 />
               </div>
+              {!libreService && (
+                <Callout ton="warn" titre="Sans libre-service, tout passe par un ticket">
+                  Le client ne pourra plus créer ni supprimer une ressource lui-même : chaque
+                  demande arrivera dans notre file de tickets, avec le délai que cela implique. À
+                  réserver aux organisations qui le demandent explicitement.
+                </Callout>
+              )}
             </div>
-            <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
-              <Button
-                className="mt-4"
-                onClick={() =>
-                  pousser({
-                    ton: 'ok',
-                    titre: 'Paramètres enregistrés',
-                    detail: 'La modification est journalisée dans l’audit du client, avec votre nom.',
-                  })
-                }
-              >
-                Enregistrer
-              </Button>
-            </GatedAction>
+            <BoutonAction
+              libelle="Enregistrer"
+              size="md"
+              className="mt-4"
+              variant="primary"
+              operation={{
+                action: 'reseller.manage',
+                titre: 'Paramètres enregistrés',
+                detail: `Plan ${planService || (org.tenantPlan ?? 'Standard')}, quota de ${quotaEspaces} espaces, libre-service ${
+                  libreService ? 'autorisé' : 'refusé'
+                }. La modification est journalisée dans l’audit du client, avec votre nom.`,
+                effet: () =>
+                  orgs.modifier(org.id, {
+                    tenantPlan: planService || (org.tenantPlan ?? 'Standard'),
+                  }),
+              }}
+            />
           </Card>
 
           <div className="space-y-4">
@@ -1119,12 +1134,28 @@ export function VueOrganisation({ id }: { id: string }) {
               Annuler
             </Button>
             <Button
+              disabled={
+                motifElevation.trim().length === 0 ||
+                (perimetreElevation === 'intervention' && ticketElevation.trim().length === 0)
+              }
               onClick={() => {
-                pousser({
+                executer({
+                  action: 'reseller.manage',
                   ton: 'warn',
                   titre: 'Élévation demandée',
                   detail: `Une entrée apparaît immédiatement dans le journal d’audit de ${org.nom}, avec votre nom et le motif.`,
+                  effet: () =>
+                    elevations.creer({
+                      id: elevations.identifiant('elv'),
+                      qui: EQUIPE_SYNELIA[0].nom,
+                      quand: MAINTENANT,
+                      duree: `${dureeElevation} h`,
+                      motif: `${ticketElevation.trim() ? `${ticketElevation.trim()} — ` : ''}${motifElevation.trim()}`,
+                      actif: true,
+                    }),
                 })
+                setMotifElevation('')
+                setTicketElevation('')
                 setElevation(false)
               }}
             >
@@ -1137,30 +1168,47 @@ export function VueOrganisation({ id }: { id: string }) {
           <Field label="Motif" hint="visible par le client dans son journal d’audit — soyez précis">
             <Textarea
               rows={3}
+              value={motifElevation}
+              onChange={(e) => setMotifElevation(e.target.value)}
               placeholder="Ticket SYN-8814 — diagnostic de la latence signalée sur app-metier, lecture des métriques et journaux de l’environnement de production."
             />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Durée" hint="l’accès expire automatiquement">
-              <Select defaultValue="4">
+              <Select
+                value={dureeElevation}
+                onChange={(e) => setDureeElevation(e.target.value)}
+              >
                 <option value="1">1 heure</option>
                 <option value="4">4 heures</option>
                 <option value="8">8 heures</option>
               </Select>
             </Field>
             <Field label="Périmètre">
-              <Select defaultValue="lecture">
+              <Select
+                value={perimetreElevation}
+                onChange={(e) => setPerimetreElevation(e.target.value)}
+              >
                 <option value="lecture">Lecture seule des métadonnées et métriques</option>
                 <option value="logs">Lecture, journaux applicatifs inclus</option>
                 <option value="intervention">Intervention — modification de ressources</option>
               </Select>
             </Field>
           </div>
-          <Field label="Ticket associé" hint="obligatoire pour une intervention">
-            <Input placeholder="SYN-8814" />
+          <Field
+            label="Ticket associé"
+            hint="obligatoire pour une intervention"
+            required={perimetreElevation === 'intervention'}
+          >
+            <Input
+              placeholder="SYN-8814"
+              value={ticketElevation}
+              onChange={(e) => setTicketElevation(e.target.value)}
+            />
           </Field>
           <Switch
             checked
+            disabled
             label="Notifier l’administrateur de l’organisation"
             description="Non désactivable pour une intervention. Un accès dont le client n’est pas averti n’est pas un accès légitime."
           />
@@ -1193,13 +1241,14 @@ export function VueOrganisation({ id }: { id: string }) {
               ]
         }
         onConfirm={() => {
-          pousser({
+          executer({
+            action: 'reseller.manage',
             ton: org.statut === 'active' ? 'err' : 'ok',
-            titre:
-              org.statut === 'active'
-                ? `${org.nom} suspendue`
-                : `${org.nom} réactivée`,
-            detail: 'L’opération est journalisée dans l’audit de l’organisation et dans celui de la plateforme.',
+            titre: org.statut === 'active' ? `${org.nom} suspendue` : `${org.nom} réactivée`,
+            detail:
+              'L’opération est journalisée dans l’audit de l’organisation et dans celui de la plateforme.',
+            effet: () =>
+              orgs.modifier(org.id, { statut: org.statut === 'active' ? 'suspendue' : 'active' }),
           })
           setSuspension(false)
         }}

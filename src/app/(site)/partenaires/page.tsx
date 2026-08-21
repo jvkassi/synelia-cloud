@@ -4,9 +4,10 @@ import { cn } from '@/lib/utils'
 import { money, pct } from '@/lib/format'
 import { MODELE_PARTENAIRE, OFFRES, PAYS } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { ButtonLink } from '@/components/ui/button'
 import { Checkbox, Field, Input, Select, Textarea } from '@/components/ui/field'
 import { Card, CardHeader, Callout } from '@/components/composition/card'
+import { FormulaireSite } from '@/components/site/formulaire'
 import {
   AppelFinal,
   Container,
@@ -81,9 +82,9 @@ export default function Partenaires() {
         chapeau="Trois niveaux de partenariat, une grille d’achat dédiée, et un portail que vous pouvez entièrement thématiser à vos couleurs et à votre domaine. Vos clients ne voient jamais Synelia — et vous ne voyez que vos clients."
         actions={
           <>
-            <Button size="lg" variant="inverse">
+            <ButtonLink href="#candidature" size="lg" variant="inverse">
               Devenir partenaire
-            </Button>
+            </ButtonLink>
             <Badge tone="ok">Aucun volume minimum la première année</Badge>
           </>
         }
@@ -301,10 +302,19 @@ export default function Partenaires() {
             chapeau="Un chargé de partenariat vous répond sous un jour ouvré pour établir votre grille et votre périmètre."
           />
           <Card className="mt-8">
-            <form className="space-y-4">
+            <FormulaireSite
+              libelle="Envoyer ma candidature"
+              titreSucces="Candidature enregistrée"
+              phraseSucces="Un chargé de partenariat instruit votre dossier : périmètre de catalogue, grille d’achat, niveau de thématisation du portail."
+              suite={[
+                'Instruction du dossier sous un jour ouvré — activité, cibles, offres déjà distribuées.',
+                'Atelier de cadrage sans frais, qui fixe votre grille et votre périmètre de catalogue.',
+                'Ouverture de votre portail thématisé et de votre compte revendeur, sans volume minimum la première année.',
+              ]}
+            >
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Raison sociale" required>
-                  <Input placeholder="Votre société" />
+                  <Input required placeholder="Votre société" />
                 </Field>
                 <Field label="Pays d’exercice" required>
                   <Select defaultValue={PAYS[0]}>
@@ -318,14 +328,14 @@ export default function Partenaires() {
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Contact" required>
-                  <Input placeholder="Nom et fonction" autoComplete="name" />
+                  <Input required placeholder="Nom et fonction" autoComplete="name" />
                 </Field>
                 <Field label="E-mail professionnel" required>
-                  <Input type="email" placeholder="contact@societe.ci" autoComplete="email" />
+                  <Input required type="email" placeholder="contact@societe.ci" autoComplete="email" />
                 </Field>
               </div>
               <Field label="Niveau de partenariat souhaité" required>
-                <Select defaultValue="">
+                <Select required defaultValue="">
                   <option value="">Sélectionner…</option>
                   {MODELE_PARTENAIRE.map((m) => (
                     <option key={m.niveau} value={m.niveau}>
@@ -348,18 +358,17 @@ export default function Partenaires() {
                 required
               >
                 <Textarea
+                  required
                   rows={5}
                   placeholder="Intégrateur réseau et sécurité basé à Abidjan, 18 collaborateurs, une trentaine de clients dans la banque et l’assurance. Nous distribuons déjà des solutions de sauvegarde et souhaitons ajouter une offre IaaS et messagerie souveraine."
                 />
               </Field>
               <Checkbox
+                required
                 label="J’accepte d’être contacté par Synelia au sujet de cette candidature"
                 description="Vos informations ne sont utilisées que pour l’instruction de votre dossier de partenariat."
               />
-              <Button type="submit" size="lg" fullWidth>
-                Envoyer ma candidature
-              </Button>
-            </form>
+            </FormulaireSite>
           </Card>
         </Container>
       </SiteSection>

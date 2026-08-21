@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { Check, ShieldCheck } from 'lucide-react'
 import { Badge, MicroLabel } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Checkbox, Field, Input, Select, Textarea } from '@/components/ui/field'
+import { FormulaireSite } from '@/components/site/formulaire'
 import { Card } from '@/components/composition/card'
 import {
   AppelFinal,
@@ -161,18 +161,41 @@ export default function Entreprises() {
             </div>
 
             <Card className="lg:p-6">
-              <form className="space-y-4">
+              <FormulaireSite
+                libelle="Demander un rendez-vous"
+                titreSucces="Demande enregistrée"
+                phraseSucces="Un architecte basé à Abidjan reprend votre demande. Pas de file d’attente internationale, pas de qualification par un centre d’appels."
+                suite={[
+                  'Un architecte lit votre besoin et prépare ses questions — pas un script commercial.',
+                  'Il vous rappelle sous un jour ouvré, au créneau que vous indiquerez.',
+                  'L’atelier de cadrage, sans frais, aboutit à une estimation chiffrée et à une trajectoire datée.',
+                ]}
+                complement={
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                    <Badge tone="ok" size="sm">
+                      Réponse sous un jour ouvré
+                    </Badge>
+                    <Badge tone="neutral" size="sm">
+                      Équipe basée à Abidjan
+                    </Badge>
+                    <Badge tone="neutral" size="sm">
+                      Sans engagement
+                    </Badge>
+                  </div>
+                }
+              >
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Nom et prénom" required>
-                    <Input name="nom" placeholder="Aïcha Koné" autoComplete="name" />
+                    <Input required name="nom" placeholder="Aïcha Koné" autoComplete="name" />
                   </Field>
                   <Field label="Fonction" required>
-                    <Input name="fonction" placeholder="Directrice des systèmes d’information" />
+                    <Input required name="fonction" placeholder="Directrice des systèmes d’information" />
                   </Field>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="E-mail professionnel" required>
                     <Input
+                      required
                       name="email"
                       type="email"
                       placeholder="prenom.nom@organisation.ci"
@@ -184,7 +207,7 @@ export default function Entreprises() {
                   </Field>
                 </div>
                 <Field label="Organisation" required>
-                  <Input name="organisation" placeholder="Nom de votre organisation" />
+                  <Input required name="organisation" placeholder="Nom de votre organisation" />
                 </Field>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Pays" required>
@@ -197,7 +220,7 @@ export default function Entreprises() {
                     </Select>
                   </Field>
                   <Field label="Secteur" required>
-                    <Select name="secteur" defaultValue="">
+                    <Select name="secteur" required defaultValue="">
                       <option value="">Sélectionner…</option>
                       {SECTEURS.map((s) => (
                         <option key={s} value={s}>
@@ -208,7 +231,7 @@ export default function Entreprises() {
                   </Field>
                 </div>
                 <Field label="Taille de l’organisation" required>
-                  <Select name="taille" defaultValue="">
+                  <Select name="taille" required defaultValue="">
                     <option value="">Sélectionner…</option>
                     {TAILLES_ORG.map((t) => (
                       <option key={t} value={t}>
@@ -223,6 +246,7 @@ export default function Entreprises() {
                   required
                 >
                   <Textarea
+                    required
                     name="besoin"
                     rows={5}
                     placeholder="Nous sortons d’un contrat de licences propriétaires arrivant à échéance en mars, pour un parc de 40 machines virtuelles et 240 boîtes de messagerie. Nous cherchons à établir un PRA inter-site avec un RTO inférieur à quatre heures."
@@ -230,24 +254,11 @@ export default function Entreprises() {
                 </Field>
                 <Checkbox
                   name="consentement"
+                  required
                   label="J’accepte d’être contacté par Synelia au sujet de cette demande"
                   description="Vos coordonnées ne sont utilisées que pour cette prise de contact et ne sont transmises à aucun tiers. Vous pouvez demander leur suppression à tout moment."
                 />
-                <Button type="submit" size="lg" fullWidth>
-                  Demander un rendez-vous
-                </Button>
-                <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                  <Badge tone="ok" size="sm">
-                    Réponse sous un jour ouvré
-                  </Badge>
-                  <Badge tone="neutral" size="sm">
-                    Équipe basée à Abidjan
-                  </Badge>
-                  <Badge tone="neutral" size="sm">
-                    Sans engagement
-                  </Badge>
-                </div>
-              </form>
+              </FormulaireSite>
             </Card>
           </div>
         </Container>

@@ -6,6 +6,7 @@ import { Handshake, Palette, Plus, TrendingUp } from 'lucide-react'
 import { cn, surfaceMarque } from '@/lib/utils'
 import { money, num, pct } from '@/lib/format'
 import { MODELE_PARTENAIRE, ORGANISATIONS, RELEVES_REVSHARE, RESELLERS } from '@/lib/mock'
+import type { Reseller } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
@@ -14,6 +15,8 @@ import { Modal } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'partenaires', label: 'Partenaires' },
@@ -22,13 +25,63 @@ const ONGLETS = [
 ]
 
 export default function Revendeurs() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const partenaires = useCollection<Reseller>('revendeurs', RESELLERS)
+  const executer = useOperation()
   const [onglet, setOnglet] = useState('partenaires')
   const [creation, setCreation] = useState(false)
+  const [nom, setNom] = useState('')
+  const [niveau, setNiveau] = useState('revendeur')
+  const [revsharePct, setRevsharePct] = useState(22)
+  const [domaine, setDomaine] = useState('')
+  const [primary, setPrimary] = useState('#1B3A5C')
+  const [accent, setAccent] = useState('#E8952B')
+  const [contact, setContact] = useState('')
+  const [catalogueComplet, setCatalogueComplet] = useState(true)
+  const [releveDetaille, setReleveDetaille] = useState(true)
+  const [facturationDirecte, setFacturationDirecte] = useState(false)
 
-  const caTotal = RESELLERS.reduce((a, r) => a + r.caGenere, 0)
-  const margeTotal = RESELLERS.reduce((a, r) => a + r.marge, 0)
-  const clientsTotal = RESELLERS.reduce((a, r) => a + r.clientsFinaux.length, 0)
+  const agreer = () => {
+    executer({
+      action: 'reseller.manage',
+      titre: `${nom.trim()} agréé`,
+      detail:
+        'Le portail sous sa marque est provisionné et son organisation revendeur est créée. Le contact administratif reçoit son invitation.',
+      job: {
+        type: 'reseller.onboard',
+        label: `Agrément · ${nom.trim()}`,
+        etapes: [
+          'Création de l’organisation revendeur',
+          'Application de la grille d’achat',
+          'Provisionnement du portail thématisé',
+          domaine ? `Émission du certificat pour ${domaine}` : 'Émission du certificat du portail',
+          'Invitation du contact administratif',
+        ],
+      },
+      effet: () =>
+        partenaires.creer({
+          id: partenaires.identifiant('res'),
+          orgId: partenaires.identifiant('org'),
+          nom: nom.trim(),
+          theme: { logoUrl: '', primary, accent, domaine: domaine || 'portail.partenaire.ci' },
+          grille: [],
+          catalogue: catalogueComplet ? ['*'] : [],
+          revsharePct,
+          clientsFinaux: [],
+          caGenere: 0,
+          marge: 0,
+          statut: 'onboarding',
+        }),
+    })
+    setNom('')
+    setDomaine('')
+    setContact('')
+    setCreation(false)
+  }
+
+  const caTotal = partenaires.items.reduce((a, r) => a + r.caGenere, 0)
+  const margeTotal = partenaires.items.reduce((a, r) => a + r.marge, 0)
+  const clientsTotal = partenaires.items.reduce((a, r) => a + r.clientsFinaux.length, 0)
   const revshareDu = RELEVES_REVSHARE.filter((r) => r.statut !== 'réglé').reduce(
     (a, r) => a + r.montant,
     0,
@@ -49,7 +102,7 @@ export default function Revendeurs() {
         meta={
           <>
             <Badge tone="neutral" size="sm">
-              {RESELLERS.length} partenaires agréés
+              {partenaires.items.length} partenaires agréés
             </Badge>
             <Badge tone="neutral" size="sm">
               {clientsTotal} clients finaux
@@ -64,7 +117,7 @@ export default function Revendeurs() {
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatTile libelle="Partenaires agréés" valeur={RESELLERS.length} ton="ok" />
+        <StatTile libelle="Partenaires agréés" valeur={partenaires.items.length} ton="ok" />
         <StatTile
           libelle="Clients finaux"
           valeur={clientsTotal}
@@ -94,7 +147,7 @@ export default function Revendeurs() {
 
       {onglet === 'partenaires' && (
         <div className="space-y-4">
-          {RESELLERS.map((r) => {
+          {partenaires.items.map((r) => {
             const clients = ORGANISATIONS.filter((o) => r.clientsFinaux.includes(o.id))
             const releves = RELEVES_REVSHARE.filter((x) => x.reseller === r.nom)
             return (
@@ -463,28 +516,23 @@ export default function Revendeurs() {
             <Button variant="ghost" onClick={() => setCreation(false)}>
               Annuler
             </Button>
-            <Button
-              onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: 'Partenaire agréé',
-                  detail: 'Le portail sous sa marque est provisionné et son organisation revendeur est créée.',
-                })
-                setCreation(false)
-              }}
-            >
+            <Button disabled={nom.trim().length === 0} onClick={agreer}>
               Agréer le partenaire
             </Button>
           </>
         }
       >
         <div className="space-y-4">
-          <Field label="Raison sociale du partenaire">
-            <Input placeholder="Nom de l’entreprise partenaire" />
+          <Field label="Raison sociale du partenaire" required>
+            <Input
+              placeholder="Nom de l’entreprise partenaire"
+              value={nom}
+              onChange={(e) => setNom(e.target.value)}
+            />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Niveau de partenariat">
-              <Select defaultValue="revendeur">
+              <Select value={niveau} onChange={(e) => setNiveau(e.target.value)}>
                 {MODELE_PARTENAIRE.map((m) => (
                   <option key={m.niveau} value={m.niveau}>
                     {m.niveau} — remise {m.remise}
@@ -493,41 +541,71 @@ export default function Revendeurs() {
               </Select>
             </Field>
             <Field label="Partage de revenus" hint="pourcentage reversé au partenaire">
-              <Input type="number" defaultValue={22} suffix="%" />
+              <Input
+                type="number"
+                min={0}
+                max={40}
+                value={revsharePct}
+                suffix="%"
+                onChange={(e) => setRevsharePct(Number(e.target.value))}
+              />
             </Field>
           </div>
           <Field label="Domaine du portail sous sa marque" hint="il devra créer un CNAME vers nos serveurs">
-            <Input placeholder="cloud.partenaire.ci" />
+            <Input
+              placeholder="cloud.partenaire.ci"
+              value={domaine}
+              onChange={(e) => setDomaine(e.target.value)}
+            />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Couleur principale">
-              <Input type="color" defaultValue="#1B3A5C" className="h-10" />
+              <Input
+                type="color"
+                value={primary}
+                className="h-10"
+                onChange={(e) => setPrimary(e.target.value)}
+              />
             </Field>
             <Field label="Couleur d’accentuation">
-              <Input type="color" defaultValue="#E8952B" className="h-10" />
+              <Input
+                type="color"
+                value={accent}
+                className="h-10"
+                onChange={(e) => setAccent(e.target.value)}
+              />
             </Field>
           </div>
           <Field label="Contact administratif" hint="recevra l’invitation d’administrateur">
-            <Input type="email" placeholder="direction@partenaire.ci" />
+            <Input
+              type="email"
+              placeholder="direction@partenaire.ci"
+              value={contact}
+              onChange={(e) => setContact(e.target.value)}
+            />
           </Field>
           <div className="space-y-3">
             <Switch
-              checked
+              checked={catalogueComplet}
+              onChange={setCatalogueComplet}
               label="Accès au catalogue technique complet"
               description="Fiches détaillées, spécifications d’architecture, réponses aux questions d’appel d’offres."
             />
             <Switch
               checked
+              disabled
               label="Protection des comptes apportés"
               description="Non désactivable. Un client apporté par ce partenaire ne pourra pas être démarché en direct par nos équipes."
             />
             <Switch
-              checked
+              checked={releveDetaille}
+              onChange={setReleveDetaille}
               label="Relevé de partage mensuel détaillé"
               description="Ligne par ligne, client par client, vérifiable."
             />
             <Switch
-              checked={false}
+              checked={facturationDirecte}
+              onChange={setFacturationDirecte}
               label="Facturation directe des clients finaux par le partenaire"
               description="Le partenaire facture lui-même ses clients et nous règle en gros. Exige une garantie financière."
             />
