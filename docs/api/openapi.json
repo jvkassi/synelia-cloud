@@ -1702,7 +1702,15 @@
             }
           },
           {
-            "name": "astreinte",
+            "name": "privilegie",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "revueDue",
             "in": "query",
             "required": false,
             "schema": {
@@ -1775,23 +1783,36 @@
                   "nom": {
                     "type": "string"
                   },
-                  "role": {
-                    "type": "string"
-                  },
                   "email": {
                     "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "provider_admin",
+                      "provider_operator",
+                      "reseller_admin",
+                      "org_admin",
+                      "espace_admin",
+                      "project_owner",
+                      "operator",
+                      "service_admin",
+                      "billing_manager",
+                      "compliance",
+                      "read_only"
+                    ]
                   },
                   "equipe": {
                     "type": "string"
                   },
-                  "astreinte": {
+                  "privilegie": {
                     "type": "boolean"
                   }
                 },
                 "required": [
                   "nom",
-                  "role",
                   "email",
+                  "role",
                   "equipe"
                 ]
               }
@@ -1860,13 +1881,30 @@
                 "type": "object",
                 "properties": {
                   "role": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                      "provider_admin",
+                      "provider_operator",
+                      "reseller_admin",
+                      "org_admin",
+                      "espace_admin",
+                      "project_owner",
+                      "operator",
+                      "service_admin",
+                      "billing_manager",
+                      "compliance",
+                      "read_only"
+                    ]
                   },
                   "equipe": {
                     "type": "string"
                   },
-                  "astreinte": {
+                  "privilegie": {
                     "type": "boolean"
+                  },
+                  "revuLe": {
+                    "type": "string",
+                    "format": "date-time"
                   }
                 }
               }
@@ -1983,7 +2021,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/ElevationPrivileges"
+                    "$ref": "#/components/schemas/Elevation"
                   }
                 }
               }
@@ -2080,7 +2118,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ElevationPrivileges"
+                  "$ref": "#/components/schemas/Elevation"
                 }
               }
             }
@@ -43220,12 +43258,29 @@
           "prixSiege"
         ]
       },
-      "ElevationPrivileges": {
+      "Elevation": {
         "type": "object",
         "description": "Élévation temporaire d’un membre de l’équipe : bornée dans le temps, motivée, et tracée.",
         "properties": {
           "id": {
             "type": "string"
+          },
+          "qui": {
+            "type": "string"
+          },
+          "quand": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "duree": {
+            "type": "string",
+            "description": "Durée accordée, telle qu’affichée : `4 h`, `30 min`."
+          },
+          "motif": {
+            "type": "string"
+          },
+          "actif": {
+            "type": "boolean"
           },
           "membreId": {
             "type": "string"
@@ -43246,15 +43301,8 @@
               "read_only"
             ]
           },
-          "motif": {
-            "type": "string"
-          },
           "ticketId": {
             "type": "string"
-          },
-          "debut": {
-            "type": "string",
-            "format": "date-time"
           },
           "expire": {
             "type": "string",
@@ -43270,11 +43318,11 @@
         },
         "required": [
           "id",
-          "membreId",
-          "role",
+          "qui",
+          "quand",
+          "duree",
           "motif",
-          "debut",
-          "expire"
+          "actif"
         ]
       },
       "EngagementSla": {
@@ -46503,27 +46551,68 @@
           "nom": {
             "type": "string"
           },
-          "role": {
-            "type": "string"
-          },
           "email": {
             "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "provider_admin",
+              "provider_operator",
+              "reseller_admin",
+              "org_admin",
+              "espace_admin",
+              "project_owner",
+              "operator",
+              "service_admin",
+              "billing_manager",
+              "compliance",
+              "read_only"
+            ]
           },
           "equipe": {
             "type": "string"
           },
-          "astreinte": {
-            "type": "boolean"
+          "dernierAcces": {
+            "type": "string",
+            "format": "date-time"
           },
-          "photoUrl": {
-            "type": "string"
+          "privilegie": {
+            "type": "boolean",
+            "description": "Compte à privilèges : soumis à revue trimestrielle."
+          },
+          "elevation": {
+            "type": "object",
+            "properties": {
+              "active": {
+                "type": "boolean"
+              },
+              "jusqua": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "justification": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "active"
+            ]
+          },
+          "revuLe": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Dernière revue du privilège — vide tant qu’elle n’a pas eu lieu."
           }
         },
         "required": [
           "id",
           "nom",
+          "email",
           "role",
-          "equipe"
+          "equipe",
+          "dernierAcces",
+          "privilegie"
         ]
       },
       "Messagerie": {
@@ -47717,6 +47806,9 @@
       "Placement": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string"
+          },
           "espaceId": {
             "type": "string"
           },
@@ -47730,6 +47822,7 @@
           }
         },
         "required": [
+          "id",
           "espaceId",
           "backendId",
           "percent"

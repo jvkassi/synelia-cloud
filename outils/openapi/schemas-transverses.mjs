@@ -416,19 +416,22 @@ export const schemasTransverses = {
     ['id', 'libelle', 'perimetre', 'debut', 'dureeMin', 'statut'],
   ),
 
-  ElevationPrivileges: objet(
+  Elevation: objet(
     {
       id: chaine(),
+      qui: chaine(),
+      quand: horodatage(),
+      duree: chaine('Durée accordée, telle qu’affichée : `4 h`, `30 min`.'),
+      motif: chaine(),
+      actif: booleen(),
       membreId: chaine(),
       role: liste(ROLES),
-      motif: chaine(),
       ticketId: chaine(),
-      debut: horodatage(),
       expire: horodatage(),
       accordePar: chaine(),
       actionsJournalisees: entier(),
     },
-    ['id', 'membreId', 'role', 'motif', 'debut', 'expire'],
+    ['id', 'qui', 'quand', 'duree', 'motif', 'actif'],
     'Élévation temporaire d’un membre de l’équipe : bornée dans le temps, motivée, et tracée.',
   ),
 

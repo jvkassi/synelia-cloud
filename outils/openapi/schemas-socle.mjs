@@ -687,7 +687,8 @@ const iaas = {
     ['id', 'code', 'type', 'site', 'hosts', 'statut', 'usage', 'capacite', 'souverain'],
   ),
 
-  Placement: objet({ espaceId: chaine(), backendId: chaine(), percent: pourcentage() }, [
+  Placement: objet({ id: chaine(), espaceId: chaine(), backendId: chaine(), percent: pourcentage() }, [
+    'id',
     'espaceId',
     'backendId',
     'percent',

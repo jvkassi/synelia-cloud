@@ -1932,13 +1932,15 @@ const ops = {
     {
       id: chaine(),
       nom: chaine(),
-      role: chaine(),
       email: chaine(),
+      role: liste(ROLES),
       equipe: chaine(),
-      astreinte: booleen(),
-      photoUrl: chaine(),
+      dernierAcces: horodatage(),
+      privilegie: booleen('Compte à privilèges : soumis à revue trimestrielle.'),
+      elevation: objet({ active: booleen(), jusqua: horodatage(), justification: chaine() }, ['active']),
+      revuLe: horodatage('Dernière revue du privilège — vide tant qu’elle n’a pas eu lieu.'),
     },
-    ['id', 'nom', 'role', 'equipe'],
+    ['id', 'nom', 'email', 'role', 'equipe', 'dernierAcces', 'privilegie'],
   ),
 
   Impaye: objet(
