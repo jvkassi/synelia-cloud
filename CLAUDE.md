@@ -81,6 +81,48 @@ Utilisez `seededSeries`, `trendSeries` et la date figée `MAINTENANT`
 partout, `CostPreview` avant toute action facturable, saisie du nom exact avant
 toute action destructive.
 
+**Aucun bouton inerte.** Un bouton, un interrupteur ou un champ visible fait ce
+qu'il annonce, ou il est désactivé avec la raison. Un interrupteur dont le
+libellé dit « non désactivable » porte `disabled`, il n'est pas simplement muet.
+
+## L'atelier — l'état mutable de la démonstration
+
+`src/components/app/atelier.tsx` garde, le temps de la session, les collections
+qui ont été modifiées. Une collection jamais touchée n'existe pas dans l'état :
+la lecture retombe sur la graine importée de `src/lib/mock/`, si bien que le
+rendu serveur et le premier rendu client restent identiques. Un rechargement
+complet remet la démonstration à zéro, et le menu du compte propose
+« Réinitialiser la démonstration » dès qu'une collection a bougé.
+
+```tsx
+const parc = useCollection<VM>('vms', VMS)     // items, creer, modifier, supprimer
+parc.modifier(id, { statut: 'running' })       // ou une fonction (vm) => patch
+const { lancerJob } = useAtelier()             // job suivi dans /app/taches
+```
+
+Trois primitives dans `src/components/app/actions.tsx` évitent que chaque écran
+réinvente la séquence « RBAC → mutation → notification → job » :
+
+| Composant | Pour quoi |
+|---|---|
+| `BoutonAction` | une action directe, avec confirmation par saisie du nom si besoin |
+| `BoutonFormulaire` | un bouton qui ouvre un formulaire puis exécute l'action |
+| `ModaleFormulaire` | le formulaire seul, quand il doit vivre hors d'un popover |
+| `useOperation()` | la séquence complète, à appeler depuis un `onClick` existant |
+
+Deux pièges :
+
+- **Une modale ne vit pas dans un popover.** Un clic dans la modale est un clic
+  « hors popover » : le popover se ferme et démonte la modale. Montez-la à la
+  racine de la vue et ouvrez-la depuis le popover par un état.
+- **Une entité affichée dans un tiroir doit être relue depuis la collection**
+  (par identifiant), pas capturée à l'ouverture : sinon le tiroir montre l'état
+  d'avant la modification.
+
+Les lectures des sélecteurs de `src/lib/mock/` (`vmsDeLEspace`, `messageriesDeLOrg`…)
+donnent le **périmètre** ; l'état vient de l'atelier. Le motif est :
+`const perimetre = new Set(selecteur().map((x) => x.id))` puis filtrer les items.
+
 ## Architecture de la navigation
 
 Deux barres, pas de barre latérale de navigation. `src/lib/navigation.ts` porte le
@@ -151,25 +193,24 @@ lien, deux ancres imbriquées étant du HTML que React refuse d'hydrater.
 
 Écart mesuré face au cahier des charges, vérifié fichier par fichier :
 
-1. **Assistant de création Kubernetes** — `/app/kubernetes/new` n'existe pas.
-   Quatre étapes attendues : version et région, control plane mono ou HA, pools
-   de workers, modules. C'est le seul assistant du cahier qui manque.
-2. **`/app/securite`** — il manque *Politiques* (MFA, durée de session,
-   restriction par plage IP) et *Sessions* (sessions actives, révocation). Les
-   clés d'API existent, sous `/app/parametres`.
-3. **`/app/docs`** — pas de parcours de formation, ni de suivi de complétion, ni
+1. **`/app/docs`** — pas de parcours de formation, ni de suivi de complétion, ni
    d'accès au bac à sable.
-4. **Fiche revendeur** — il manque *Périmètre de catalogue* et *API & intégration*.
-5. **`/admin/catalogue`** — le cahier demande un découpage par famille (Espace
+2. **Fiche revendeur** — il manque *Périmètre de catalogue* et *API & intégration*.
+3. **`/admin/catalogue`** — le cahier demande un découpage par famille (Espace
    Cloud, images VM, clusters, stacks, web) ; on a un tableau unique.
-6. **IaaS** — déploiement de plusieurs serveurs d'un coup en glisser-déposer,
-   avec ce qu'on installe, le processeur, la mémoire, le disque et la carte
-   réseau. Demandé, pas commencé.
-7. **Anglais** — aucun mécanisme d'internationalisation ; tous les libellés sont
+4. **Espace fournisseur** — les écrans `/admin` restent en lecture : leurs
+   boutons ne sont pas branchés sur l'atelier, contrairement à tout l'espace
+   client. Les primitives sont là, c'est du câblage.
+5. **Anglais** — aucun mécanisme d'internationalisation ; tous les libellés sont
    en français en dur. Le cahier ne demande que la structure, pas la traduction.
    C'est le seul chantier de la liste qui se compte en jours.
-8. **Lanceur comme page d'accueil** — l'écran existe et l'explique, mais aucun
+6. **Lanceur comme page d'accueil** — l'écran existe et l'explique, mais aucun
    réglage ne le fixe pour les membres au rôle purement utilisateur.
+
+Fait depuis : l'assistant `/app/kubernetes/new` (cinq étapes), l'onglet
+*Sessions actives* de `/app/securite` et sa politique d'organisation, le centre
+de tâches `/app/taches`, et le glisser-déposer de composition de serveurs qui
+livre réellement ses lots (`/app/vms/composer`).
 
 ## Style d'écriture
 
@@ -181,7 +222,7 @@ utile avant de s'engager.
 
 ## Branche
 
-Le travail va sur `claude/marketplace-admin-vercel-x4f2mh`, poussé directement,
+Le travail va sur `claude/fake-workflows-crud-hmks5e`, poussé directement,
 sans pull request. Déploiement :
 `npx vercel@latest --prod --yes --archive=tgz --token "$VERCEL_TOKEN"` — un
 `fetch failed` au premier essai est fréquent, le second passe.
