@@ -35,7 +35,9 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StackedBar, StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
-import type { Invoice } from '@/lib/types'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import type { Invoice, MoyenPaiement, Subscription } from '@/lib/types'
 
 const ONGLETS = [
   { id: 'apercu', label: 'Aperçu' },
@@ -71,20 +73,52 @@ const TON_STATUT: Record<Invoice['statut'], 'ok' | 'err' | 'info' | 'neutral'> =
   annulee: 'neutral',
 }
 
+interface MoyenEnregistre {
+  id: string
+  moyen: MoyenPaiement
+  detail: string
+  principal: boolean
+}
+
+const MOYENS: MoyenEnregistre[] = [
+  { id: 'moy-1', moyen: 'orange_money', detail: '+225 07 •• •• •• 42', principal: true },
+  { id: 'moy-2', moyen: 'virement', detail: 'SGCI · IBAN CI•• •••• •••• •••• •••• 8814', principal: false },
+  { id: 'moy-3', moyen: 'carte', detail: 'Visa •••• 4821 · expire 09/28', principal: false },
+]
+
 export default function Facturation() {
-  const { autorise, refus, perm, pousser } = useApp()
+  const { autorise, refus, perm } = useApp()
+  const executer = useOperation()
+  const lesFactures = useCollection<Invoice>('factures', FACTURES)
+  const souscriptions = useCollection<Subscription>('souscriptions', SOUSCRIPTIONS)
+  const moyens = useCollection<MoyenEnregistre>('moyens-paiement', MOYENS)
   const [onglet, setOnglet] = useState('apercu')
   const [facture, setFacture] = useState<string | null>(null)
 
   const peutVoir = perm('invoice.view') !== 'none'
-  const factures = FACTURES.filter((f) => f.orgId === ORG_COURANTE.id)
+  const factures = lesFactures.items.filter((f) => f.orgId === ORG_COURANTE.id)
   const impayees = factures.filter((f) => f.statut === 'impayee')
   const enCours = factures.find((f) => f.statut === 'brouillon')
   const detail = factures.find((f) => f.id === facture)
 
   const consommeMois = CONSOMMATION_JOURS.reduce((a, j) => a + j.montant, 0)
   const projete = Math.round((consommeMois / CONSOMMATION_JOURS.length) * 31)
-  const somme = (s: (typeof SOUSCRIPTIONS)[number]) => s.quantite * s.prixApplique
+  const somme = (s: Subscription) => s.quantite * s.prixApplique
+
+  /** Règlement d'une facture : le job simule l'encaissement du prestataire. */
+  const regler = (f: Invoice) =>
+    executer({
+      action: 'payment.update',
+      titre: `Règlement de ${f.numero} lancé`,
+      detail: `${money(f.total)} · moyen principal : ${MOYEN_LABEL[moyens.items.find((m) => m.principal)?.moyen ?? 'virement']}`,
+      job: {
+        type: 'facture.paiement',
+        label: `Règlement ${f.numero}`,
+        etapes: ['Initier le paiement', 'Attendre la confirmation du prestataire', 'Rapprocher la facture'],
+        dureeEtapeMs: 1100,
+      },
+      effetFinal: () => lesFactures.modifier(f.id, { statut: 'payee' }),
+    })
 
   const masque = (v: string) => (peutVoir ? v : '•••')
 
@@ -96,9 +130,17 @@ export default function Facturation() {
         sousTitre="Ce que vous consommez, ce que ça coûte, et où ça part dans votre organisation. Les montants sont en francs CFA, la TVA de 18 % détaillée séparément, et l’usage du mois en cours calculé au prorata jour par jour."
         actions={
           <GatedAction autorise={autorise('invoice.view')} message={refus('invoice.view')}>
-            <Button variant="secondary" iconBefore={<Download size={14} />}>
-              Exporter la période
-            </Button>
+            <BoutonAction
+              libelle="Exporter la période"
+              size="md"
+              icone={<Download size={14} />}
+              operation={{
+                action: 'invoice.view',
+                titre: 'Export de la période préparé',
+                detail:
+                  'Consommation jour par jour, souscriptions et ventilation par étiquette, au format CSV et PDF.',
+              }}
+            />
           </GatedAction>
         }
         meta={
@@ -420,15 +462,23 @@ export default function Facturation() {
                       <Button size="sm" variant="ghost" onClick={() => setFacture(f.id)}>
                         Détail
                       </Button>
-                      <Button size="sm" variant="ghost" iconBefore={<Download size={12} />}>
-                        PDF
-                      </Button>
+                      <BoutonAction
+                        libelle="PDF"
+                        variant="ghost"
+                        icone={<Download size={12} />}
+                        operation={{
+                          action: 'invoice.view',
+                          ton: 'info',
+                          titre: `Facture ${f.numero} téléchargée`,
+                          detail: `${money(f.total)} · TVA détaillée séparément`,
+                        }}
+                      />
                       {f.statut === 'impayee' && (
                         <GatedAction
                           autorise={autorise('payment.update')}
                           message={refus('payment.update')}
                         >
-                          <Button size="sm" variant="secondary">
+                          <Button size="sm" variant="secondary" onClick={() => regler(f)}>
                             Régler
                           </Button>
                         </GatedAction>
@@ -510,9 +560,36 @@ export default function Facturation() {
                         {dateCourte(s.debut)}
                       </td>
                       <td className="px-3 py-2.5 text-right">
-                        <Button size="sm" variant="ghost">
-                          Modifier
-                        </Button>
+                        <BoutonFormulaire
+                          libelle="Modifier"
+                          variant="ghost"
+                          action="payment.update"
+                          titre={`Modifier la souscription ${s.cible.label}`}
+                          description="La modification prend effet au prorata du mois en cours. Une réduction de quantité s’applique à la prochaine échéance."
+                          champs={[
+                            { id: 'quantite', label: 'Quantité', type: 'nombre', demi: true, min: 1 },
+                            {
+                              id: 'periodicite',
+                              label: 'Périodicité',
+                              type: 'select',
+                              demi: true,
+                              options: [
+                                { value: 'mensuelle', label: 'Mensuelle' },
+                                { value: 'annuelle', label: 'Annuelle · deux mois offerts' },
+                              ],
+                            },
+                          ]}
+                          valeursDepart={{ quantite: s.quantite, periodicite: s.periodicite }}
+                          operation={(v) => ({
+                            titre: `Souscription ${s.cible.label} modifiée`,
+                            detail: `${v.quantite} × ${money(s.prixApplique)} · ${v.periodicite === 'annuelle' ? 'annuelle' : 'mensuelle'}`,
+                            effet: () =>
+                              souscriptions.modifier(s.id, {
+                                quantite: Number(v.quantite),
+                                periodicite: v.periodicite as Subscription['periodicite'],
+                              }),
+                          })}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -558,9 +635,16 @@ export default function Facturation() {
                         <span className="tnum text-[12.5px] font-bold text-ok">
                           − {masque(money(economie))}/an
                         </span>
-                        <Button size="sm" variant="ghost">
-                          Passer à l’annuel
-                        </Button>
+                        <BoutonAction
+                          libelle="Passer à l’annuel"
+                          variant="ghost"
+                          operation={{
+                            action: 'payment.update',
+                            titre: `${s.cible.label} passe à l’engagement annuel`,
+                            detail: `${masque(money(economie))} économisés sur douze mois. Une réduction de périmètre en cours d’année est ajustée à la baisse.`,
+                            effet: () => souscriptions.modifier(s.id, { periodicite: 'annuelle' }),
+                          }}
+                        />
                       </span>
                     </div>
                   )
@@ -643,9 +727,25 @@ export default function Facturation() {
               titre="Rapport de refacturation"
               sousTitre="Généré chaque mois, envoyé aux responsables de centre de coût."
               actions={
-                <Button size="sm" variant="secondary" iconBefore={<TrendingUp size={13} />}>
-                  Générer maintenant
-                </Button>
+                <BoutonAction
+                  libelle="Générer maintenant"
+                  icone={<TrendingUp size={13} />}
+                  operation={{
+                    action: 'invoice.view',
+                    titre: 'Rapport de refacturation généré',
+                    detail: 'Envoyé aux responsables de centre de coût, avec la ventilation par étiquette.',
+                    job: {
+                      type: 'showback.report',
+                      label: 'Rapport de refacturation du mois',
+                      etapes: [
+                        'Agréger la consommation par étiquette',
+                        'Composer le rapport',
+                        'Notifier les responsables',
+                      ],
+                      dureeEtapeMs: 900,
+                    },
+                  }}
+                />
               }
             />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -697,28 +797,9 @@ export default function Facturation() {
               sousTitre="Nous acceptons les moyens réellement utilisés en Afrique de l’Ouest, pas seulement la carte internationale."
             />
             <div className="space-y-2">
-              {[
-                {
-                  moyen: 'orange_money' as const,
-                  detail: '+225 07 •• •• •• 42',
-                  principal: true,
-                  icone: <Smartphone size={14} />,
-                },
-                {
-                  moyen: 'virement' as const,
-                  detail: 'SGCI · IBAN CI•• •••• •••• •••• •••• 8814',
-                  principal: false,
-                  icone: <CreditCard size={14} />,
-                },
-                {
-                  moyen: 'carte' as const,
-                  detail: 'Visa •••• 4821 · expire 09/28',
-                  principal: false,
-                  icone: <CreditCard size={14} />,
-                },
-              ].map((m) => (
+              {moyens.items.map((m) => (
                 <div
-                  key={m.moyen}
+                  key={m.id}
                   className={cn(
                     'flex flex-wrap items-center justify-between gap-3 rounded-[6px] border px-3 py-2.5',
                     m.principal ? 'border-p-700 bg-p-050' : 'border-g-300',
@@ -726,7 +807,11 @@ export default function Facturation() {
                 >
                   <span className="flex min-w-0 items-center gap-2.5">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] bg-white text-p-700">
-                      {m.icone}
+                      {m.moyen === 'carte' || m.moyen === 'virement' ? (
+                        <CreditCard size={14} />
+                      ) : (
+                        <Smartphone size={14} />
+                      )}
                     </span>
                     <span className="min-w-0">
                       <span className="block text-[12.5px] font-semibold text-ink">
@@ -741,22 +826,82 @@ export default function Facturation() {
                         Principal
                       </Badge>
                     ) : (
-                      <Button size="sm" variant="ghost">
-                        Définir comme principal
-                      </Button>
+                      <BoutonAction
+                        libelle="Définir comme principal"
+                        variant="ghost"
+                        operation={{
+                          action: 'payment.update',
+                          titre: `${MOYEN_LABEL[m.moyen]} devient le moyen principal`,
+                          detail: 'Les prochains prélèvements passeront par ce moyen.',
+                          effet: () =>
+                            moyens.modifierPlusieurs(
+                              moyens.items.map((x) => x.id),
+                              (x) => ({ principal: x.id === m.id }),
+                            ),
+                        }}
+                      />
                     )}
-                    <Button size="sm" variant="ghost">
-                      Retirer
-                    </Button>
+                    <BoutonAction
+                      libelle="Retirer"
+                      variant="ghost"
+                      desactive={m.principal && moyens.items.length > 1}
+                      operation={{
+                        action: 'payment.update',
+                        ton: 'warn',
+                        titre: `${MOYEN_LABEL[m.moyen]} retiré`,
+                        detail: m.principal
+                          ? 'Aucun moyen principal : les factures devront être réglées manuellement.'
+                          : undefined,
+                        effet: () => moyens.supprimer(m.id),
+                      }}
+                    />
                   </span>
                 </div>
               ))}
             </div>
-            <GatedAction autorise={autorise('payment.update')} message={refus('payment.update')}>
-              <Button size="sm" className="mt-3" variant="secondary">
-                Ajouter un moyen de paiement
-              </Button>
-            </GatedAction>
+            <BoutonFormulaire
+              libelle="Ajouter un moyen de paiement"
+              className="mt-3"
+              action="payment.update"
+              titre="Ajouter un moyen de paiement"
+              description="Nous ne stockons ni numéro de carte complet ni code : le prestataire de paiement conserve les données, nous n’en gardons qu’un jeton."
+              champs={[
+                {
+                  id: 'moyen',
+                  label: 'Moyen',
+                  type: 'select',
+                  options: [
+                    { value: 'orange_money', label: 'Orange Money' },
+                    { value: 'wave', label: 'Wave' },
+                    { value: 'mtn_momo', label: 'MTN MoMo' },
+                    { value: 'prepaye', label: 'Porte-monnaie prépayé' },
+                    { value: 'virement', label: 'Virement bancaire' },
+                    { value: 'carte', label: 'Carte bancaire' },
+                  ],
+                },
+                { id: 'reference', label: 'Référence', placeholder: 'numéro de téléphone, IBAN ou carte', obligatoire: true },
+                { id: 'principal', label: 'En faire le moyen principal', type: 'switch', placeholder: 'Oui' },
+              ]}
+              valeursDepart={{ moyen: 'orange_money' }}
+              libelleValider="Ajouter"
+              operation={(v) => ({
+                titre: `${MOYEN_LABEL[v.moyen as MoyenPaiement]} ajouté`,
+                detail: v.principal ? 'Défini comme moyen principal.' : undefined,
+                effet: () => {
+                  if (v.principal)
+                    moyens.modifierPlusieurs(
+                      moyens.items.map((x) => x.id),
+                      { principal: false },
+                    )
+                  moyens.creer({
+                    id: moyens.identifiant('moy'),
+                    moyen: v.moyen as MoyenPaiement,
+                    detail: String(v.reference),
+                    principal: Boolean(v.principal),
+                  })
+                },
+              })}
+            />
             <Callout ton="info" className="mt-4" titre="Ce que nous ne stockons pas">
               Aucun numéro de carte complet, aucun cryptogramme, aucun code de confirmation mobile ne
               transite ni ne réside chez nous. Le paiement passe par notre prestataire agréé ; nous ne
@@ -878,9 +1023,17 @@ export default function Facturation() {
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         <span className="flex items-center justify-end gap-1.5">
-                          <Button size="sm" variant="ghost" iconBefore={<Download size={12} />}>
-                            PDF
-                          </Button>
+                          <BoutonAction
+                            libelle="PDF"
+                            variant="ghost"
+                            icone={<Download size={12} />}
+                            operation={{
+                              action: 'invoice.view',
+                              ton: 'info',
+                              titre: 'Devis téléchargé',
+                              detail: `${d.numero} · valable jusqu’au ${dateCourte(d.validite)}`,
+                            }}
+                          />
                           {d.statut === 'envoye' && (
                             <GatedAction
                               autorise={autorise('payment.update')}
@@ -890,10 +1043,20 @@ export default function Facturation() {
                                 size="sm"
                                 variant="secondary"
                                 onClick={() =>
-                                  pousser({
-                                    ton: 'ok',
+                                  executer({
+                                    action: 'payment.update',
                                     titre: `Devis ${d.numero} accepté`,
-                                    detail: 'Les souscriptions correspondantes sont créées et le provisionnement démarre.',
+                                    detail:
+                                      'Les souscriptions correspondantes sont créées et le provisionnement démarre.',
+                                    job: {
+                                      type: 'devis.accept',
+                                      label: `Acceptation du devis ${d.numero}`,
+                                      etapes: [
+                                        'Créer les souscriptions',
+                                        'Provisionner les ressources',
+                                        'Émettre la première facture au prorata',
+                                      ],
+                                    },
                                   })
                                 }
                               >
@@ -964,15 +1127,32 @@ export default function Facturation() {
             />
 
             <div className="flex flex-wrap gap-1.5">
-              <Button variant="secondary" iconBefore={<Download size={13} />}>
-                Télécharger le PDF
-              </Button>
-              <Button variant="ghost" iconBefore={<Download size={13} />}>
-                Détail des lignes en CSV
-              </Button>
+              <BoutonAction
+                libelle="Télécharger le PDF"
+                size="md"
+                icone={<Download size={13} />}
+                operation={{
+                  action: 'invoice.view',
+                  ton: 'info',
+                  titre: `Facture ${detail.numero} téléchargée`,
+                  detail: `${money(detail.total)} · exemplaire opposable, horodaté`,
+                }}
+              />
+              <BoutonAction
+                libelle="Détail des lignes en CSV"
+                variant="ghost"
+                size="md"
+                icone={<Download size={13} />}
+                operation={{
+                  action: 'invoice.view',
+                  ton: 'info',
+                  titre: 'Détail des lignes exporté',
+                  detail: `${detail.lignes.length} ligne(s), avec l’étiquette de répartition de chacune.`,
+                }}
+              />
               {detail.statut === 'impayee' && (
                 <GatedAction autorise={autorise('payment.update')} message={refus('payment.update')}>
-                  <Button>Régler maintenant</Button>
+                  <Button onClick={() => regler(detail)}>Régler maintenant</Button>
                 </GatedAction>
               )}
             </div>
