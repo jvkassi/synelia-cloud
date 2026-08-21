@@ -15,6 +15,8 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { Timeline } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'trajectoire', label: 'Trajectoire de sortie' },
@@ -126,14 +128,18 @@ const TON_STATUT: Record<Vague['statut'], 'ok' | 'info' | 'neutral' | 'warn'> = 
 }
 
 export default function Migration() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const vagues = useCollection<Vague>('vagues-migration', VAGUES)
   const [onglet, setOnglet] = useState('trajectoire')
   const [lancement, setLancement] = useState<Vague | null>(null)
 
   const enSortie = BACKENDS.filter((b) => b.enSortie?.actif)
-  const migrees = VAGUES.filter((v) => v.statut === 'terminee').reduce((a, v) => a + v.machines, 0)
-  const total = VAGUES.reduce((a, v) => a + v.machines, 0)
-  const enCours = VAGUES.find((v) => v.statut === 'en_cours')
+  const migrees = vagues.items
+    .filter((v) => v.statut === 'terminee')
+    .reduce((a, v) => a + v.machines, 0)
+  const total = vagues.items.reduce((a, v) => a + v.machines, 0)
+  const enCours = vagues.items.find((v) => v.statut === 'en_cours')
 
   return (
     <div className="space-y-5">
@@ -183,7 +189,7 @@ export default function Migration() {
         />
         <StatTile
           libelle="Vagues terminées"
-          valeur={`${VAGUES.filter((v) => v.statut === 'terminee').length}/${VAGUES.length}`}
+          valeur={`${vagues.items.filter((v) => v.statut === 'terminee').length}/${vagues.items.length}`}
         />
         <StatTile
           libelle="Interruptions constatées"
@@ -270,7 +276,7 @@ export default function Migration() {
                     {
                       cle: 'Machines à migrer',
                       valeur: String(
-                        VAGUES.filter((v) => v.source === b.code).reduce(
+                        vagues.items.filter((v) => v.source === b.code).reduce(
                           (a, v) => a + v.machines,
                           0,
                         ),
@@ -279,7 +285,7 @@ export default function Migration() {
                     {
                       cle: 'Vagues restantes',
                       valeur: String(
-                        VAGUES.filter((v) => v.source === b.code && v.statut !== 'terminee').length,
+                        vagues.items.filter((v) => v.source === b.code && v.statut !== 'terminee').length,
                       ),
                     },
                     { cle: 'Allocation actuelle', valeur: pct(b.usage.vcpuPct) },
@@ -306,7 +312,7 @@ export default function Migration() {
               actions={<CalendarClock size={15} className="text-p-700" />}
             />
             <Timeline
-              evenements={VAGUES.map((v) => ({
+              evenements={vagues.items.map((v) => ({
                 id: v.id,
                 titre: (
                   <span className="flex flex-wrap items-baseline gap-2">
@@ -342,7 +348,7 @@ export default function Migration() {
             </Callout>
           )}
 
-          {VAGUES.map((v) => (
+          {vagues.items.map((v) => (
             <Card
               key={v.id}
               className={cn(
@@ -456,15 +462,52 @@ export default function Migration() {
                       autorise={autorise('capacity.manage')}
                       message={refus('capacity.manage')}
                     >
-                      <Button size="sm" variant="ghost" className="w-full">
-                        Planifier une fenêtre
-                      </Button>
+                      <BoutonFormulaire
+                        libelle="Planifier une fenêtre"
+                        variant="ghost"
+                        fullWidth
+                        action="capacity.manage"
+                        titre={`Planifier ${v.nom}`}
+                        description="La fenêtre est annoncée aux organisations concernées sept jours avant. Une migration à froid demande leur accord explicite."
+                        champs={[
+                          {
+                            id: 'fenetre',
+                            label: 'Fenêtre',
+                            type: 'select',
+                            options: [
+                              { value: 'Samedi 22h00 – 02h00', label: 'Samedi 22h00 – 02h00' },
+                              { value: 'Dimanche 02h00 – 06h00', label: 'Dimanche 02h00 – 06h00' },
+                              { value: 'Nuit de semaine 23h00 – 04h00', label: 'Nuit de semaine 23h00 – 04h00' },
+                            ],
+                          },
+                        ]}
+                        libelleValider="Planifier"
+                        operation={(f) => ({
+                          titre: `${v.nom} planifiée`,
+                          detail: `${f.fenetre} · ${v.organisations.length} organisation(s) prévenue(s).`,
+                          effet: () =>
+                            vagues.modifier(v.id, {
+                              statut: 'planifiee',
+                              fenetre: String(f.fenetre),
+                            }),
+                        })}
+                      />
                     </GatedAction>
                   )}
                   {v.statut === 'en_cours' && (
-                    <Button size="sm" variant="ghost" className="w-full">
-                      Suspendre la vague
-                    </Button>
+                    <BoutonAction
+                      libelle="Suspendre la vague"
+                      variant="ghost"
+                      fullWidth
+                      operation={{
+                        action: 'capacity.manage',
+                        ton: 'warn',
+                        titre: `${v.nom} suspendue`,
+                        detail:
+                          'Les machines déjà migrées restent sur le socle cible ; les suivantes attendent une reprise explicite.',
+                        effet: () => vagues.modifier(v.id, { statut: 'planifiee' }),
+                      }}
+                    />
                   )}
                 </div>
               </div>
@@ -708,11 +751,30 @@ export default function Migration() {
           'Le retour arrière reste possible pendant sept jours, machine par machine',
         ]}
         onConfirm={() => {
-          pousser({
-            ton: 'info',
-            titre: `${lancement?.nom} lancée`,
-            detail: 'Les migrations à chaud démarrent immédiatement. Les autres sont réparties dans les fenêtres de maintenance déclarées par chaque client.',
-          })
+          const cible = lancement
+          if (cible) {
+            executer({
+              action: 'capacity.manage',
+              ton: 'info',
+              titre: `${cible.nom} lancée`,
+              detail:
+                'Les migrations à chaud démarrent immédiatement. Les autres sont réparties dans les fenêtres de maintenance déclarées par chaque client.',
+              effet: () => vagues.modifier(cible.id, { statut: 'en_cours', avancement: 4 }),
+              job: {
+                type: 'migration.vague',
+                label: `Migration · ${cible.nom}`,
+                etapes: [
+                  `Préparer ${cible.machines} machines sur ${cible.cible}`,
+                  'Migrer les machines à chaud',
+                  ...(cible.mode === 'chaud' ? [] : ['Migrer à froid les machines restantes']),
+                  'Vérifier la santé sur le socle cible',
+                  'Libérer la capacité du socle source',
+                ],
+              },
+              effetFinal: () =>
+                vagues.modifier(cible.id, { statut: 'terminee', avancement: 100 }),
+            })
+          }
           setLancement(null)
         }}
       />

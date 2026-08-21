@@ -18,7 +18,13 @@ import {
   USERS,
   membresDeLOrg,
 } from '@/lib/mock'
-import { MOYEN_LABEL, ROLE_LABEL, SITE_COURT, type Role } from '@/lib/types'
+import {
+  MOYEN_LABEL,
+  ROLE_LABEL,
+  SITE_COURT,
+  type Invoice,
+  type Role,
+} from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Avatar, GatedAction, Tabs } from '@/components/ui/display'
@@ -28,6 +34,8 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { Timeline } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'synthese', label: 'Synthèse' },
@@ -39,8 +47,39 @@ const ONGLETS = [
   { id: 'administration', label: 'Administration' },
 ]
 
+interface Elevation {
+  id: string
+  qui: string
+  quand: string
+  duree: string
+  motif: string
+  actif: boolean
+}
+
+const ELEVATIONS: Elevation[] = [
+  {
+    id: 'elv-1',
+    qui: 'Jean-Vincent Kassi',
+    quand: '2026-08-19T13:00:00Z',
+    duree: '4 h',
+    motif: 'Ticket SYN-8814 — diagnostic de latence sur app-metier',
+    actif: true,
+  },
+  {
+    id: 'elv-2',
+    qui: 'Aïcha Bamba',
+    quand: '2026-08-12T09:20:00Z',
+    duree: '2 h',
+    motif: 'Ticket SYN-8702 — restauration accompagnée',
+    actif: false,
+  },
+]
+
 export function VueOrganisation({ id }: { id: string }) {
   const { autorise, refus, pousser } = useApp()
+  const executer = useOperation()
+  const lesFactures = useCollection<Invoice>('factures', FACTURES)
+  const elevations = useCollection<Elevation>(`elevations-${id}`, ELEVATIONS)
   const [onglet, setOnglet] = useState('synthese')
   const [elevation, setElevation] = useState(false)
   const [suspension, setSuspension] = useState(false)
@@ -48,7 +87,7 @@ export function VueOrganisation({ id }: { id: string }) {
   const org = ORGANISATIONS.find((o) => o.id === id)!
   const reseller = RESELLERS.find((r) => r.id === org.resellerId)
   const membres = membresDeLOrg(org.id)
-  const factures = FACTURES.filter((f) => f.orgId === org.id)
+  const factures = lesFactures.items.filter((f) => f.orgId === org.id)
   const impayees = factures.filter((f) => f.statut === 'impayee')
   const tickets = TICKETS_PLATEFORME.filter((t) => t.orgId === org.id)
   const audit = AUDIT.filter((a) => a.orgId === org.id)
@@ -574,17 +613,30 @@ export function VueOrganisation({ id }: { id: string }) {
                         </td>
                         <td className="px-3 py-2.5 text-right">
                           <span className="flex items-center justify-end gap-1.5">
-                            <Button size="sm" variant="ghost">
-                              PDF
-                            </Button>
+                            <BoutonAction
+                              libelle="PDF"
+                              variant="ghost"
+                              operation={{
+                                ton: 'info',
+                                titre: `Facture ${f.numero} téléchargée`,
+                                detail: `${money(f.total)} · exemplaire opposable`,
+                              }}
+                            />
                             {f.statut === 'impayee' && (
                               <GatedAction
                                 autorise={autorise('reseller.manage')}
                                 message={refus('reseller.manage')}
                               >
-                                <Button size="sm" variant="secondary">
-                                  Relancer
-                                </Button>
+                                <BoutonAction
+                                  libelle="Relancer"
+                                  operation={{
+                                    action: 'reseller.manage',
+                                    ton: 'warn',
+                                    titre: `Relance envoyée pour ${f.numero}`,
+                                    detail:
+                                      'Courriel au contact de facturation et à l’administrateur de l’organisation, avec la copie de la facture.',
+                                  }}
+                                />
                               </GatedAction>
                             )}
                           </span>
@@ -636,15 +688,76 @@ export function VueOrganisation({ id }: { id: string }) {
                 ]}
               />
               <div className="mt-4 flex flex-wrap gap-1.5 border-t border-g-100 pt-4">
-                <Button size="sm" variant="secondary">
-                  Enregistrer un appel
-                </Button>
-                <Button size="sm" variant="ghost">
-                  Proposer un échelonnement
-                </Button>
-                <Button size="sm" variant="ghost">
-                  Passer un avoir commercial
-                </Button>
+                <BoutonFormulaire
+                  libelle="Enregistrer un appel"
+                  action="reseller.manage"
+                  titre="Enregistrer un appel de recouvrement"
+                  description="Ce qui a été dit compte autant que le fait d’avoir appelé : la note suit le dossier et évite qu’un collègue répète la même demande."
+                  champs={[
+                    {
+                      id: 'issue',
+                      label: 'Issue de l’appel',
+                      type: 'select',
+                      options: [
+                        { value: 'promesse', label: 'Promesse de règlement' },
+                        { value: 'echelonnement', label: 'Demande d’échelonnement' },
+                        { value: 'contestation', label: 'Contestation de la facture' },
+                        { value: 'injoignable', label: 'Injoignable' },
+                      ],
+                    },
+                    { id: 'note', label: 'Note', type: 'zone', placeholder: 'Interlocuteur, engagement pris, date annoncée…' },
+                  ]}
+                  valeursDepart={{ issue: 'promesse' }}
+                  libelleValider="Enregistrer"
+                  operation={(v) => ({
+                    titre: 'Appel enregistré au dossier',
+                    detail: `${{ promesse: 'Promesse de règlement', echelonnement: 'Demande d’échelonnement', contestation: 'Contestation', injoignable: 'Injoignable' }[String(v.issue)]}`,
+                  })}
+                />
+                <BoutonFormulaire
+                  libelle="Proposer un échelonnement"
+                  variant="ghost"
+                  action="reseller.manage"
+                  titre="Proposer un échelonnement"
+                  description="Un échelonnement accepté rapporte plus qu’une suspension : il maintient le service et étale la créance."
+                  champs={[
+                    { id: 'mensualites', label: 'Nombre de mensualités', type: 'nombre', demi: true, min: 2, max: 12 },
+                    { id: 'premiere', label: 'Première échéance', type: 'select', demi: true, options: [
+                      { value: 'immediat', label: 'Immédiate' },
+                      { value: 'fin-mois', label: 'Fin du mois en cours' },
+                      { value: 'mois-suivant', label: 'Le mois suivant' },
+                    ] },
+                  ]}
+                  valeursDepart={{ mensualites: 3, premiere: 'fin-mois' }}
+                  libelleValider="Proposer"
+                  operation={(v) => ({
+                    titre: `Échelonnement sur ${v.mensualites} mensualités proposé`,
+                    detail: `${money(Math.round((impayeReleve?.montant ?? 0) / Number(v.mensualites)))} par mois. En attente de l’accord du client.`,
+                  })}
+                />
+                <BoutonFormulaire
+                  libelle="Passer un avoir commercial"
+                  variant="ghost"
+                  action="reseller.manage"
+                  titre="Passer un avoir commercial"
+                  description="Un avoir sort de la créance et entre dans la marge : il se justifie, il ne s’accorde pas pour clore une discussion."
+                  champs={[
+                    { id: 'montant', label: 'Montant', type: 'nombre', demi: true, min: 1, suffixe: 'FCFA' },
+                    { id: 'motif', label: 'Motif', type: 'select', demi: true, options: [
+                      { value: 'sla', label: 'Crédit de SLA' },
+                      { value: 'geste', label: 'Geste commercial' },
+                      { value: 'erreur', label: 'Erreur de facturation' },
+                    ] },
+                    { id: 'note', label: 'Justification', type: 'zone', obligatoire: true },
+                  ]}
+                  valeursDepart={{ montant: 50000, motif: 'geste' }}
+                  libelleValider="Passer l’avoir"
+                  operation={(v) => ({
+                    ton: 'warn',
+                    titre: `Avoir de ${money(Number(v.montant))} passé`,
+                    detail: 'Imputé sur la marge de l’organisation et visible dans le rapport de finance.',
+                  })}
+                />
               </div>
             </Card>
           )}
@@ -870,24 +983,9 @@ export function VueOrganisation({ id }: { id: string }) {
                 sousTitre="Chaque accès de nos équipes aux ressources de cette organisation."
               />
               <div className="space-y-2">
-                {[
-                  {
-                    qui: 'Jean-Vincent Kassi',
-                    quand: '2026-08-19T13:00:00Z',
-                    duree: '4 h',
-                    motif: 'Ticket SYN-8814 — diagnostic de latence sur app-metier',
-                    actif: true,
-                  },
-                  {
-                    qui: 'Aïcha Bamba',
-                    quand: '2026-08-12T09:20:00Z',
-                    duree: '2 h',
-                    motif: 'Ticket SYN-8702 — restauration accompagnée',
-                    actif: false,
-                  },
-                ].map((e) => (
+                {elevations.items.map((e) => (
                   <div
-                    key={e.quand}
+                    key={e.id}
                     className={cn(
                       'rounded-[6px] border px-3 py-2.5',
                       e.actif ? 'border-warn/40 bg-warn-bg' : 'border-g-300',
@@ -907,9 +1005,19 @@ export function VueOrganisation({ id }: { id: string }) {
                       {dateHeure(e.quand)} · durée {e.duree}
                     </p>
                     {e.actif && (
-                      <Button size="sm" variant="ghost" className="mt-1.5">
-                        Révoquer maintenant
-                      </Button>
+                      <BoutonAction
+                        libelle="Révoquer maintenant"
+                        variant="ghost"
+                        className="mt-1.5"
+                        operation={{
+                          action: 'reseller.manage',
+                          ton: 'warn',
+                          titre: `Élévation de ${e.qui} révoquée`,
+                          detail:
+                            'L’accès est coupé immédiatement et la révocation apparaît dans l’audit de l’organisation, au même titre que l’élévation.',
+                          effet: () => elevations.modifier(e.id, { actif: false }),
+                        }}
+                      />
                     )}
                   </div>
                 ))}
@@ -960,9 +1068,38 @@ export function VueOrganisation({ id }: { id: string }) {
                     autorise={autorise('reseller.manage')}
                     message={refus('reseller.manage')}
                   >
-                    <Button size="sm" variant="danger" className="mt-2">
-                      Ouvrir la procédure de clôture
-                    </Button>
+                    <BoutonAction
+                      libelle="Ouvrir la procédure de clôture"
+                      variant="danger"
+                      className="mt-2"
+                      operation={{
+                        action: 'reseller.manage',
+                        ton: 'err',
+                        titre: `Procédure de clôture ouverte pour ${org.nom}`,
+                        detail:
+                          '30 jours de récupération, 30 jours de conservation en lecture, puis effacement avec attestation. Rien n’est supprimé aujourd’hui.',
+                        job: {
+                          type: 'org.closure',
+                          label: `Clôture de ${org.nom}`,
+                          etapes: [
+                            'Notifier le client et son revendeur',
+                            'Ouvrir la fenêtre de récupération des données',
+                            'Geler les souscriptions à la prochaine échéance',
+                          ],
+                          dureeEtapeMs: 1100,
+                        },
+                      }}
+                      confirmation={{
+                        ressource: org.nom,
+                        titre: 'Ouvrir la procédure de clôture ?',
+                        pertes: [
+                          'Le client est notifié et le calendrier de réversibilité démarre',
+                          'Les souscriptions cessent d’être renouvelées',
+                          'Au terme des 60 jours, les données sont effacées avec attestation',
+                        ],
+                        libelleAction: 'Ouvrir la procédure',
+                      }}
+                    />
                   </GatedAction>
                 </div>
               </div>

@@ -12,7 +12,7 @@ import {
   SYNTHESE_PLATEFORME,
   VMS,
 } from '@/lib/mock'
-import { BACKEND_LABEL, SITE_COURT } from '@/lib/types'
+import { BACKEND_LABEL, SITE_COURT, type Backend } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
@@ -22,6 +22,8 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { BackendGauge, PlacementSlider, AvertissementMigration } from '@/components/business/infra'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'socles', label: 'Socles et capacité' },
@@ -32,14 +34,16 @@ const ONGLETS = [
 
 export default function Capacite() {
   const { autorise, refus, pousser } = useApp()
+  const executer = useOperation()
+  const socles = useCollection<Backend>('backends', BACKENDS)
   const [onglet, setOnglet] = useState('socles')
   const [espaceId, setEspaceId] = useState(ESPACES[0]?.id ?? '')
   const [rebalance, setRebalance] = useState(false)
 
   const espace = ESPACES.find((e) => e.id === espaceId)
   const placementsEspace = PLACEMENTS.filter((p) => p.espaceId === espaceId)
-  const satures = BACKENDS.filter((b) => (b.saturation?.j30 ?? 0) > 85)
-  const enSortie = BACKENDS.filter((b) => b.enSortie?.actif)
+  const satures = socles.items.filter((b) => (b.saturation?.j30 ?? 0) > 85)
+  const enSortie = socles.items.filter((b) => b.enSortie?.actif)
 
   const vcpuPct = Math.round(
     (SYNTHESE_PLATEFORME.vcpuUtilise / SYNTHESE_PLATEFORME.vcpuTotal) * 100,
@@ -55,9 +59,79 @@ export default function Capacite() {
         titre="Capacité et placement"
         sousTitre="Le placement multi-socle transparent est un objectif de produit, pas un détail d’exploitation : un Espace Cloud peut être réparti entre plusieurs hyperviseurs, et le client voit sur quel socle tourne chacune de ses machines."
         actions={
-          <GatedAction autorise={autorise('capacity.manage')} message={refus('capacity.manage')}>
-            <Button iconBefore={<Plus size={14} />}>Déclarer un socle</Button>
-          </GatedAction>
+          <BoutonFormulaire
+            libelle="Déclarer un socle"
+            size="md"
+            variant="primary"
+            icone={<Plus size={14} />}
+            action="capacity.manage"
+            titre="Déclarer un socle d’hypervision"
+            description="Un socle déclaré n’accueille rien tant qu’il n’est pas en ligne : les sondes tournent d’abord, le placement suit."
+            champs={[
+              { id: 'code', label: 'Code', placeholder: 'OS-ABJ-02', obligatoire: true },
+              {
+                id: 'type',
+                label: 'Type',
+                type: 'select',
+                options: [
+                  { value: 'openstack', label: 'OpenStack' },
+                  { value: 'proxmox', label: 'Proxmox VE' },
+                  { value: 'cloudstack', label: 'Apache CloudStack' },
+                  { value: 'vmware', label: 'VMware vSphere' },
+                  { value: 'hyperv', label: 'Microsoft Hyper-V' },
+                ],
+              },
+              {
+                id: 'site',
+                label: 'Site',
+                type: 'select',
+                demi: true,
+                options: [
+                  { value: 'ABJ', label: 'Abidjan' },
+                  { value: 'GBM', label: 'Grand-Bassam' },
+                ],
+              },
+              { id: 'vcpu', label: 'vCPU', type: 'nombre', demi: true, min: 8 },
+              { id: 'ram', label: 'Mémoire', type: 'nombre', demi: true, min: 32, suffixe: 'Go' },
+              { id: 'stockage', label: 'Stockage', type: 'nombre', demi: true, min: 1, suffixe: 'To' },
+            ]}
+            valeursDepart={{ type: 'openstack', site: 'ABJ', vcpu: 256, ram: 1024, stockage: 100 }}
+            libelleValider="Déclarer"
+            operation={(v) => {
+              const idSocle = socles.identifiant('bk')
+              return {
+                titre: `Socle ${v.code} déclaré`,
+                detail: 'Il reste hors placement jusqu’à sa mise en ligne.',
+                effet: () =>
+                  socles.creer({
+                    id: idSocle,
+                    code: String(v.code),
+                    type: v.type as Backend['type'],
+                    site: v.site as Backend['site'],
+                    statut: 'degrade',
+                    capacite: {
+                      vcpu: Number(v.vcpu),
+                      ramGo: Number(v.ram),
+                      stockageTo: Number(v.stockage),
+                    },
+                    usage: { vcpuPct: 0, ramPct: 0, stockagePct: 0 },
+                    hosts: 0,
+                    souverain: v.type !== 'vmware' && v.type !== 'hyperv',
+                  }),
+                job: {
+                  type: 'backend.declare',
+                  label: `Raccordement du socle ${v.code}`,
+                  etapes: [
+                    'Vérifier l’accès à l’API du socle',
+                    'Inventorier les hôtes',
+                    'Déclarer les sondes de supervision',
+                    'Ouvrir le socle au placement',
+                  ],
+                },
+                effetFinal: () => socles.modifier(idSocle, { statut: 'en_ligne' }),
+              }
+            }}
+          />
         }
         meta={
           <>
@@ -216,17 +290,52 @@ export default function Capacite() {
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         <span className="flex items-center justify-end gap-1.5">
-                          <Button size="sm" variant="ghost">
-                            Détail
-                          </Button>
-                          <GatedAction
-                            autorise={autorise('capacity.manage')}
-                            message={refus('capacity.manage')}
-                          >
-                            <Button size="sm" variant="ghost">
-                              {b.statut === 'maintenance' ? 'Remettre en ligne' : 'Drainer'}
-                            </Button>
-                          </GatedAction>
+                          <BoutonAction
+                            libelle="Détail"
+                            variant="ghost"
+                            operation={{
+                              ton: 'info',
+                              titre: `${b.code} · ${BACKEND_LABEL[b.type]}`,
+                              detail: `${b.hosts} hôtes · ${b.capacite.vcpu} vCPU · ${num(b.capacite.ramGo)} Go · saturation projetée à 30 jours ${b.saturation?.j30 ?? 0} %`,
+                            }}
+                          />
+                          <BoutonAction
+                            libelle={b.statut === 'maintenance' ? 'Remettre en ligne' : 'Drainer'}
+                            variant="ghost"
+                            operation={{
+                              action: 'capacity.manage',
+                              ton: b.statut === 'maintenance' ? 'ok' : 'warn',
+                              titre:
+                                b.statut === 'maintenance'
+                                  ? `${b.code} remis en ligne`
+                                  : `Drainage de ${b.code} lancé`,
+                              detail:
+                                b.statut === 'maintenance'
+                                  ? 'Le socle accueille de nouveau des placements.'
+                                  : 'Les machines du socle sont migrées à chaud vers les autres socles du site avant la maintenance.',
+                              job:
+                                b.statut === 'maintenance'
+                                  ? undefined
+                                  : {
+                                      type: 'backend.drain',
+                                      label: `Drainage du socle ${b.code}`,
+                                      etapes: [
+                                        'Fermer le socle au placement',
+                                        'Calculer le plan de migration',
+                                        'Migrer les machines à chaud',
+                                        'Vérifier qu’aucune charge ne reste',
+                                      ],
+                                    },
+                              effet:
+                                b.statut === 'maintenance'
+                                  ? () => socles.modifier(b.id, { statut: 'en_ligne' })
+                                  : undefined,
+                              effetFinal:
+                                b.statut === 'maintenance'
+                                  ? undefined
+                                  : () => socles.modifier(b.id, { statut: 'maintenance' }),
+                            }}
+                          />
                         </span>
                       </td>
                     </tr>
@@ -333,7 +442,16 @@ export default function Capacite() {
                       Appliquer le rééquilibrage
                     </Button>
                   </GatedAction>
-                  <Button variant="ghost">Simuler l’impact</Button>
+                  <BoutonAction
+                    libelle="Simuler l’impact"
+                    variant="ghost"
+                    size="md"
+                    operation={{
+                      ton: 'info',
+                      titre: 'Simulation terminée',
+                      detail: `${placementsEspace.length} socle(s) concerné(s) : migration à chaud possible pour la majorité des machines, redémarrage nécessaire pour celles dont le socle cible change de famille d’hyperviseur. Rien n’a été déplacé.`,
+                    }}
+                  />
                   <span className="text-[11.5px] text-g-500">
                     La simulation liste les machines à déplacer et le mode de migration disponible pour
                     chacune.
