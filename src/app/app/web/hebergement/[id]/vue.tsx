@@ -83,7 +83,7 @@ const TEINTE_SITE: Record<string, string> = {
 }
 
 export function VueHebergement({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
   const [onglet, setOnglet] = useState('apercu')
   const [siteOuvertId, setSiteOuvert] = useState<string | null>(null)
   const [baseOuverteId, setBaseOuverte] = useState<string | null>(null)

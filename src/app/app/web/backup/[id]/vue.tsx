@@ -30,7 +30,7 @@ const ETAPES = [
 ]
 
 export function VueSauvegarde({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
   const [onglet, setOnglet] = useState('executions')
   const [etape, setEtape] = useState(1)
   const [perimetre, setPerimetre] = useState('Une application')
@@ -71,21 +71,29 @@ export function VueSauvegarde({ id }: { id: string }) {
         }
         actions={
           <>
-            <GatedAction autorise={autorise('backup.manage')} message={refus('backup.manage')}>
-              <Button
-                variant="secondary"
-                iconBefore={<Play size={14} />}
-                onClick={() =>
-                  pousser({
-                    ton: 'ok',
-                    titre: 'Sauvegarde lancée',
-                    detail: `Exécution hors planning sur ${p.serveur}. Suivi dans le centre de tâches.`,
-                  })
-                }
-              >
-                Sauvegarder maintenant
-              </Button>
-            </GatedAction>
+            <BoutonAction
+              libelle="Sauvegarder maintenant"
+              size="md"
+              icone={<Play size={14} />}
+              operation={{
+                action: 'backup.plan.write',
+                ton: 'info',
+                titre: 'Sauvegarde lancée',
+                detail: `Exécution hors planning sur ${p.serveur}. Suivi dans le centre de tâches.`,
+                job: {
+                  type: 'sauvegarde.run',
+                  label: `Sauvegarde hors planning · ${p.serveur}`,
+                  etapes: [
+                    'Geler les écritures',
+                    'Copier les fichiers',
+                    'Copier les bases',
+                    ...(p.perimetre.messagerie ? ['Copier la messagerie'] : []),
+                    'Vérifier l’empreinte',
+                  ],
+                  dureeEtapeMs: 900,
+                },
+              }}
+            />
             {h && (
               <ButtonLink href={`/app/web/hebergement/${h.id}`} variant="ghost">
                 Le serveur

@@ -16,8 +16,9 @@ import {
 } from 'lucide-react'
 import { cn, surfaceMarque } from '@/lib/utils'
 import { money } from '@/lib/format'
-import { SITE_LABEL, type Site } from '@/lib/types'
-import { PROJETS, ZONE_APPLICATIVE, modeleBySlug } from '@/lib/mock'
+import { MAINTENANT } from '@/lib/format'
+import { SITE_LABEL, type ServiceProjet, type Site } from '@/lib/types'
+import { PROJETS, SERVICES_PROJET, ZONE_APPLICATIVE, modeleBySlug } from '@/lib/mock'
 import { configurationDuService } from '@/lib/configurations'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
@@ -26,6 +27,7 @@ import { Field, Input, SegmentedControl, Select, Switch } from '@/components/ui/
 import { PageHeader, Card, CardHeader, Callout, KeyValueList } from '@/components/composition/card'
 import { CostPreview, Stepper, Timeline } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
+import { useAtelier, useCollection } from '@/components/app/atelier'
 
 const ETAPES = [
   { numero: 1, titre: 'Projet' },
@@ -48,6 +50,8 @@ const TACHES_DEPLOIEMENT = [
 
 export function VueModele({ slug }: { slug: string }) {
   const { autorise, refus, pousser } = useApp()
+  const services = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+  const { lancerJob } = useAtelier()
   const m = modeleBySlug(slug)
 
   const [etape, setEtape] = useState(1)
@@ -577,10 +581,55 @@ export function VueModele({ slug }: { slug: string }) {
                           iconBefore={<Rocket size={13} />}
                           onClick={() => {
                             setLance(true)
+                            const idService = services.identifiant('svc')
+                            services.creer({
+                              id: idService,
+                              projetId: projetId,
+                              nom,
+                              type: 'application',
+                              environnement,
+                              statut: 'building',
+                              ressources:
+                                palier === 'petit'
+                                  ? { cpu: 2, ramMo: 4096, diskGo: 60 }
+                                  : palier === 'large'
+                                    ? { cpu: 8, ramMo: 32768, diskGo: 500 }
+                                    : { cpu: 4, ramMo: 8192, diskGo: 200 },
+                              emplacement: {
+                                site,
+                                backend: 'OpenStack Magnum',
+                                namespace: `${nom}-${environnement.toLowerCase()}`,
+                              },
+                              derniereMaj: MAINTENANT,
+                              coutMensuel: prix,
+                              modeleSlug: m.slug,
+                              sieges: { attribues: 0, souscrits: 10 },
+                            })
                             pousser({
                               ton: 'info',
                               titre: `Déploiement de ${m.nom}`,
                               detail: `Dans ${projet.nom} · ${environnement} — sept tâches, suivi dans le centre de tâches.`,
+                            })
+                            lancerJob({
+                              type: 'modele.provision',
+                              label: `Déploiement ${m.nom} · ${projet.nom} / ${environnement}`,
+                              etapes: [
+                                'Allouer la capacité',
+                                'Déployer l’instance',
+                                'Configurer le domaine et le TLS',
+                                ...(sso ? ['Déclarer le client OIDC dans Keycloak'] : []),
+                                'Appliquer la politique de sauvegarde',
+                                'Enregistrer les sondes de supervision',
+                                'Créer la souscription facturable',
+                              ],
+                              alFin: () => {
+                                services.modifier(idService, { statut: 'running' })
+                                pousser({
+                                  ton: 'ok',
+                                  titre: `${m.nom} est prêt`,
+                                  detail: 'Le bouton Ouvrir de sa fiche redirige désormais en SSO.',
+                                })
+                              },
                             })
                           }}
                         >

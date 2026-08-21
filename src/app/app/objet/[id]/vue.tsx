@@ -78,7 +78,7 @@ const REGLES_CYCLE: RegleCycle[] = [
 ]
 
 export function VueBucket({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
   const executer = useOperation()
   const seaux = useCollection<Bucket>('buckets', BUCKETS)
   const cles = useCollection<CleS3>('cles-s3', CLES_S3)
