@@ -14,6 +14,7 @@ import { PageHeader, Card, CardHeader, Callout, KeyValueList } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { Stepper } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
+import { BoutonAction } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'executions', label: 'Exécutions' },
@@ -176,12 +177,51 @@ export function VueSauvegarde({ id }: { id: string }) {
                     </td>
                     <td className="px-3 py-2.5 text-right">
                       <span className="flex items-center justify-end gap-1.5">
-                        <Button size="sm" variant="ghost" iconBefore={<RotateCcw size={12} />}>
-                          Restaurer
-                        </Button>
-                        <Button size="sm" variant="ghost" iconBefore={<Download size={12} />}>
-                          Télécharger
-                        </Button>
+                        <BoutonAction
+                          libelle="Restaurer"
+                          variant="ghost"
+                          icone={<RotateCcw size={12} />}
+                          operation={{
+                            action: 'backup.restore',
+                            ton: 'info',
+                            titre: `Restauration du ${dateHeure(e.ts)}`,
+                            detail: e.contenu.join(' · '),
+                            job: {
+                              type: 'sauvegarde.restore',
+                              label: `Restauration · ${dateCourte(e.ts)}`,
+                              etapes: [
+                                'Monter la sauvegarde',
+                                'Restaurer les fichiers',
+                                'Restaurer la base',
+                                'Vider les caches',
+                              ],
+                            },
+                          }}
+                          confirmation={
+                            e.statut === 'ok'
+                              ? undefined
+                              : {
+                                  ressource: dateCourte(e.ts),
+                                  titre: 'Restaurer depuis une sauvegarde incomplète ?',
+                                  pertes: [
+                                    e.message ?? 'Cette exécution ne s’est pas terminée normalement',
+                                    'Le contenu restauré peut être partiel',
+                                  ],
+                                  libelleAction: 'Restaurer quand même',
+                                }
+                          }
+                        />
+                        <BoutonAction
+                          libelle="Télécharger"
+                          variant="ghost"
+                          icone={<Download size={12} />}
+                          operation={{
+                            action: 'backup.restore',
+                            ton: 'info',
+                            titre: `Archive du ${dateCourte(e.ts)} préparée`,
+                            detail: `${e.taille} · lien signé valable une heure`,
+                          }}
+                        />
                       </span>
                     </td>
                   </tr>

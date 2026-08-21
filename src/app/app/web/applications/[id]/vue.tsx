@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import { ArrowRight, ExternalLink, GitCompare, RotateCcw, ShieldCheck, Upload } from 'lucide-react'
 import { cn, seededSeries, surfaceMarque } from '@/lib/utils'
-import { dateCourte, num, relatif } from '@/lib/format'
+import { MAINTENANT, dateCourte, num, relatif } from '@/lib/format'
 import { SITE_LABEL } from '@/lib/types'
-import { TYPE_SITE_LABEL, hebergementById, nomServi, siteById } from '@/lib/mock'
+import { SITES_WEB, TYPE_SITE_LABEL, hebergementById, nomServi } from '@/lib/mock'
+import type { SiteWeb } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { CopyField, GatedAction, Tabs } from '@/components/ui/display'
@@ -13,6 +14,8 @@ import { Field, Select, Switch } from '@/components/ui/field'
 import { PageHeader, Card, CardHeader, Callout, KeyValueList } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'apercu', label: 'Vue d’ensemble' },
@@ -29,11 +32,13 @@ const TEINTE: Record<string, string> = {
 }
 
 export function VueApplication({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const sites = useCollection<SiteWeb>('sites-web', SITES_WEB)
   const [onglet, setOnglet] = useState('apercu')
   const [majAuto, setMajAuto] = useState(true)
 
-  const s = siteById(id)
+  const s = sites.items.find((x) => x.id === id)
   if (!s) return null
   const h = hebergementById(s.hebergementId)
   const surface = surfaceMarque(TEINTE[s.type] ?? '#4B2882')
@@ -250,10 +255,21 @@ export function VueApplication({ id }: { id: string }) {
                 className="mt-3"
                 iconBefore={<Upload size={13} />}
                 onClick={() =>
-                  pousser({
-                    ton: 'ok',
+                  executer({
+                    action: 'service.admin',
                     titre: 'Mise à jour programmée',
                     detail: 'Sauvegarde prise, application dans la prochaine fenêtre de maintenance.',
+                    job: {
+                      type: 'site.update',
+                      label: `Mises à jour · ${s.hote}`,
+                      etapes: [
+                        'Prendre une sauvegarde',
+                        'Appliquer les mises à jour',
+                        'Vérifier que le site répond',
+                      ],
+                      dureeEtapeMs: 1100,
+                    },
+                    effetFinal: () => sites.modifier(s.id, { majEnAttente: 0 }),
                   })
                 }
               >
@@ -286,12 +302,39 @@ export function VueApplication({ id }: { id: string }) {
                   ]}
                 />
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button variant="secondary" size="sm" iconBefore={<RotateCcw size={13} />}>
-                    Resynchroniser depuis la production
-                  </Button>
-                  <Button variant="ghost" size="sm" iconBefore={<GitCompare size={13} />}>
-                    Comparer
-                  </Button>
+                  <BoutonAction
+                    libelle="Resynchroniser depuis la production"
+                    icone={<RotateCcw size={13} />}
+                    operation={{
+                      action: 'service.admin',
+                      ton: 'info',
+                      titre: 'Resynchronisation lancée',
+                      detail: 'La préproduction est écrasée par la production ; l’inverse n’arrive jamais tout seul.',
+                      job: {
+                        type: 'site.staging.sync',
+                        label: `Resynchronisation · ${s.preproduction?.hote ?? s.hote}`,
+                        etapes: ['Copier les fichiers', 'Copier la base', 'Réécrire les URL'],
+                        dureeEtapeMs: 1100,
+                      },
+                      effetFinal: () =>
+                        sites.modifier(s.id, (x) => ({
+                          preproduction: x.preproduction
+                            ? { ...x.preproduction, derniereSync: MAINTENANT.slice(0, 10) }
+                            : undefined,
+                        })),
+                    }}
+                  />
+                  <BoutonAction
+                    libelle="Comparer"
+                    variant="ghost"
+                    icone={<GitCompare size={13} />}
+                    operation={{
+                      ton: 'info',
+                      titre: 'Comparatif préproduction / production',
+                      detail:
+                        'Fichiers et schéma de base comparés ; le contenu éditorial ne l’est pas — c’est au site de le dire.',
+                    }}
+                  />
                   <ButtonLink
                     href={`https://${s.preproduction.hote}`}
                     variant="ghost"
@@ -309,9 +352,34 @@ export function VueApplication({ id }: { id: string }) {
                   base sur <span className="font-mono">{s.preproduction?.hote ?? `staging-${s.hote}`}</span>{' '}
                   sans toucher à la production.
                 </p>
-                <Button variant="secondary" size="sm" className="mt-3">
-                  Créer une préproduction
-                </Button>
+                <BoutonAction
+                  libelle="Créer une préproduction"
+                  className="mt-3"
+                  operation={{
+                    action: 'service.admin',
+                    titre: 'Préproduction en création',
+                    detail: 'Clone des fichiers et de la base, exclu des moteurs de recherche.',
+                    job: {
+                      type: 'site.staging.create',
+                      label: `Préproduction · ${s.hote}`,
+                      etapes: [
+                        'Cloner les fichiers',
+                        'Cloner la base',
+                        'Poser le certificat du sous-domaine',
+                        'Bloquer l’indexation',
+                      ],
+                      dureeEtapeMs: 1100,
+                    },
+                    effetFinal: () =>
+                      sites.modifier(s.id, {
+                        preproduction: {
+                          actif: true,
+                          hote: `staging-${s.hote}`,
+                          derniereSync: MAINTENANT.slice(0, 10),
+                        },
+                      }),
+                  }}
+                />
               </>
             )}
           </Card>
@@ -337,11 +405,45 @@ export function VueApplication({ id }: { id: string }) {
                 </div>
               ))}
             </div>
-            <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-              <Button variant="secondary" size="sm" className="mt-3" iconAfter={<ArrowRight size={13} />}>
-                Publier
-              </Button>
-            </GatedAction>
+            <BoutonFormulaire
+              libelle="Publier"
+              className="mt-3"
+              action="service.admin"
+              titre={`Publier vers ${s.hote}`}
+              description="Une sauvegarde est prise avant. Publier la base écrase ce qui est arrivé en production depuis le clonage."
+              champs={[
+                {
+                  id: 'portee',
+                  label: 'Ce qui est publié',
+                  type: 'select',
+                  options: [
+                    { value: 'fichiers', label: 'Fichiers seulement — le plus courant' },
+                    { value: 'tout', label: 'Fichiers et base — production gelée' },
+                  ],
+                },
+              ]}
+              valeursDepart={{ portee: 'fichiers' }}
+              libelleValider="Publier"
+              operation={(v) => ({
+                ton: v.portee === 'tout' ? 'warn' : 'info',
+                titre: 'Publication lancée',
+                detail:
+                  v.portee === 'tout'
+                    ? 'La base de production sera écrasée : commandes et commentaires récents seront perdus.'
+                    : 'Thème, extensions et code seulement. La base de production reste intacte.',
+                job: {
+                  type: 'site.publish',
+                  label: `Publication · ${s.hote}`,
+                  etapes: [
+                    'Prendre une sauvegarde de la production',
+                    'Copier les fichiers',
+                    ...(v.portee === 'tout' ? ['Remplacer la base'] : []),
+                    'Vider les caches',
+                    'Vérifier que le site répond',
+                  ],
+                },
+              })}
+            />
           </Card>
         </div>
       )}
