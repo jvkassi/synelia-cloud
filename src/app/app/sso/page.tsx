@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { ArrowRight, CheckCircle2, Link2, RefreshCw, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateHeure, relatif } from '@/lib/format'
-import { ORG_COURANTE, SERVICES_MANAGES, USERS } from '@/lib/mock'
+import { ESPACES, ORG_COURANTE, SERVICES_MANAGES, USERS } from '@/lib/mock'
+import { ROLES_CLIENT } from '@/lib/rbac'
 import { ROLE_LABEL, type Role } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
@@ -14,6 +15,24 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { Stepper, Timeline } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+
+interface Correspondance {
+  id: string
+  groupe: string
+  role: Role
+  membres: number
+  portee: string
+}
+
+const CORRESPONDANCES: Correspondance[] = [
+  { id: 'cor-1', groupe: 'SYN-CLOUD-ADMINS', role: 'org_admin', membres: 2, portee: 'Organisation' },
+  { id: 'cor-2', groupe: 'SYN-CLOUD-INFRA', role: 'espace_admin', membres: 4, portee: 'Organisation' },
+  { id: 'cor-3', groupe: 'SYN-CLOUD-DEV-PROD', role: 'project_owner', membres: 8, portee: 'EC-DBA-01' },
+  { id: 'cor-4', groupe: 'SYN-CLOUD-FINANCE', role: 'billing_manager', membres: 2, portee: 'Organisation' },
+  { id: 'cor-5', groupe: 'Tout le personnel', role: 'read_only', membres: 142, portee: 'Organisation' },
+]
 
 const ONGLETS = [
   { id: 'etat', label: 'État de la fédération' },
@@ -43,7 +62,12 @@ const PROTOCOLES = [
 
 export default function Sso() {
   const { autorise, refus, pousser } = useApp()
+  const executer = useOperation()
+  const correspondances = useCollection<Correspondance>('correspondances-sso', CORRESPONDANCES)
   const [onglet, setOnglet] = useState('etat')
+  const [emailSimule, setEmailSimule] = useState('k.toure@dba.africa')
+  const [groupesSimules, setGroupesSimules] = useState('SYN-CLOUD-DEV-PROD\nTout le personnel')
+  const [resultatSimulation, setResultatSimulation] = useState<Correspondance | null>(null)
   const [protocole, setProtocole] = useState('oidc')
   const [etape, setEtape] = useState(1)
 
@@ -75,9 +99,27 @@ export default function Sso() {
         }
         actions={
           <GatedAction autorise={autorise('sso.configure')} message={refus('sso.configure')}>
-            <Button variant="secondary" iconBefore={<RefreshCw size={14} />}>
-              Tester la connexion
-            </Button>
+            <BoutonAction
+              libelle="Tester la connexion"
+              size="md"
+              icone={<RefreshCw size={14} />}
+              operation={{
+                action: 'sso.configure',
+                titre: 'Connexion au fournisseur d’identité vérifiée',
+                detail:
+                  'Point de découverte joignable, certificat de signature valide, revendications attendues présentes.',
+                job: {
+                  type: 'sso.test',
+                  label: 'Test de la fédération d’identité',
+                  etapes: [
+                    'Récupérer le point de découverte',
+                    'Vérifier le certificat de signature',
+                    'Contrôler les revendications reçues',
+                  ],
+                  dureeEtapeMs: 900,
+                },
+              }}
+            />
           </GatedAction>
         }
       />
@@ -211,9 +253,27 @@ export default function Sso() {
                     Modifier la configuration
                   </Button>
                 </GatedAction>
-                <Button size="sm" variant="ghost" iconBefore={<RefreshCw size={12} />}>
-                  Forcer une synchronisation
-                </Button>
+                <BoutonAction
+                  libelle="Forcer une synchronisation"
+                  variant="ghost"
+                  icone={<RefreshCw size={12} />}
+                  operation={{
+                    action: 'sso.configure',
+                    ton: 'info',
+                    titre: 'Synchronisation de l’annuaire lancée',
+                    detail: 'Les mouvements d’équipe de votre annuaire sont rejoués sur les rôles.',
+                    job: {
+                      type: 'sso.sync',
+                      label: 'Synchronisation de l’annuaire',
+                      etapes: [
+                        'Lire les groupes de l’annuaire',
+                        'Appliquer les correspondances',
+                        'Retirer les accès des membres partis',
+                      ],
+                      dureeEtapeMs: 1100,
+                    },
+                  }}
+                />
               </div>
             </Card>
 
@@ -498,15 +558,9 @@ export default function Sso() {
               sousTitre="Un groupe de votre annuaire donne un rôle chez nous. C’est ce qui permet de gérer les accès depuis votre annuaire, sans repasser par ce portail à chaque mouvement d’équipe."
             />
             <div className="space-y-2">
-              {[
-                { groupe: 'SYN-CLOUD-ADMINS', role: 'org_admin' as Role, membres: 2, portee: 'Organisation' },
-                { groupe: 'SYN-CLOUD-INFRA', role: 'infra_admin' as Role, membres: 4, portee: 'Organisation' },
-                { groupe: 'SYN-CLOUD-DEV-PROD', role: 'app_admin' as Role, membres: 8, portee: 'EC-DBA-01' },
-                { groupe: 'SYN-CLOUD-FINANCE', role: 'billing_admin' as Role, membres: 2, portee: 'Organisation' },
-                { groupe: 'Tout le personnel', role: 'read_only' as Role, membres: 142, portee: 'Organisation' },
-              ].map((c) => (
+              {correspondances.items.map((c) => (
                 <div
-                  key={c.groupe}
+                  key={c.id}
                   className="flex flex-wrap items-center gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                 >
                   <span className="min-w-0 flex-1">
@@ -526,17 +580,99 @@ export default function Sso() {
                       {c.portee}
                     </Badge>
                   </span>
-                  <Button size="sm" variant="ghost">
-                    Modifier
-                  </Button>
+                  <span className="flex items-center gap-1">
+                    <BoutonFormulaire
+                      libelle="Modifier"
+                      variant="ghost"
+                      action="sso.configure"
+                      titre={`Correspondance ${c.groupe}`}
+                      description="Les correspondances sont évaluées de haut en bas : la première qui s’applique gagne."
+                      champs={[
+                        {
+                          id: 'role',
+                          label: 'Rôle attribué',
+                          type: 'select',
+                          options: ROLES_CLIENT.map((r) => ({ value: r, label: ROLE_LABEL[r] })),
+                        },
+                        {
+                          id: 'portee',
+                          label: 'Portée',
+                          type: 'select',
+                          options: [
+                            { value: 'Organisation', label: 'Toute l’organisation' },
+                            ...ESPACES.map((e) => ({ value: e.code, label: `Espace ${e.code}` })),
+                          ],
+                        },
+                      ]}
+                      valeursDepart={{ role: c.role, portee: c.portee }}
+                      operation={(v) => ({
+                        titre: `Correspondance ${c.groupe} modifiée`,
+                        detail: `${ROLE_LABEL[v.role as Role]} · ${v.portee}`,
+                        effet: () =>
+                          correspondances.modifier(c.id, {
+                            role: v.role as Role,
+                            portee: String(v.portee),
+                          }),
+                      })}
+                    />
+                    <BoutonAction
+                      libelle="Retirer"
+                      variant="ghost"
+                      operation={{
+                        action: 'sso.configure',
+                        ton: 'warn',
+                        titre: `Correspondance ${c.groupe} retirée`,
+                        detail: `${c.membres} membre(s) perdront le rôle ${ROLE_LABEL[c.role]} à leur prochaine connexion.`,
+                        effet: () => correspondances.supprimer(c.id),
+                      }}
+                    />
+                  </span>
                 </div>
               ))}
             </div>
-            <GatedAction autorise={autorise('sso.configure')} message={refus('sso.configure')}>
-              <Button size="sm" variant="secondary" className="mt-3" iconBefore={<Link2 size={12} />}>
-                Ajouter une correspondance
-              </Button>
-            </GatedAction>
+            <BoutonFormulaire
+              libelle="Ajouter une correspondance"
+              className="mt-3"
+              icone={<Link2 size={12} />}
+              action="sso.configure"
+              titre="Ajouter une correspondance"
+              description="Un groupe de votre annuaire donne un rôle chez nous. Placez les groupes larges en dernier, sinon ils gagnent sur les autres."
+              champs={[
+                { id: 'groupe', label: 'Groupe de l’annuaire', placeholder: 'SYN-CLOUD-SUPPORT', obligatoire: true },
+                {
+                  id: 'role',
+                  label: 'Rôle attribué',
+                  type: 'select',
+                  options: ROLES_CLIENT.map((r) => ({ value: r, label: ROLE_LABEL[r] })),
+                },
+                {
+                  id: 'portee',
+                  label: 'Portée',
+                  type: 'select',
+                  options: [
+                    { value: 'Organisation', label: 'Toute l’organisation' },
+                    ...ESPACES.map((e) => ({ value: e.code, label: `Espace ${e.code}` })),
+                  ],
+                },
+              ]}
+              valeursDepart={{ role: 'read_only', portee: 'Organisation' }}
+              libelleValider="Ajouter"
+              operation={(v) => ({
+                titre: `Correspondance ${v.groupe} ajoutée`,
+                detail: 'Évaluée en dernier : déplacez-la si elle doit primer.',
+                effet: () =>
+                  correspondances.creer(
+                    {
+                      id: correspondances.identifiant('cor'),
+                      groupe: String(v.groupe),
+                      role: v.role as Role,
+                      membres: 0,
+                      portee: String(v.portee),
+                    },
+                    'fin',
+                  ),
+              })}
+            />
             <Callout ton="warn" className="mt-4" titre="L’ordre compte">
               Les correspondances sont évaluées de haut en bas, et la première qui s’applique gagne.
               Placez « Tout le personnel » en dernier : sinon, tout le monde obtiendrait le rôle de
@@ -573,19 +709,65 @@ export default function Sso() {
               />
               <div className="space-y-4">
                 <Field label="Adresse électronique">
-                  <Input defaultValue="k.toure@dba.africa" />
+                  <Input value={emailSimule} onChange={(e) => setEmailSimule(e.target.value)} />
                 </Field>
                 <Field label="Groupes de l’annuaire" hint="un par ligne">
-                  <MonoTextarea rows={3} defaultValue={'SYN-CLOUD-DEV-PROD\nTout le personnel'} />
+                  <MonoTextarea
+                    rows={3}
+                    value={groupesSimules}
+                    onChange={(e) => setGroupesSimules(e.target.value)}
+                  />
                 </Field>
-                <Button variant="secondary">Simuler</Button>
-                <div className="rounded-[6px] border border-ok/40 bg-ok-bg px-3 py-2.5">
-                  <p className="text-[12px] font-semibold text-ink">
-                    Résultat : Administrateur d’application, portée EC-DBA-01
-                  </p>
-                  <p className="mt-0.5 text-[11.5px] text-g-700">
-                    Correspondance retenue : SYN-CLOUD-DEV-PROD, évaluée avant « Tout le personnel ».
-                  </p>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    const groupes = groupesSimules
+                      .split('\n')
+                      .map((g) => g.trim())
+                      .filter(Boolean)
+                    // La première correspondance qui s'applique gagne, dans
+                    // l'ordre de la liste : c'est ce que dit l'écran.
+                    const retenue =
+                      correspondances.items.find((c) => groupes.includes(c.groupe)) ?? null
+                    setResultatSimulation(retenue)
+                    executer({
+                      ton: retenue ? 'ok' : 'warn',
+                      titre: retenue
+                        ? `${emailSimule} obtiendrait ${ROLE_LABEL[retenue.role]}`
+                        : `${emailSimule} n’obtiendrait aucun accès`,
+                      detail: retenue
+                        ? `Correspondance retenue : ${retenue.groupe} · portée ${retenue.portee}`
+                        : 'Aucun de ces groupes ne correspond à une règle. La connexion serait refusée.',
+                    })
+                  }}
+                >
+                  Simuler
+                </Button>
+                <div
+                  className={cn(
+                    'rounded-[6px] border px-3 py-2.5',
+                    resultatSimulation === null
+                      ? 'border-g-300 bg-g-050'
+                      : 'border-ok/40 bg-ok-bg',
+                  )}
+                >
+                  {resultatSimulation ? (
+                    <>
+                      <p className="text-[12px] font-semibold text-ink">
+                        Résultat : {ROLE_LABEL[resultatSimulation.role]}, portée{' '}
+                        {resultatSimulation.portee}
+                      </p>
+                      <p className="mt-0.5 text-[11.5px] text-g-700">
+                        Correspondance retenue : {resultatSimulation.groupe}, évaluée avant les
+                        suivantes.
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-[12px] text-g-700">
+                      Renseignez les groupes puis lancez la simulation : le résultat indique la
+                      correspondance retenue, pas seulement le rôle obtenu.
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>
@@ -787,11 +969,16 @@ export default function Sso() {
                   description="Nous poussons chaque événement d’authentification vers votre outil de corrélation, en temps réel, plutôt que par exports ponctuels."
                 />
               </div>
-              <GatedAction autorise={autorise('compliance.export')} message={refus('compliance.export')}>
-                <Button size="sm" className="mt-3.5" variant="secondary" iconBefore={<ShieldCheck size={12} />}>
-                  Exporter
-                </Button>
-              </GatedAction>
+              <BoutonAction
+                libelle="Exporter"
+                className="mt-3.5"
+                icone={<ShieldCheck size={12} />}
+                operation={{
+                  action: 'compliance.export',
+                  titre: 'Export des événements d’authentification préparé',
+                  detail: 'Le lien de téléchargement arrive par courriel et expire après 24 heures.',
+                }}
+              />
             </Card>
           </div>
         </div>

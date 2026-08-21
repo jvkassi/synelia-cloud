@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Key, Plus, ShieldCheck, Webhook } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dateCourte, num, pct, relatif } from '@/lib/format'
+import { MAINTENANT, dateCourte, num, pct, relatif } from '@/lib/format'
 import { SMTP } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
@@ -13,6 +13,11 @@ import { Modal } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { GaugeCircle, QuotaBar, StackedBar, StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+
+type CleSmtp = (typeof SMTP.cles)[number]
+type WebhookSmtp = (typeof SMTP.webhooks)[number]
 
 const ONGLETS = [
   { id: 'apercu', label: 'Aperçu' },
@@ -37,9 +42,18 @@ const LIBELLE_STATUT: Record<string, string> = {
 }
 
 export default function Smtp() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const cles = useCollection<CleSmtp>('cles-smtp', SMTP.cles)
+  const webhooks = useCollection<WebhookSmtp>('webhooks-smtp', SMTP.webhooks)
   const [onglet, setOnglet] = useState('apercu')
   const [nouvelleCle, setNouvelleCle] = useState(false)
+  const [nomCle, setNomCle] = useState('')
+  const [quotaCle, setQuotaCle] = useState(5000)
+  const [expediteur, setExpediteur] = useState('facturation@dba.africa')
+  const [refuserHorsDomaine, setRefuserHorsDomaine] = useState(true)
+  const [purgeErreurs, setPurgeErreurs] = useState(true)
+  const [desabonnement, setDesabonnement] = useState(false)
 
   const tauxLivraison = SMTP.livraison.find((l) => l.statut === 'delivre')?.pct ?? 0
 
@@ -260,7 +274,7 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
               }
             />
             <div className="space-y-2">
-              {SMTP.cles.map((c) => (
+              {cles.items.map((c) => (
                 <div key={c.id} className="rounded-[6px] border border-g-300 px-3 py-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <span className="flex min-w-0 items-start gap-2.5">
@@ -275,12 +289,38 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                       </span>
                     </span>
                     <span className="flex shrink-0 items-center gap-1.5">
-                      <Button size="sm" variant="ghost">
-                        Réinitialiser
-                      </Button>
-                      <Button size="sm" variant="ghost">
-                        Révoquer
-                      </Button>
+                      <BoutonAction
+                        libelle="Réinitialiser"
+                        variant="ghost"
+                        operation={{
+                          action: 'secrets.update',
+                          titre: `Clé « ${c.nom} » réinitialisée`,
+                          detail:
+                            'La nouvelle valeur est affichée une seule fois. L’ancienne cesse immédiatement de fonctionner.',
+                          effet: () => cles.modifier(c.id, { envoyesJour: 0 }),
+                        }}
+                      />
+                      <BoutonAction
+                        libelle="Révoquer"
+                        variant="ghost"
+                        operation={{
+                          action: 'secrets.update',
+                          ton: 'warn',
+                          titre: `Clé « ${c.nom} » révoquée`,
+                          detail: 'Les envois de cette application seront refusés dès maintenant.',
+                          effet: () => cles.supprimer(c.id),
+                        }}
+                        confirmation={{
+                          ressource: c.nom,
+                          titre: `Révoquer « ${c.nom} » ?`,
+                          pertes: [
+                            'Les envois de l’application qui l’utilise seront refusés immédiatement',
+                            `Quota journalier libéré : ${c.quotaJour} messages`,
+                            'La clé ne peut pas être restaurée : il faudra en créer une autre',
+                          ],
+                          libelleAction: 'Révoquer la clé',
+                        }}
+                      />
                     </span>
                   </div>
                   <div className="mt-2.5">
@@ -419,26 +459,38 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                   description="Non désactivable : un courriel non signé est massivement filtré."
                 />
                 <Switch
-                  checked
+                  checked={refuserHorsDomaine}
+                  onChange={setRefuserHorsDomaine}
                   label="Refuser les adresses d’expéditeur hors de vos domaines"
                   description="Empêche une application compromise d’envoyer au nom d’un autre domaine que les vôtres."
                 />
                 <Switch
-                  checked
+                  checked={purgeErreurs}
+                  onChange={setPurgeErreurs}
                   label="Supprimer automatiquement les adresses en erreur permanente"
                   description="Une adresse qui rejette trois fois de suite en 5.1.1 est retirée de vos envois. Continuer à écrire à des adresses mortes dégrade votre réputation."
                 />
                 <Switch
-                  checked={false}
+                  checked={desabonnement}
+                  onChange={setDesabonnement}
                   label="Ajouter un en-tête de désabonnement en un clic"
                   description="Obligatoire pour les envois de masse chez Gmail et Yahoo. Inutile pour les courriels transactionnels."
                 />
               </div>
-              <GatedAction autorise={autorise('secrets.update')} message={refus('secrets.update')}>
-                <Button className="mt-4" variant="secondary">
-                  Enregistrer
-                </Button>
-              </GatedAction>
+              <BoutonAction
+                libelle="Enregistrer"
+                size="md"
+                className="mt-4"
+                operation={{
+                  action: 'secrets.update',
+                  titre: 'Réglages d’envoi enregistrés',
+                  detail: [
+                    refuserHorsDomaine ? 'expéditeurs hors domaine refusés' : 'expéditeurs libres',
+                    purgeErreurs ? 'adresses mortes purgées' : 'adresses mortes conservées',
+                    desabonnement ? 'en-tête de désabonnement ajouté' : 'aucun en-tête de désabonnement',
+                  ].join(' · '),
+                }}
+              />
             </Card>
           </div>
         </div>
@@ -513,13 +565,43 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
               titre="Webhooks"
               sousTitre="Nous appelons votre application dès qu’un courriel change d’état. Vous gardez ainsi la trace des rejets sans interroger notre journal."
               actions={
-                <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />}>
-                  Ajouter
-                </Button>
+                <BoutonFormulaire
+                  libelle="Ajouter"
+                  icone={<Plus size={13} />}
+                  action="secrets.update"
+                  titre="Ajouter un webhook"
+                  description="Nous appelons votre application dès qu’un courriel change d’état. Sans webhook, il faut interroger le journal."
+                  champs={[
+                    { id: 'url', label: 'URL appelée', placeholder: 'https://api.dba.africa/hooks/smtp', obligatoire: true },
+                    {
+                      id: 'evenements',
+                      label: 'Événements',
+                      type: 'select',
+                      options: [
+                        { value: 'rejete', label: 'Rejets seulement' },
+                        { value: 'rejete,plainte', label: 'Rejets et plaintes' },
+                        { value: 'delivre,rejete,plainte', label: 'Remises, rejets et plaintes' },
+                      ],
+                    },
+                  ]}
+                  valeursDepart={{ evenements: 'rejete,plainte' }}
+                  libelleValider="Ajouter"
+                  operation={(v) => ({
+                    titre: 'Webhook ajouté',
+                    detail: 'Un appel de test est envoyé immédiatement.',
+                    effet: () =>
+                      webhooks.creer({
+                        id: webhooks.identifiant('wh'),
+                        url: String(v.url),
+                        evenements: String(v.evenements).split(','),
+                        actif: true,
+                      }),
+                  })}
+                />
               }
             />
             <div className="space-y-2">
-              {SMTP.webhooks.map((w) => (
+              {webhooks.items.map((w) => (
                 <div key={w.id} className="rounded-[6px] border border-g-300 px-3 py-2.5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <span className="flex min-w-0 items-start gap-2">
@@ -532,9 +614,26 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                       <Badge tone={w.actif ? 'ok' : 'neutral'} dot size="sm">
                         {w.actif ? 'Actif' : 'Désactivé'}
                       </Badge>
-                      <Button size="sm" variant="ghost">
-                        Tester
-                      </Button>
+                      <BoutonAction
+                        libelle="Tester"
+                        variant="ghost"
+                        operation={{
+                          action: 'secrets.update',
+                          ton: 'info',
+                          titre: 'Appel de test envoyé',
+                          detail: `${w.url} — un 2xx est attendu dans les cinq secondes, sinon nous réessayons trois fois.`,
+                        }}
+                      />
+                      <BoutonAction
+                        libelle={w.actif ? 'Désactiver' : 'Activer'}
+                        variant="ghost"
+                        operation={{
+                          action: 'secrets.update',
+                          ton: w.actif ? 'warn' : 'ok',
+                          titre: w.actif ? 'Webhook désactivé' : 'Webhook réactivé',
+                          effet: () => webhooks.modifier(w.id, { actif: !w.actif }),
+                        }}
+                      />
                     </span>
                   </div>
                   <div className="mt-2 flex flex-wrap gap-1">
@@ -602,12 +701,24 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
               Annuler
             </Button>
             <Button
+              disabled={!nomCle.trim()}
               onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: 'Clé d’envoi créée',
-                  detail: 'Copiez-la maintenant : elle ne sera plus affichée en clair après la fermeture de cette fenêtre.',
+                executer({
+                  action: 'secrets.update',
+                  titre: `Clé « ${nomCle} » créée`,
+                  detail:
+                    'Copiez-la maintenant : elle ne sera plus affichée en clair après la fermeture de cette fenêtre.',
+                  effet: () =>
+                    cles.creer({
+                      id: cles.identifiant('sk'),
+                      nom: nomCle,
+                      creee: MAINTENANT.slice(0, 10),
+                      derniereUtilisation: MAINTENANT,
+                      quotaJour: quotaCle,
+                      envoyesJour: 0,
+                    }),
                 })
+                setNomCle('')
                 setNouvelleCle(false)
               }}
             >
@@ -618,16 +729,24 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
       >
         <div className="space-y-4">
           <Field label="Nom" hint="décrivez l’application qui utilisera cette clé">
-            <Input placeholder="app-metier · notifications" />
+            <Input
+              value={nomCle}
+              onChange={(e) => setNomCle(e.target.value)}
+              placeholder="app-metier · notifications"
+            />
           </Field>
           <Field
             label="Quota journalier"
             hint="au-delà, les envois de cette clé sont refusés — les autres clés continuent"
           >
-            <Input type="number" defaultValue={5000} />
+            <Input
+              type="number"
+              value={quotaCle}
+              onChange={(e) => setQuotaCle(Number(e.target.value))}
+            />
           </Field>
           <Field label="Adresse d’expéditeur autorisée" hint="doit appartenir à un de vos domaines">
-            <Select defaultValue="facturation@dba.africa">
+            <Select value={expediteur} onChange={(e) => setExpediteur(e.target.value)}>
               <option value="facturation@dba.africa">facturation@dba.africa</option>
               <option value="noreply@dba.africa">noreply@dba.africa</option>
               <option value="contact@dba.africa">contact@dba.africa</option>
