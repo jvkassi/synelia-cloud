@@ -33,6 +33,7 @@
 "/app/vms/new",
 "/app/vms/vm-web-01",
 "/app/kubernetes",
+"/app/kubernetes/new",
 "/app/kubernetes/k8s-prod",
 "/app/reseau",
 "/app/reseau/lb",

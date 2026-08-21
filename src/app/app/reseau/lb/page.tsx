@@ -16,12 +16,14 @@ import { StatTile } from '@/components/composition/metrics'
 import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { CostPreview, WizardShell } from '@/components/composition/flow'
 import { useApp, useEspace } from '@/components/app/contexte'
+import { useAtelier, useCollection } from '@/components/app/atelier'
 
 export default function LoadBalancers() {
   const espace = useEspace()
   const { autorise, refus } = useApp()
   const [assistant, setAssistant] = useState(false)
-  const lbs = LOAD_BALANCERS.filter((l) => l.espaceId === espace.id)
+  const collection = useCollection<LoadBalancer>('load-balancers', LOAD_BALANCERS)
+  const lbs = collection.items.filter((l) => l.espaceId === espace.id)
 
   if (assistant) return <AssistantLb onFermer={() => setAssistant(false)} />
 
@@ -227,6 +229,8 @@ const ETAPES = [
 function AssistantLb({ onFermer }: { onFermer: () => void }) {
   const espace = useEspace()
   const { pousser } = useApp()
+  const collection = useCollection<LoadBalancer>('load-balancers', LOAD_BALANCERS)
+  const { lancerJob } = useAtelier()
   const [etape, setEtape] = useState(1)
 
   const [nom, setNom] = useState('lb-nouveau')
@@ -296,10 +300,71 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
             <Button
               disabled={!conditions}
               onClick={() => {
+                const nouveau: LoadBalancer = {
+                  id: collection.identifiant('lb'),
+                  espaceId: espace.id,
+                  nom,
+                  layer,
+                  exposure,
+                  vip: vip || `102.176.20.${190 + collection.items.length}`,
+                  algo,
+                  sticky: sticky ? 'cookie' : undefined,
+                  listeners: [
+                    { protocole: 'HTTPS', port: portHttps, certId: certAuto ? 'cert-auto' : undefined, tlsMin },
+                    ...(redirection ? [{ protocole: 'HTTP', port: 80 }] : []),
+                  ],
+                  pool: cibles.map((cible) => ({
+                    targetId: cible,
+                    targetLabel: vmsEspace.find((v) => v.id === cible)?.nom ?? cible,
+                    poids: 10,
+                    sante: 'drain' as const,
+                  })),
+                  healthCheck: {
+                    protocole: layer === 'l7' ? 'HTTP' : 'TCP',
+                    chemin: layer === 'l7' ? hcChemin : undefined,
+                    codeAttendu: layer === 'l7' ? 200 : undefined,
+                    intervalleS: hcIntervalle,
+                    seuilKo: hcSeuilKo,
+                    seuilOk: hcSeuilOk,
+                  },
+                  waf: waf ? { actif: true, ruleset: 'OWASP CRS 4.3' } : undefined,
+                  rateLimit: { requetesParMin: rateLimit },
+                  metriques: {
+                    rps: 0,
+                    p50: 0,
+                    p95: 0,
+                    p99: 0,
+                    taux4xx: 0,
+                    taux5xx: 0,
+                    connexions: 0,
+                  },
+                }
+                collection.creer(nouveau)
                 pousser({
                   ton: 'info',
                   titre: `Création de ${nom} lancée`,
                   detail: 'La VIP est réservée, les health checks démarrent dans une minute.',
+                })
+                lancerJob({
+                  type: 'lb.create',
+                  label: `Création du load balancer ${nom}`,
+                  etapes: [
+                    'Réserver la VIP',
+                    'Créer les écouteurs',
+                    ...(certAuto ? ['Émettre le certificat ACME'] : []),
+                    'Déclarer le pool de backends',
+                    'Attendre les premiers health checks',
+                  ],
+                  alFin: () => {
+                    collection.modifier(nouveau.id, (l) => ({
+                      pool: l.pool.map((x) => ({ ...x, sante: 'ok' as const })),
+                    }))
+                    pousser({
+                      ton: 'ok',
+                      titre: `${nom} répartit le trafic`,
+                      detail: `${cibles.length} cible(s) saine(s) dans le pool.`,
+                    })
+                  },
                 })
                 onFermer()
               }}

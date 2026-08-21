@@ -6,6 +6,7 @@ import { cn, seededSeries } from '@/lib/utils'
 import { dateCourte, goHumain, num, pct } from '@/lib/format'
 import { SITE_LABEL, ROLE_LABEL, type Role } from '@/lib/types'
 import { K8S_CLUSTERS, espaceById } from '@/lib/mock'
+import type { K8sCluster } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, IconButton } from '@/components/ui/button'
 import { CodeBlock, CopyField, GatedAction, Tabs } from '@/components/ui/display'
@@ -14,6 +15,20 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { HealthBadge, QuotaBar, StatTile } from '@/components/composition/metrics'
 import { GrilleSparkCharts } from '@/components/business/observabilite'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+
+/** Versions proposées à la mise à jour — une mineure d'écart au plus. */
+const VERSIONS = ['1.29.6', '1.30.4', '1.31.2']
+
+const MODULES_DISPONIBLES = [
+  { id: 'ingress-nginx 4.11.2', label: 'ingress-nginx · contrôleur d’entrée HTTP/HTTPS' },
+  { id: 'cert-manager 1.15.3', label: 'cert-manager · certificats automatiques' },
+  { id: 'argocd 2.12.3', label: 'argocd · livraison continue en GitOps' },
+  { id: 'external-dns 0.14.2', label: 'external-dns · synchronisation DNS' },
+  { id: 'rook-ceph 1.15.1', label: 'rook-ceph · stockage persistant distribué' },
+  { id: 'velero 1.14.1', label: 'velero · sauvegarde du cluster' },
+]
 
 const ONGLETS = [
   { id: 'apercu', label: 'Vue d’ensemble' },
@@ -40,10 +55,20 @@ const MAPPING_ROLES: Array<{ role: Role; k8s: string; namespaces: string }> = [
 ]
 
 export function VueCluster({ id }: { id: string }) {
-  const cluster = K8S_CLUSTERS.find((c) => c.id === id)!
-  const espace = espaceById(cluster.espaceId)
   const { autorise, refus, pousser } = useApp()
+  const executer = useOperation()
+  const grappes = useCollection<K8sCluster>('clusters', K8S_CLUSTERS)
   const [onglet, setOnglet] = useState('apercu')
+  /** Brouillons d'édition des pools, par nom de pool. */
+  const [brouillons, setBrouillons] = useState<
+    Record<string, { nodes?: number; min?: number; max?: number; disk?: number }>
+  >({})
+
+  const cluster = grappes.items.find((c) => c.id === id)!
+  const espace = espaceById(cluster.espaceId)
+
+  const poserBrouillon = (pool: string, champ: 'nodes' | 'min' | 'max' | 'disk', valeur: number) =>
+    setBrouillons((p) => ({ ...p, [pool]: { ...p[pool], [champ]: valeur } }))
 
   const noeudsTotal = cluster.pools.reduce((a, p) => a + p.nodes, 0)
   const vcpuTotal = cluster.pools.reduce((a, p) => {
@@ -113,9 +138,45 @@ users:
             >
               Télécharger le kubeconfig
             </Button>
-            <GatedAction autorise={autorise('espace.quota.update')} message={refus('espace.quota.update')}>
-              <Button variant="ghost">Mettre à jour la version</Button>
-            </GatedAction>
+            <BoutonFormulaire
+              libelle="Mettre à jour la version"
+              variant="ghost"
+              size="md"
+              action="espace.quota.update"
+              titre={`Mettre à jour ${cluster.nom}`}
+              description="La mise à jour se fait control plane d’abord, puis les pools un nœud à la fois. Un saut de plus d’une version mineure n’est pas proposé : Kubernetes ne le supporte pas."
+              champs={[
+                {
+                  id: 'version',
+                  label: 'Version cible',
+                  type: 'select',
+                  options: VERSIONS.filter((v) => v > cluster.version).map((v) => ({
+                    value: v,
+                    label: `Kubernetes ${v}`,
+                  })),
+                },
+              ]}
+              libelleValider="Mettre à jour"
+              operation={(v) => ({
+                ton: 'info',
+                titre: `Mise à jour vers ${v.version} lancée`,
+                effet: () => grappes.modifier(cluster.id, { statut: 'updating' }),
+                job: {
+                  type: 'k8s.upgrade',
+                  label: `Mise à jour ${cluster.nom} → ${v.version}`,
+                  etapes: [
+                    'Mettre à jour le control plane',
+                    'Drainer et remplacer les nœuds, un par un',
+                    'Vérifier les modules préqualifiés',
+                  ],
+                },
+                effetFinal: () =>
+                  grappes.modifier(cluster.id, {
+                    statut: 'running',
+                    version: String(v.version),
+                  }),
+              })}
+            />
           </>
         }
       />
@@ -281,9 +342,27 @@ users:
                           </Badge>
                         </td>
                         <td className="px-3 py-2.5 text-right">
-                          <Button size="sm" variant="ghost">
-                            Drainer
-                          </Button>
+                          <BoutonAction
+                            libelle="Drainer"
+                            variant="ghost"
+                            operation={{
+                              action: 'component.restart',
+                              ton: 'info',
+                              titre: 'Drainage du nœud lancé',
+                              detail:
+                                'Les pods sont évacués en respectant les budgets de perturbation. Si un budget bloque, nous ne forçons pas.',
+                              job: {
+                                type: 'k8s.node.drain',
+                                label: `Drainage d’un nœud · ${cluster.nom}`,
+                                etapes: [
+                                  'Marquer le nœud non planifiable',
+                                  'Évacuer les pods',
+                                  'Vérifier les budgets de perturbation',
+                                ],
+                                dureeEtapeMs: 1100,
+                              },
+                            }}
+                          />
                         </td>
                       </tr>
                     )
@@ -335,20 +414,45 @@ users:
               />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Field label="Nombre de nœuds">
-                  <Input type="number" defaultValue={p.nodes} min={0} max={40} />
+                  <Input
+                    type="number"
+                    value={brouillons[p.nom]?.nodes ?? p.nodes}
+                    onChange={(e) => poserBrouillon(p.nom, 'nodes', Number(e.target.value))}
+                    min={0}
+                    max={40}
+                    aria-label={`Nombre de nœuds du pool ${p.nom}`}
+                  />
                 </Field>
                 {p.autoscale && (
                   <>
                     <Field label="Minimum">
-                      <Input type="number" defaultValue={p.autoscale.min} min={0} />
+                      <Input
+                        type="number"
+                        value={brouillons[p.nom]?.min ?? p.autoscale.min}
+                        onChange={(e) => poserBrouillon(p.nom, 'min', Number(e.target.value))}
+                        min={0}
+                        aria-label={`Minimum du pool ${p.nom}`}
+                      />
                     </Field>
                     <Field label="Maximum">
-                      <Input type="number" defaultValue={p.autoscale.max} min={1} />
+                      <Input
+                        type="number"
+                        value={brouillons[p.nom]?.max ?? p.autoscale.max}
+                        onChange={(e) => poserBrouillon(p.nom, 'max', Number(e.target.value))}
+                        min={1}
+                        aria-label={`Maximum du pool ${p.nom}`}
+                      />
                     </Field>
                   </>
                 )}
                 <Field label="Disque par nœud">
-                  <Input type="number" defaultValue={p.diskGo ?? 100} suffix="Go" />
+                  <Input
+                    type="number"
+                    value={brouillons[p.nom]?.disk ?? p.diskGo ?? 100}
+                    onChange={(e) => poserBrouillon(p.nom, 'disk', Number(e.target.value))}
+                    suffix="Go"
+                    aria-label={`Disque par nœud du pool ${p.nom}`}
+                  />
                 </Field>
               </div>
 
@@ -388,12 +492,78 @@ users:
                   autorise={autorise('espace.quota.update')}
                   message={refus('espace.quota.update')}
                 >
-                  <Button size="sm">Appliquer</Button>
+                  <Button
+                    size="sm"
+                    disabled={!brouillons[p.nom]}
+                    onClick={() => {
+                      const b = brouillons[p.nom] ?? {}
+                      executer({
+                        action: 'espace.quota.update',
+                        titre: `Pool ${p.nom} redimensionné`,
+                        detail: `${b.nodes ?? p.nodes} nœuds · ${b.disk ?? p.diskGo ?? 100} Go par nœud`,
+                        effet: () =>
+                          grappes.modifier(cluster.id, (c) => ({
+                            pools: c.pools.map((x) =>
+                              x.nom === p.nom
+                                ? {
+                                    ...x,
+                                    nodes: b.nodes ?? x.nodes,
+                                    diskGo: b.disk ?? x.diskGo,
+                                    autoscale: x.autoscale
+                                      ? {
+                                          min: b.min ?? x.autoscale.min,
+                                          max: b.max ?? x.autoscale.max,
+                                        }
+                                      : undefined,
+                                  }
+                                : x,
+                            ),
+                          })),
+                      })
+                      setBrouillons((prev) => {
+                        const suite = { ...prev }
+                        delete suite[p.nom]
+                        return suite
+                      })
+                    }}
+                  >
+                    Appliquer
+                  </Button>
                 </GatedAction>
-                <Button size="sm" variant="secondary">
-                  Mise à jour progressive
-                </Button>
-                <IconButton label="Supprimer le pool" size="sm">
+                <BoutonAction
+                  libelle="Mise à jour progressive"
+                  operation={{
+                    action: 'espace.quota.update',
+                    ton: 'info',
+                    titre: `Mise à jour progressive du pool ${p.nom}`,
+                    job: {
+                      type: 'k8s.pool.roll',
+                      label: `Remplacement des nœuds · ${p.nom}`,
+                      etapes: [
+                        'Créer un nœud à la nouvelle image',
+                        'Drainer un ancien nœud',
+                        'Répéter jusqu’au dernier',
+                      ],
+                    },
+                  }}
+                />
+                <IconButton
+                  label={`Supprimer le pool ${p.nom}`}
+                  size="sm"
+                  disabled={cluster.pools.length === 1}
+                  onClick={() =>
+                    executer({
+                      action: 'espace.quota.update',
+                      ton: 'warn',
+                      titre: `Pool ${p.nom} supprimé`,
+                      detail: 'Ses nœuds sont drainés puis détruits ; les pods se replacent ailleurs.',
+                      effet: () =>
+                        grappes.modifier(cluster.id, (c) => ({
+                          pools: c.pools.filter((x) => x.nom !== p.nom),
+                        })),
+                    })
+                  }
+                >
                   <Trash2 size={13} className="text-err" />
                 </IconButton>
               </div>
@@ -407,9 +577,73 @@ users:
               )}
             </Card>
           ))}
-          <Button variant="secondary" iconBefore={<Plus size={14} />}>
-            Ajouter un pool
-          </Button>
+          <BoutonFormulaire
+            libelle="Ajouter un pool"
+            size="md"
+            icone={<Plus size={14} />}
+            action="espace.quota.update"
+            titre="Ajouter un pool de workers"
+            description="Un pool regroupe des nœuds de même gabarit. Séparer les pools permet de placer les charges par étiquette et de réserver les nœuds GPU ou préemptibles."
+            champs={[
+              { id: 'nom', label: 'Nom du pool', placeholder: 'pool-batch', obligatoire: true },
+              {
+                id: 'type',
+                label: 'Type',
+                type: 'select',
+                demi: true,
+                options: [
+                  { value: 'standard', label: 'Standard' },
+                  { value: 'memory', label: 'Optimisé mémoire' },
+                  { value: 'gpu', label: 'GPU / vGPU' },
+                  { value: 'preemptible', label: 'Préemptible' },
+                ],
+              },
+              {
+                id: 'flavor',
+                label: 'Gabarit',
+                type: 'select',
+                demi: true,
+                options: [
+                  { value: '4 vCPU · 8 Go', label: '4 vCPU · 8 Go' },
+                  { value: '8 vCPU · 16 Go', label: '8 vCPU · 16 Go' },
+                  { value: '8 vCPU · 32 Go', label: '8 vCPU · 32 Go' },
+                  { value: '16 vCPU · 64 Go', label: '16 vCPU · 64 Go' },
+                ],
+              },
+              { id: 'nodes', label: 'Nœuds', type: 'nombre', demi: true, min: 1, max: 40 },
+              { id: 'disque', label: 'Disque par nœud', type: 'nombre', demi: true, min: 40, suffixe: 'Go' },
+              { id: 'autoscale', label: 'Autoscaling', type: 'switch', placeholder: 'Activé' },
+            ]}
+            valeursDepart={{ type: 'standard', flavor: '8 vCPU · 16 Go', nodes: 3, disque: 100 }}
+            libelleValider="Ajouter le pool"
+            operation={(v) => ({
+              titre: `Pool ${v.nom} créé`,
+              detail: `${v.nodes} nœuds · ${v.flavor}`,
+              job: {
+                type: 'k8s.pool.create',
+                label: `Création du pool ${v.nom} · ${cluster.nom}`,
+                etapes: ['Provisionner les nœuds', 'Joindre le cluster', 'Vérifier l’état Ready'],
+                dureeEtapeMs: 1100,
+              },
+              effet: () =>
+                grappes.modifier(cluster.id, (c) => ({
+                  pools: [
+                    ...c.pools,
+                    {
+                      nom: String(v.nom),
+                      nodes: Number(v.nodes),
+                      flavor: String(v.flavor),
+                      diskGo: Number(v.disque),
+                      type: v.type as 'standard' | 'gpu' | 'memory' | 'preemptible',
+                      autoscale: v.autoscale
+                        ? { min: Number(v.nodes), max: Number(v.nodes) * 3 }
+                        : undefined,
+                      taints: v.type === 'preemptible' ? ['preemptible=true:NoSchedule'] : undefined,
+                    },
+                  ],
+                })),
+            })}
+          />
         </div>
       )}
 
@@ -420,9 +654,37 @@ users:
             titre="Modules installés"
             sousTitre="Charts Helm préqualifiés par nos équipes. Vous restez libre d’installer vos propres charts en parallèle."
             actions={
-              <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />}>
-                Installer un module
-              </Button>
+              <BoutonFormulaire
+                libelle="Installer un module"
+                icone={<Plus size={13} />}
+                action="espace.quota.update"
+                titre="Installer un module préqualifié"
+                description="Nous testons chaque version sur un cluster de référence avant de la proposer. Un chart que vous installez vous-même reste sous votre responsabilité."
+                champs={[
+                  {
+                    id: 'module',
+                    label: 'Module',
+                    type: 'select',
+                    options: MODULES_DISPONIBLES.filter(
+                      (m) => !cluster.modules.includes(m.id),
+                    ).map((m) => ({ value: m.id, label: m.label })),
+                  },
+                ]}
+                libelleValider="Installer"
+                operation={(v) => ({
+                  titre: `Module ${String(v.module).split(' ')[0]} installé`,
+                  job: {
+                    type: 'k8s.module.install',
+                    label: `Installation ${v.module} · ${cluster.nom}`,
+                    etapes: ['Déployer le chart Helm', 'Attendre les pods Ready'],
+                    dureeEtapeMs: 1100,
+                  },
+                  effetFinal: () =>
+                    grappes.modifier(cluster.id, (c) => ({
+                      modules: [...c.modules, String(v.module)],
+                    })),
+                })}
+              />
             }
           />
           <div className="space-y-2">
@@ -455,9 +717,37 @@ users:
                     <Badge tone="ok" dot size="sm">
                       Sain
                     </Badge>
-                    <Button size="sm" variant="ghost">
-                      Mettre à jour
-                    </Button>
+                    <BoutonAction
+                      libelle="Mettre à jour"
+                      variant="ghost"
+                      operation={{
+                        action: 'espace.quota.update',
+                        titre: `${nom} mis à jour`,
+                        detail: 'Version préqualifiée la plus récente.',
+                      }}
+                    />
+                    <BoutonAction
+                      libelle="Retirer"
+                      variant="ghost"
+                      operation={{
+                        action: 'espace.quota.update',
+                        ton: 'warn',
+                        titre: `${nom} retiré du cluster`,
+                        effet: () =>
+                          grappes.modifier(cluster.id, (c) => ({
+                            modules: c.modules.filter((x) => x !== m),
+                          })),
+                      }}
+                      confirmation={{
+                        ressource: nom,
+                        titre: `Retirer ${nom} ?`,
+                        pertes: [
+                          'Les ressources créées par ce module seront supprimées',
+                          'Les charges qui en dépendent cesseront de fonctionner',
+                        ],
+                        libelleAction: 'Retirer le module',
+                      }}
+                    />
                   </span>
                 </div>
               )
@@ -634,9 +924,23 @@ users:
                         <Badge tone="ok" size="sm">
                           NetworkPolicy active
                         </Badge>
-                        <Button size="sm" variant="ghost">
-                          Quotas
-                        </Button>
+                        <BoutonFormulaire
+                          libelle="Quotas"
+                          variant="ghost"
+                          action="espace.quota.update"
+                          titre={`Quotas du namespace ${ns}`}
+                          description="Le quota borne ce que le namespace peut consommer sur le cluster. Il ne réserve rien : c’est un plafond, pas une garantie."
+                          champs={[
+                            { id: 'vcpu', label: 'vCPU', type: 'nombre', demi: true, min: 1 },
+                            { id: 'ram', label: 'Mémoire', type: 'nombre', demi: true, min: 1, suffixe: 'Go' },
+                            { id: 'pods', label: 'Pods', type: 'nombre', demi: true, min: 1 },
+                          ]}
+                          valeursDepart={{ vcpu: 8, ram: 32, pods: 20 }}
+                          operation={(v) => ({
+                            titre: `Quotas de ${ns} enregistrés`,
+                            detail: `${v.vcpu} vCPU · ${v.ram} Go · ${v.pods} pods`,
+                          })}
+                        />
                       </>
                     )}
                   </span>
