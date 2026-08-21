@@ -54,7 +54,7 @@ export default function Reseau() {
         fil={[
           { label: 'Espace client', href: '/app' },
           { label: espace.code, href: `/app/espaces/${espace.id}` },
-          { label: 'Réseau & IP' },
+          { label: 'Réseau & VPN' },
         ]}
         titre="Réseau et adressage"
         sousTitre={`Plage allouée à ${espace.code} : ${espace.cidr}. Les réseaux privés découpent cette plage ; les groupes de sécurité filtrent le trafic.`}
