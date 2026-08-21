@@ -89,6 +89,13 @@ const communs = {
     ['code', 'message', 'correlationId', 'integration'],
   ),
 
+  // Les erreurs voyagent sous une enveloppe `erreur` : un client distingue ainsi
+  // un échec d'une ressource sans regarder le code HTTP.
+  ReponseErreur: objet({ erreur: ref('Erreur') }, ['erreur']),
+  ReponseErreurInterdit: objet({ erreur: ref('ErreurInterdit') }, ['erreur']),
+  ReponseErreurValidation: objet({ erreur: ref('ErreurValidation') }, ['erreur']),
+  ReponseErreurDegrade: objet({ erreur: ref('ErreurDegrade') }, ['erreur']),
+
   Quota: objet(
     { vcpu: entier(), ramGo: entier(), stockageTo: nombre() },
     ['vcpu', 'ramGo', 'stockageTo'],

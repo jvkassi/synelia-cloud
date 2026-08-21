@@ -295,17 +295,53 @@ const vms = fusion(
     rbac: 'vm.hardware.update',
     erreurs: [409],
   }),
-  action({
-    tag: T_VMS,
-    chemin: '/vms/{vmId}/instantane',
-    id: 'creerInstantaneVm',
-    resume: 'Prendre un instantané',
-    detail: 'Un instantané n’est pas une sauvegarde : il vit sur le même socle et n’est pas immuable.',
-    params: [idVm],
-    corps: objet({ nom: chaine(), avecMemoire: booleen() }, ['nom']),
-    corpsRequis: true,
-    rbac: 'backup.plan.write',
-  }),
+  {
+    '/vms/{vmId}/instantanes': {
+      get: op({
+        tag: T_VMS,
+        id: 'listerInstantanesVm',
+        resume: 'Lister les instantanés d’une machine',
+        params: [idVm],
+        ok: tableau(ref('InstantaneVm')),
+      }),
+      post: op({
+        tag: T_VMS,
+        id: 'creerInstantaneVm',
+        resume: 'Prendre un instantané',
+        detail:
+          'Un instantané n’est pas une sauvegarde : il vit sur le même socle, n’est pas immuable ' +
+          'et sa durée de vie est bornée. Pour protéger, il faut un plan de sauvegarde.',
+        params: [idVm],
+        corps: objet({ nom: chaine(), avecMemoire: booleen(), description: chaine() }, ['nom']),
+        ok: ref('TravailProvisioning'),
+        code: 202,
+        rbac: 'backup.plan.write',
+        erreurs: [402],
+      }),
+    },
+    '/vms/{vmId}/instantanes/{instantaneId}': {
+      delete: op({
+        tag: T_VMS,
+        id: 'supprimerInstantaneVm',
+        resume: 'Supprimer un instantané',
+        params: [idVm, chemin('instantaneId', 'Identifiant de l’instantané.')],
+        code: 204,
+        rbac: 'backup.plan.write',
+      }),
+      post: op({
+        tag: T_VMS,
+        id: 'restaurerInstantaneVm',
+        resume: 'Revenir à un instantané',
+        detail: 'La machine redémarre sur l’état capturé : tout ce qui a suivi est perdu.',
+        params: [idVm, chemin('instantaneId', 'Identifiant de l’instantané.')],
+        destructif: true,
+        ok: ref('TravailProvisioning'),
+        code: 202,
+        rbac: 'backup.restore',
+        erreurs: [409],
+      }),
+    },
+  },
   action({
     tag: T_VMS,
     chemin: '/vms/{vmId}/console',
@@ -607,6 +643,18 @@ const reseau = fusion(
       }),
     },
   },
+  action({
+    tag: T_RESEAU,
+    chemin: '/vpn/{tunnelId}/renegociation',
+    id: 'renegocierTunnelVpn',
+    resume: 'Renégocier un tunnel',
+    detail: 'Coupe la session en cours et relance la négociation : quelques secondes de trafic perdu.',
+    params: [chemin('tunnelId', 'Identifiant du tunnel.')],
+    ok: ref('TunnelVpn'),
+    code: 200,
+    rbac: 'network.manage',
+    erreurs: [409],
+  }),
   crud({
     tag: T_RESEAU,
     base: '/load-balancers',
@@ -851,6 +899,24 @@ const bases = fusion(
   }),
   action({
     tag: T_BASES,
+    chemin: '/bases/{baseId}/identifiants/rotation',
+    id: 'rotationnerIdentifiantsBase',
+    resume: 'Faire tourner le mot de passe d’une base',
+    detail:
+      'L’ancien mot de passe cesse de fonctionner à la fin du délai de grâce : les applications ' +
+      'qui le portent encore doivent être redéployées avant.',
+    params: [chemin('baseId', 'Identifiant de la base.')],
+    corps: objet({ delaiGraceMin: entier() }),
+    ok: objet(
+      { host: chaine(), port: entier(), utilisateur: chaine(), motDePasse: chaine('Renvoyé une seule fois.') },
+      ['host', 'port', 'utilisateur', 'motDePasse'],
+    ),
+    code: 200,
+    rbac: 'secrets.update',
+    erreurs: [409],
+  }),
+  action({
+    tag: T_BASES,
     chemin: '/bases/{baseId}/replicas',
     id: 'ajouterReplicaBase',
     resume: 'Ajouter un réplica de lecture',
@@ -897,6 +963,41 @@ const protection = fusion(
           filtre('immuables', booleen()),
         ],
         ok: page(ref('PointRestauration')),
+      }),
+    },
+    '/sauvegarde/points/{pointId}': {
+      delete: op({
+        tag: T_PROTECTION,
+        id: 'supprimerPointRestauration',
+        resume: 'Supprimer un point de restauration',
+        detail:
+          'Refusé (`409`) tant que le point est immuable : c’est précisément ce que garantit ' +
+          'l’immuabilité, et aucun rôle ne peut la contourner.',
+        params: [chemin('pointId', 'Identifiant du point.')],
+        destructif: true,
+        code: 204,
+        rbac: 'backup.plan.write',
+        erreurs: [409],
+      }),
+    },
+    '/sauvegarde/restaurations': {
+      get: op({
+        tag: T_PROTECTION,
+        id: 'listerRestaurations',
+        resume: 'Lister les restaurations demandées',
+        detail: 'Trace de qui a restauré quoi, quand, et avec quelle granularité.',
+        paginee: true,
+        params: [filtre('statut', chaine()), filtre('ressourceId', chaine()), filtre('depuis', horodatage())],
+        ok: page(ref('Restauration')),
+      }),
+    },
+    '/sauvegarde/restaurations/{restaurationId}': {
+      get: op({
+        tag: T_PROTECTION,
+        id: 'obtenirRestauration',
+        resume: 'Suivre une restauration',
+        params: [chemin('restaurationId', 'Identifiant de la restauration.')],
+        ok: ref('Restauration'),
       }),
     },
     '/sauvegarde/conformite': {

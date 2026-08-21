@@ -538,6 +538,21 @@ const sitesWeb = fusion(
       }),
     },
   },
+  {
+    '/web/sites/{siteId}/mises-a-jour': {
+      get: op({
+        tag: T_SITES,
+        id: 'listerMisesAJourSiteWeb',
+        resume: 'Lister les mises à jour en attente',
+        detail:
+          'Cœur, extensions, thèmes et traductions, avec ce qui relève d’un correctif de sécurité — ' +
+          'celui-là ne se remet pas à la prochaine fenêtre.',
+        params: [idSite, filtre('securiteSeulement', booleen())],
+        ok: tableau(ref('MiseAJourSite')),
+        erreurs: [424],
+      }),
+    },
+  },
   action({
     tag: T_SITES,
     chemin: '/web/sites/{siteId}/mise-a-jour',
@@ -1201,6 +1216,93 @@ const smtp = fusion(
         ],
         ok: page(ref('MessageSmtp')),
         erreurs: [424],
+      }),
+    },
+  },
+  {
+    '/web/smtp/cles': {
+      get: op({
+        tag: T_SMTP,
+        id: 'listerClesSmtp',
+        resume: 'Lister les clés d’envoi',
+        detail:
+          'Une clé par application émettrice : celle qui fuit se révoque sans couper les autres, ' +
+          'et le journal de remise dit laquelle a envoyé quoi.',
+        params: [filtre('statut', liste(['active', 'suspendue', 'revoquee']))],
+        ok: tableau(ref('CleSmtp')),
+      }),
+      post: op({
+        tag: T_SMTP,
+        id: 'creerCleSmtp',
+        resume: 'Créer une clé d’envoi',
+        corps: ref('CleSmtpCreation'),
+        ok: ref('CleSmtpSecret'),
+        code: 201,
+        rbac: 'secrets.update',
+        erreurs: [409],
+      }),
+    },
+    '/web/smtp/cles/{cleSmtpId}': {
+      patch: op({
+        tag: T_SMTP,
+        id: 'modifierCleSmtp',
+        resume: 'Modifier une clé d’envoi',
+        params: [chemin('cleSmtpId', 'Identifiant de la clé.')],
+        corps: objet({
+          nom: chaine(),
+          domainesAutorises: tableau(chaine()),
+          quotaJour: entier(),
+          statut: liste(['active', 'suspendue']),
+        }),
+        ok: ref('CleSmtp'),
+        rbac: 'secrets.update',
+      }),
+      delete: op({
+        tag: T_SMTP,
+        id: 'revoquerCleSmtp',
+        resume: 'Révoquer une clé d’envoi',
+        detail: 'L’application qui la porte cesse d’émettre immédiatement.',
+        params: [chemin('cleSmtpId', 'Identifiant de la clé.')],
+        destructif: true,
+        code: 204,
+        rbac: 'secrets.update',
+      }),
+    },
+    '/web/smtp/webhooks': {
+      get: op({
+        tag: T_SMTP,
+        id: 'listerWebhooksSmtp',
+        resume: 'Lister les webhooks de remise',
+        detail: 'Rebonds et plaintes remontés à l’application, pour qu’elle nettoie ses listes.',
+        ok: tableau(ref('WebhookSmtp')),
+      }),
+      post: op({
+        tag: T_SMTP,
+        id: 'creerWebhookSmtp',
+        resume: 'Créer un webhook de remise',
+        corps: ref('WebhookSmtpCreation'),
+        ok: ref('WebhookSmtp'),
+        code: 201,
+        rbac: 'service.admin',
+      }),
+    },
+    '/web/smtp/webhooks/{webhookId}': {
+      patch: op({
+        tag: T_SMTP,
+        id: 'modifierWebhookSmtp',
+        resume: 'Modifier un webhook de remise',
+        params: [chemin('webhookId', 'Identifiant du webhook.')],
+        corps: ref('WebhookSmtpCreation'),
+        ok: ref('WebhookSmtp'),
+        rbac: 'service.admin',
+      }),
+      delete: op({
+        tag: T_SMTP,
+        id: 'supprimerWebhookSmtp',
+        resume: 'Supprimer un webhook de remise',
+        params: [chemin('webhookId', 'Identifiant du webhook.')],
+        code: 204,
+        rbac: 'service.admin',
       }),
     },
   },

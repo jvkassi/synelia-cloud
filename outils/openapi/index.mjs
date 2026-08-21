@@ -1,5 +1,5 @@
 /**
- * Génère `docs/openapi.json` — le contrat que le backend doit servir.
+ * Génère `docs/api/openapi.json` — le contrat que le backend doit servir.
  *
  *     node outils/openapi/index.mjs
  *
@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url'
 import { fusion, parametres, reponses } from './socle.mjs'
 import { schemasSocle } from './schemas-socle.mjs'
 import { schemasProduits } from './schemas-produits.mjs'
+import { schemasTransverses } from './schemas-transverses.mjs'
 import { cheminsIdentite } from './chemins-identite.mjs'
 import { cheminsInfra } from './chemins-infra.mjs'
 import { cheminsApplicatif } from './chemins-applicatif.mjs'
@@ -25,9 +26,10 @@ import { cheminsWeb } from './chemins-web.mjs'
 import { cheminsServices } from './chemins-services.mjs'
 import { cheminsAdmin } from './chemins-admin.mjs'
 import { cheminsPublic } from './chemins-public.mjs'
+import { cheminsTransverses } from './chemins-transverses.mjs'
 
 const ICI = dirname(fileURLToPath(import.meta.url))
-const SORTIE = join(ICI, '..', '..', 'docs', 'openapi.json')
+const SORTIE = join(ICI, '..', '..', 'docs', 'api', 'openapi.json')
 
 const DESCRIPTION = `
 API de Synelia Cloud — plateforme de gestion de cloud multi-tenant opérée à
@@ -66,8 +68,8 @@ portent des liens de sortie vers Centreon, Grafana et VictoriaLogs.
   en français. \`Accept-Language\` gouverne les libellés, jamais les clés.
 - **Multi-tenant** : l'organisation vient du jeton ; \`X-Organisation-Id\` la
   remplace quand l'utilisateur appartient à plusieurs organisations.
-- **Pagination** : \`page\` et \`parPage\` en requête, \`{ donnees, pagination }\`
-  en réponse.
+- **Pagination** : \`page\`, \`parPage\`, \`tri\`, \`ordre\` et \`q\` en requête,
+  \`{ donnees, pagination }\` en réponse. Une ressource seule n'est pas enveloppée.
 - **Asynchrone** : toute opération de provisioning répond \`202\` avec un
   \`TravailProvisioning\` dont les étapes se suivent une par une.
 - **Actions destructives** : paramètre \`confirmation\` obligatoire, valant le
@@ -77,8 +79,10 @@ portent des liens de sortie vers Centreon, Grafana et VictoriaLogs.
 - **Droits** : chaque opération porte \`x-rbac\`, l'identifiant de son action
   dans la matrice RBAC. Un refus renvoie \`403\` avec \`rolesRequis\` : le client
   désactive l'action et nomme le rôle requis, il ne la masque pas.
-- **Erreurs** : toutes portent un \`correlationId\`, affiché et copiable côté
-  interface.
+- **Erreurs** : enveloppe \`{ erreur: { code, message, correlationId } }\`. Le
+  \`correlationId\` est toujours présent, affiché et copiable côté interface.
+- **Secrets** : mots de passe, clés privées et jetons ne sont renvoyés qu'à leur
+  création ou à leur rotation, jamais en lecture.
 - **Intégration amont en défaut** : \`424\` avec la fraîcheur des dernières
   données connues, pour un affichage dégradé plutôt qu'une page vide.
 - **Montants** : entiers en FCFA (XOF) sauf mention contraire.
@@ -90,8 +94,8 @@ const TAGS = [
   ['Organisations', 'Cycle de vie des organisations, vue fournisseur.'],
   ['Membres & rôles', 'Membres, invitations, matrice des droits.'],
   ['Sécurité & accès', 'Fédération SSO, politiques, sessions, clés d’API.'],
-  ['Audit', 'Journal d’audit et rapports de conformité.'],
-  ['Tableau de bord', 'Synthèse de l’organisation.'],
+  ['Audit', 'Journal d’audit, rapports de conformité, attestations.'],
+  ['Tableau de bord', 'Synthèse, recherche globale, copilote, guide de démarrage, anomalies.'],
   ['Travaux de provisioning', 'Suivi des opérations asynchrones.'],
   ['Espaces Cloud', 'Espaces, quotas, placement, consommation.'],
   ['Machines virtuelles', 'Machines, matériel virtuel, console, déploiement en lot.'],
@@ -100,7 +104,7 @@ const TAGS = [
   ['Stockage', 'Volumes bloc, buckets objet, clés d’accès S3.'],
   ['Bases managées', 'Bases opérées par la plateforme, réplicas, restauration dans le temps.'],
   ['Sauvegarde & PRA', 'Plans, points de restauration, conformité 3-2-1, plans de reprise.'],
-  ['Applications', 'Applications, environnements, composants, registre.'],
+  ['Applications', 'Applications, environnements, composants, dépôts.'],
   ['Déploiements', 'Construction, analyse, mise en service, retour arrière.'],
   ['Projets applicatifs', 'Projets, services, zone applicative, domaines, routage.'],
   ['Modèles applicatifs', 'Bibliothèque de solutions libres qualifiées.'],
@@ -135,6 +139,7 @@ const chemins = fusion(
   cheminsServices,
   cheminsAdmin,
   cheminsPublic,
+  cheminsTransverses,
 )
 
 const document = {
@@ -176,7 +181,7 @@ const document = {
     parameters: parametres,
     responses: reponses,
     schemas: Object.fromEntries(
-      Object.entries({ ...schemasSocle, ...schemasProduits }).sort(([a], [b]) => a.localeCompare(b)),
+      Object.entries({ ...schemasSocle, ...schemasProduits, ...schemasTransverses }).sort(([a], [b]) => a.localeCompare(b)),
     ),
   },
 }
@@ -284,6 +289,6 @@ for (const item of Object.values(document.paths)) {
 }
 
 console.log(
-  `docs/openapi.json — ${Object.keys(document.paths).length} chemins, ${nbOperations} opérations, ` +
+  `docs/api/openapi.json — ${Object.keys(document.paths).length} chemins, ${nbOperations} opérations, ` +
     `${Object.keys(document.components.schemas).length} schémas, ${parRubrique.size} rubriques.`,
 )

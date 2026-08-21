@@ -397,6 +397,28 @@ const membres = fusion(
         ok: page(ref('Membre')),
         rbac: 'member.invite',
       }),
+      post: op({
+        tag: T_MEMBRES,
+        id: 'ajouterAppartenance',
+        resume: 'Donner un rôle supplémentaire à un membre existant',
+        detail:
+          'Un même utilisateur peut être Operator sur un Espace et Billing Manager sur ' +
+          "l'organisation : les appartenances s'ajoutent, elles ne se remplacent pas. " +
+          "Pour un utilisateur qui n'a pas encore de compte, passer par une invitation.",
+        corps: objet(
+          {
+            userId: chaine(),
+            role: liste(ROLES),
+            scopeType: liste(['org', 'espace', 'application', 'service']),
+            scopeId: chaine(),
+          },
+          ['userId', 'role', 'scopeType'],
+        ),
+        ok: ref('Membre'),
+        code: 201,
+        rbac: 'member.invite',
+        erreurs: [409],
+      }),
     },
     '/membres/{membreId}': {
       get: op({

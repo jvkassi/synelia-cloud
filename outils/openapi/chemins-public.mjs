@@ -200,6 +200,31 @@ const confiance = {
   },
 }
 
+const contenus = {
+  '/public/pages-legales': {
+    get: op({
+      tag: T,
+      portee: P,
+      id: 'listerPagesLegales',
+      resume: 'Lister les pages légales',
+      ok: tableau(
+        objet({ slug: chaine(), titre: chaine(), miseAJour: chaine() }, ['slug', 'titre', 'miseAJour']),
+      ),
+    }),
+  },
+  '/public/pages-legales/{slug}': {
+    get: op({
+      tag: T,
+      portee: P,
+      id: 'obtenirPageLegale',
+      resume: 'Obtenir une page légale',
+      detail: 'Mentions légales, conditions, politique de confidentialité, sous-traitance.',
+      params: [chemin('slug', 'Slug de la page.', 'mentions-legales')],
+      ok: ref('PageLegale'),
+    }),
+  },
+}
+
 const demandes = {
   '/public/contact': {
     post: op({
@@ -253,4 +278,4 @@ const demandes = {
   },
 }
 
-export const cheminsPublic = fusion(offres, confiance, demandes)
+export const cheminsPublic = fusion(offres, confiance, contenus, demandes)

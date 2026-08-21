@@ -219,27 +219,22 @@ const applications = fusion(
         ok: tableau(ref('BriqueCanvas')),
       }),
     },
-    '/registre/images': {
+    '/depots/branches': {
       get: op({
         tag: T_APPS,
-        id: 'listerImagesRegistre',
-        resume: 'Lister les images du registre privé',
-        paginee: true,
-        params: [filtre('depot', chaine()), filtre('signees', booleen())],
-        ok: page(ref('ImageRegistre')),
-      }),
-    },
-    '/registre/images/{imageId}': {
-      delete: op({
-        tag: T_APPS,
-        id: 'supprimerImageRegistre',
-        resume: 'Supprimer une image du registre',
-        detail: 'Refusé quand un environnement actif s’appuie encore sur l’image.',
-        params: [chemin('imageId', 'Identifiant de l’image.')],
-        destructif: true,
-        code: 204,
+        id: 'listerBranchesDepot',
+        resume: 'Lister les branches d’un dépôt',
+        detail:
+          'Sert le choix de branche du déploiement automatique, avec le dernier commit de chacune : ' +
+          'on choisit une branche vivante, pas un nom saisi de mémoire.',
+        params: [
+          filtre('provider', liste(['github', 'gitlab'])),
+          filtre('url', chaine()),
+          filtre('appId', chaine(), 'Reprend le dépôt déjà connu de l’application.'),
+        ],
+        ok: tableau(ref('BrancheDepot')),
         rbac: 'app.deploy',
-        erreurs: [409],
+        erreurs: [424],
       }),
     },
   },
@@ -336,6 +331,22 @@ const deploiements = fusion(
     corps: objet({ versionCible: chaine('Par défaut, la dernière version en service.') }),
     ok: ref('Deploiement'),
     rbac: 'app.rollback',
+    erreurs: [409],
+  }),
+  action({
+    tag: T_DEPLOIEMENTS,
+    chemin: '/deploiements/{deploiementId}/approbation',
+    id: 'approuverDeploiement',
+    resume: 'Approuver ou refuser un déploiement en attente',
+    detail:
+      'Barrière des environnements protégés (`protection.approbationRequise`). ' +
+      'L’approbateur ne peut pas être l’auteur du déploiement.',
+    params: [chemin('deploiementId', 'Identifiant du déploiement.')],
+    corps: objet({ decision: liste(['approuver', 'refuser']), motif: chaine() }, ['decision']),
+    corpsRequis: true,
+    ok: ref('Deploiement'),
+    code: 200,
+    rbac: 'app.deploy',
     erreurs: [409],
   }),
   action({
@@ -499,6 +510,30 @@ const projets = fusion(
         code: 202,
         rbac: 'app.deploy',
         erreurs: [409],
+      }),
+    },
+    '/projets/{projetId}/services/{serviceId}/identifiants': {
+      get: op({
+        tag: T_PROJETS,
+        id: 'obtenirIdentifiantsServiceProjet',
+        resume: 'Obtenir les identifiants de connexion d’un service',
+        detail:
+          'Appel dédié parce que les listes de services ne portent jamais de mot de passe : ' +
+          'un secret se demande, il ne traîne pas dans une réponse de collection.',
+        params: [idProjet, idService],
+        ok: objet(
+          {
+            hoteInterne: chaine(),
+            port: entier(),
+            utilisateur: chaine(),
+            motDePasse: chaine(),
+            base: chaine(),
+            uri: chaine(),
+            variablesInjectees: tableau(chaine(), 'Variables déjà disponibles aux autres services du projet.'),
+          },
+          ['hoteInterne', 'port'],
+        ),
+        rbac: 'secrets.update',
       }),
     },
     '/projets/{projetId}/services/{serviceId}/journaux': {

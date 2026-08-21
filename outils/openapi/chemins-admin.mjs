@@ -5,6 +5,7 @@
 
 import {
   BACKENDS,
+  ROLES,
   SITES,
   action,
   booleen,
@@ -471,6 +472,64 @@ const produit = fusion(
         rbac: 'catalog.edit',
       }),
     },
+    '/admin/catalogue/services/{slug}': {
+      put: op({
+        tag: T_PRODUIT,
+        portee: A,
+        id: 'modifierFicheCatalogueService',
+        resume: 'Modifier une fiche du catalogue de services managés',
+        detail:
+          'Paliers, prix, SLA, formats de réversibilité, migrations entrantes. La fiche est le ' +
+          'contrat commercial du service : ce qu’elle annonce, la plateforme doit le tenir.',
+        params: [chemin('slug', 'Slug du service.', 'drive-pro')],
+        corps: ref('FicheCatalogue'),
+        ok: ref('FicheCatalogue'),
+        rbac: 'catalog.edit',
+      }),
+    },
+    '/admin/catalogue/services/{slug}/versions': {
+      post: op({
+        tag: T_PRODUIT,
+        portee: A,
+        id: 'qualifierVersionService',
+        resume: 'Qualifier une version d’un service managé',
+        detail:
+          'Une version n’est déployable qu’une fois qualifiée : c’est ce qui permet de ne jamais ' +
+          'servir « latest » à un client.',
+        params: [chemin('slug', 'Slug du service.', 'drive-pro')],
+        corps: objet(
+          {
+            version: chaine(),
+            notes: chaine(),
+            notesUrl: chaine(),
+            rupture: booleen(),
+            dureeIndisponibiliteMin: entier(),
+            rollbackPossible: booleen(),
+            statut: liste(['disponible', 'depreciee', 'retiree']),
+          },
+          ['version'],
+        ),
+        ok: ref('VersionService'),
+        code: 201,
+        rbac: 'catalog.edit',
+        erreurs: [409],
+      }),
+    },
+    '/admin/modeles/{slug}': {
+      put: op({
+        tag: T_PRODUIT,
+        portee: A,
+        id: 'modifierModeleApplicatif',
+        resume: 'Modifier un modèle de la bibliothèque',
+        detail:
+          'Version qualifiée, ressources par défaut, dépendances, variables, plan de sauvegarde ' +
+          'proposé, et ce que le portail ne fera pas pour ce produit.',
+        params: [chemin('slug', 'Slug du modèle.', 'zimbra')],
+        corps: ref('ModeleApplicatif'),
+        ok: ref('ModeleApplicatif'),
+        rbac: 'catalog.edit',
+      }),
+    },
     '/admin/marketplace/instances': {
       get: op({
         tag: T_PRODUIT,
@@ -595,6 +654,19 @@ const finance = fusion(
         detail: 'Coût d’infrastructure contre revenu : c’est ce qui justifie la sortie d’un socle propriétaire.',
         ok: tableau(ref('MargeBackend')),
         rbac: 'catalog.edit',
+      }),
+    },
+    '/admin/facturation/cycles': {
+      get: op({
+        tag: T_FINANCE,
+        portee: A,
+        id: 'listerCyclesFacturation',
+        resume: 'Lister les cycles de facturation',
+        detail: 'Un cycle par période, avec le nombre de factures émises et les organisations en échec.',
+        paginee: true,
+        params: [filtre('periode', chaine()), filtre('statut', chaine())],
+        ok: page(ref('CycleFacturation')),
+        rbac: 'invoice.view',
       }),
     },
     '/admin/revshare': {
@@ -827,4 +899,146 @@ const exploitation = fusion(
   }),
 )
 
-export const cheminsAdmin = fusion(pilotage, clients, infrastructure, produit, finance, exploitation)
+
+// ─── Prospection, conformité, élévations ──────────────────────────────
+
+const ajouts = {
+    '/admin/leads': {
+      get: op({
+        tag: T_CLIENTS,
+        portee: A,
+        id: 'listerLeads',
+        resume: 'Lister les demandes entrantes de la vitrine',
+        detail: 'Contacts, devis et configurations simulées, avec leur suivi commercial.',
+        paginee: true,
+        params: [
+          filtre('statut', liste(['nouveau', 'contacte', 'qualifie', 'devis_envoye', 'gagne', 'perdu'])),
+          filtre('origine', chaine()),
+          filtre('assigneA', chaine()),
+          filtre('depuis', horodatage()),
+        ],
+        ok: page(ref('Lead')),
+      }),
+    },
+    '/admin/leads/{leadId}': {
+      patch: op({
+        tag: T_CLIENTS,
+        portee: A,
+        id: 'modifierLead',
+        resume: 'Qualifier une demande entrante',
+        params: [chemin('leadId', 'Identifiant de la demande.')],
+        corps: objet({
+          statut: liste(['nouveau', 'contacte', 'qualifie', 'devis_envoye', 'gagne', 'perdu']),
+          assigneA: chaine(),
+          note: chaine(),
+        }),
+        ok: ref('Lead'),
+      }),
+    },
+    '/admin/conformite/fenetres-patching': {
+      get: op({
+        tag: T_EXPLOIT,
+        portee: A,
+        id: 'listerFenetresPatching',
+        resume: 'Lister les fenêtres de patching',
+        paginee: true,
+        params: [filtre('statut', chaine()), filtre('depuis', horodatage())],
+        ok: page(ref('FenetrePatching')),
+        rbac: 'capacity.manage',
+      }),
+      post: op({
+        tag: T_EXPLOIT,
+        portee: A,
+        id: 'planifierFenetrePatching',
+        resume: 'Planifier une fenêtre de patching',
+        detail: 'Les organisations concernées sont notifiées avec l’impact annoncé, pas après coup.',
+        corps: objet(
+          {
+            libelle: chaine(),
+            perimetre: chaine(),
+            debut: horodatage(),
+            dureeMin: entier(),
+            recurrence: chaine(),
+            impactClient: chaine(),
+            notifier: booleen(),
+          },
+          ['libelle', 'perimetre', 'debut', 'dureeMin'],
+        ),
+        ok: ref('FenetrePatching'),
+        code: 201,
+        rbac: 'capacity.manage',
+        erreurs: [409],
+      }),
+    },
+    '/admin/conformite/tests-restauration': {
+      post: op({
+        tag: T_EXPLOIT,
+        portee: A,
+        id: 'lancerCampagneTestsRestauration',
+        resume: 'Lancer une campagne de tests de restauration',
+        detail:
+          'Restaurations à blanc sur un échantillon : c’est ce qui distingue une sauvegarde ' +
+          'd’un espoir, et ce que l’auditeur demande à voir daté.',
+        corps: objet(
+          {
+            perimetre: liste(['toutes', 'organisation', 'type_ressource']),
+            valeur: chaine(),
+            echantillonPct: nombre(),
+            fenetre: horodatage(),
+          },
+          ['perimetre'],
+        ),
+        ok: ref('TravailProvisioning'),
+        code: 202,
+        rbac: 'compliance.export',
+      }),
+    },
+    '/admin/equipe/{membreId}/elevation': {
+      get: op({
+        tag: T_EXPLOIT,
+        portee: A,
+        id: 'listerElevations',
+        resume: 'Lister les élévations d’un membre de l’équipe',
+        params: [chemin('membreId', 'Identifiant du membre.')],
+        ok: tableau(ref('ElevationPrivileges')),
+        rbac: 'audit.view',
+      }),
+      post: op({
+        tag: T_EXPLOIT,
+        portee: A,
+        id: 'eleverPrivileges',
+        resume: 'Élever temporairement les privilèges d’un membre',
+        detail:
+          'Bornée dans le temps, motivée, rattachée à un ticket, et intégralement journalisée. ' +
+          'Aucun rôle permanent ne remplace cette trace.',
+        params: [chemin('membreId', 'Identifiant du membre.')],
+        corps: objet(
+          { role: liste(ROLES), motif: chaine(), ticketId: chaine(), dureeMin: entier() },
+          ['role', 'motif', 'dureeMin'],
+        ),
+        ok: ref('ElevationPrivileges'),
+        code: 201,
+        rbac: 'reseller.manage',
+        erreurs: [409],
+      }),
+      delete: op({
+        tag: T_EXPLOIT,
+        portee: A,
+        id: 'revoquerElevation',
+        resume: 'Révoquer une élévation avant son terme',
+        params: [chemin('membreId', 'Identifiant du membre.')],
+        code: 204,
+        rbac: 'reseller.manage',
+      }),
+    },
+}
+
+export const cheminsAdmin = fusion(
+  pilotage,
+  clients,
+  infrastructure,
+  produit,
+  finance,
+  exploitation,
+  ajouts,
+)

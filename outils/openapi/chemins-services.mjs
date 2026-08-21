@@ -73,6 +73,29 @@ const servicesManages = fusion(
         ok: ref('ConfigurationService'),
       }),
     },
+    '/catalogue/services-partages': {
+      get: op({
+        tag: T_SERVICES,
+        id: 'listerCataloguePartage',
+        resume: 'Lister les services partagés attachables à un domaine',
+        detail:
+          'Messagerie et drive mutualisés : ils se rattachent au domaine d’un hébergement, ' +
+          'pas à un projet.',
+        ok: tableau(ref('FicheCatalogue')),
+      }),
+    },
+    '/catalogue/contrat-integration': {
+      get: op({
+        tag: T_SERVICES,
+        id: 'obtenirContratIntegration',
+        resume: 'Obtenir le contrat d’intégration du catalogue',
+        detail:
+          'Ce que la plateforme garantit pour toute solution intégrée — provisioning, SSO, ' +
+          'sauvegarde, supervision, réversibilité — et l’écran qui le porte.',
+        portee: 'public',
+        ok: ref('ContratIntegration'),
+      }),
+    },
     '/services': {
       get: op({
         tag: T_SERVICES,
@@ -234,6 +257,29 @@ const servicesManages = fusion(
         rbac: 'sso.configure',
       }),
     },
+    '/services/{serviceManageId}/versions': {
+      get: op({
+        tag: T_SERVICES,
+        id: 'listerVersionsService',
+        resume: 'Lister les versions d’un service managé',
+        detail:
+          'Version installée, versions disponibles, notes, ruptures de compatibilité et durée ' +
+          'd’indisponibilité annoncée. Jamais de « latest ».',
+        params: [idService],
+        ok: tableau(ref('VersionService')),
+      }),
+    },
+    '/services/{serviceManageId}/exports': {
+      get: op({
+        tag: T_SERVICES,
+        id: 'listerExportsService',
+        resume: 'Lister les exports de réversibilité',
+        detail: 'Ce qui a été sorti, quand, et jusqu’à quand c’est récupérable.',
+        params: [idService],
+        ok: tableau(ref('ExportService')),
+        rbac: 'service.admin',
+      }),
+    },
     '/services/{serviceManageId}/metriques': {
       get: op({
         tag: T_SERVICES,
@@ -265,6 +311,20 @@ const servicesManages = fusion(
     resume: 'Appliquer la version disponible',
     params: [idService],
     corps: objet({ version: chaine(), fenetre: horodatage() }),
+    rbac: 'service.admin',
+    erreurs: [409],
+  }),
+  action({
+    tag: T_SERVICES,
+    chemin: '/services/{serviceManageId}/versions/rollback',
+    id: 'revenirVersionService',
+    resume: 'Revenir à la version précédente d’un service',
+    detail:
+      'Possible seulement quand la version installée l’annonce (`rollbackPossible`) : une migration ' +
+      'de schéma ne se défait pas, et le contrat le dit plutôt que de le laisser découvrir.',
+    params: [idService],
+    corps: objet({ version: chaine(), confirmation: chaine() }, ['confirmation']),
+    corpsRequis: true,
     rbac: 'service.admin',
     erreurs: [409],
   }),
@@ -309,6 +369,17 @@ const facturation = fusion(
         rbac: 'invoice.view',
       }),
     },
+    '/facturation/factures/{factureId}/pdf': {
+      get: op({
+        tag: T_FACTURATION,
+        id: 'obtenirPdfFacture',
+        resume: 'Obtenir le PDF d’une facture',
+        detail: 'Renvoie une URL signée à durée de vie courte plutôt que le binaire.',
+        params: [chemin('factureId', 'Identifiant ou numéro de facture.')],
+        ok: objet({ url: chaine(), expire: horodatage(), tailleOctets: entier() }, ['url', 'expire']),
+        rbac: 'invoice.view',
+      }),
+    },
     '/facturation/consommation': {
       get: op({
         tag: T_FACTURATION,
@@ -342,6 +413,36 @@ const facturation = fusion(
         params: [filtre('actives', booleen())],
         ok: page(ref('Souscription')),
         rbac: 'invoice.view',
+      }),
+    },
+    '/facturation/souscriptions/{souscriptionId}': {
+      patch: op({
+        tag: T_FACTURATION,
+        id: 'modifierSouscription',
+        resume: 'Modifier une souscription',
+        detail: 'Quantité ou périodicité. Le passage à l’annuel s’applique au prochain terme.',
+        params: [chemin('souscriptionId', 'Identifiant de la souscription.')],
+        corps: objet({ quantite: entier(), periodicite: liste(['mensuelle', 'annuelle']) }),
+        ok: ref('Souscription'),
+        rbac: 'payment.update',
+        erreurs: [409, 402],
+      }),
+      delete: op({
+        tag: T_FACTURATION,
+        id: 'resilierSouscription',
+        resume: 'Résilier une souscription',
+        detail:
+          'La ressource souscrite continue de tourner jusqu’au terme, puis est arrêtée : ' +
+          'la réponse donne la date et ce qui sera détruit.',
+        params: [chemin('souscriptionId', 'Identifiant de la souscription.')],
+        destructif: true,
+        ok: objet(
+          { souscription: ref('Souscription'), finEffet: chaine(), ressourcesConcernees: tableau(chaine()) },
+          ['souscription', 'finEffet'],
+        ),
+        code: 200,
+        rbac: 'payment.update',
+        erreurs: [409],
       }),
     },
     '/facturation/devis': {
@@ -454,6 +555,35 @@ const facturation = fusion(
     code: 200,
     rbac: 'payment.update',
     erreurs: [424],
+  }),
+  action({
+    tag: T_FACTURATION,
+    chemin: '/facturation/consommation/export',
+    id: 'exporterConsommation',
+    resume: 'Exporter la consommation détaillée',
+    detail: 'Pour la refacturation interne : une ligne par jour et par imputation.',
+    corps: objet(
+      { periode: chaine(), format: liste(['csv', 'xlsx', 'json']), axe: liste(['famille', 'espace', 'application', 'projet', 'site']) },
+      ['periode', 'format'],
+    ),
+    corpsRequis: true,
+    ok: objet({ url: chaine(), expire: horodatage() }, []),
+    code: 202,
+    rbac: 'invoice.view',
+  }),
+  action({
+    tag: T_FACTURATION,
+    chemin: '/facturation/sla/reclamations',
+    id: 'reclamerCreditSla',
+    resume: 'Réclamer un crédit SLA',
+    detail:
+      'Les crédits constatés sont appliqués sans demande. Cette réclamation sert au cas où le ' +
+      'client mesure une indisponibilité que la plateforme n’a pas vue.',
+    corps: ref('ReclamationCredit'),
+    corpsRequis: true,
+    ok: ref('AccuseReception'),
+    code: 201,
+    rbac: 'invoice.view',
   }),
   action({
     tag: T_FACTURATION,

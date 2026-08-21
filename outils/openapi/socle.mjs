@@ -155,8 +155,15 @@ export const parametres = {
     name: 'tri',
     in: 'query',
     required: false,
-    description: "Champ de tri, préfixé de `-` pour l'ordre décroissant (`-createdAt`).",
+    description: 'Champ de tri (`nom`, `createdAt`, `statut`…).',
     schema: chaine(),
+  },
+  Ordre: {
+    name: 'ordre',
+    in: 'query',
+    required: false,
+    description: 'Sens du tri.',
+    schema: liste(['asc', 'desc'], undefined, { default: 'asc' }),
   },
   Recherche: {
     name: 'q',
@@ -188,7 +195,7 @@ export const parametres = {
 
 const erreur = (description) => ({
   description,
-  content: { 'application/json': { schema: ref('Erreur') } },
+  content: { 'application/json': { schema: ref('ReponseErreur') } },
 })
 
 export const reponses = {
@@ -198,13 +205,13 @@ export const reponses = {
     description:
       "Droits insuffisants. `rolesRequis` nomme les rôles qui peuvent l'exécuter : " +
       "l'interface s'en sert pour l'infobulle de l'action désactivée. Le refus est journalisé dans l'audit.",
-    content: { 'application/json': { schema: ref('ErreurInterdit') } },
+    content: { 'application/json': { schema: ref('ReponseErreurInterdit') } },
   },
   Introuvable: erreur('Ressource inexistante ou hors du périmètre de la clé.'),
   Conflit: erreur("État incompatible avec l'action (ressource déjà en cours de modification, unicité)."),
   Invalidee: {
     description: 'Validation échouée. `champs` porte le détail par champ.',
-    content: { 'application/json': { schema: ref('ErreurValidation') } },
+    content: { 'application/json': { schema: ref('ReponseErreurValidation') } },
   },
   Quota: erreur('Quota de l’organisation dépassé ou capacité indisponible sur le site demandé.'),
   TropDeRequetes: erreur('Trop de requêtes. `Retry-After` indique le délai.'),
@@ -212,7 +219,7 @@ export const reponses = {
     description:
       "Intégration amont indisponible (Centreon, Grafana, VictoriaLogs, socle de virtualisation). " +
       "Les données renvoyées sont partielles et datées : l'interface passe en état dégradé.",
-    content: { 'application/json': { schema: ref('ErreurDegrade') } },
+    content: { 'application/json': { schema: ref('ReponseErreurDegrade') } },
   },
   Serveur: erreur('Erreur interne. `correlationId` est à fournir au support.'),
 }
@@ -222,7 +229,7 @@ export const reponses = {
 const P = (nom) => ({ $ref: `#/components/parameters/${nom}` })
 const R = (nom) => ({ $ref: `#/components/responses/${nom}` })
 
-const PAGINATION = [P('Page'), P('ParPage'), P('Tri'), P('Recherche')]
+const PAGINATION = [P('Page'), P('ParPage'), P('Tri'), P('Ordre'), P('Recherche')]
 
 /**
  * Construit une opération complète : paramètres transverses, corps, réponses

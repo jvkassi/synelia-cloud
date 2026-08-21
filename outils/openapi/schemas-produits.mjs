@@ -259,25 +259,6 @@ const paas = {
     ['id', 'nom', 'categorie', 'image'],
   ),
 
-  ImageRegistre: objet(
-    {
-      id: chaine(),
-      depot: chaine(),
-      tag: chaine(),
-      digest: chaine(),
-      tailleMo: nombre(),
-      pousseeLe: horodatage(),
-      pousseePar: chaine(),
-      vulnerabilites: objet({ eleve: entier(), moyen: entier(), faible: entier() }, [
-        'eleve',
-        'moyen',
-        'faible',
-      ]),
-      signee: booleen(),
-      utiliseePar: tableau(chaine()),
-    },
-    ['id', 'depot', 'tag', 'digest', 'tailleMo', 'pousseeLe'],
-  ),
 }
 
 // ─── Projets applicatifs ──────────────────────────────────────────────
