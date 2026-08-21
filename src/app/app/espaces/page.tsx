@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { num, pct, toHumain } from '@/lib/format'
-import { SITE_COURT, type EspaceCloud } from '@/lib/types'
+import { SITE_COURT, type EspaceCloud, type VM } from '@/lib/types'
 import { ESPACES, SYNTHESE_CLIENT, VMS } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { ButtonLink } from '@/components/ui/button'
@@ -12,8 +12,9 @@ import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/
 import { HealthBadge, QuotaBar, StatTile } from '@/components/composition/metrics'
 import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
 
-const COLONNES: Array<Colonne<EspaceCloud>> = [
+const colonnesEspaces = (vms: VM[]): Array<Colonne<EspaceCloud>> => [
   {
     id: 'code',
     entete: 'Code',
@@ -93,8 +94,8 @@ const COLONNES: Array<Colonne<EspaceCloud>> = [
     id: 'machines',
     entete: 'Machines',
     aligne: 'right',
-    cle: (e) => VMS.filter((v) => v.espaceId === e.id).length,
-    rendu: (e) => VMS.filter((v) => v.espaceId === e.id).length,
+    cle: (e) => vms.filter((v) => v.espaceId === e.id).length,
+    rendu: (e) => vms.filter((v) => v.espaceId === e.id).length,
     masquable: true,
   },
   {
@@ -120,6 +121,8 @@ const COLONNES: Array<Colonne<EspaceCloud>> = [
 
 export default function ListeEspaces() {
   const { autorise, refus } = useApp()
+  const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
+  const parc = useCollection<VM>('vms', VMS)
   const s = SYNTHESE_CLIENT
 
   return (
@@ -138,7 +141,7 @@ export default function ListeEspaces() {
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile libelle="Espaces Cloud" valeur={ESPACES.length} detail="Répartis sur 2 sites" />
+        <StatTile libelle="Espaces Cloud" valeur={espaces.items.length} detail="Répartis sur 2 sites" />
         <StatTile
           libelle="vCPU consommés"
           valeur={`${s.usage.vcpu}/${s.quota.vcpu}`}
@@ -168,8 +171,8 @@ export default function ListeEspaces() {
         </div>
         <div className="px-4 pb-4">
           <DataTable
-            lignes={ESPACES}
-            colonnes={COLONNES}
+            lignes={espaces.items}
+            colonnes={colonnesEspaces(parc.items)}
             placeholderRecherche="Rechercher un code, une offre, une plage…"
             filtres={[
               {
@@ -183,7 +186,7 @@ export default function ListeEspaces() {
               {
                 id: 'offre',
                 libelle: 'Offre',
-                options: Array.from(new Set(ESPACES.map((e) => e.offreNom))).map((o) => ({
+                options: Array.from(new Set(espaces.items.map((e) => e.offreNom))).map((o) => ({
                   value: o,
                   label: o,
                 })),

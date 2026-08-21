@@ -6,8 +6,8 @@ import { ROLE_LABEL } from '@/lib/types'
 import { MATRICE_RBAC } from '@/lib/rbac'
 import { Avatar } from '@/components/ui/display'
 import { Badge, MicroLabel } from '@/components/ui/badge'
-import { Button, ButtonLink } from '@/components/ui/button'
 import { Callout } from '@/components/composition/card'
+import { ActionsInvitation } from './actions'
 
 export const metadata: Metadata = { title: 'Invitation à rejoindre une organisation' }
 
@@ -93,14 +93,10 @@ export default async function PageInvitation({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <ButtonLink href="/app" size="lg" fullWidth>
-          Accepter l’invitation
-        </ButtonLink>
-        <Button variant="secondary" size="lg" fullWidth>
-          Refuser
-        </Button>
-      </div>
+      <ActionsInvitation
+        organisation={invitation.organisation}
+        invitantNom={invitation.invitantNom}
+      />
 
       <p className="text-[11.5px] leading-relaxed text-g-500">
         L’acceptation ou le refus de cette invitation est journalisé dans le journal d’audit de{' '}

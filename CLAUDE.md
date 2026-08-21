@@ -100,6 +100,85 @@ Utilisez `seededSeries`, `trendSeries` et la date figée `MAINTENANT`
 partout, `CostPreview` avant toute action facturable, saisie du nom exact avant
 toute action destructive.
 
+**Aucun bouton inerte.** Un bouton, un interrupteur ou un champ visible fait ce
+qu'il annonce, ou il est désactivé avec la raison. Un interrupteur dont le
+libellé dit « non désactivable » porte `disabled`, il n'est pas simplement muet.
+
+## L'atelier — l'état mutable de la démonstration
+
+`src/components/app/atelier.tsx` garde, le temps de la session, les collections
+qui ont été modifiées. Une collection jamais touchée n'existe pas dans l'état :
+la lecture retombe sur la graine importée de `src/lib/mock/`, si bien que le
+rendu serveur et le premier rendu client restent identiques. Un rechargement
+complet remet la démonstration à zéro, et le menu du compte propose
+« Réinitialiser la démonstration » dès qu'une collection a bougé.
+
+```tsx
+const parc = useCollection<VM>('vms', VMS)     // items, creer, modifier, supprimer
+parc.modifier(id, { statut: 'running' })       // ou une fonction (vm) => patch
+const { lancerJob } = useAtelier()             // job suivi dans /app/taches
+```
+
+Trois primitives dans `src/components/app/actions.tsx` évitent que chaque écran
+réinvente la séquence « RBAC → mutation → notification → job » :
+
+| Composant | Pour quoi |
+|---|---|
+| `BoutonAction` | une action directe, avec confirmation par saisie du nom si besoin |
+| `BoutonFormulaire` | un bouton qui ouvre un formulaire puis exécute l'action |
+| `ModaleFormulaire` | le formulaire seul, quand il doit vivre hors d'un popover |
+| `useOperation()` | la séquence complète, à appeler depuis un `onClick` existant |
+
+Deux pièges :
+
+- **Une modale ne vit pas dans un popover.** Un clic dans la modale est un clic
+  « hors popover » : le popover se ferme et démonte la modale. Montez-la à la
+  racine de la vue et ouvrez-la depuis le popover par un état.
+- **Une entité affichée dans un tiroir doit être relue depuis la collection**
+  (par identifiant), pas capturée à l'ouverture : sinon le tiroir montre l'état
+  d'avant la modification.
+
+Les lectures des sélecteurs de `src/lib/mock/` (`vmsDeLEspace`, `messageriesDeLOrg`…)
+donnent le **périmètre** ; l'état vient de l'atelier. Le motif est :
+`const perimetre = new Set(selecteur().map((x) => x.id))` puis filtrer les items.
+
+### Deux ateliers, un seul retenu
+
+Deux branches ont écrit un atelier en parallèle : un registre typé par
+collection avec `useActe()` (back-office seul, 14 fichiers) et le
+`useCollection(nom, graine)` générique décrit plus haut (les deux espaces, 65
+fichiers). **Le générique a été retenu à la fusion** : le même mécanisme sert la
+vitrine, l'espace client et l'espace fournisseur, et une collection ne se
+déclare pas au préalable.
+
+Ce que l'autre faisait de mieux, et qui reste à reprendre : `useActe()` écrivait
+**la trace au journal d'audit** en même temps que la mutation et la
+notification. `useOperation()` ne journalise pas encore. Séparer les trois, c'est
+se garantir qu'un jour l'une des trois manquera — en pratique, la trace.
+
+Deux règles de l'autre atelier restent vraies ici, et sont déjà appliquées :
+
+- **Identifiants et horodatages déterministes** : `collection.identifiant()`
+  compte, les dates partent de `MAINTENANT`. Pas de `Math.random()`, pas
+  d'horloge navigateur.
+- **Une route de détail ne fait plus `notFound()`.** Une organisation créée
+  pendant la session n'existe pas dans le jeu figé : un 404 du serveur ferait
+  croire à une panne. C'est la vue cliente qui dit ce qu'elle ne trouve pas.
+
+### Les exports
+
+`src/lib/export.ts` produit un fichier réel : `telechargerCsv` (point-virgule et
+BOM, ce qu'attend un tableur en français) et `telechargerTexte`. `DataTable`
+l'utilise pour son icône d'export ; le simulateur de la vitrine, le journal
+d'audit et la facturation fournisseur en descendent leurs jeux de données. Ce que
+le navigateur ne sait pas fabriquer — un PDF signé, un flux syslog — reste une
+notification qui dit ce qui se passerait, sans prétendre le faire.
+
+Les formulaires de la vitrine passent par `FormulaireSite`
+(`src/components/site/formulaire.tsx`) : champs obligatoires réellement exigés,
+accusé de réception avec référence, et la phrase qui dit qu'aucun courriel ne
+part d'une maquette.
+
 ## Architecture de la navigation
 
 Deux barres, pas de barre latérale de navigation. `src/lib/navigation.ts` porte le
@@ -207,56 +286,6 @@ Elle évite le défaut des portails qui vendent le nom, l'hébergement et la
 messagerie séparément : chez eux le même nom réapparaît dans trois listes et
 aucune page ne dit tout ce qui le concerne.
 
-## L'atelier — l'état mutable du back-office
-
-`src/components/app/atelier.tsx` porte les créations, modifications et
-suppressions faites dans `/admin` pendant une session. Monté dans
-`admin/layout.tsx`, il prend une copie du jeu figé au montage et l'expose en
-registres typés (`organisations`, `revendeurs`, `offres`, `tickets`, `backends`,
-`campagnes`, `journal`…), chacun avec `ajouter`, `modifier`, `supprimer`,
-`remplacer` et `reinitialiser`.
-
-`src/lib/mock/` **reste figé** : c'est ce qui garantit qu'un rendu serveur et le
-premier rendu client donnent le même HTML. L'atelier ne persiste rien —
-recharger revient au jeu d'origine, et c'est voulu : une maquette qui accumule
-les essais de la veille devient illisible en démonstration.
-
-`useActe()` est la porte d'entrée des pages : un acte, c'est **la mutation, le
-message à l'écran, la trace au journal**. Les séparer garantit qu'un jour l'une
-des trois manquera — en pratique, la trace.
-
-```tsx
-const { organisations } = useAtelier()
-const acte = useActe()
-
-acte({
-  faire: () => organisations.modifier(o.id, { statut: 'suspendue' }),
-  ton: 'warn',
-  titre: `${o.nom} suspendue`,
-  detail: 'Les accès sont coupés, les données conservées intactes.',
-  action: 'organisation.suspend',   // objet.verbe, comme dans AUDIT
-  cible: o.id,
-  orgId: o.id,
-  orgNom: o.nom,
-})
-```
-
-Trois conséquences à connaître :
-
-- **Identifiants et horodatages restent déterministes** : `nouvelId()` compte,
-  `horodatage()` part de `MAINTENANT`. Pas de `Math.random()`, pas d'horloge
-  navigateur — le rendu ne doit pas diverger.
-- **Les routes de détail ne font plus `notFound()`.** Une organisation créée
-  pendant la session n'existe pas dans le jeu figé : un 404 du serveur ferait
-  croire à une panne. C'est la vue cliente qui dit ce qu'elle ne trouve pas.
-- **Un enregistrement ouvert dans un tiroir se relit dans le registre**
-  (`registre.parId(detail.id)`), sinon il affiche la copie du clic et ne reflète
-  pas ce qu'on vient d'y changer.
-
-Ce que l'atelier ne fait pas : appeler un réseau, valider métier côté serveur,
-gérer des écritures concurrentes. Ces trois-là appartiennent à
-l'implémentation, pas à la maquette.
-
 ## Décisions déjà arbitrées
 
 | Sujet | Décision |
@@ -298,25 +327,30 @@ lien, deux ancres imbriquées étant du HTML que React refuse d'hydrater.
 
 Écart mesuré face au cahier des charges, vérifié fichier par fichier :
 
-1. **Assistant de création Kubernetes** — `/app/kubernetes/new` n'existe pas.
-   Quatre étapes attendues : version et région, control plane mono ou HA, pools
-   de workers, modules. C'est le seul assistant du cahier qui manque.
-2. **`/app/securite`** — il manque *Politiques* (MFA, durée de session,
-   restriction par plage IP) et *Sessions* (sessions actives, révocation). Les
-   clés d'API existent, sous `/app/parametres`.
-3. **`/app/docs`** — pas de parcours de formation, ni de suivi de complétion, ni
+1. **`/app/docs`** — pas de parcours de formation, ni de suivi de complétion, ni
    d'accès au bac à sable.
-4. **Fiche revendeur** — il manque *Périmètre de catalogue* et *API & intégration*.
-5. **`/admin/catalogue`** — le cahier demande un découpage par famille (Espace
+2. **Fiche revendeur** — il manque *Périmètre de catalogue* et *API & intégration*.
+3. **`/admin/catalogue`** — le cahier demande un découpage par famille (Espace
    Cloud, images VM, clusters, stacks, web) ; on a un tableau unique.
-6. **IaaS** — déploiement de plusieurs serveurs d'un coup en glisser-déposer,
-   avec ce qu'on installe, le processeur, la mémoire, le disque et la carte
-   réseau. Demandé, pas commencé.
-7. **Anglais** — aucun mécanisme d'internationalisation ; tous les libellés sont
+4. **Anglais** — aucun mécanisme d'internationalisation ; tous les libellés sont
    en français en dur. Le cahier ne demande que la structure, pas la traduction.
    C'est le seul chantier de la liste qui se compte en jours.
-8. **Lanceur comme page d'accueil** — l'écran existe et l'explique, mais aucun
+5. **Lanceur comme page d'accueil** — l'écran existe et l'explique, mais aucun
    réglage ne le fixe pour les membres au rôle purement utilisateur.
+6. **Univers Applications** — la restructuration autour du projet est arrivée
+   par une autre branche que le câblage des actions : les huit sections
+   `/app/applications/*` s'affichent bien mais leurs boutons de détail ne
+   touchent pas encore l'atelier (paramètres, variables, backup, déploiements).
+   C'est du câblage, les primitives sont là.
+7. **Journal d'audit des actions** — `useOperation()` mute et notifie, mais
+   n'écrit pas dans `AUDIT`. Voir « Deux ateliers, un seul retenu ».
+
+Fait depuis : l'assistant `/app/kubernetes/new` (cinq étapes), l'onglet
+*Sessions actives* de `/app/securite` et sa politique d'organisation, le centre
+de tâches `/app/taches`, le glisser-déposer de composition de serveurs qui livre
+réellement ses lots (`/app/vms/composer`), et le câblage complet de l'espace
+fournisseur sur l'atelier — organisations, catalogue, capacité, marketplace,
+tickets, équipe, conformité, recouvrement, revendeurs.
 
 ## Style d'écriture
 

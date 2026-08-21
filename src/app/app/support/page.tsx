@@ -4,8 +4,15 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { BookOpen, MessageSquarePlus, Phone } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dateCourte, dureeMin, money, pct, relatif } from '@/lib/format'
-import { ARTICLES_KB, CREDITS_SLA, ENGAGEMENTS_SLA, ORG_COURANTE, TICKETS } from '@/lib/mock'
+import { MAINTENANT, dateCourte, dureeMin, money, pct, relatif } from '@/lib/format'
+import {
+  ARTICLES_KB,
+  CREDITS_SLA,
+  ENGAGEMENTS_SLA,
+  ORG_COURANTE,
+  TICKETS,
+  UTILISATEUR_COURANT,
+} from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
@@ -15,6 +22,8 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { GaugeCircle, StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, useOperation } from '@/components/app/actions'
 import type { Ticket } from '@/lib/types'
 
 const ONGLETS = [
@@ -58,9 +67,15 @@ export default function Support() {
   const { autorise, refus, pousser } = useApp()
   const [onglet, setOnglet] = useState('tickets')
   const [nouveau, setNouveau] = useState(false)
+  const [sujet, setSujet] = useState('')
+  const [gravite, setGravite] = useState<Ticket['gravite']>('majeure')
+  const [ressource, setRessource] = useState('')
+  const [description, setDescription] = useState('')
   const [theme, setTheme] = useState('tous')
 
-  const tickets = TICKETS.filter((t) => t.orgId === ORG_COURANTE.id)
+  const executer = useOperation()
+  const collection = useCollection<Ticket>('tickets', TICKETS)
+  const tickets = collection.items.filter((t) => t.orgId === ORG_COURANTE.id)
   const ouverts = tickets.filter((t) => !['resolu', 'ferme'].includes(t.statut))
   const enAttente = tickets.filter((t) => t.statut === 'attente_client')
   const critique = ouverts.find((t) => t.gravite === 'critique')
@@ -506,9 +521,16 @@ export default function Support() {
               ]}
             />
             <div className="mt-4 flex flex-wrap gap-1.5 border-t border-g-100 pt-4">
-              <Button variant="secondary" iconBefore={<Phone size={13} />}>
-                Demander à être rappelé
-              </Button>
+              <BoutonAction
+                libelle="Demander à être rappelé"
+                size="md"
+                icone={<Phone size={13} />}
+                operation={{
+                  titre: 'Rappel demandé',
+                  detail:
+                    'Un technicien vous rappelle sur le numéro du contact technique, dans les heures ouvrées ou immédiatement si l’astreinte est mobilisée.',
+                }}
+              />
               <Button variant="ghost" onClick={() => setNouveau(true)}>
                 Ouvrir un ticket
               </Button>
@@ -611,12 +633,42 @@ export default function Support() {
               Annuler
             </Button>
             <Button
+              disabled={!sujet.trim() || !description.trim()}
               onClick={() => {
-                pousser({
-                  ton: 'ok',
+                const cibles = {
+                  critique: { premiereReponseMin: 15, resolutionMin: 240 },
+                  majeure: { premiereReponseMin: 60, resolutionMin: 480 },
+                  mineure: { premiereReponseMin: 240, resolutionMin: 2880 },
+                  question: { premiereReponseMin: 480, resolutionMin: 4320 },
+                }[gravite]
+                executer({
                   titre: 'Ticket ouvert',
-                  detail: 'Les métriques, journaux et l’emplacement des ressources sélectionnées ont été joints automatiquement.',
+                  detail:
+                    'Les métriques, journaux et l’emplacement des ressources sélectionnées ont été joints automatiquement.',
+                  effet: () =>
+                    collection.creer({
+                      id: collection.identifiant('tck'),
+                      orgId: ORG_COURANTE.id,
+                      numero: `TCK-${4500 + collection.items.length}`,
+                      sujet,
+                      gravite,
+                      statut: 'ouvert',
+                      slaCible: cibles,
+                      slaRestantMin: cibles.premiereReponseMin,
+                      ressourcesLiees: ressource ? [ressource] : [],
+                      createdAt: MAINTENANT,
+                      messages: [
+                        {
+                          auteur: UTILISATEUR_COURANT.nom,
+                          role: 'client',
+                          date: MAINTENANT,
+                          contenu: description,
+                        },
+                      ],
+                    }),
                 })
+                setSujet('')
+                setDescription('')
                 setNouveau(false)
               }}
             >
@@ -627,11 +679,18 @@ export default function Support() {
       >
         <div className="space-y-4">
           <Field label="Sujet" hint="une phrase qui décrit le problème, pas la solution supposée">
-            <Input placeholder="Latence élevée sur l’API de facturation depuis 14 h 10" />
+            <Input
+              value={sujet}
+              onChange={(e) => setSujet(e.target.value)}
+              placeholder="Latence élevée sur l’API de facturation depuis 14 h 10"
+            />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Gravité" hint="détermine l’engagement de réponse">
-              <Select defaultValue="majeure">
+              <Select
+                value={gravite}
+                onChange={(e) => setGravite(e.target.value as Ticket['gravite'])}
+              >
                 <option value="critique">Critique — production indisponible</option>
                 <option value="majeure">Majeure — production dégradée</option>
                 <option value="mineure">Mineure — gêne sans impact</option>
@@ -639,7 +698,7 @@ export default function Support() {
               </Select>
             </Field>
             <Field label="Ressource concernée" hint="son contexte technique sera joint automatiquement">
-              <Select defaultValue="">
+              <Select value={ressource} onChange={(e) => setRessource(e.target.value)}>
                 <option value="">Aucune ressource précise</option>
                 <option value="ec-dba-01">Espace EC-DBA-01</option>
                 <option value="app-metier">Application app-metier</option>
@@ -653,7 +712,11 @@ export default function Support() {
             label="Description"
             hint="ce que vous attendiez, ce que vous avez obtenu, depuis quand, et ce que vous avez déjà essayé"
           >
-            <Textarea rows={6} placeholder="Depuis 14 h 10 GMT, les appels à /v1/factures répondent en 4 à 6 secondes au lieu de 200 ms. Aucun déploiement de notre côté aujourd’hui. Le redémarrage du composant api n’a rien changé." />
+            <Textarea
+              rows={6}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Depuis 14 h 10 GMT, les appels à /v1/factures répondent en 4 à 6 secondes au lieu de 200 ms. Aucun déploiement de notre côté aujourd’hui. Le redémarrage du composant api n’a rien changé." />
           </Field>
           <Field label="Pièces jointes" hint="captures, extraits de journaux, traces">
             <Input type="file" />

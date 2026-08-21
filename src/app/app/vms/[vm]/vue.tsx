@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import {
   Camera,
@@ -14,8 +15,8 @@ import {
   Trash2,
 } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
-import { dateCourte, dateHeure, goHumain, num, pct, relatif } from '@/lib/format'
-import { SITE_LABEL } from '@/lib/types'
+import { MAINTENANT, dateCourte, dateHeure, goHumain, num, pct, relatif } from '@/lib/format'
+import { SITE_LABEL, type VM, type Volume } from '@/lib/types'
 import {
   BACKUP_PLANS,
   EVENEMENTS_SUPERVISION,
@@ -36,6 +37,28 @@ import { HealthBadge, QuotaBar, StatTile } from '@/components/composition/metric
 import { EmptyState } from '@/components/composition/states'
 import { EventList, GrilleSparkCharts } from '@/components/business/observabilite'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import {
+  BoutonAction,
+  BoutonFormulaire,
+  ModaleFormulaire,
+  useOperation,
+} from '@/components/app/actions'
+
+interface Snapshot {
+  id: string
+  nom: string
+  date: string
+  taille: number
+  type: string
+}
+
+/** Les snapshots ne sont pas dans le jeu de données : graine locale. */
+const SNAPSHOTS_GRAINE: Snapshot[] = [
+  { id: 'snap-1', nom: 'avant-maj-noyau', date: '2026-08-18T21:40:00Z', taille: 42, type: 'à chaud' },
+  { id: 'snap-2', nom: 'pre-deploiement-v2.7.1', date: '2026-08-19T15:04:00Z', taille: 44, type: 'à chaud' },
+  { id: 'snap-3', nom: 'reference-installation', date: '2026-03-11T09:12:00Z', taille: 28, type: 'à froid' },
+]
 
 const ONGLETS = [
   { id: 'apercu', label: 'Aperçu' },
@@ -47,18 +70,57 @@ const ONGLETS = [
 ]
 
 export function VueVm({ id }: { id: string }) {
-  const vm = VMS.find((v) => v.id === id)!
-  const espace = espaceById(vm.espaceId)
-  const { autorise, refus, pousser } = useApp()
+  const router = useRouter()
+  const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const parc = useCollection<VM>('vms', VMS)
+  const disques = useCollection<Volume>('volumes', VOLUMES)
+  const snapshots = useCollection<Snapshot>(`snapshots-${id}`, SNAPSHOTS_GRAINE)
   const [onglet, setOnglet] = useState('apercu')
   const [console_, setConsole] = useState(false)
   const [suppression, setSuppression] = useState(false)
+  const [redimensionnement, setRedimensionnement] = useState(false)
 
+  const vm = parc.items.find((v) => v.id === id)
+
+  // La machine peut avoir été supprimée depuis cette page : le retour arrière
+  // du navigateur ne doit pas casser l'écran.
+  if (!vm) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          fil={[
+            { label: 'Espace client', href: '/app' },
+            { label: 'Machines virtuelles', href: '/app/vms' },
+            { label: 'Machine supprimée' },
+          ]}
+          titre="Cette machine n’existe plus"
+        />
+        <EmptyState
+          titre="Machine supprimée"
+          phrase="Ses volumes détachés et ses points de restauration restent accessibles depuis l’Espace Cloud et la section Sauvegardes le temps de la rétention."
+          action={{ libelle: 'Retour aux machines', href: '/app/vms' }}
+        />
+      </div>
+    )
+  }
+
+  const espace = espaceById(vm.espaceId)
   const ipPrivee = vm.ips.find((i) => i.type === 'privee')?.adresse
   const ipPublique = vm.ips.find((i) => i.type === 'publique')?.adresse
-  const volumes = VOLUMES.filter((v) => v.attachedTo === vm.id)
+  const volumes = disques.items.filter((v) => v.attachedTo === vm.id)
   const points = RESTORE_POINTS.filter((p) => p.resourceId === vm.id)
   const plan = BACKUP_PLANS.find((p) => p.id === vm.backupPlanId)
+
+  const prendreUnSnapshot = (nom: string) => {
+    snapshots.creer({
+      id: snapshots.identifiant('snap'),
+      nom,
+      date: MAINTENANT,
+      taille: Math.round(vm.diskGo * 0.35),
+      type: vm.statut === 'running' ? 'à chaud' : 'à froid',
+    })
+  }
 
   return (
     <div className="space-y-5">
@@ -104,26 +166,46 @@ export function VueVm({ id }: { id: string }) {
             >
               Console
             </Button>
-            <GatedAction autorise={autorise('vm.power')} message={refus('vm.power')}>
-              <Button
-                variant="secondary"
-                iconBefore={<RotateCw size={14} />}
-                onClick={() =>
-                  pousser({
-                    ton: 'info',
-                    titre: `Redémarrage de ${vm.nom}`,
-                    detail: 'La machine sera de nouveau disponible dans environ 40 secondes.',
-                  })
-                }
-              >
-                Redémarrer
-              </Button>
-            </GatedAction>
-            <GatedAction autorise={autorise('vm.create_delete')} message={refus('vm.create_delete')}>
-              <Button variant="secondary" iconBefore={<Camera size={14} />}>
-                Snapshot
-              </Button>
-            </GatedAction>
+            <BoutonAction
+              libelle="Redémarrer"
+              size="md"
+              icone={<RotateCw size={14} />}
+              operation={{
+                action: 'vm.power',
+                ton: 'info',
+                titre: `Redémarrage de ${vm.nom}`,
+                detail: 'La machine sera de nouveau disponible dans environ 40 secondes.',
+                effet: () => parc.modifier(vm.id, { statut: 'creating' }),
+                job: {
+                  type: 'vm.power',
+                  label: `Redémarrage · ${vm.nom}`,
+                  etapes: ['Arrêt propre du système', 'Rallumage', 'Attente des agents'],
+                  dureeEtapeMs: 900,
+                },
+                effetFinal: () => parc.modifier(vm.id, { statut: 'running' }),
+              }}
+            />
+            <BoutonFormulaire
+              libelle="Snapshot"
+              size="md"
+              icone={<Camera size={14} />}
+              action="vm.create_delete"
+              titre="Prendre un snapshot"
+              description="Copie instantanée de l’état de la machine. Ce n’est pas une sauvegarde : le snapshot vit sur le même stockage."
+              champs={[
+                {
+                  id: 'nom',
+                  label: 'Nom du snapshot',
+                  placeholder: 'avant-mise-a-jour',
+                  obligatoire: true,
+                },
+              ]}
+              operation={(v) => ({
+                titre: `Snapshot « ${v.nom} » créé`,
+                detail: `Machine ${vm.nom}`,
+                effet: () => prendreUnSnapshot(String(v.nom)),
+              })}
+            />
             <Popover
               width="w-56"
               label="Autres actions sur la machine"
@@ -136,14 +218,65 @@ export function VueVm({ id }: { id: string }) {
               {(close) => (
                 <div className="p-1.5">
                   {[
-                    { l: 'Arrêter', i: <Power size={13} />, action: 'vm.power' },
-                    { l: 'Redimensionner', i: <Ruler size={13} />, action: 'vm.hardware.update' },
-                    { l: 'Migrer vers un autre hôte', i: <MoveRight size={13} />, action: 'vm.hardware.update' },
+                    {
+                      l: vm.statut === 'running' ? 'Arrêter' : 'Démarrer',
+                      i: <Power size={13} />,
+                      action: 'vm.power',
+                      faire: () =>
+                        executer({
+                          action: 'vm.power',
+                          ton: 'info',
+                          titre:
+                            vm.statut === 'running'
+                              ? `Arrêt de ${vm.nom} demandé`
+                              : `Démarrage de ${vm.nom} demandé`,
+                          job: {
+                            type: 'vm.power',
+                            label: `${vm.statut === 'running' ? 'Arrêt' : 'Démarrage'} · ${vm.nom}`,
+                            etapes:
+                              vm.statut === 'running'
+                                ? ['Arrêt propre du système', 'Libération des verrous de stockage']
+                                : ['Allumage', 'Attente des agents'],
+                            dureeEtapeMs: 900,
+                          },
+                          effetFinal: () =>
+                            parc.modifier(vm.id, {
+                              statut: vm.statut === 'running' ? 'stopped' : 'running',
+                            }),
+                        }),
+                    },
+                    {
+                      l: 'Migrer vers un autre hôte',
+                      i: <MoveRight size={13} />,
+                      action: 'vm.hardware.update',
+                      faire: () =>
+                        executer({
+                          action: 'vm.hardware.update',
+                          ton: 'info',
+                          titre: `Migration à chaud de ${vm.nom}`,
+                          detail: 'Aucune interruption de service attendue.',
+                          effet: () => parc.modifier(vm.id, { statut: 'migrating' }),
+                          job: {
+                            type: 'vm.migrate',
+                            label: `Migration à chaud · ${vm.nom}`,
+                            etapes: [
+                              'Choisir un hôte de destination',
+                              'Copier la mémoire active',
+                              'Basculer l’exécution',
+                              'Libérer l’hôte d’origine',
+                            ],
+                          },
+                          effetFinal: () => parc.modifier(vm.id, { statut: 'running' }),
+                        }),
+                    },
                   ].map((a) => (
                     <GatedAction key={a.l} autorise={autorise(a.action)} message={refus(a.action)}>
                       <button
                         type="button"
-                        onClick={close}
+                        onClick={() => {
+                          close()
+                          a.faire()
+                        }}
                         className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[12.5px] text-ink hover:bg-p-050"
                       >
                         <span className="text-g-500">{a.i}</span>
@@ -151,6 +284,24 @@ export function VueVm({ id }: { id: string }) {
                       </button>
                     </GatedAction>
                   ))}
+                  <GatedAction
+                    autorise={autorise('vm.hardware.update')}
+                    message={refus('vm.hardware.update')}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        close()
+                        setRedimensionnement(true)
+                      }}
+                      className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[12.5px] text-ink hover:bg-p-050"
+                    >
+                      <span className="text-g-500">
+                        <Ruler size={13} />
+                      </span>
+                      Redimensionner
+                    </button>
+                  </GatedAction>
                   <div className="mt-1 border-t border-g-100 pt-1">
                     <GatedAction
                       autorise={autorise('vm.create_delete')}
@@ -344,9 +495,30 @@ export function VueVm({ id }: { id: string }) {
             <CardHeader
               titre="Groupes de sécurité appliqués"
               actions={
-                <Button size="sm" variant="secondary" onClick={() => {}}>
-                  Modifier les groupes
-                </Button>
+                <BoutonFormulaire
+                  libelle="Modifier les groupes"
+                  action="network.manage"
+                  titre="Groupes de sécurité de la machine"
+                  description="Un groupe de sécurité s’applique à la carte réseau. Le portail ne réécrit pas les règles ici : elles se gèrent dans la section Réseau, où elles sont partagées entre machines."
+                  champs={[
+                    {
+                      id: 'groupe',
+                      label: 'Groupe de sécurité principal',
+                      type: 'select',
+                      options: SECURITY_GROUPS.map((g) => ({ value: g.id, label: g.nom })),
+                    },
+                  ]}
+                  operation={(v) => ({
+                    titre: 'Groupe de sécurité appliqué',
+                    detail: SECURITY_GROUPS.find((g) => g.id === v.groupe)?.nom,
+                    job: {
+                      type: 'network.sg.apply',
+                      label: `Groupe de sécurité · ${vm.nom}`,
+                      etapes: ['Appliquer les règles sur la carte réseau', 'Vérifier la connectivité'],
+                      dureeEtapeMs: 900,
+                    },
+                  })}
+                />
               }
             />
             {SECURITY_GROUPS.slice(0, 2).map((sg) => (
@@ -410,9 +582,49 @@ export function VueVm({ id }: { id: string }) {
             titre="Volumes attachés"
             sousTitre="Le disque système est inclus dans le gabarit ; les volumes de données sont facturés séparément."
             actions={
-              <Button size="sm" variant="secondary">
-                Attacher un volume
-              </Button>
+              <BoutonFormulaire
+                libelle="Attacher un volume"
+                action="vm.hardware.update"
+                titre="Attacher un volume de données"
+                description="Un volume de données est facturé séparément du gabarit et survit à la suppression de la machine."
+                champs={[
+                  { id: 'nom', label: 'Nom du volume', placeholder: 'data-postgres-03', obligatoire: true },
+                  { id: 'taille', label: 'Taille', type: 'nombre', demi: true, min: 10, max: 8000, suffixe: 'Go' },
+                  {
+                    id: 'classe',
+                    label: 'Classe de stockage',
+                    type: 'select',
+                    demi: true,
+                    options: [
+                      { value: 'nvme', label: 'NVMe · 12 000 IOPS' },
+                      { value: 'ssd', label: 'SSD · 6 000 IOPS' },
+                      { value: 'hdd', label: 'HDD · 900 IOPS' },
+                    ],
+                  },
+                  { id: 'montage', label: 'Point de montage', placeholder: '/srv/data' },
+                  { id: 'chiffre', label: 'Chiffrement au repos', type: 'switch', placeholder: 'Activé' },
+                ]}
+                valeursDepart={{ taille: 100, classe: 'ssd', chiffre: true, montage: '/srv/data' }}
+                libelleValider="Attacher"
+                operation={(v) => ({
+                  titre: `Volume « ${v.nom} » attaché`,
+                  detail: `${v.taille} Go · ${String(v.classe).toUpperCase()}`,
+                  effet: () =>
+                    disques.creer({
+                      id: disques.identifiant('vol'),
+                      espaceId: vm.espaceId,
+                      nom: String(v.nom),
+                      tailleGo: Number(v.taille),
+                      classe: v.classe as Volume['classe'],
+                      chiffre: Boolean(v.chiffre),
+                      attachedTo: vm.id,
+                      attachedLabel: vm.nom,
+                      ephemere: false,
+                      iops: v.classe === 'nvme' ? 12000 : v.classe === 'ssd' ? 6000 : 900,
+                      montage: String(v.montage),
+                    }),
+                })}
+              />
             }
           />
           <div className="mb-4 rounded-[8px] border border-g-300 bg-g-050 px-3.5 py-3">
@@ -476,9 +688,48 @@ export function VueVm({ id }: { id: string }) {
                         </Badge>
                       </td>
                       <td className="px-3 py-2.5 text-right">
-                        <Button size="sm" variant="ghost">
-                          Étendre
-                        </Button>
+                        <span className="flex items-center justify-end gap-1">
+                          <BoutonFormulaire
+                            libelle="Étendre"
+                            variant="ghost"
+                            action="vm.hardware.update"
+                            titre={`Étendre ${v.nom}`}
+                            description="L’extension est appliquée à chaud. Le système de fichiers de l’invité doit ensuite être étendu à son tour — un volume ne rétrécit jamais."
+                            champs={[
+                              {
+                                id: 'taille',
+                                label: 'Nouvelle taille',
+                                type: 'nombre',
+                                min: v.tailleGo,
+                                max: 8000,
+                                suffixe: 'Go',
+                              },
+                            ]}
+                            valeursDepart={{ taille: v.tailleGo }}
+                            libelleValider="Étendre"
+                            operation={(f) => ({
+                              titre: `${v.nom} étendu à ${num(Number(f.taille))} Go`,
+                              effet: () =>
+                                disques.modifier(v.id, { tailleGo: Number(f.taille) }),
+                            })}
+                          />
+                          <BoutonAction
+                            libelle="Détacher"
+                            variant="ghost"
+                            operation={{
+                              action: 'vm.hardware.update',
+                              ton: 'warn',
+                              titre: `${v.nom} détaché`,
+                              detail: 'Le volume est conservé et peut être attaché à une autre machine.',
+                              effet: () =>
+                                disques.modifier(v.id, {
+                                  attachedTo: undefined,
+                                  attachedLabel: undefined,
+                                  montage: undefined,
+                                }),
+                            }}
+                          />
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -496,11 +747,20 @@ export function VueVm({ id }: { id: string }) {
             titre="Snapshots"
             sousTitre="Copie instantanée de l’état de la machine. Utile avant une mise à jour, mais ce n’est pas une sauvegarde : le snapshot vit sur le même stockage."
             actions={
-              <GatedAction autorise={autorise('vm.create_delete')} message={refus('vm.create_delete')}>
-                <Button size="sm" iconBefore={<Camera size={13} />}>
-                  Prendre un snapshot
-                </Button>
-              </GatedAction>
+              <BoutonFormulaire
+                libelle="Prendre un snapshot"
+                variant="primary"
+                icone={<Camera size={13} />}
+                action="vm.create_delete"
+                titre="Prendre un snapshot"
+                champs={[
+                  { id: 'nom', label: 'Nom du snapshot', placeholder: 'avant-mise-a-jour', obligatoire: true },
+                ]}
+                operation={(v) => ({
+                  titre: `Snapshot « ${v.nom} » créé`,
+                  effet: () => prendreUnSnapshot(String(v.nom)),
+                })}
+              />
             }
           />
           <div className="overflow-x-auto">
@@ -515,12 +775,8 @@ export function VueVm({ id }: { id: string }) {
                 </tr>
               </thead>
               <tbody>
-                {[
-                  { nom: 'avant-maj-noyau', date: '2026-08-18T21:40:00Z', taille: 42, type: 'à chaud' },
-                  { nom: 'pre-deploiement-v2.7.1', date: '2026-08-19T15:04:00Z', taille: 44, type: 'à chaud' },
-                  { nom: 'reference-installation', date: '2026-03-11T09:12:00Z', taille: 28, type: 'à froid' },
-                ].map((s) => (
-                  <tr key={s.nom} className="border-b border-g-100 last:border-0">
+                {snapshots.items.map((s) => (
+                  <tr key={s.id} className="border-b border-g-100 last:border-0">
                     <td className="px-3 py-2.5 font-mono text-[12.5px] text-ink">{s.nom}</td>
                     <td className="px-3 py-2.5 text-[12.5px] text-g-700">{dateHeure(s.date)}</td>
                     <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">
@@ -533,13 +789,75 @@ export function VueVm({ id }: { id: string }) {
                     </td>
                     <td className="px-3 py-2.5">
                       <span className="flex flex-wrap gap-1.5">
-                        <Button size="sm" variant="ghost">
-                          Restaurer
-                        </Button>
-                        <Button size="sm" variant="ghost" iconBefore={<Copy size={12} />}>
-                          Cloner
-                        </Button>
-                        <IconButton label="Supprimer le snapshot" size="sm">
+                        <BoutonAction
+                          libelle="Restaurer"
+                          variant="ghost"
+                          operation={{
+                            action: 'vm.create_delete',
+                            ton: 'info',
+                            titre: `Restauration du snapshot « ${s.nom} »`,
+                            effet: () => parc.modifier(vm.id, { statut: 'creating' }),
+                            job: {
+                              type: 'vm.snapshot.revert',
+                              label: `Retour au snapshot ${s.nom} · ${vm.nom}`,
+                              etapes: [
+                                'Arrêter la machine',
+                                'Réappliquer l’état des disques',
+                                'Rallumer la machine',
+                              ],
+                            },
+                            effetFinal: () => parc.modifier(vm.id, { statut: 'running' }),
+                          }}
+                          confirmation={{
+                            ressource: vm.nom,
+                            titre: `Revenir au snapshot « ${s.nom} » ?`,
+                            pertes: [
+                              `Toutes les écritures postérieures au ${dateHeure(s.date)} seront perdues`,
+                              'La machine sera arrêtée pendant l’opération',
+                            ],
+                            libelleAction: 'Revenir à ce snapshot',
+                          }}
+                        />
+                        <BoutonAction
+                          libelle="Cloner"
+                          variant="ghost"
+                          icone={<Copy size={12} />}
+                          operation={{
+                            action: 'vm.create_delete',
+                            titre: `Clone de « ${s.nom} » lancé`,
+                            detail: 'Une nouvelle machine est créée depuis ce snapshot.',
+                            job: {
+                              type: 'vm.clone',
+                              label: `Clone depuis ${s.nom}`,
+                              etapes: ['Copier les disques', 'Créer la machine', 'Rattacher le réseau'],
+                            },
+                            effetFinal: () =>
+                              parc.creer({
+                                ...vm,
+                                id: parc.identifiant('vm'),
+                                nom: `${vm.nom}-clone`,
+                                statut: 'stopped',
+                                applicationId: undefined,
+                                applicationNom: undefined,
+                                backupPlanId: undefined,
+                                derniereSauvegarde: undefined,
+                                ips: [{ adresse: '10.0.1.240', type: 'privee' }],
+                              }),
+                          }}
+                        />
+                        <IconButton
+                          label="Supprimer le snapshot"
+                          size="sm"
+                          onClick={() =>
+                            executer({
+                              action: 'vm.create_delete',
+                              ton: 'warn',
+                              titre: `Snapshot « ${s.nom} » supprimé`,
+                              detail: 'L’espace disque est rendu immédiatement.',
+                              effet: () => snapshots.supprimer(s.id),
+                            })
+                          }
+                        >
                           <Trash2 size={13} className="text-err" />
                         </IconButton>
                       </span>
@@ -614,9 +932,50 @@ export function VueVm({ id }: { id: string }) {
               titre="Points de restauration"
               sousTitre="La restauration granulaire descend jusqu’au fichier."
               actions={
-                <GatedAction autorise={autorise('backup.restore')} message={refus('backup.restore')}>
-                  <Button size="sm">Lancer une restauration</Button>
-                </GatedAction>
+                <BoutonFormulaire
+                  libelle="Lancer une restauration"
+                  variant="primary"
+                  action="backup.restore"
+                  titre={`Restaurer ${vm.nom}`}
+                  description="La granularité descend jusqu’au fichier. La destination peut être la machine d’origine, une nouvelle machine, ou un téléchargement."
+                  champs={[
+                    {
+                      id: 'granularite',
+                      label: 'Granularité',
+                      type: 'select',
+                      options: [
+                        { value: 'machine', label: 'Machine entière' },
+                        { value: 'volume', label: 'Un volume' },
+                        { value: 'fichiers', label: 'Fichiers et dossiers' },
+                      ],
+                    },
+                    {
+                      id: 'destination',
+                      label: 'Destination',
+                      type: 'select',
+                      options: [
+                        { value: 'origine', label: 'La machine d’origine (écrasement)' },
+                        { value: 'nouvelle', label: 'Une nouvelle machine' },
+                        { value: 'autre-site', label: 'L’autre site' },
+                      ],
+                    },
+                  ]}
+                  operation={(v) => ({
+                    ton: 'info',
+                    titre: 'Restauration lancée',
+                    detail: `${v.granularite === 'machine' ? 'Machine entière' : v.granularite === 'volume' ? 'Volume' : 'Fichiers'} · ${v.destination === 'origine' ? 'sur place' : 'vers une autre cible'}`,
+                    job: {
+                      type: 'backup.restore',
+                      label: `Restauration · ${vm.nom}`,
+                      etapes: [
+                        'Monter le point de restauration',
+                        'Copier les données',
+                        'Vérifier l’intégrité',
+                        'Remettre le service en ligne',
+                      ],
+                    },
+                  })}
+                />
               }
             />
             {points.length === 0 ? (
@@ -656,14 +1015,25 @@ export function VueVm({ id }: { id: string }) {
                           </Badge>
                         </td>
                         <td className="px-3 py-2.5 text-right">
-                          <GatedAction
-                            autorise={autorise('backup.restore')}
-                            message={refus('backup.restore')}
-                          >
-                            <Button size="sm" variant="ghost">
-                              Restaurer
-                            </Button>
-                          </GatedAction>
+                          <BoutonAction
+                            libelle="Restaurer"
+                            variant="ghost"
+                            operation={{
+                              action: 'backup.restore',
+                              ton: 'info',
+                              titre: `Restauration du ${dateHeure(p.date)}`,
+                              job: {
+                                type: 'backup.restore',
+                                label: `Restauration ${vm.nom} · ${dateCourte(p.date)}`,
+                                etapes: [
+                                  'Monter le point de restauration',
+                                  'Copier les données',
+                                  'Vérifier l’intégrité',
+                                  'Remettre le service en ligne',
+                                ],
+                              },
+                            }}
+                          />
                         </td>
                       </tr>
                     ))}
@@ -692,10 +1062,31 @@ export function VueVm({ id }: { id: string }) {
             <span className="mr-auto text-[11.5px] text-g-500">
               Session console chiffrée · déconnexion automatique après 15 minutes d’inactivité
             </span>
-            <Button variant="ghost" iconBefore={<Maximize2 size={13} />}>
+            <Button
+              variant="ghost"
+              iconBefore={<Maximize2 size={13} />}
+              onClick={() =>
+                executer({
+                  ton: 'info',
+                  titre: 'Console en plein écran',
+                  detail: 'La console s’ouvre dans un onglet dédié, hors du portail.',
+                })
+              }
+            >
               Plein écran
             </Button>
-            <Button variant="secondary" iconBefore={<RotateCw size={13} />}>
+            <Button
+              variant="secondary"
+              iconBefore={<RotateCw size={13} />}
+              onClick={() =>
+                executer({
+                  action: 'vm.power',
+                  ton: 'info',
+                  titre: 'Ctrl+Alt+Suppr envoyé',
+                  detail: `Séquence transmise à la console de ${vm.nom}.`,
+                })
+              }
+            >
               Envoyer Ctrl+Alt+Suppr
             </Button>
             <Button variant="ghost" onClick={() => setConsole(false)}>
@@ -744,14 +1135,47 @@ ops@${vm.nom}:~$ _`}
         </div>
       </Drawer>
 
+      <ModaleFormulaire
+        ouvert={redimensionnement}
+        onFermer={() => setRedimensionnement(false)}
+        titre={`Redimensionner ${vm.nom}`}
+        description="L’ajout de vCPU et de mémoire s’applique à chaud sur cette image ; un retrait exige un redémarrage."
+        champs={[
+          { id: 'vcpu', label: 'vCPU', type: 'nombre', demi: true, min: 1, max: 64 },
+          { id: 'ram', label: 'Mémoire', type: 'nombre', demi: true, min: 1, max: 256, suffixe: 'Go' },
+        ]}
+        valeursDepart={{ vcpu: vm.vcpu, ram: vm.ramGo }}
+        libelleValider="Redimensionner"
+        onValider={(v) =>
+          executer({
+            action: 'vm.hardware.update',
+            titre: `${vm.nom} redimensionnée`,
+            detail: `${v.vcpu} vCPU · ${v.ram} Go`,
+            effet: () =>
+              parc.modifier(vm.id, {
+                vcpu: Number(v.vcpu),
+                ramGo: Number(v.ram),
+                flavor: 'personnalisé',
+              }),
+          })
+        }
+      />
+
       <ConfirmDialog
         open={suppression}
         onClose={() => setSuppression(false)}
         onConfirm={() =>
-          pousser({
+          executer({
+            action: 'vm.create_delete',
             ton: 'warn',
             titre: `Suppression de ${vm.nom} lancée`,
             detail: 'Le quota sera libéré à la fin de l’opération.',
+            effet: () => {
+              // Les volumes de données survivent à la machine : on les détache.
+              volumes.forEach((v) => disques.modifier(v.id, { attachedTo: undefined }))
+              parc.supprimer(vm.id)
+              router.push('/app/vms')
+            },
           })
         }
         titre="Supprimer cette machine virtuelle"
@@ -759,7 +1183,7 @@ ops@${vm.nom}:~$ _`}
         pertes={[
           'Le disque système et son contenu seront détruits',
           `${volumes.length} volume(s) attaché(s) seront détaché(s) puis conservé(s) séparément`,
-          '3 snapshots seront supprimés',
+          `${snapshots.items.length} snapshot(s) seront supprimés`,
           vm.backupPlanId
             ? `Les points de restauration restent disponibles pendant ${plan?.retentionJours ?? 30} jours`
             : 'Aucun point de restauration n’existe : la perte sera définitive',
@@ -773,9 +1197,83 @@ ops@${vm.nom}:~$ _`}
 
 // ─── Onglet Matériel virtuel ──────────────────────────────────────────
 
-function OngletMateriel({ vm }: { vm: (typeof VMS)[number] }) {
+function OngletMateriel({ vm }: { vm: VM }) {
   const { autorise, refus } = useApp()
+  const parc = useCollection<VM>('vms', VMS)
+  const executer = useOperation()
   const [sousOnglet, setSousOnglet] = useState<'materiel' | 'options' | 'avance'>('materiel')
+
+  // Formulaire contrôlé : sans état local, « Appliquer les modifications »
+  // n'aurait rien à appliquer.
+  const [vcpu, setVcpu] = useState(vm.vcpu)
+  const [ram, setRam] = useState(vm.ramGo)
+  const [scsi, setScsi] = useState('paravirtual')
+  const [nics, setNics] = useState(vm.hardware.nics)
+  const [video, setVideo] = useState(String(vm.hardware.videoMo ?? 16))
+  const [usb, setUsb] = useState(vm.hardware.usb)
+  const [secureBoot, setSecureBoot] = useState(vm.hardware.secureBoot)
+  const [vtpm, setVtpm] = useState(vm.hardware.vtpm ?? false)
+
+  const [demarrageAuto, setDemarrageAuto] = useState(true)
+  const [ordre, setOrdre] = useState(2)
+  const [ntp, setNtp] = useState('synelia')
+  const [quiescing, setQuiescing] = useState(true)
+
+  const [reservationCpu, setReservationCpu] = useState(0)
+  const [limiteCpu, setLimiteCpu] = useState(0)
+  const [reservationRam, setReservationRam] = useState(Math.round(vm.ramGo / 2))
+  const [antiAffinite, setAntiAffinite] = useState(vm.tags?.includes('production') ? 'prod-web' : '')
+  const [migrationChaud, setMigrationChaud] = useState(true)
+
+  const materielModifie =
+    vcpu !== vm.vcpu ||
+    ram !== vm.ramGo ||
+    nics !== vm.hardware.nics ||
+    video !== String(vm.hardware.videoMo ?? 16) ||
+    usb !== vm.hardware.usb ||
+    secureBoot !== vm.hardware.secureBoot ||
+    vtpm !== (vm.hardware.vtpm ?? false)
+
+  const redemarrageNecessaire =
+    vcpu < vm.vcpu ||
+    ram < vm.ramGo ||
+    nics !== vm.hardware.nics ||
+    usb !== vm.hardware.usb ||
+    secureBoot !== vm.hardware.secureBoot ||
+    vtpm !== (vm.hardware.vtpm ?? false)
+
+  const appliquerMateriel = () =>
+    executer({
+      action: 'vm.hardware.update',
+      titre: `Matériel de ${vm.nom} mis à jour`,
+      detail: redemarrageNecessaire
+        ? 'Un redémarrage est nécessaire pour que tout soit pris en compte.'
+        : 'Modifications appliquées à chaud.',
+      effet: () =>
+        parc.modifier(vm.id, (v) => ({
+          vcpu,
+          ramGo: ram,
+          flavor: vcpu !== v.vcpu || ram !== v.ramGo ? 'personnalisé' : v.flavor,
+          hardware: {
+            ...v.hardware,
+            nics,
+            usb,
+            secureBoot,
+            vtpm,
+            videoMo: Number(video),
+          },
+        })),
+      ...(redemarrageNecessaire
+        ? {
+            job: {
+              type: 'vm.hardware.update',
+              label: `Reconfiguration matérielle · ${vm.nom}`,
+              etapes: ['Arrêt propre', 'Reconfigurer le matériel virtuel', 'Rallumage'],
+              dureeEtapeMs: 900,
+            },
+          }
+        : {}),
+    })
 
   return (
     <div className="space-y-4">
@@ -799,7 +1297,9 @@ function OngletMateriel({ vm }: { vm: (typeof VMS)[number] }) {
                 autorise={autorise('vm.hardware.update')}
                 message={refus('vm.hardware.update')}
               >
-                <Button size="sm">Appliquer les modifications</Button>
+                <Button size="sm" disabled={!materielModifie} onClick={appliquerMateriel}>
+                  Appliquer les modifications
+                </Button>
               </GatedAction>
             }
           />
@@ -809,31 +1309,53 @@ function OngletMateriel({ vm }: { vm: (typeof VMS)[number] }) {
               redemarrage={false}
               note="Ajout à chaud possible sur cette image ; le retrait exige un redémarrage."
             >
-              <Input type="number" defaultValue={vm.vcpu} min={1} max={64} className="w-24" />
+              <Input
+                type="number"
+                value={vcpu}
+                onChange={(e) => setVcpu(Number(e.target.value))}
+                min={1}
+                max={64}
+                className="w-24"
+              />
             </Ligne>
             <Ligne
               libelle="Mémoire"
               redemarrage={false}
               note="Ajout à chaud possible ; le retrait exige un redémarrage."
             >
-              <Input type="number" defaultValue={vm.ramGo} min={1} max={256} suffix="Go" className="w-32" />
+              <Input
+                type="number"
+                value={ram}
+                onChange={(e) => setRam(Number(e.target.value))}
+                min={1}
+                max={256}
+                suffix="Go"
+                className="w-32"
+              />
             </Ligne>
             <Ligne
               libelle="Contrôleur SCSI"
               redemarrage
               note="Le changement de type de contrôleur peut nécessiter un pilote dans l’invité."
             >
-              <Select defaultValue="paravirtual" className="w-56">
+              <Select value={scsi} onChange={(e) => setScsi(e.target.value)} className="w-56">
                 <option value="paravirtual">VirtIO SCSI (paravirtualisé)</option>
                 <option value="lsi">LSI Logic SAS</option>
                 <option value="nvme">NVMe</option>
               </Select>
             </Ligne>
             <Ligne libelle="Cartes réseau" redemarrage note="Une carte ajoutée apparaît comme ethN dans l’invité.">
-              <Input type="number" defaultValue={vm.hardware.nics} min={1} max={8} className="w-24" />
+              <Input
+                type="number"
+                value={nics}
+                onChange={(e) => setNics(Number(e.target.value))}
+                min={1}
+                max={8}
+                className="w-24"
+              />
             </Ligne>
             <Ligne libelle="Carte vidéo" redemarrage={false} note="Mémoire vidéo allouée à la console.">
-              <Select defaultValue={String(vm.hardware.videoMo ?? 16)} className="w-40">
+              <Select value={video} onChange={(e) => setVideo(e.target.value)} className="w-40">
                 <option value="8">8 Mo</option>
                 <option value="16">16 Mo</option>
                 <option value="32">32 Mo</option>
@@ -845,7 +1367,7 @@ function OngletMateriel({ vm }: { vm: (typeof VMS)[number] }) {
               redemarrage
               note="Redirection USB depuis la console. Déconseillé en production."
             >
-              <Switch checked={vm.hardware.usb} label="" />
+              <Switch checked={usb} onChange={setUsb} label="Redirection USB" />
             </Ligne>
             <Ligne
               libelle="Périphériques de sécurité"
@@ -853,8 +1375,8 @@ function OngletMateriel({ vm }: { vm: (typeof VMS)[number] }) {
               note="Secure Boot et vTPM sont requis par Windows 11 et par le chiffrement de disque BitLocker ou LUKS scellé."
             >
               <div className="flex flex-col items-end gap-2">
-                <Switch checked={vm.hardware.secureBoot} label="Secure Boot" />
-                <Switch checked={vm.hardware.vtpm ?? false} label="vTPM 2.0" />
+                <Switch checked={secureBoot} onChange={setSecureBoot} label="Secure Boot" />
+                <Switch checked={vtpm} onChange={setVtpm} label="vTPM 2.0" />
               </div>
             </Ligne>
           </div>
@@ -863,16 +1385,44 @@ function OngletMateriel({ vm }: { vm: (typeof VMS)[number] }) {
 
       {sousOnglet === 'options' && (
         <Card>
-          <CardHeader titre="Options de la VM" />
+          <CardHeader
+            titre="Options de la VM"
+            actions={
+              <GatedAction
+                autorise={autorise('vm.hardware.update')}
+                message={refus('vm.hardware.update')}
+              >
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    executer({
+                      action: 'vm.hardware.update',
+                      titre: 'Options de la machine enregistrées',
+                      detail: `Démarrage automatique ${demarrageAuto ? 'activé' : 'désactivé'} · ordre ${ordre} · horloge ${ntp === 'synelia' ? 'NTP interne' : 'hyperviseur'}`,
+                    })
+                  }
+                >
+                  Enregistrer les options
+                </Button>
+              </GatedAction>
+            }
+          />
           <div className="space-y-4">
             <Ligne libelle="Démarrage automatique de l’hôte" redemarrage={false} note="Redémarre la machine après une maintenance de l’hyperviseur.">
-              <Switch checked label="" />
+              <Switch checked={demarrageAuto} onChange={setDemarrageAuto} label="Démarrage automatique" />
             </Ligne>
             <Ligne libelle="Ordre de démarrage" redemarrage={false} note="Priorité au sein d’un groupe de démarrage PRA.">
-              <Input type="number" defaultValue={2} min={1} max={10} className="w-24" />
+              <Input
+                type="number"
+                value={ordre}
+                onChange={(e) => setOrdre(Number(e.target.value))}
+                min={1}
+                max={10}
+                className="w-24"
+              />
             </Ligne>
             <Ligne libelle="Synchronisation horaire" redemarrage={false} note="NTP interne Synelia, pas d’accès NTP public nécessaire.">
-              <Select defaultValue="synelia" className="w-56">
+              <Select value={ntp} onChange={(e) => setNtp(e.target.value)} className="w-56">
                 <option value="synelia">ntp.interne.synelia.cloud</option>
                 <option value="hote">Horloge de l’hyperviseur</option>
               </Select>
@@ -883,7 +1433,7 @@ function OngletMateriel({ vm }: { vm: (typeof VMS)[number] }) {
               </Badge>
             </Ligne>
             <Ligne libelle="Quiescing des sauvegardes" redemarrage={false} note="Suspend brièvement les écritures pour garantir la cohérence applicative du point de restauration.">
-              <Switch checked label="" />
+              <Switch checked={quiescing} onChange={setQuiescing} label="Quiescing" />
             </Ligne>
           </div>
         </Card>
@@ -892,26 +1442,75 @@ function OngletMateriel({ vm }: { vm: (typeof VMS)[number] }) {
       {sousOnglet === 'avance' && (
         <div className="space-y-4">
           <Card>
-            <CardHeader titre="Paramètres avancés" />
+            <CardHeader
+              titre="Paramètres avancés"
+              actions={
+                <GatedAction
+                  autorise={autorise('vm.hardware.update')}
+                  message={refus('vm.hardware.update')}
+                >
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      executer({
+                        action: 'vm.hardware.update',
+                        titre: 'Paramètres avancés appliqués',
+                        detail: `Réservation ${reservationCpu} MHz · limite ${limiteCpu === 0 ? 'aucune' : `${limiteCpu} MHz`} · anti-affinité ${antiAffinite || 'aucune'}`,
+                        effet: () =>
+                          antiAffinite
+                            ? parc.modifier(vm.id, (v) => ({
+                                tags: Array.from(new Set([...(v.tags ?? []), antiAffinite])),
+                              }))
+                            : undefined,
+                      })
+                    }
+                  >
+                    Appliquer
+                  </Button>
+                </GatedAction>
+              }
+            />
             <div className="space-y-4">
               <Ligne libelle="Réservation CPU" redemarrage={false} note="Garantit une part minimale de cycles, même en cas de contention sur l’hôte.">
-                <Input type="number" defaultValue={0} suffix="MHz" className="w-32" />
+                <Input
+                  type="number"
+                  value={reservationCpu}
+                  onChange={(e) => setReservationCpu(Number(e.target.value))}
+                  suffix="MHz"
+                  className="w-32"
+                />
               </Ligne>
               <Ligne libelle="Limite CPU" redemarrage={false} note="Plafonne la consommation. Laisser à 0 pour aucune limite.">
-                <Input type="number" defaultValue={0} suffix="MHz" className="w-32" />
+                <Input
+                  type="number"
+                  value={limiteCpu}
+                  onChange={(e) => setLimiteCpu(Number(e.target.value))}
+                  suffix="MHz"
+                  className="w-32"
+                />
               </Ligne>
               <Ligne libelle="Réservation mémoire" redemarrage={false} note="Mémoire garantie non sujette au ballooning.">
-                <Input type="number" defaultValue={vm.ramGo / 2} suffix="Go" className="w-32" />
+                <Input
+                  type="number"
+                  value={reservationRam}
+                  onChange={(e) => setReservationRam(Number(e.target.value))}
+                  suffix="Go"
+                  className="w-32"
+                />
               </Ligne>
               <Ligne libelle="Groupe d’anti-affinité" redemarrage={false} note="Les machines d’un même groupe ne sont jamais placées sur le même hôte physique.">
-                <Select defaultValue={vm.tags?.includes('production') ? 'prod-web' : ''} className="w-56">
+                <Select
+                  value={antiAffinite}
+                  onChange={(e) => setAntiAffinite(e.target.value)}
+                  className="w-56"
+                >
                   <option value="">Aucun</option>
                   <option value="prod-web">prod-web</option>
                   <option value="prod-data">prod-data</option>
                 </Select>
               </Ligne>
               <Ligne libelle="Migration à chaud" redemarrage={false} note="Autorise nos équipes à déplacer la machine entre hôtes sans interruption, pour les opérations de maintenance.">
-                <Switch checked label="" />
+                <Switch checked={migrationChaud} onChange={setMigrationChaud} label="Migration à chaud" />
               </Ligne>
             </div>
           </Card>

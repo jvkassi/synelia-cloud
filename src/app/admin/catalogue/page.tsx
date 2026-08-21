@@ -1,11 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Archive, Plus, Trash2 } from 'lucide-react'
-import { cn, slugify } from '@/lib/utils'
-import { dateCourte, money, moneyPerMonth, num, pct } from '@/lib/format'
+import { Archive, Eye, FileEdit, Plus, Tag } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { money, moneyPerMonth, num, pct } from '@/lib/format'
+import { OFFRES, SOUSCRIPTIONS } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
 import { Field, Input, Select, Switch, Textarea } from '@/components/ui/field'
 import { ConfirmDialog, Drawer } from '@/components/ui/overlay'
@@ -13,7 +14,8 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
-import { useActe, useAtelier } from '@/components/app/atelier'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, useOperation } from '@/components/app/actions'
 import type { Offer } from '@/lib/types'
 
 const ONGLETS = [
@@ -30,7 +32,7 @@ const LIBELLE_CATEGORIE: Record<Offer['categorie'], string> = {
   web: 'Hébergement web',
 }
 
-/** Ce qu'un formulaire d'offre porte — le reste du modèle est dérivé. */
+/** Brouillon de saisie du tiroir — l'offre telle qu'elle est en train d'être écrite. */
 interface Brouillon {
   nom: string
   code: string
@@ -59,178 +61,86 @@ const BROUILLON_VIDE: Brouillon = {
   surDevis: false,
 }
 
-const versBrouillon = (o: Offer): Brouillon => ({
-  nom: o.nom,
-  code: o.code,
-  categorie: o.categorie,
-  specs: o.specs,
-  caracteristiques: o.caracteristiques.join('\n'),
-  direct: o.prix.direct,
-  revendeur: o.prix.revendeur,
-  operateur: o.prix.operateur,
-  sla: o.sla ?? '',
-  populaire: o.populaire ?? false,
-  surDevis: o.surDevis ?? false,
-})
-
 export default function Catalogue() {
   const { autorise, refus } = useApp()
-  const { offres, journal } = useAtelier()
-  const acte = useActe()
-
+  const offres = useCollection<Offer>('offres', OFFRES)
+  const executer = useOperation()
   const [onglet, setOnglet] = useState('offres')
-  const [edition, setEdition] = useState<Offer | null>(null)
+  const [editionId, setEditionId] = useState<string | null>(null)
   const [creation, setCreation] = useState(false)
-  const [form, setForm] = useState<Brouillon>(BROUILLON_VIDE)
-  const [depreciation, setDepreciation] = useState<Offer | null>(null)
-  const [suppression, setSuppression] = useState<Offer | null>(null)
+  const [depreciationId, setDepreciationId] = useState<string | null>(null)
+  const [brouillon, setBrouillon] = useState<Brouillon>(BROUILLON_VIDE)
 
-  const OFFRES = offres.liste
-  const publiees = OFFRES.filter((o) => o.statut === 'publiee')
-  const brouillons = OFFRES.filter((o) => o.statut === 'brouillon')
-  const depreciees = OFFRES.filter((o) => o.statut === 'depreciee')
-  const souscriptionsTotal = OFFRES.reduce((a, o) => a + o.souscriptionsActives, 0)
+  const edition = offres.items.find((o) => o.id === editionId) ?? null
+  const depreciation = offres.items.find((o) => o.id === depreciationId) ?? null
 
-  /** Les mouvements de catalogue de la session, lus dans le journal d'audit. */
-  const mouvements = journal.liste.filter((a) => a.action.startsWith('offer.'))
+  const poser = (patch: Partial<Brouillon>) => setBrouillon((b) => ({ ...b, ...patch }))
 
-  const modifierForm = <C extends keyof Brouillon>(champ: C, valeur: Brouillon[C]) =>
-    setForm((f) => ({ ...f, [champ]: valeur }))
+  const ouvrirEdition = (o: Offer) => {
+    setBrouillon({
+      nom: o.nom,
+      code: o.code,
+      categorie: o.categorie,
+      specs: o.specs,
+      caracteristiques: o.caracteristiques.join('\n'),
+      direct: o.prix.direct,
+      revendeur: o.prix.revendeur,
+      operateur: o.prix.operateur,
+      sla: o.sla ?? '',
+      populaire: Boolean(o.populaire),
+      surDevis: Boolean(o.surDevis),
+    })
+    setEditionId(o.id)
+  }
 
   const ouvrirCreation = () => {
-    setEdition(null)
-    setForm(BROUILLON_VIDE)
+    setBrouillon(BROUILLON_VIDE)
     setCreation(true)
   }
 
-  const ouvrirEdition = (o: Offer) => {
-    setCreation(false)
-    setForm(versBrouillon(o))
-    setEdition(o)
-  }
-
-  const fermerFormulaire = () => {
-    setEdition(null)
-    setCreation(false)
-  }
-
-  const nomValide = form.nom.trim().length >= 2
-  const codeValide = /^[A-Z0-9-]{3,}$/.test(form.code.trim().toUpperCase())
-  const prixValide = form.surDevis || form.direct > 0
-  const ordreValide =
-    form.surDevis || (form.revendeur <= form.direct && form.operateur <= form.revendeur)
-  const formValide = nomValide && codeValide && prixValide && ordreValide
-
   const enregistrer = () => {
-    const nom = form.nom.trim()
-    const code = form.code.trim().toUpperCase()
-    const prix = { direct: form.direct, revendeur: form.revendeur, operateur: form.operateur }
-    const caracteristiques = form.caracteristiques
-      .split('\n')
-      .map((l) => l.trim())
-      .filter(Boolean)
-
-    if (edition) {
-      acte({
-        faire: () =>
-          offres.modifier(edition.id, {
-            nom,
-            code,
-            categorie: form.categorie,
-            specs: form.specs.trim(),
-            caracteristiques,
-            prix,
-            sla: form.sla || undefined,
-            populaire: form.populaire,
-            surDevis: form.surDevis,
-          }),
-        titre: `${nom} modifiée`,
-        detail:
-          edition.souscriptionsActives > 0
-            ? `Les ${edition.souscriptionsActives} souscriptions en cours conservent leur prix. La modification ne concerne que les nouvelles.`
-            : 'Aucune souscription en cours : la modification prend effet immédiatement.',
-        action: 'offer.update',
-        cible: code,
-      })
-    } else {
-      const base = `off-${slugify(nom).slice(0, 20) || 'offre'}`
-      let id = base
-      let n = 2
-      while (offres.parId(id)) {
-        id = `${base}-${n}`
-        n += 1
-      }
-      acte({
-        faire: () =>
-          offres.ajouter({
-            id,
-            code,
-            nom,
-            categorie: form.categorie,
-            specs: form.specs.trim(),
-            caracteristiques,
-            prix,
-            statut: 'brouillon',
-            souscriptionsActives: 0,
-            sla: form.sla || undefined,
-            populaire: form.populaire,
-            surDevis: form.surDevis,
-          }),
-        titre: `${nom} créée en brouillon`,
-        detail:
-          'Elle n’apparaîtra sur la vitrine qu’après publication explicite. Publier engage le prix.',
-        action: 'offer.create',
-        cible: code,
-      })
+    const champs = {
+      nom: brouillon.nom.trim(),
+      code: brouillon.code.trim().toUpperCase(),
+      categorie: brouillon.categorie,
+      specs: brouillon.specs.trim(),
+      caracteristiques: brouillon.caracteristiques
+        .split('\n')
+        .map((x) => x.trim())
+        .filter(Boolean),
+      prix: {
+        direct: brouillon.direct,
+        revendeur: brouillon.revendeur,
+        operateur: brouillon.operateur,
+      },
+      sla: brouillon.sla || undefined,
+      populaire: brouillon.populaire,
+      surDevis: brouillon.surDevis,
     }
-    fermerFormulaire()
+    executer({
+      action: 'catalog.edit',
+      titre: edition ? `${champs.nom} modifiée` : `${champs.nom} créée en brouillon`,
+      detail: edition
+        ? 'Les souscriptions en cours conservent leur prix. La modification ne concerne que les nouvelles.'
+        : 'Elle n’apparaîtra sur la vitrine qu’après publication explicite.',
+      effet: () =>
+        edition
+          ? offres.modifier(edition.id, champs)
+          : offres.creer({
+              id: offres.identifiant('off'),
+              ...champs,
+              statut: 'brouillon',
+              souscriptionsActives: 0,
+            }),
+    })
+    setEditionId(null)
+    setCreation(false)
   }
 
-  const publier = (o: Offer) => {
-    acte({
-      faire: () => offres.modifier(o.id, { statut: 'publiee' }),
-      titre: `${o.nom} publiée`,
-      detail:
-        'L’offre apparaît immédiatement sur la vitrine publique et dans le simulateur de coût. Son prix est désormais garanti pour chaque souscripteur.',
-      action: 'offer.publish',
-      cible: o.code,
-    })
-  }
-
-  const deprecier = (o: Offer) => {
-    acte({
-      faire: () => offres.modifier(o.id, { statut: 'depreciee', populaire: false }),
-      ton: 'info',
-      titre: `${o.nom} dépréciée`,
-      detail: `Elle n’est plus souscriptible. Les ${o.souscriptionsActives} clients existants continuent d’être servis au prix garanti.`,
-      action: 'offer.deprecate',
-      cible: o.code,
-    })
-    setDepreciation(null)
-  }
-
-  const republier = (o: Offer) => {
-    acte({
-      faire: () => offres.modifier(o.id, { statut: 'publiee' }),
-      titre: `${o.nom} remise en vente`,
-      detail: 'Elle réapparaît sur la vitrine et dans le simulateur, au prix affiché.',
-      action: 'offer.publish',
-      cible: o.code,
-    })
-  }
-
-  const supprimer = (o: Offer) => {
-    acte({
-      faire: () => offres.supprimer(o.id),
-      ton: 'warn',
-      titre: `${o.nom} supprimée`,
-      detail:
-        'Un brouillon n’a jamais été vendu : sa suppression n’engage personne. Une offre publiée, elle, ne peut être que dépréciée.',
-      action: 'offer.delete',
-      cible: o.code,
-    })
-    setSuppression(null)
-  }
+  const publiees = offres.items.filter((o) => o.statut === 'publiee')
+  const brouillons = offres.items.filter((o) => o.statut === 'brouillon')
+  const depreciees = offres.items.filter((o) => o.statut === 'depreciee')
+  const souscriptionsTotal = offres.items.reduce((a, o) => a + o.souscriptionsActives, 0)
 
   return (
     <div className="space-y-5">
@@ -264,7 +174,7 @@ export default function Catalogue() {
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatTile libelle="Offres au catalogue" valeur={OFFRES.length} />
+        <StatTile libelle="Offres au catalogue" valeur={offres.items.length} />
         <StatTile libelle="Publiées" valeur={publiees.length} ton="ok" />
         <StatTile
           libelle="Souscriptions actives"
@@ -273,7 +183,7 @@ export default function Catalogue() {
         />
         <StatTile
           libelle="Offres sur devis"
-          valeur={OFFRES.filter((o) => o.surDevis).length}
+          valeur={offres.items.filter((o) => o.surDevis).length}
           detail="Périmètre à qualifier"
         />
         <StatTile
@@ -290,7 +200,7 @@ export default function Catalogue() {
         <Card padding={false}>
           <div className="p-4">
             <DataTable<Offer>
-              lignes={OFFRES}
+              lignes={offres.items}
               exportable
               parPage={12}
               placeholderRecherche="Rechercher une offre, un code…"
@@ -455,7 +365,7 @@ export default function Catalogue() {
                             size="sm"
                             variant="ghost"
                             iconBefore={<Archive size={12} />}
-                            onClick={() => setDepreciation(o)}
+                            onClick={() => setDepreciationId(o.id)}
                           >
                             Déprécier
                           </Button>
@@ -466,34 +376,20 @@ export default function Catalogue() {
                           autorise={autorise('catalog.edit')}
                           message={refus('catalog.edit')}
                         >
-                          <Button size="sm" variant="secondary" onClick={() => publier(o)}>
-                            Publier
-                          </Button>
-                        </GatedAction>
-                      )}
-                      {o.statut === 'depreciee' && (
-                        <GatedAction
-                          autorise={autorise('catalog.edit')}
-                          message={refus('catalog.edit')}
-                        >
-                          <Button size="sm" variant="ghost" onClick={() => republier(o)}>
-                            Remettre en vente
-                          </Button>
-                        </GatedAction>
-                      )}
-                      {o.souscriptionsActives === 0 && o.statut !== 'publiee' && (
-                        <GatedAction
-                          autorise={autorise('catalog.edit')}
-                          message={refus('catalog.edit')}
-                        >
                           <Button
                             size="sm"
-                            variant="ghost"
-                            className="text-err hover:bg-err-bg"
-                            iconBefore={<Trash2 size={12} />}
-                            onClick={() => setSuppression(o)}
+                            variant="secondary"
+                            onClick={() =>
+                              executer({
+                                action: 'catalog.edit',
+                                titre: `${o.nom} publiée`,
+                                detail:
+                                  'L’offre apparaît immédiatement sur la vitrine publique et dans le simulateur de coût. Son prix est désormais garanti à chaque souscripteur.',
+                                effet: () => offres.modifier(o.id, { statut: 'publiee' }),
+                              })
+                            }
                           >
-                            Supprimer
+                            Publier
                           </Button>
                         </GatedAction>
                       )}
@@ -541,7 +437,7 @@ export default function Catalogue() {
                   </tr>
                 </thead>
                 <tbody>
-                  {OFFRES.filter((o) => !o.surDevis && o.statut === 'publiee').map((o) => {
+                  {offres.items.filter((o) => !o.surDevis && o.statut === 'publiee').map((o) => {
                     const ecartRev = Math.round(
                       ((o.prix.direct - o.prix.revendeur) / o.prix.direct) * 1000,
                     ) / 10
@@ -627,12 +523,12 @@ export default function Catalogue() {
                 sousTitre="Ce que les clients achètent réellement, indépendamment de ce que nous mettons en avant."
               />
               <div className="space-y-2.5">
-                {[...OFFRES]
+                {[...offres.items]
                   .filter((o) => o.souscriptionsActives > 0)
                   .sort((a, b) => b.souscriptionsActives - a.souscriptionsActives)
                   .slice(0, 8)
                   .map((o) => {
-                    const max = Math.max(...OFFRES.map((x) => x.souscriptionsActives))
+                    const max = Math.max(...offres.items.map((x) => x.souscriptionsActives))
                     return (
                       <div key={o.id}>
                         <div className="flex items-baseline justify-between gap-3">
@@ -718,21 +614,6 @@ export default function Catalogue() {
               sousTitre="Chaque publication, dépréciation et modification de prix est datée et attribuée."
             />
             <div className="space-y-1.5">
-              {mouvements.map((a) => (
-                <div
-                  key={a.id}
-                  className="flex flex-wrap items-baseline justify-between gap-2 border-b border-g-100 pb-1.5 last:border-0"
-                >
-                  <span className="min-w-0 text-[12px] text-ink">
-                    <span className="mr-1.5 font-mono text-[10.5px] text-p-700">{a.action}</span>
-                    {a.target}
-                    {a.detail ? ` — ${a.detail}` : ''}
-                  </span>
-                  <span className="shrink-0 text-[10.5px] text-g-500">
-                    {a.actor.nom} · {dateCourte(a.ts)}
-                  </span>
-                </div>
-              ))}
               {[
                 { q: '12 août 2026', qui: 'Jean-Vincent Kassi', d: 'Publication de l’offre Cloud Souverain — placement exclusivement libre et local' },
                 { q: '4 août 2026', qui: 'Aïcha Bamba', d: 'Publication de l’offre Cloud Hybride — absorption d’une capacité VMware existante' },
@@ -757,16 +638,28 @@ export default function Catalogue() {
 
       <Drawer
         open={edition !== null || creation}
-        onClose={fermerFormulaire}
+        onClose={() => {
+          setEditionId(null)
+          setCreation(false)
+        }}
         title={edition ? `Modifier ${edition.nom}` : 'Créer une offre'}
         size="lg"
         footer={
           <>
-            <Button variant="ghost" onClick={fermerFormulaire}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setEditionId(null)
+                setCreation(false)
+              }}
+            >
               Annuler
             </Button>
             <GatedAction autorise={autorise('catalog.edit')} message={refus('catalog.edit')}>
-              <Button disabled={!formValide} onClick={enregistrer}>
+              <Button
+                disabled={brouillon.nom.trim().length === 0 || brouillon.code.trim().length === 0}
+                onClick={enregistrer}
+              >
                 {edition ? 'Enregistrer' : 'Créer en brouillon'}
               </Button>
             </GatedAction>
@@ -775,46 +668,30 @@ export default function Catalogue() {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field
-              label="Nom commercial"
-              required
-              error={form.nom !== '' && !nomValide ? 'Deux caractères au minimum.' : undefined}
-            >
+            <Field label="Nom commercial" required>
               <Input
-                value={form.nom}
-                onChange={(e) => modifierForm('nom', e.target.value)}
+                value={brouillon.nom}
                 placeholder="Cloud Pro"
-                autoFocus
+                onChange={(e) => poser({ nom: e.target.value })}
               />
             </Field>
             <Field
               label="Code"
+              hint="apparaît sur les factures — immuable après publication"
               required
-              hint={
-                edition?.statut === 'publiee'
-                  ? 'immuable : il apparaît sur des factures déjà émises'
-                  : 'apparaît sur les factures — immuable après publication'
-              }
-              error={
-                form.code !== '' && !codeValide
-                  ? 'Trois caractères au minimum, en majuscules, chiffres et tirets.'
-                  : undefined
-              }
             >
               <Input
-                value={form.code}
-                disabled={edition?.statut === 'publiee'}
-                onChange={(e) => modifierForm('code', e.target.value.toUpperCase())}
+                value={brouillon.code}
                 placeholder="CLOUD-PRO"
+                disabled={edition?.statut === 'publiee'}
+                onChange={(e) => poser({ code: e.target.value })}
               />
             </Field>
           </div>
           <Field label="Catégorie">
             <Select
-              value={form.categorie}
-              onChange={(e) =>
-                modifierForm('categorie', e.target.value as Offer['categorie'])
-              }
+              value={brouillon.categorie}
+              onChange={(e) => poser({ categorie: e.target.value as Offer['categorie'] })}
             >
               {Object.entries(LIBELLE_CATEGORIE).map(([v, l]) => (
                 <option key={v} value={v}>
@@ -825,79 +702,54 @@ export default function Catalogue() {
           </Field>
           <Field label="Caractéristiques" hint="phrase affichée sur la vitrine et le comparateur">
             <Input
-              value={form.specs}
-              onChange={(e) => modifierForm('specs', e.target.value)}
+              value={brouillon.specs}
               placeholder="16 vCPU · 64 Go · 2 To SSD"
+              onChange={(e) => poser({ specs: e.target.value })}
             />
           </Field>
           <Field label="Ce qui est inclus" hint="une ligne par élément">
             <Textarea
               rows={5}
-              value={form.caracteristiques}
-              onChange={(e) => modifierForm('caracteristiques', e.target.value)}
+              value={brouillon.caracteristiques}
               placeholder={'Sauvegarde quotidienne incluse\nIP publique\nSupport en heures ouvrées'}
+              onChange={(e) => poser({ caracteristiques: e.target.value })}
             />
           </Field>
           <MicroLabel className="pt-2">Tarification par canal</MicroLabel>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Field
-              label="Prix direct"
-              hint="publié sur la vitrine"
-              required={!form.surDevis}
-              error={!form.surDevis && form.direct <= 0 ? 'Un prix est attendu.' : undefined}
-            >
+            <Field label="Prix direct" hint="publié sur la vitrine">
               <Input
                 type="number"
                 min={0}
-                value={form.direct}
-                disabled={form.surDevis}
-                onChange={(e) => modifierForm('direct', Math.max(0, Number(e.target.value) || 0))}
+                value={brouillon.direct}
                 suffix="FCFA"
+                disabled={brouillon.surDevis}
+                onChange={(e) => poser({ direct: Number(e.target.value) })}
               />
             </Field>
-            <Field
-              label="Prix revendeur"
-              hint="prix d’achat partenaire"
-              error={
-                !form.surDevis && form.revendeur > form.direct
-                  ? 'Au-dessus du prix direct : le partenaire ne pourrait rien vendre.'
-                  : undefined
-              }
-            >
+            <Field label="Prix revendeur" hint="prix d’achat partenaire">
               <Input
                 type="number"
                 min={0}
-                value={form.revendeur}
-                disabled={form.surDevis}
-                onChange={(e) =>
-                  modifierForm('revendeur', Math.max(0, Number(e.target.value) || 0))
-                }
+                value={brouillon.revendeur}
                 suffix="FCFA"
+                disabled={brouillon.surDevis}
+                onChange={(e) => poser({ revendeur: Number(e.target.value) })}
               />
             </Field>
-            <Field
-              label="Prix opérateur"
-              hint="volume négocié"
-              error={
-                !form.surDevis && form.operateur > form.revendeur
-                  ? 'Au-dessus du prix revendeur : la hiérarchie des canaux s’inverse.'
-                  : undefined
-              }
-            >
+            <Field label="Prix opérateur" hint="volume négocié">
               <Input
                 type="number"
                 min={0}
-                value={form.operateur}
-                disabled={form.surDevis}
-                onChange={(e) =>
-                  modifierForm('operateur', Math.max(0, Number(e.target.value) || 0))
-                }
+                value={brouillon.operateur}
                 suffix="FCFA"
+                disabled={brouillon.surDevis}
+                onChange={(e) => poser({ operateur: Number(e.target.value) })}
               />
             </Field>
           </div>
           <Field label="Engagement de disponibilité">
-            <Select value={form.sla} onChange={(e) => modifierForm('sla', e.target.value)}>
+            <Select value={brouillon.sla} onChange={(e) => poser({ sla: e.target.value })}>
               <option value="">Aucun engagement chiffré</option>
               <option value="99,9 %">99,9 %</option>
               <option value="99,95 %">99,95 %</option>
@@ -906,18 +758,25 @@ export default function Catalogue() {
           </Field>
           <div className="space-y-3">
             <Switch
-              checked={form.populaire}
-              onChange={(v) => modifierForm('populaire', v)}
+              checked={brouillon.populaire}
+              onChange={(v) => poser({ populaire: v })}
               label="Marquer comme populaire"
               description="Met l’offre en avant sur la vitrine. À utiliser sur l’offre que vous recommandez réellement, pas sur celle qui rapporte le plus."
             />
             <Switch
-              checked={form.surDevis}
-              onChange={(v) => modifierForm('surDevis', v)}
+              checked={brouillon.surDevis}
+              onChange={(v) => poser({ surDevis: v })}
               label="Sur devis uniquement"
               description="L’offre apparaît sans prix, avec un bouton de prise de contact. Pour les périmètres qui exigent une qualification."
             />
           </div>
+          {brouillon.surDevis && (
+            <Callout ton="info" titre="Une offre sur devis n’affiche pas de prix">
+              Les trois prix restent saisissables une fois la case décochée, mais ils ne sont ni
+              publiés sur la vitrine, ni utilisés par le simulateur : le client passe par une prise de
+              contact.
+            </Callout>
+          )}
           <Callout ton="warn" titre="Publier engage un prix">
             Une fois publiée, l’offre est souscriptible en autonomie et son prix est garanti pour la
             durée de l’engagement de chaque souscripteur. Une hausse ultérieure ne s’applique qu’aux
@@ -928,7 +787,7 @@ export default function Catalogue() {
 
       <ConfirmDialog
         open={depreciation !== null}
-        onClose={() => setDepreciation(null)}
+        onClose={() => setDepreciationId(null)}
         titre="Déprécier une offre"
         ressource={depreciation?.code ?? ''}
         libelleAction="Déprécier l’offre"
@@ -938,21 +797,18 @@ export default function Catalogue() {
           `Les ${depreciation?.souscriptionsActives ?? 0} souscriptions actives sont maintenues, au prix garanti, sans limite de durée annoncée`,
           'Les clients concernés reçoivent une comparaison avec l’offre de remplacement, sans obligation de migrer',
         ]}
-        onConfirm={() => depreciation && deprecier(depreciation)}
-      />
-
-      <ConfirmDialog
-        open={suppression !== null}
-        onClose={() => setSuppression(null)}
-        titre="Supprimer une offre"
-        ressource={suppression?.code ?? ''}
-        libelleAction="Supprimer l’offre"
-        pertes={[
-          'L’offre disparaît du catalogue, sans trace côté client',
-          'Aucune souscription n’est concernée : seule une offre jamais vendue peut être supprimée',
-          'Une offre publiée, elle, ne se supprime pas — elle se déprécie',
-        ]}
-        onConfirm={() => suppression && supprimer(suppression)}
+        onConfirm={() => {
+          if (!depreciation) return
+          executer({
+            action: 'catalog.edit',
+            ton: 'info',
+            titre: `${depreciation.nom} dépréciée`,
+            detail:
+              'Elle n’est plus souscriptible. Les clients existants continuent d’être servis au prix garanti.',
+            effet: () => offres.modifier(depreciation.id, { statut: 'depreciee' }),
+          })
+          setDepreciationId(null)
+        }}
       />
     </div>
   )

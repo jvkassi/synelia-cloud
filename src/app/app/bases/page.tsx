@@ -14,7 +14,16 @@ import { HealthBadge, QuotaBar, StatTile } from '@/components/composition/metric
 import { EmptyState } from '@/components/composition/states'
 import { GrilleSparkCharts, LogPeek } from '@/components/business/observabilite'
 import { useApp, useEspace } from '@/components/app/contexte'
-import type { LigneLog } from '@/lib/types'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire } from '@/components/app/actions'
+import type { LigneLog, ManagedDatabase } from '@/lib/types'
+
+const PALIERS = [
+  { id: 'db-s', label: 'Small · 2 vCPU · 8 Go' },
+  { id: 'db-m', label: 'Medium · 4 vCPU · 16 Go' },
+  { id: 'db-l', label: 'Large · 8 vCPU · 32 Go' },
+  { id: 'db-xl', label: 'XLarge · 16 vCPU · 64 Go' },
+]
 
 const MOTEURS: Record<string, { nom: string; teinte: string; port: number }> = {
   postgresql: { nom: 'PostgreSQL', teinte: '#336791', port: 5432 },
@@ -45,8 +54,18 @@ const REQUETES_LENTES: LigneLog[] = [
 export default function BasesManagees() {
   const espace = useEspace()
   const { autorise, refus } = useApp()
-  const bases = BASES_MANAGEES.filter((b) => b.espaceId === espace.id)
+  const collection = useCollection<ManagedDatabase>('bases-managees', BASES_MANAGEES)
+  const bases = collection.items.filter((b) => b.espaceId === espace.id)
   const [selection, setSelection] = useState(bases[0]?.id ?? '')
+  const [reseaux, setReseaux] = useState([
+    '10.0.1.0/24 · prod-front',
+    '10.0.4.0/24 · ci-cd',
+    '10.99.0.0/24 · pool VPN',
+  ])
+  const [restreint, setRestreint] = useState(true)
+  const [ipsExternes, setIpsExternes] = useState(false)
+  const [instantPitr, setInstantPitr] = useState('2026-08-19T14:00')
+  const [destinationPitr, setDestinationPitr] = useState('nouvelle')
   const [onglet, setOnglet] = useState('connexion')
 
   const base = bases.find((b) => b.id === selection)
@@ -63,9 +82,77 @@ export default function BasesManagees() {
         titre="Bases de données managées"
         sousTitre="Nous exploitons le moteur : haute disponibilité, sauvegardes avec restauration à un instant précis, montées de version qualifiées. Vous gardez la main sur vos schémas et vos données."
         actions={
-          <GatedAction autorise={autorise('network.manage')} message={refus('network.manage')}>
-            <Button iconBefore={<Plus size={14} />}>Créer une base</Button>
-          </GatedAction>
+          <BoutonFormulaire
+            libelle="Créer une base"
+            size="md"
+            variant="primary"
+            icone={<Plus size={14} />}
+            action="network.manage"
+            titre="Créer une base de données managée"
+            description="Nous exploitons le moteur : haute disponibilité, sauvegardes avec restauration à un instant précis, montées de version qualifiées."
+            champs={[
+              { id: 'nom', label: 'Nom de l’instance', placeholder: 'pg-facturation', obligatoire: true },
+              {
+                id: 'moteur',
+                label: 'Moteur',
+                type: 'select',
+                demi: true,
+                options: Object.entries(MOTEURS).map(([id, m]) => ({ value: id, label: m.nom })),
+              },
+              {
+                id: 'palier',
+                label: 'Palier',
+                type: 'select',
+                demi: true,
+                options: PALIERS.map((p) => ({ value: p.id, label: p.label })),
+              },
+              { id: 'taille', label: 'Stockage', type: 'nombre', demi: true, min: 10, max: 4000, suffixe: 'Go' },
+              { id: 'ha', label: 'Haute disponibilité', type: 'switch', demi: true, placeholder: 'Deux nœuds' },
+              { id: 'pitr', label: 'Restauration à un instant précis', type: 'switch', placeholder: 'Journalisation continue' },
+            ]}
+            valeursDepart={{ moteur: 'postgresql', palier: 'db-m', taille: 100, ha: true, pitr: true }}
+            libelleValider="Créer la base"
+            operation={(v) => {
+              const id = collection.identifiant('db')
+              return {
+                titre: `Création de ${v.nom} lancée`,
+                detail: `${MOTEURS[String(v.moteur)]?.nom} · ${v.ha ? 'HA' : 'nœud unique'}`,
+                effet: () =>
+                  collection.creer({
+                    id,
+                    espaceId: espace.id,
+                    nom: String(v.nom),
+                    moteur: v.moteur as ManagedDatabase['moteur'],
+                    version: { postgresql: '16.4', mysql: '8.4', mariadb: '11.4', mongodb: '7.0', redis: '7.4' }[
+                      String(v.moteur)
+                    ] ?? '1.0',
+                    palier: PALIERS.find((p) => p.id === v.palier)?.label ?? 'Medium',
+                    ha: Boolean(v.ha),
+                    tailleGo: Number(v.taille),
+                    connexions: { actives: 0, max: 300 },
+                    replicas: 0,
+                    statut: 'maintenance',
+                    pitr: Boolean(v.pitr),
+                    host: `${String(v.nom)}.db.${espace.site.toLowerCase()}.synelia.cloud`,
+                  }),
+                job: {
+                  type: 'db.create',
+                  label: `Création de la base ${v.nom}`,
+                  etapes: [
+                    'Provisionner le stockage',
+                    `Démarrer le moteur ${MOTEURS[String(v.moteur)]?.nom ?? ''}`,
+                    ...(v.ha ? ['Établir la réplication synchrone'] : []),
+                    ...(v.pitr ? ['Activer la journalisation continue'] : []),
+                    'Restreindre l’accès aux réseaux privés',
+                  ],
+                },
+                effetFinal: () => {
+                  collection.modifier(id, { statut: 'running' })
+                  setSelection(id)
+                },
+              }
+            }}
+          />
         }
       />
 
@@ -238,9 +325,23 @@ export default function BasesManagees() {
                     titre="Réplicas de lecture"
                     sousTitre="Un réplica soulage l’instance principale pour les requêtes de lecture et les rapports."
                     actions={
-                      <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />}>
-                        Ajouter un réplica
-                      </Button>
+                      <BoutonAction
+                        libelle="Ajouter un réplica"
+                        icone={<Plus size={13} />}
+                        operation={{
+                          action: 'network.manage',
+                          titre: `Réplica de lecture ajouté à ${base.nom}`,
+                          detail: 'Le rattrapage initial dure quelques minutes selon la taille de la base.',
+                          job: {
+                            type: 'db.replica.create',
+                            label: `Réplica de lecture · ${base.nom}`,
+                            etapes: ['Cloner la base', 'Rattraper les journaux', 'Ouvrir les connexions en lecture'],
+                            dureeEtapeMs: 1100,
+                          },
+                          effetFinal: () =>
+                            collection.modifier(base.id, (b) => ({ replicas: b.replicas + 1 })),
+                        }}
+                      />
                     }
                   />
                   {base.replicas === 0 ? (
@@ -268,9 +369,41 @@ export default function BasesManagees() {
                               Synchronisé
                             </Badge>
                             <span className="tnum text-[11.5px] text-g-500">retard 42 ms</span>
-                            <Button size="sm" variant="ghost">
-                              Promouvoir
-                            </Button>
+                            <BoutonAction
+                              libelle="Promouvoir"
+                              variant="ghost"
+                              operation={{
+                                action: 'network.manage',
+                                ton: 'warn',
+                                titre: `${base.nom}-replica-${i + 1} promu instance principale`,
+                                detail:
+                                  'L’ancienne instance principale passe en lecture seule : reconfigurez vos applications.',
+                                job: {
+                                  type: 'db.replica.promote',
+                                  label: `Promotion de ${base.nom}-replica-${i + 1}`,
+                                  etapes: [
+                                    'Arrêter les écritures sur l’instance principale',
+                                    'Attendre le rattrapage complet',
+                                    'Promouvoir le réplica',
+                                    'Basculer le nom d’hôte',
+                                  ],
+                                },
+                                effetFinal: () =>
+                                  collection.modifier(base.id, (b) => ({
+                                    replicas: Math.max(0, b.replicas - 1),
+                                  })),
+                              }}
+                              confirmation={{
+                                ressource: `${base.nom}-replica-${i + 1}`,
+                                titre: 'Promouvoir ce réplica ?',
+                                pertes: [
+                                  'L’instance principale actuelle devient un réplica en lecture seule',
+                                  'Les écritures en vol pendant la bascule sont perdues',
+                                  'Vos applications doivent être repointées sur le nouveau nom d’hôte',
+                                ],
+                                libelleAction: 'Promouvoir le réplica',
+                              }}
+                            />
                           </span>
                         </div>
                       ))}
@@ -315,21 +448,73 @@ export default function BasesManagees() {
                     />
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <Field label="Instant cible" hint="heure GMT">
-                        <Input type="datetime-local" defaultValue="2026-08-19T14:00" />
+                        <Input
+                          type="datetime-local"
+                          value={instantPitr}
+                          onChange={(e) => setInstantPitr(e.target.value)}
+                        />
                       </Field>
                       <Field label="Destination">
-                        <Select defaultValue="nouvelle">
+                        <Select
+                          value={destinationPitr}
+                          onChange={(e) => setDestinationPitr(e.target.value)}
+                        >
                           <option value="nouvelle">Nouvelle instance (recommandé)</option>
                           <option value="ecraser">Écraser l’instance actuelle</option>
                         </Select>
                       </Field>
                     </div>
-                    <GatedAction
-                      autorise={autorise('backup.restore')}
-                      message={refus('backup.restore')}
-                    >
-                      <Button className="mt-3.5">Lancer la restauration</Button>
-                    </GatedAction>
+                    <BoutonAction
+                      libelle="Lancer la restauration"
+                      variant="primary"
+                      size="md"
+                      className="mt-3.5"
+                      operation={{
+                        action: 'backup.restore',
+                        ton: 'info',
+                        titre: `Restauration de ${base.nom} au ${instantPitr.replace('T', ' à ')}`,
+                        detail:
+                          destinationPitr === 'nouvelle'
+                            ? 'Une nouvelle instance est créée : l’actuelle continue de servir.'
+                            : 'L’instance actuelle sera écrasée.',
+                        job: {
+                          type: 'db.pitr',
+                          label: `Restauration ${base.nom} · ${instantPitr}`,
+                          etapes: [
+                            'Monter la sauvegarde de base',
+                            'Rejouer les journaux jusqu’à l’instant demandé',
+                            destinationPitr === 'nouvelle'
+                              ? 'Démarrer la nouvelle instance'
+                              : 'Remplacer l’instance actuelle',
+                            'Vérifier les connexions',
+                          ],
+                        },
+                        effetFinal:
+                          destinationPitr === 'nouvelle'
+                            ? () =>
+                                collection.creer({
+                                  ...base,
+                                  id: collection.identifiant('db'),
+                                  nom: `${base.nom}-restore`,
+                                  replicas: 0,
+                                  host: base.host.replace(base.nom, `${base.nom}-restore`),
+                                })
+                            : undefined,
+                      }}
+                      confirmation={
+                        destinationPitr === 'ecraser'
+                          ? {
+                              ressource: base.nom,
+                              titre: `Écraser ${base.nom} ?`,
+                              pertes: [
+                                `Toutes les écritures postérieures au ${instantPitr.replace('T', ' ')} seront perdues`,
+                                'L’instance sera indisponible pendant la restauration',
+                              ],
+                              libelleAction: 'Écraser et restaurer',
+                            }
+                          : undefined
+                      }
+                    />
                     <Callout ton="violet" className="mt-4" titre="Pourquoi une nouvelle instance">
                       Restaurer dans une nouvelle instance permet de vérifier le contenu avant de
                       basculer votre application, sans perdre l’état actuel. C’est la manœuvre à
@@ -439,9 +624,42 @@ export default function BasesManagees() {
                             Votre version
                           </Badge>
                         ) : (
-                          <Button size="sm" variant="secondary">
-                            Planifier
-                          </Button>
+                          <BoutonFormulaire
+                            libelle="Planifier"
+                            titre={`Planifier la montée vers ${moteur.nom} ${x.v}`}
+                            description="Snapshot avant l’opération, application, vérification du démarrage et des connexions, retour arrière possible pendant sept jours."
+                            action="network.manage"
+                            champs={[
+                              { id: 'fenetre', label: 'Fenêtre de maintenance', type: 'select', options: [
+                                { value: 'prochaine-nuit', label: 'La prochaine nuit · 02h00–04h00' },
+                                { value: 'week-end', label: 'Le prochain week-end · samedi 03h00' },
+                                { value: 'immediat', label: 'Immédiatement' },
+                              ] },
+                            ]}
+                            libelleValider="Planifier"
+                            operation={(f) => ({
+                              titre: `Montée vers ${x.v} planifiée`,
+                              detail:
+                                f.fenetre === 'immediat'
+                                  ? 'Opération lancée maintenant.'
+                                  : 'Vous recevrez un rappel 24 heures avant.',
+                              ...(f.fenetre === 'immediat'
+                                ? {
+                                    job: {
+                                      type: 'db.upgrade',
+                                      label: `Montée de version ${base.nom} → ${x.v}`,
+                                      etapes: [
+                                        'Snapshot avant opération',
+                                        'Appliquer la mise à jour',
+                                        'Vérifier le démarrage et les connexions',
+                                      ],
+                                    },
+                                    effetFinal: () =>
+                                      collection.modifier(base.id, { version: x.v }),
+                                  }
+                                : {}),
+                            })}
+                          />
                         )}
                       </div>
                     ))}
@@ -463,12 +681,14 @@ export default function BasesManagees() {
                   />
                   <div className="space-y-3.5">
                     <Switch
-                      checked
+                      checked={restreint}
+                      onChange={setRestreint}
                       label="Restreindre aux réseaux privés de l’espace"
                       description={`Seules les ressources de ${espace.code} (${espace.cidr}) peuvent se connecter. Aucune exposition sur Internet.`}
                     />
                     <Switch
-                      checked={false}
+                      checked={ipsExternes}
+                      onChange={setIpsExternes}
                       label="Autoriser des adresses IP externes"
                       description="À n’activer que temporairement, pour une migration ou un outil d’administration ponctuel. Chaque adresse autorisée élargit la surface d’attaque."
                     />
@@ -476,23 +696,49 @@ export default function BasesManagees() {
                   <div className="mt-4 border-t border-g-100 pt-4">
                     <MicroLabel className="mb-2">Réseaux autorisés</MicroLabel>
                     <div className="space-y-2">
-                      {['10.0.1.0/24 · prod-front', '10.0.4.0/24 · ci-cd', '10.99.0.0/24 · pool VPN'].map(
-                        (r) => (
-                          <div
-                            key={r}
-                            className="flex items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2"
-                          >
-                            <span className="font-mono text-[12px] text-ink">{r}</span>
+                      {reseaux.map((r) => (
+                        <div
+                          key={r}
+                          className="flex items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2"
+                        >
+                          <span className="font-mono text-[12px] text-ink">{r}</span>
+                          <span className="flex items-center gap-2">
                             <Badge tone="ok" size="sm">
                               Autorisé
                             </Badge>
-                          </div>
-                        ),
-                      )}
+                            <BoutonAction
+                              libelle="Retirer"
+                              variant="ghost"
+                              operation={{
+                                action: 'network.manage',
+                                ton: 'warn',
+                                titre: `${r.split(' · ')[0]} retiré des réseaux autorisés`,
+                                effet: () => setReseaux((prev) => prev.filter((x) => x !== r)),
+                              }}
+                            />
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                    <Button size="sm" variant="ghost" className="mt-2.5" iconBefore={<Plus size={12} />}>
-                      Ajouter un réseau
-                    </Button>
+                    <BoutonFormulaire
+                      libelle="Ajouter un réseau"
+                      variant="ghost"
+                      className="mt-2.5"
+                      icone={<Plus size={12} />}
+                      action="network.manage"
+                      titre="Autoriser un réseau"
+                      description="Une base mutualisée n’a pas à être joignable depuis Internet : n’autorisez que des plages privées, sauf migration ponctuelle."
+                      champs={[
+                        { id: 'cidr', label: 'Plage', placeholder: '10.0.5.0/24', obligatoire: true },
+                        { id: 'libelle', label: 'À quoi elle sert', placeholder: 'outillage BI' },
+                      ]}
+                      libelleValider="Autoriser"
+                      operation={(f) => ({
+                        titre: `${f.cidr} autorisé`,
+                        effet: () =>
+                          setReseaux((prev) => [...prev, `${f.cidr}${f.libelle ? ` · ${f.libelle}` : ''}`]),
+                      })}
+                    />
                   </div>
                 </Card>
               )}

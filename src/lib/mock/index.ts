@@ -131,18 +131,92 @@ export const MARGE_BACKENDS = [
 ]
 
 /** Relevés de revshare partenaires (§8.7). */
-export const RELEVES_REVSHARE = [
-  { periode: 'Juillet 2026', reseller: 'OC²S', caGenere: 1_240_000, revsharePct: 22, montant: 272_800, statut: 'réglé' },
-  { periode: 'Juin 2026', reseller: 'OC²S', caGenere: 1_104_000, revsharePct: 22, montant: 242_880, statut: 'réglé' },
-  { periode: 'Mai 2026', reseller: 'OC²S', caGenere: 968_000, revsharePct: 22, montant: 212_960, statut: 'réglé' },
-  { periode: 'Août 2026', reseller: 'OC²S', caGenere: 1_318_000, revsharePct: 22, montant: 289_960, statut: 'en cours' },
+export interface ReleveRevshare {
+  id: string
+  periode: string
+  reseller: string
+  caGenere: number
+  revsharePct: number
+  montant: number
+  statut: string
+}
+
+export const RELEVES_REVSHARE: ReleveRevshare[] = [
+  { id: 'rev-07', periode: 'Juillet 2026', reseller: 'OC²S', caGenere: 1_240_000, revsharePct: 22, montant: 272_800, statut: 'réglé' },
+  { id: 'rev-06', periode: 'Juin 2026', reseller: 'OC²S', caGenere: 1_104_000, revsharePct: 22, montant: 242_880, statut: 'réglé' },
+  { id: 'rev-05', periode: 'Mai 2026', reseller: 'OC²S', caGenere: 968_000, revsharePct: 22, montant: 212_960, statut: 'réglé' },
+  { id: 'rev-08', periode: 'Août 2026', reseller: 'OC²S', caGenere: 1_318_000, revsharePct: 22, montant: 289_960, statut: 'en cours' },
 ]
 
+/** Une ligne du journal de recouvrement — ce qui a été fait, et ce qui a été dit. */
+export interface ActionRecouvrement {
+  date: string
+  action: string
+  note: string
+}
+
 /** Impayés et relances (§8.8). */
-export const IMPAYES = [
-  { org: 'Digital Business Africa', facture: 'INV-1962', montant: 124_365, echeance: '2026-06-10', retardJours: 70, relances: 3 },
-  { org: 'BICICI Lab', facture: 'INV-1877', montant: 48_200, echeance: '2026-05-10', retardJours: 101, relances: 4 },
-  { org: 'AMUGA', facture: 'INV-2062', montant: 152_220, echeance: '2026-08-10', retardJours: 9, relances: 1 },
+export interface Impaye {
+  id: string
+  org: string
+  facture: string
+  montant: number
+  echeance: string
+  retardJours: number
+  relances: number
+  /** Un échelonnement accordé suspend les relances tant qu'il est respecté. */
+  echelonnement?: boolean
+  suspendu?: boolean
+  regle?: boolean
+  prochaineRelance?: string
+  journal?: ActionRecouvrement[]
+}
+
+export const IMPAYES: Impaye[] = [
+  {
+    id: 'imp-1962',
+    org: 'Digital Business Africa',
+    facture: 'INV-1962',
+    montant: 124_365,
+    echeance: '2026-06-10',
+    retardJours: 70,
+    relances: 3,
+    prochaineRelance: '2026-08-25',
+    journal: [
+      { date: '2026-06-13', action: 'Relance automatique', note: 'Premier rappel par courriel au contact de facturation, sans pénalité.' },
+      { date: '2026-06-25', action: 'Relance écrite', note: 'Courrier avec copie de la facture et relevé de consommation détaillé.' },
+      { date: '2026-07-20', action: 'Appel téléphonique', note: 'Comptabilité injoignable trois fois. Message laissé au standard.' },
+    ],
+  },
+  {
+    id: 'imp-1877',
+    org: 'BICICI Lab',
+    facture: 'INV-1877',
+    montant: 48_200,
+    echeance: '2026-05-10',
+    retardJours: 101,
+    relances: 4,
+    prochaineRelance: '2026-08-22',
+    journal: [
+      { date: '2026-05-13', action: 'Relance automatique', note: 'Premier rappel par courriel, sans pénalité.' },
+      { date: '2026-05-27', action: 'Relance écrite', note: 'Le service achats demande un bon de commande rétroactif pour payer.' },
+      { date: '2026-06-18', action: 'Appel téléphonique', note: 'Bon de commande en circuit de signature interne. Délai annoncé : six semaines.' },
+      { date: '2026-07-30', action: 'Appel de la direction', note: 'Blocage administratif confirmé, pas de difficulté de trésorerie. Aucune suspension envisagée.' },
+    ],
+  },
+  {
+    id: 'imp-2062',
+    org: 'AMUGA',
+    facture: 'INV-2062',
+    montant: 152_220,
+    echeance: '2026-08-10',
+    retardJours: 9,
+    relances: 1,
+    prochaineRelance: '2026-08-24',
+    journal: [
+      { date: '2026-08-13', action: 'Relance automatique', note: 'Premier rappel par courriel. Facture contestée sur le poste transfert sortant.' },
+    ],
+  },
 ]
 
 /** Sièges disponibles par service pour l'utilisateur courant — lanceur (§6.7). */

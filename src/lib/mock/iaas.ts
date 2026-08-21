@@ -154,10 +154,10 @@ export const BACKENDS: Backend[] = [
 ]
 
 export const PLACEMENTS: Placement[] = [
-  { espaceId: 'ec-dba-01', backendId: 'bk-cl-gra-01', percent: 70 },
-  { espaceId: 'ec-dba-01', backendId: 'bk-os-gra-02', percent: 30 },
-  { espaceId: 'ec-dba-02', backendId: 'bk-pve-par-01', percent: 100 },
-  { espaceId: 'ec-dba-03', backendId: 'bk-hv-rbx-01', percent: 100 },
+  { id: 'pl-1', espaceId: 'ec-dba-01', backendId: 'bk-cl-gra-01', percent: 70 },
+  { id: 'pl-2', espaceId: 'ec-dba-01', backendId: 'bk-os-gra-02', percent: 30 },
+  { id: 'pl-3', espaceId: 'ec-dba-02', backendId: 'bk-pve-par-01', percent: 100 },
+  { id: 'pl-4', espaceId: 'ec-dba-03', backendId: 'bk-hv-rbx-01', percent: 100 },
 ]
 
 export const VMS: VM[] = [

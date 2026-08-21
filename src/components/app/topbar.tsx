@@ -10,12 +10,13 @@ import {
   CloudCog,
   ListChecks,
   LogOut,
+  RotateCcw,
   Settings,
   ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { relatif } from '@/lib/format'
-import { ROLE_LABEL, type Role } from '@/lib/types'
+import { ROLE_LABEL, type ProvisioningJob, type Role } from '@/lib/types'
 import { ROLES_CLIENT, ROLES_FOURNISSEUR } from '@/lib/rbac'
 import { MES_ORGANISATIONS, ORG_COURANTE, UTILISATEUR_COURANT } from '@/lib/mock/orgs'
 import { ESPACES } from '@/lib/mock/iaas'
@@ -35,6 +36,7 @@ import { Popover } from '@/components/ui/overlay'
 import { Logo, BadgeFournisseur } from '@/components/brand/logo'
 import { RechercheGlobale } from './recherche'
 import { useApp } from './contexte'
+import { useAtelier, useCollection } from './atelier'
 
 const NOTIFICATIONS = [
   {
@@ -371,7 +373,11 @@ function SelecteurContexte({ avecEspace }: { avecEspace: boolean }) {
 // ─── Contrôles de droite ───────────────────────────────────────────────
 
 function CentreDeTaches({ fournisseur }: { fournisseur: boolean }) {
-  const jobs = fournisseur ? JOBS_PLATEFORME : JOBS
+  // Lu depuis l'atelier : une création lancée dans la session doit apparaître
+  // ici, et sa barre d'avancement bouger, sans recharger la page.
+  const client = useCollection<ProvisioningJob>('jobs', JOBS)
+  const plateforme = useCollection<ProvisioningJob>('jobs-plateforme', JOBS_PLATEFORME)
+  const jobs = fournisseur ? plateforme.items : client.items
   const enCours = jobs.filter((j) => j.statut === 'running' || j.statut === 'queued')
   const echecs = jobs.filter((j) => j.statut === 'failed')
 
@@ -456,6 +462,15 @@ function CentreDeTaches({ fournisseur }: { fournisseur: boolean }) {
               )
             })}
           </div>
+          {!fournisseur && (
+            <Link
+              href="/app/taches"
+              onClick={close}
+              className="block border-t border-g-100 px-3 py-2 text-[12px] font-semibold text-p-700 hover:text-m-600"
+            >
+              Ouvrir le centre de tâches →
+            </Link>
+          )}
         </div>
       )}
     </Popover>
@@ -511,7 +526,8 @@ function NotificationsPopover() {
  * place d'un troisième contrôle de contexte.
  */
 function MenuCompte({ fournisseur }: { fournisseur: boolean }) {
-  const { role, setRole } = useApp()
+  const { role, setRole, pousser } = useApp()
+  const { collectionsModifiees, reinitialiser } = useAtelier()
   const roles = fournisseur ? ROLES_FOURNISSEUR : ROLES_CLIENT
 
   return (
@@ -587,6 +603,26 @@ function MenuCompte({ fournisseur }: { fournisseur: boolean }) {
                   Sécurité & sessions
                 </MenuLien>
               </>
+            )}
+            {collectionsModifiees > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  reinitialiser()
+                  close()
+                  pousser({
+                    ton: 'info',
+                    titre: 'Démonstration réinitialisée',
+                    detail: 'Les ressources créées ou supprimées pendant la session sont revenues à leur état d’origine.',
+                  })
+                }}
+                className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[12.5px] text-ink transition-colors hover:bg-p-050"
+              >
+                <span className="text-g-500">
+                  <RotateCcw size={13} />
+                </span>
+                Réinitialiser la démonstration
+              </button>
             )}
             <MenuLien href="/login" onClick={close} icone={<LogOut size={13} />}>
               Se déconnecter

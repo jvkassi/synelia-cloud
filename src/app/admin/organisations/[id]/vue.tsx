@@ -2,11 +2,33 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Ban, KeyRound, Pause, Play, Plus, ShieldAlert, UserCog } from 'lucide-react'
-import { cn, slugify, trendSeries } from '@/lib/utils'
-import { dateCourte, dateHeure, money, num, relatif } from '@/lib/format'
-import { ESPACES, SERVICES_MANAGES } from '@/lib/mock'
-import { MOYEN_LABEL, ROLE_LABEL, SITE_COURT, type Organisation, type Role } from '@/lib/types'
+import { Ban, KeyRound, Pause, Play, ShieldAlert, UserCog } from 'lucide-react'
+import { cn, trendSeries } from '@/lib/utils'
+import { dateCourte, dateHeure, goHumain, MAINTENANT, money, num, pct, relatif } from '@/lib/format'
+import {
+  AUDIT,
+  ELEVATIONS,
+  EQUIPE_SYNELIA,
+  ESPACES,
+  FACTURES,
+  IMPAYES,
+  ORGANISATIONS,
+  RESELLERS,
+  SERVICES_MANAGES,
+  SOUSCRIPTIONS,
+  TICKETS_PLATEFORME,
+  USERS,
+  membresDeLOrg,
+} from '@/lib/mock'
+import {
+  MOYEN_LABEL,
+  ROLE_LABEL,
+  SITE_COURT,
+  type Invoice,
+  type Organisation,
+  type Role,
+} from '@/lib/types'
+import type { Elevation } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Avatar, GatedAction, Tabs } from '@/components/ui/display'
@@ -16,7 +38,8 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { Timeline } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
-import { useActe, useAtelier } from '@/components/app/atelier'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'synthese', label: 'Synthèse' },
@@ -28,295 +51,39 @@ const ONGLETS = [
   { id: 'administration', label: 'Administration' },
 ]
 
-/** Élévations d'accès posées pendant la session, par organisation. */
-interface Elevation {
-  id: string
-  qui: string
-  quand: string
-  duree: string
-  motif: string
-  actif: boolean
-}
-
-const ELEVATIONS_INITIALES: Record<string, Elevation[]> = {
-  'org-dba': [
-    {
-      id: 'elev-1',
-      qui: 'Jean-Vincent Kassi',
-      quand: '2026-08-19T13:00:00Z',
-      duree: '4 h',
-      motif: 'Ticket SYN-8814 — diagnostic de latence sur app-metier',
-      actif: true,
-    },
-    {
-      id: 'elev-2',
-      qui: 'Aïcha Bamba',
-      quand: '2026-08-12T09:20:00Z',
-      duree: '2 h',
-      motif: 'Ticket SYN-8702 — restauration accompagnée',
-      actif: false,
-    },
-  ],
-}
-
-/**
- * Une organisation créée pendant la session n'existe pas dans le jeu figé :
- * la route est donc servie, et c'est cette vue qui dit ce qu'elle ne trouve
- * pas. Un 404 du serveur laisserait croire à une panne.
- */
-function OrganisationIntrouvable({ id }: { id: string }) {
-  return (
-    <div className="space-y-5">
-      <PageHeader
-        fil={[
-          { label: 'Espace fournisseur', href: '/admin' },
-          { label: 'Organisations', href: '/admin/organisations' },
-          { label: 'Introuvable' },
-        ]}
-        titre="Organisation introuvable"
-        sousTitre={`Aucune organisation ne porte l’identifiant ${id}. Elle a peut-être été fermée, ou l’adresse a été recopiée à la main.`}
-      />
-      <Card>
-        <p className="rounded-[8px] border border-dashed border-g-300 px-4 py-10 text-center text-[12.5px] text-g-500">
-          Les organisations fermées disparaissent du portail à l’issue de leur période de
-          réversibilité.
-        </p>
-        <ButtonLink variant="secondary" className="mt-4" href="/admin/organisations">
-          Revenir à la liste
-        </ButtonLink>
-      </Card>
-    </div>
-  )
-}
-
 export function VueOrganisation({ id }: { id: string }) {
-  const { organisations } = useAtelier()
-  const org = organisations.parId(id)
-  if (!org) return <OrganisationIntrouvable id={id} />
-  return <FicheOrganisation org={org} />
-}
-
-function FicheOrganisation({ org }: { org: Organisation }) {
-  const { autorise, refus } = useApp()
-  const {
-    organisations,
-    revendeurs,
-    utilisateurs,
-    adhesions,
-    factures: registreFactures,
-    impayes,
-    tickets: registreTickets,
-    souscriptions: registreSouscriptions,
-    journal,
-  } = useAtelier()
-  const acte = useActe()
-
+  const { autorise, refus, pousser } = useApp()
+  const executer = useOperation()
+  const lesFactures = useCollection<Invoice>('factures', FACTURES)
+  const elevations = useCollection<Elevation>(`elevations-${id}`, ELEVATIONS)
+  const orgs = useCollection<Organisation>('organisations', ORGANISATIONS)
   const [onglet, setOnglet] = useState('synthese')
   const [elevation, setElevation] = useState(false)
   const [suspension, setSuspension] = useState(false)
-  const [cloture, setCloture] = useState(false)
-  const [invitation, setInvitation] = useState(false)
-  const [elevations, setElevations] = useState<Elevation[]>(ELEVATIONS_INITIALES[org.id] ?? [])
-  const [demande, setDemande] = useState({
-    motif: '',
-    duree: '4',
-    perimetre: 'lecture',
-    ticket: '',
-    notifier: true,
-  })
-  const [nouveauMembre, setNouveauMembre] = useState({ nom: '', email: '' })
-  const [reglages, setReglages] = useState({
-    plan: org.tenantPlan ?? 'Standard',
-    plafond: org.caMensuel ? org.caMensuel * 2 : 500000,
-    quotaEspaces: 10,
-    libreService: true,
-    marketplace: true,
-    souverain: false,
-  })
+  const [motifElevation, setMotifElevation] = useState('')
+  const [dureeElevation, setDureeElevation] = useState('4')
+  const [perimetreElevation, setPerimetreElevation] = useState('lecture')
+  const [ticketElevation, setTicketElevation] = useState('')
+  const [libreService, setLibreService] = useState(true)
+  const [marketplaceOuverte, setMarketplaceOuverte] = useState(true)
+  const [soclesSouverains, setSoclesSouverains] = useState(false)
+  const [planService, setPlanService] = useState('')
+  const [plafond, setPlafond] = useState(0)
+  const [quotaEspaces, setQuotaEspaces] = useState(10)
 
-  const reseller = revendeurs.liste.find((r) => r.id === org.resellerId)
-  const membres = adhesions.liste
-    .filter((m) => m.orgId === org.id)
-    .map((m) => ({ membership: m, user: utilisateurs.parId(m.userId) }))
-    .filter((x): x is { membership: (typeof adhesions.liste)[number]; user: NonNullable<typeof x.user> } => Boolean(x.user))
-  const factures = registreFactures.liste.filter((f) => f.orgId === org.id)
+  // L'organisation vient de la collection : suspendre depuis cet écran doit se
+  // voir dans la liste, et une organisation créée dans la session doit s'ouvrir.
+  const org = orgs.items.find((o) => o.id === id)!
+  const reseller = RESELLERS.find((r) => r.id === org.resellerId)
+  const membres = membresDeLOrg(org.id)
+  const factures = lesFactures.items.filter((f) => f.orgId === org.id)
   const impayees = factures.filter((f) => f.statut === 'impayee')
-  const tickets = registreTickets.liste.filter((t) => t.orgId === org.id)
-  const audit = journal.liste.filter((a) => a.orgId === org.id)
+  const tickets = TICKETS_PLATEFORME.filter((t) => t.orgId === org.id)
+  const audit = AUDIT.filter((a) => a.orgId === org.id)
   const espaces = org.id === 'org-dba' ? ESPACES : []
   const services = org.id === 'org-dba' ? SERVICES_MANAGES : []
-  const souscriptions = registreSouscriptions.liste.filter((s) => s.orgId === org.id)
-  const impayeReleve = impayes.liste.find((i) => i.org === org.nom)
-
-  const portee = { type: 'org' as const, id: org.id, label: org.nom }
-
-  const basculerStatut = () => {
-    const suspendre = org.statut === 'active'
-    acte({
-      faire: () => organisations.modifier(org.id, { statut: suspendre ? 'suspendue' : 'active' }),
-      ton: suspendre ? 'err' : 'ok',
-      titre: suspendre ? `${org.nom} suspendue` : `${org.nom} réactivée`,
-      detail:
-        'L’opération est journalisée dans l’audit de l’organisation et dans celui de la plateforme.',
-      action: suspendre ? 'organisation.suspend' : 'organisation.reactivate',
-      cible: org.id,
-      orgId: org.id,
-      orgNom: org.nom,
-      portee,
-    })
-    setSuspension(false)
-  }
-
-  const cloturer = () => {
-    acte({
-      faire: () => {
-        organisations.modifier(org.id, { statut: 'fermee', caMensuel: 0 })
-        impayes.liste
-          .filter((i) => i.org === org.nom)
-          .forEach((i) => impayes.supprimer(i.facture))
-      },
-      ton: 'warn',
-      titre: `Clôture de ${org.nom} engagée`,
-      detail:
-        'Trente jours de récupération, trente jours de conservation en lecture, puis effacement avec attestation.',
-      action: 'organisation.close',
-      cible: org.id,
-      orgId: org.id,
-      orgNom: org.nom,
-      portee,
-    })
-    setCloture(false)
-  }
-
-  const demanderElevation = () => {
-    const duree = `${demande.duree} h`
-    acte({
-      faire: () =>
-        setElevations((l) => [
-          {
-            id: `elev-session-${l.length + 1}`,
-            qui: 'Jean-Vincent Kassi',
-            quand: '2026-08-19T15:20:00Z',
-            duree,
-            motif: demande.motif.trim() || 'Motif non renseigné',
-            actif: true,
-          },
-          ...l,
-        ]),
-      ton: 'warn',
-      titre: 'Élévation accordée',
-      detail: `Une entrée apparaît immédiatement dans le journal d’audit de ${org.nom}, avec votre nom et le motif.`,
-      action: 'access.elevation.grant',
-      cible: org.id,
-      orgId: org.id,
-      orgNom: org.nom,
-      portee,
-    })
-    setDemande({ motif: '', duree: '4', perimetre: 'lecture', ticket: '', notifier: true })
-    setElevation(false)
-  }
-
-  const revoquerElevation = (e: Elevation) => {
-    acte({
-      faire: () => setElevations((l) => l.map((x) => (x.id === e.id ? { ...x, actif: false } : x))),
-      titre: 'Élévation révoquée',
-      detail: `L’accès de ${e.qui} est coupé immédiatement, avant son expiration.`,
-      action: 'access.elevation.revoke',
-      cible: org.id,
-      orgId: org.id,
-      orgNom: org.nom,
-      portee,
-    })
-  }
-
-  /**
-   * La seule intervention du fournisseur sur les identités d'un client : lui
-   * rendre un administrateur quand il a perdu le dernier. Tout le reste — créer,
-   * changer de rôle, révoquer — appartient à l'organisation elle-même, depuis son
-   * propre espace. Le faire à sa place serait exactement ce que le cloisonnement
-   * est censé empêcher.
-   */
-  const retablirAdministrateur = () => {
-    const nom = nouveauMembre.nom.trim()
-    const idUtilisateur = `usr-${slugify(nom).slice(0, 20) || 'admin'}-secours`
-    acte({
-      faire: () => {
-        utilisateurs.ajouter({
-          id: idUtilisateur,
-          email: nouveauMembre.email.trim(),
-          nom,
-          mfaEnabled: true,
-          idpSource: 'local',
-          orgId: org.id,
-          statut: 'invite',
-        })
-        adhesions.ajouter({
-          id: `mb-${idUtilisateur}`,
-          userId: idUtilisateur,
-          orgId: org.id,
-          role: 'org_admin',
-          scopeType: 'org',
-          scopeLabel: 'Toute l’organisation',
-        })
-        organisations.modifier(org.id, (o) => ({ utilisateurs: (o.utilisateurs ?? 0) + 1 }))
-      },
-      ton: 'warn',
-      titre: `Administrateur rétabli pour ${org.nom}`,
-      detail: `${nom} reçoit une invitation à ${nouveauMembre.email.trim()}, avec deuxième facteur obligatoire. L’opération figure en tête du journal d’audit du client.`,
-      action: 'member.recovery',
-      cible: idUtilisateur,
-      orgId: org.id,
-      orgNom: org.nom,
-      portee,
-    })
-    setNouveauMembre({ nom: '', email: '' })
-    setInvitation(false)
-  }
-
-  const relancer = (f: (typeof factures)[number]) => {
-    acte({
-      faire: () =>
-        impayes.modifier(f.numero, (i) => ({ relances: i.relances + 1 })),
-      ton: 'info',
-      titre: `Relance envoyée sur ${f.numero}`,
-      detail:
-        'Courriel au contact de facturation et à l’administrateur. Une relance n’est jamais suivie d’une coupure automatique.',
-      action: 'invoice.dunning',
-      cible: f.numero,
-      orgId: org.id,
-      orgNom: org.nom,
-      portee,
-    })
-  }
-
-  const encaisser = (f: (typeof factures)[number]) => {
-    acte({
-      faire: () => {
-        registreFactures.modifier(f.id, { statut: 'payee', moyen: f.moyen ?? 'virement' })
-        impayes.supprimer(f.numero)
-      },
-      titre: `${f.numero} encaissée`,
-      detail: `${money(f.total, f.devise)} rapprochés. La facture sort du recouvrement.`,
-      action: 'invoice.payment.record',
-      cible: f.numero,
-      orgId: org.id,
-      orgNom: org.nom,
-      portee,
-    })
-  }
-
-  const enregistrerReglages = () => {
-    acte({
-      faire: () => organisations.modifier(org.id, { tenantPlan: reglages.plan }),
-      titre: 'Paramètres enregistrés',
-      detail: `Plan ${reglages.plan}, plafond ${money(reglages.plafond)}, ${reglages.quotaEspaces} Espaces Cloud au maximum. La modification est journalisée dans l’audit du client, avec votre nom.`,
-      action: 'organisation.settings.update',
-      cible: org.id,
-      orgId: org.id,
-      orgNom: org.nom,
-      portee,
-    })
-  }
+  const souscriptions = SOUSCRIPTIONS.filter((s) => s.orgId === org.id)
+  const impayeReleve = IMPAYES.find((i) => i.org === org.nom)
 
   return (
     <div className="space-y-5">
@@ -676,21 +443,6 @@ function FicheOrganisation({ org }: { org: Organisation }) {
               titre="Membres de l’organisation"
               sousTitre="Nous voyons les identités et leurs rôles, jamais leurs mots de passe — ils n’existent pas chez nous."
               className="mb-0"
-              actions={
-                <GatedAction
-                  autorise={autorise('reseller.manage')}
-                  message={refus('reseller.manage')}
-                >
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    iconBefore={<Plus size={12} />}
-                    onClick={() => setInvitation(true)}
-                  >
-                    Rétablir un administrateur
-                  </Button>
-                </GatedAction>
-              }
             />
           </div>
           {membres.length === 0 ? (
@@ -752,10 +504,10 @@ function FicheOrganisation({ org }: { org: Organisation }) {
           )}
           <div className="border-t border-g-100 px-4 py-3">
             <p className="text-[11.5px] leading-relaxed text-g-500">
-              Nous ne créons, ne modifions et ne révoquons jamais un membre à la place d’une
-              organisation : elle le fait depuis son propre espace. La seule exception est la
-              récupération du dernier administrateur perdu — elle exige une vérification d’identité
-              auprès du signataire du contrat, et l’opération apparaît en tête de son journal d’audit.
+              Nous ne modifions jamais les rôles d’une organisation à sa place. Si un client perd
+              l’accès de son dernier administrateur, la procédure de récupération exige une
+              vérification d’identité auprès du signataire du contrat, et l’opération est journalisée
+              dans son audit.
             </p>
           </div>
         </Card>
@@ -850,42 +602,30 @@ function FicheOrganisation({ org }: { org: Organisation }) {
                         </td>
                         <td className="px-3 py-2.5 text-right">
                           <span className="flex items-center justify-end gap-1.5">
-                            <Button
-                              size="sm"
+                            <BoutonAction
+                              libelle="PDF"
                               variant="ghost"
-                              onClick={() =>
-                                acte({
-                                  ton: 'info',
-                                  titre: `${f.numero} téléchargée`,
-                                  detail: `Facture ${f.periode}, ${money(f.total, f.devise)}. Le téléchargement figure dans le journal du client.`,
-                                  action: 'invoice.download',
-                                  cible: f.numero,
-                                  orgId: org.id,
-                                  orgNom: org.nom,
-                                  portee,
-                                })
-                              }
-                            >
-                              PDF
-                            </Button>
+                              operation={{
+                                ton: 'info',
+                                titre: `Facture ${f.numero} téléchargée`,
+                                detail: `${money(f.total)} · exemplaire opposable`,
+                              }}
+                            />
                             {f.statut === 'impayee' && (
                               <GatedAction
                                 autorise={autorise('reseller.manage')}
                                 message={refus('reseller.manage')}
                               >
-                                <Button size="sm" variant="secondary" onClick={() => relancer(f)}>
-                                  Relancer
-                                </Button>
-                              </GatedAction>
-                            )}
-                            {f.statut === 'impayee' && (
-                              <GatedAction
-                                autorise={autorise('reseller.manage')}
-                                message={refus('reseller.manage')}
-                              >
-                                <Button size="sm" variant="ghost" onClick={() => encaisser(f)}>
-                                  Encaisser
-                                </Button>
+                                <BoutonAction
+                                  libelle="Relancer"
+                                  operation={{
+                                    action: 'reseller.manage',
+                                    ton: 'warn',
+                                    titre: `Relance envoyée pour ${f.numero}`,
+                                    detail:
+                                      'Courriel au contact de facturation et à l’administrateur de l’organisation, avec la copie de la facture.',
+                                  }}
+                                />
                               </GatedAction>
                             )}
                           </span>
@@ -937,64 +677,76 @@ function FicheOrganisation({ org }: { org: Organisation }) {
                 ]}
               />
               <div className="mt-4 flex flex-wrap gap-1.5 border-t border-g-100 pt-4">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() =>
-                    acte({
-                      faire: () =>
-                        impayes.modifier(impayeReleve.facture, (i) => ({
-                          relances: i.relances + 1,
-                        })),
-                      titre: 'Appel consigné',
-                      detail: `Quatrième étape du recouvrement pour ${impayeReleve.facture}. Le compteur de relances passe à ${impayeReleve.relances + 1}.`,
-                      action: 'dunning.call.log',
-                      cible: impayeReleve.facture,
-                      orgId: org.id,
-                      orgNom: org.nom,
-                      portee,
-                    })
-                  }
-                >
-                  Enregistrer un appel
-                </Button>
-                <Button
-                  size="sm"
+                <BoutonFormulaire
+                  libelle="Enregistrer un appel"
+                  action="reseller.manage"
+                  titre="Enregistrer un appel de recouvrement"
+                  description="Ce qui a été dit compte autant que le fait d’avoir appelé : la note suit le dossier et évite qu’un collègue répète la même demande."
+                  champs={[
+                    {
+                      id: 'issue',
+                      label: 'Issue de l’appel',
+                      type: 'select',
+                      options: [
+                        { value: 'promesse', label: 'Promesse de règlement' },
+                        { value: 'echelonnement', label: 'Demande d’échelonnement' },
+                        { value: 'contestation', label: 'Contestation de la facture' },
+                        { value: 'injoignable', label: 'Injoignable' },
+                      ],
+                    },
+                    { id: 'note', label: 'Note', type: 'zone', placeholder: 'Interlocuteur, engagement pris, date annoncée…' },
+                  ]}
+                  valeursDepart={{ issue: 'promesse' }}
+                  libelleValider="Enregistrer"
+                  operation={(v) => ({
+                    titre: 'Appel enregistré au dossier',
+                    detail: `${{ promesse: 'Promesse de règlement', echelonnement: 'Demande d’échelonnement', contestation: 'Contestation', injoignable: 'Injoignable' }[String(v.issue)]}`,
+                  })}
+                />
+                <BoutonFormulaire
+                  libelle="Proposer un échelonnement"
                   variant="ghost"
-                  onClick={() =>
-                    acte({
-                      ton: 'info',
-                      titre: 'Échelonnement proposé',
-                      detail: `${money(impayeReleve.montant)} en trois mensualités, sans frais. La proposition attend l’accord écrit du client.`,
-                      action: 'dunning.installment.offer',
-                      cible: impayeReleve.facture,
-                      orgId: org.id,
-                      orgNom: org.nom,
-                      portee,
-                    })
-                  }
-                >
-                  Proposer un échelonnement
-                </Button>
-                <Button
-                  size="sm"
+                  action="reseller.manage"
+                  titre="Proposer un échelonnement"
+                  description="Un échelonnement accepté rapporte plus qu’une suspension : il maintient le service et étale la créance."
+                  champs={[
+                    { id: 'mensualites', label: 'Nombre de mensualités', type: 'nombre', demi: true, min: 2, max: 12 },
+                    { id: 'premiere', label: 'Première échéance', type: 'select', demi: true, options: [
+                      { value: 'immediat', label: 'Immédiate' },
+                      { value: 'fin-mois', label: 'Fin du mois en cours' },
+                      { value: 'mois-suivant', label: 'Le mois suivant' },
+                    ] },
+                  ]}
+                  valeursDepart={{ mensualites: 3, premiere: 'fin-mois' }}
+                  libelleValider="Proposer"
+                  operation={(v) => ({
+                    titre: `Échelonnement sur ${v.mensualites} mensualités proposé`,
+                    detail: `${money(Math.round((impayeReleve?.montant ?? 0) / Number(v.mensualites)))} par mois. En attente de l’accord du client.`,
+                  })}
+                />
+                <BoutonFormulaire
+                  libelle="Passer un avoir commercial"
                   variant="ghost"
-                  onClick={() =>
-                    acte({
-                      faire: () => impayes.supprimer(impayeReleve.facture),
-                      ton: 'warn',
-                      titre: 'Avoir commercial passé',
-                      detail: `${money(impayeReleve.montant)} annulés sur ${impayeReleve.facture}. La créance sort du recouvrement et l’écart apparaîtra au rapprochement.`,
-                      action: 'invoice.credit_note',
-                      cible: impayeReleve.facture,
-                      orgId: org.id,
-                      orgNom: org.nom,
-                      portee,
-                    })
-                  }
-                >
-                  Passer un avoir commercial
-                </Button>
+                  action="reseller.manage"
+                  titre="Passer un avoir commercial"
+                  description="Un avoir sort de la créance et entre dans la marge : il se justifie, il ne s’accorde pas pour clore une discussion."
+                  champs={[
+                    { id: 'montant', label: 'Montant', type: 'nombre', demi: true, min: 1, suffixe: 'FCFA' },
+                    { id: 'motif', label: 'Motif', type: 'select', demi: true, options: [
+                      { value: 'sla', label: 'Crédit de SLA' },
+                      { value: 'geste', label: 'Geste commercial' },
+                      { value: 'erreur', label: 'Erreur de facturation' },
+                    ] },
+                    { id: 'note', label: 'Justification', type: 'zone', obligatoire: true },
+                  ]}
+                  valeursDepart={{ montant: 50000, motif: 'geste' }}
+                  libelleValider="Passer l’avoir"
+                  operation={(v) => ({
+                    ton: 'warn',
+                    titre: `Avoir de ${money(Number(v.montant))} passé`,
+                    detail: 'Imputé sur la marge de l’organisation et visible dans le rapport de finance.',
+                  })}
+                />
               </div>
             </Card>
           )}
@@ -1105,12 +857,6 @@ function FicheOrganisation({ org }: { org: Organisation }) {
           </Callout>
 
           <Card padding={false}>
-            {audit.length === 0 ? (
-              <p className="px-4 py-8 text-center text-[12.5px] text-g-500">
-                Aucun événement consigné pour cette organisation. Le journal se remplit dès la
-                première action — la sienne comme la nôtre.
-              </p>
-            ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-max border-collapse">
                 <thead>
@@ -1125,7 +871,7 @@ function FicheOrganisation({ org }: { org: Organisation }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {audit.map((a) => (
+                  {(audit.length > 0 ? audit : AUDIT.slice(0, 10)).map((a) => (
                     <tr key={a.id} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2 text-[11px] text-g-700">{dateHeure(a.ts)}</td>
                       <td className="px-3 py-2">
@@ -1157,7 +903,6 @@ function FicheOrganisation({ org }: { org: Organisation }) {
                 </tbody>
               </table>
             </div>
-            )}
           </Card>
         </div>
       )}
@@ -1172,8 +917,8 @@ function FicheOrganisation({ org }: { org: Organisation }) {
             <div className="space-y-4">
               <Field label="Plan de service">
                 <Select
-                  value={reglages.plan}
-                  onChange={(e) => setReglages((r) => ({ ...r, plan: e.target.value }))}
+                  value={planService || (org.tenantPlan ?? 'Standard')}
+                  onChange={(e) => setPlanService(e.target.value)}
                 >
                   <option value="Standard">Standard</option>
                   <option value="Avancé">Avancé — support prioritaire</option>
@@ -1187,52 +932,63 @@ function FicheOrganisation({ org }: { org: Organisation }) {
                 <Input
                   type="number"
                   min={0}
-                  value={reglages.plafond}
-                  suffix="FCFA"
-                  onChange={(e) =>
-                    setReglages((r) => ({ ...r, plafond: Math.max(0, Number(e.target.value)) }))
-                  }
+                  value={plafond || (org.caMensuel ? org.caMensuel * 2 : 500000)}
+                  onChange={(e) => setPlafond(Number(e.target.value))}
                 />
               </Field>
               <Field label="Quota maximal d’Espaces Cloud">
                 <Input
                   type="number"
-                  min={1}
-                  value={reglages.quotaEspaces}
-                  onChange={(e) =>
-                    setReglages((r) => ({
-                      ...r,
-                      quotaEspaces: Math.max(1, Number(e.target.value)),
-                    }))
-                  }
+                  min={org.espaces ?? 0}
+                  value={quotaEspaces}
+                  onChange={(e) => setQuotaEspaces(Number(e.target.value))}
                 />
               </Field>
               <div className="space-y-3">
                 <Switch
-                  checked={reglages.libreService}
-                  onChange={(v) => setReglages((r) => ({ ...r, libreService: v }))}
+                  checked={libreService}
+                  onChange={setLibreService}
                   label="Autoriser le libre-service"
                   description="Le client peut créer et supprimer ses propres ressources sans passer par nous. Désactiver revient à imposer un ticket pour chaque création."
                 />
                 <Switch
-                  checked={reglages.marketplace}
-                  onChange={(v) => setReglages((r) => ({ ...r, marketplace: v }))}
+                  checked={marketplaceOuverte}
+                  onChange={setMarketplaceOuverte}
                   label="Autoriser la marketplace"
                   description="Souscription en autonomie aux services managés du catalogue."
                 />
                 <Switch
-                  checked={reglages.souverain}
-                  onChange={(v) => setReglages((r) => ({ ...r, souverain: v }))}
+                  checked={soclesSouverains}
+                  onChange={setSoclesSouverains}
                   label="Restreindre aux socles souverains"
                   description="Les ressources de cette organisation ne seront placées que sur des socles libres et localisés en Côte d’Ivoire. À activer pour les organisations soumises à une contrainte réglementaire."
                 />
               </div>
+              {!libreService && (
+                <Callout ton="warn" titre="Sans libre-service, tout passe par un ticket">
+                  Le client ne pourra plus créer ni supprimer une ressource lui-même : chaque
+                  demande arrivera dans notre file de tickets, avec le délai que cela implique. À
+                  réserver aux organisations qui le demandent explicitement.
+                </Callout>
+              )}
             </div>
-            <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
-              <Button className="mt-4" onClick={enregistrerReglages}>
-                Enregistrer
-              </Button>
-            </GatedAction>
+            <BoutonAction
+              libelle="Enregistrer"
+              size="md"
+              className="mt-4"
+              variant="primary"
+              operation={{
+                action: 'reseller.manage',
+                titre: 'Paramètres enregistrés',
+                detail: `Plan ${planService || (org.tenantPlan ?? 'Standard')}, quota de ${quotaEspaces} espaces, libre-service ${
+                  libreService ? 'autorisé' : 'refusé'
+                }. La modification est journalisée dans l’audit du client, avec votre nom.`,
+                effet: () =>
+                  orgs.modifier(org.id, {
+                    tenantPlan: planService || (org.tenantPlan ?? 'Standard'),
+                  }),
+              }}
+            />
           </Card>
 
           <div className="space-y-4">
@@ -1241,47 +997,46 @@ function FicheOrganisation({ org }: { org: Organisation }) {
                 titre="Élévations récentes"
                 sousTitre="Chaque accès de nos équipes aux ressources de cette organisation."
               />
-              {elevations.length === 0 ? (
-                <p className="rounded-[6px] border border-dashed border-g-300 px-3 py-6 text-center text-[12px] text-g-500">
-                  Aucune de nos équipes n’a accédé aux ressources de cette organisation.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {elevations.map((e) => (
-                    <div
-                      key={e.id}
-                      className={cn(
-                        'rounded-[6px] border px-3 py-2.5',
-                        e.actif ? 'border-warn/40 bg-warn-bg' : 'border-g-300',
-                      )}
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="flex items-center gap-1.5 text-[12.5px] font-semibold text-ink">
-                          <KeyRound size={12} className="shrink-0 text-g-500" />
-                          {e.qui}
-                        </span>
-                        <Badge tone={e.actif ? 'warn' : 'neutral'} dot={e.actif} size="sm">
-                          {e.actif ? 'Active' : 'Expirée'}
-                        </Badge>
-                      </div>
-                      <p className="mt-0.5 text-[11.5px] text-g-700">{e.motif}</p>
-                      <p className="mt-0.5 text-[10.5px] text-g-500">
-                        {dateHeure(e.quand)} · durée {e.duree}
-                      </p>
-                      {e.actif && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="mt-1.5"
-                          onClick={() => revoquerElevation(e)}
-                        >
-                          Révoquer maintenant
-                        </Button>
-                      )}
+              <div className="space-y-2">
+                {elevations.items.map((e) => (
+                  <div
+                    key={e.id}
+                    className={cn(
+                      'rounded-[6px] border px-3 py-2.5',
+                      e.actif ? 'border-warn/40 bg-warn-bg' : 'border-g-300',
+                    )}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-[12.5px] font-semibold text-ink">
+                        <KeyRound size={12} className="shrink-0 text-g-500" />
+                        {e.qui}
+                      </span>
+                      <Badge tone={e.actif ? 'warn' : 'neutral'} dot={e.actif} size="sm">
+                        {e.actif ? 'Active' : 'Expirée'}
+                      </Badge>
                     </div>
-                  ))}
-                </div>
-              )}
+                    <p className="mt-0.5 text-[11.5px] text-g-700">{e.motif}</p>
+                    <p className="mt-0.5 text-[10.5px] text-g-500">
+                      {dateHeure(e.quand)} · durée {e.duree}
+                    </p>
+                    {e.actif && (
+                      <BoutonAction
+                        libelle="Révoquer maintenant"
+                        variant="ghost"
+                        className="mt-1.5"
+                        operation={{
+                          action: 'reseller.manage',
+                          ton: 'warn',
+                          titre: `Élévation de ${e.qui} révoquée`,
+                          detail:
+                            'L’accès est coupé immédiatement et la révocation apparaît dans l’audit de l’organisation, au même titre que l’élévation.',
+                          effet: () => elevations.modifier(e.id, { actif: false }),
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
             </Card>
 
             <Card className="border-err/30">
@@ -1328,17 +1083,38 @@ function FicheOrganisation({ org }: { org: Organisation }) {
                     autorise={autorise('reseller.manage')}
                     message={refus('reseller.manage')}
                   >
-                    <Button
-                      size="sm"
+                    <BoutonAction
+                      libelle="Ouvrir la procédure de clôture"
                       variant="danger"
                       className="mt-2"
-                      disabled={org.statut === 'fermee'}
-                      onClick={() => setCloture(true)}
-                    >
-                      {org.statut === 'fermee'
-                        ? 'Clôture déjà engagée'
-                        : 'Ouvrir la procédure de clôture'}
-                    </Button>
+                      operation={{
+                        action: 'reseller.manage',
+                        ton: 'err',
+                        titre: `Procédure de clôture ouverte pour ${org.nom}`,
+                        detail:
+                          '30 jours de récupération, 30 jours de conservation en lecture, puis effacement avec attestation. Rien n’est supprimé aujourd’hui.',
+                        job: {
+                          type: 'org.closure',
+                          label: `Clôture de ${org.nom}`,
+                          etapes: [
+                            'Notifier le client et son revendeur',
+                            'Ouvrir la fenêtre de récupération des données',
+                            'Geler les souscriptions à la prochaine échéance',
+                          ],
+                          dureeEtapeMs: 1100,
+                        },
+                      }}
+                      confirmation={{
+                        ressource: org.nom,
+                        titre: 'Ouvrir la procédure de clôture ?',
+                        pertes: [
+                          'Le client est notifié et le calendrier de réversibilité démarre',
+                          'Les souscriptions cessent d’être renouvelées',
+                          'Au terme des 60 jours, les données sont effacées avec attestation',
+                        ],
+                        libelleAction: 'Ouvrir la procédure',
+                      }}
+                    />
                   </GatedAction>
                 </div>
               </div>
@@ -1359,10 +1135,29 @@ function FicheOrganisation({ org }: { org: Organisation }) {
             </Button>
             <Button
               disabled={
-                demande.motif.trim().length < 12 ||
-                (demande.perimetre === 'intervention' && demande.ticket.trim() === '')
+                motifElevation.trim().length === 0 ||
+                (perimetreElevation === 'intervention' && ticketElevation.trim().length === 0)
               }
-              onClick={demanderElevation}
+              onClick={() => {
+                executer({
+                  action: 'reseller.manage',
+                  ton: 'warn',
+                  titre: 'Élévation demandée',
+                  detail: `Une entrée apparaît immédiatement dans le journal d’audit de ${org.nom}, avec votre nom et le motif.`,
+                  effet: () =>
+                    elevations.creer({
+                      id: elevations.identifiant('elv'),
+                      qui: EQUIPE_SYNELIA[0].nom,
+                      quand: MAINTENANT,
+                      duree: `${dureeElevation} h`,
+                      motif: `${ticketElevation.trim() ? `${ticketElevation.trim()} — ` : ''}${motifElevation.trim()}`,
+                      actif: true,
+                    }),
+                })
+                setMotifElevation('')
+                setTicketElevation('')
+                setElevation(false)
+              }}
             >
               Demander l’accès
             </Button>
@@ -1370,28 +1165,19 @@ function FicheOrganisation({ org }: { org: Organisation }) {
         }
       >
         <div className="space-y-4">
-          <Field
-            label="Motif"
-            required
-            hint="visible par le client dans son journal d’audit — soyez précis"
-            error={
-              demande.motif !== '' && demande.motif.trim().length < 12
-                ? 'Un motif d’un mot ne renseigne personne : douze caractères au minimum.'
-                : undefined
-            }
-          >
+          <Field label="Motif" hint="visible par le client dans son journal d’audit — soyez précis">
             <Textarea
               rows={3}
-              value={demande.motif}
-              onChange={(e) => setDemande((d) => ({ ...d, motif: e.target.value }))}
+              value={motifElevation}
+              onChange={(e) => setMotifElevation(e.target.value)}
               placeholder="Ticket SYN-8814 — diagnostic de la latence signalée sur app-metier, lecture des métriques et journaux de l’environnement de production."
             />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Durée" hint="l’accès expire automatiquement">
               <Select
-                value={demande.duree}
-                onChange={(e) => setDemande((d) => ({ ...d, duree: e.target.value }))}
+                value={dureeElevation}
+                onChange={(e) => setDureeElevation(e.target.value)}
               >
                 <option value="1">1 heure</option>
                 <option value="4">4 heures</option>
@@ -1400,8 +1186,8 @@ function FicheOrganisation({ org }: { org: Organisation }) {
             </Field>
             <Field label="Périmètre">
               <Select
-                value={demande.perimetre}
-                onChange={(e) => setDemande((d) => ({ ...d, perimetre: e.target.value }))}
+                value={perimetreElevation}
+                onChange={(e) => setPerimetreElevation(e.target.value)}
               >
                 <option value="lecture">Lecture seule des métadonnées et métriques</option>
                 <option value="logs">Lecture, journaux applicatifs inclus</option>
@@ -1412,18 +1198,17 @@ function FicheOrganisation({ org }: { org: Organisation }) {
           <Field
             label="Ticket associé"
             hint="obligatoire pour une intervention"
-            required={demande.perimetre === 'intervention'}
+            required={perimetreElevation === 'intervention'}
           >
             <Input
-              value={demande.ticket}
-              onChange={(e) => setDemande((d) => ({ ...d, ticket: e.target.value }))}
               placeholder="SYN-8814"
+              value={ticketElevation}
+              onChange={(e) => setTicketElevation(e.target.value)}
             />
           </Field>
           <Switch
-            checked={demande.perimetre === 'intervention' ? true : demande.notifier}
-            disabled={demande.perimetre === 'intervention'}
-            onChange={(v) => setDemande((d) => ({ ...d, notifier: v }))}
+            checked
+            disabled
             label="Notifier l’administrateur de l’organisation"
             description="Non désactivable pour une intervention. Un accès dont le client n’est pas averti n’est pas un accès légitime."
           />
@@ -1455,84 +1240,19 @@ function FicheOrganisation({ org }: { org: Organisation }) {
                 'La facturation reprend son cours normal',
               ]
         }
-        onConfirm={basculerStatut}
+        onConfirm={() => {
+          executer({
+            action: 'reseller.manage',
+            ton: org.statut === 'active' ? 'err' : 'ok',
+            titre: org.statut === 'active' ? `${org.nom} suspendue` : `${org.nom} réactivée`,
+            detail:
+              'L’opération est journalisée dans l’audit de l’organisation et dans celui de la plateforme.',
+            effet: () =>
+              orgs.modifier(org.id, { statut: org.statut === 'active' ? 'suspendue' : 'active' }),
+          })
+          setSuspension(false)
+        }}
       />
-
-      <ConfirmDialog
-        open={cloture}
-        onClose={() => setCloture(false)}
-        titre="Clôturer l’organisation"
-        ressource={org.nom}
-        libelleAction="Engager la clôture"
-        pertes={[
-          'Trente jours pour récupérer les données, en libre-service et sans frais de sortie',
-          'Trente jours supplémentaires de conservation en lecture seule',
-          'Puis effacement des ressources et des sauvegardes, avec attestation de destruction',
-          'La facturation s’arrête à la date d’engagement, au prorata',
-        ]}
-        onConfirm={cloturer}
-      />
-
-      <Modal
-        open={invitation}
-        onClose={() => setInvitation(false)}
-        title="Rétablir un administrateur"
-        description="Procédure de récupération — à n’ouvrir qu’après vérification d’identité auprès du signataire du contrat."
-        size="md"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setInvitation(false)}>
-              Annuler
-            </Button>
-            <Button
-              disabled={
-                nouveauMembre.nom.trim().length < 2 ||
-                !/.+@.+\..+/.test(nouveauMembre.email.trim())
-              }
-              onClick={retablirAdministrateur}
-            >
-              Envoyer l’invitation
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <Callout ton="warn" titre="Ce n’est pas une création de compte ordinaire">
-            Nous ne gérons pas les membres d’une organisation à sa place. Cette procédure existe pour
-            un seul cas : le client a perdu l’accès de son dernier administrateur et ne peut plus se
-            le rendre lui-même.
-          </Callout>
-          <Field label="Nom du bénéficiaire" required>
-            <Input
-              value={nouveauMembre.nom}
-              onChange={(e) => setNouveauMembre((m) => ({ ...m, nom: e.target.value }))}
-              placeholder="Nom figurant au contrat"
-              autoFocus
-            />
-          </Field>
-          <Field
-            label="Adresse électronique"
-            required
-            hint="doit appartenir au domaine de l’organisation"
-          >
-            <Input
-              type="email"
-              value={nouveauMembre.email}
-              onChange={(e) => setNouveauMembre((m) => ({ ...m, email: e.target.value }))}
-              placeholder={`admin@${org.domaine ?? 'entreprise.ci'}`}
-            />
-          </Field>
-          <KeyValueList
-            colonnes={1}
-            items={[
-              { cle: 'Rôle attribué', valeur: ROLE_LABEL.org_admin },
-              { cle: 'Deuxième facteur', valeur: 'Obligatoire dès la première connexion' },
-              { cle: 'Portée', valeur: 'Toute l’organisation' },
-              { cle: 'Trace', valeur: 'En tête du journal d’audit du client, à votre nom' },
-            ]}
-          />
-        </div>
-      </Modal>
     </div>
   )
 }

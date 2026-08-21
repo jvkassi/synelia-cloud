@@ -1,14 +1,17 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { AlertTriangle, ShieldCheck, ShoppingCart } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dateCourte, money } from '@/lib/format'
+import { MAINTENANT, dateCourte, money } from '@/lib/format'
 import {
   CERTIFICATS,
   OFFRES_CERTIFICAT,
   TYPE_CERTIFICAT_LABEL,
   joursAvant,
+  type Certificat,
+  type TypeCertificat,
 } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -17,12 +20,58 @@ import { Field, Input, Select } from '@/components/ui/field'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 export default function ListeCertificats() {
   const { autorise, refus } = useApp()
-  const payants = CERTIFICATS.filter((c) => c.prixAnnuel > 0)
-  const sansAuto = CERTIFICATS.filter((c) => !c.renouvellementAuto && c.etat === 'actif')
-  const proches = CERTIFICATS.filter((c) => joursAvant(c.expire) <= 30 && c.etat === 'actif')
+  const executer = useOperation()
+  const collection = useCollection<Certificat>('certificats', CERTIFICATS)
+  const [hote, setHote] = useState('')
+  const [typeCert, setTypeCert] = useState<TypeCertificat>('letsencrypt')
+  const payants = collection.items.filter((c) => c.prixAnnuel > 0)
+  const sansAuto = collection.items.filter((c) => !c.renouvellementAuto && c.etat === 'actif')
+  const proches = collection.items.filter((c) => joursAvant(c.expire) <= 30 && c.etat === 'actif')
+
+  /** Commande d'un certificat : émission puis pose sur l'hôte visé. */
+  const commander = (cible: string, type: TypeCertificat) => {
+    const offre = OFFRES_CERTIFICAT.find((o) => o.type === type)
+    const nouveau = collection.identifiant('cert')
+    executer({
+      action: 'service.admin',
+      titre: `Certificat pour ${cible} commandé`,
+      detail:
+        offre && offre.prix > 0
+          ? `${offre.nom} · ${money(offre.prix)} par an. La validation d’organisation demande des pièces justificatives.`
+          : 'Émission immédiate, renouvellement automatique compris.',
+      effet: () =>
+        collection.creer({
+          id: nouveau,
+          hote: cible,
+          type,
+          emetteur: type === 'letsencrypt' ? 'Let’s Encrypt' : 'Sectigo',
+          emisLe: MAINTENANT.slice(0, 10),
+          expire: type === 'letsencrypt' ? '2026-11-17' : '2027-08-19',
+          renouvellementAuto: true,
+          prixAnnuel: offre?.prix ?? 0,
+          etat: 'en_emission',
+          algorithme: 'ECDSA P-256',
+          validationDomaine: type === 'letsencrypt' ? 'http' : 'dns',
+        }),
+      job: {
+        type: 'certificat.order',
+        label: `Émission du certificat · ${cible}`,
+        etapes: [
+          'Vérifier le contrôle du domaine',
+          ...(offre && offre.prix > 0 ? ['Transmettre le dossier à l’autorité'] : []),
+          'Récupérer le certificat',
+          'Installer sur l’hôte',
+        ],
+        dureeEtapeMs: 1100,
+      },
+      effetFinal: () => collection.modifier(nouveau, { etat: 'actif' }),
+    })
+  }
 
   return (
     <div className="space-y-5">
@@ -35,9 +84,33 @@ export default function ListeCertificats() {
         titre="Certificats TLS"
         sousTitre="Let’s Encrypt est posé et renouvelé sans rien demander. Les certificats à validation d’organisation ou joker se commandent ici, et se posent sur les hôtes que vous désignez."
         actions={
-          <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-            <Button iconBefore={<ShoppingCart size={14} />}>Commander un certificat</Button>
-          </GatedAction>
+          <BoutonFormulaire
+            libelle="Commander un certificat"
+            size="md"
+            variant="primary"
+            icone={<ShoppingCart size={14} />}
+            action="service.admin"
+            titre="Commander un certificat TLS"
+            description="Le gratuit convient à presque tout. Les payants servent quand il faut une garantie financière, le nom de l’entreprise dans le certificat, ou tous les sous-domaines d’un coup."
+            champs={[
+              { id: 'hote', label: 'Hôte à couvrir', placeholder: 'boutique.dba.africa', obligatoire: true },
+              {
+                id: 'type',
+                label: 'Type',
+                type: 'select',
+                options: OFFRES_CERTIFICAT.map((o) => ({
+                  value: o.type,
+                  label: `${o.nom} — ${o.prix === 0 ? 'inclus' : `${money(o.prix)} / an`}`,
+                })),
+              },
+            ]}
+            valeursDepart={{ type: 'letsencrypt' }}
+            libelleValider="Commander"
+            operation={(v) => ({
+              titre: `Certificat pour ${v.hote} commandé`,
+              effet: () => commander(String(v.hote), v.type as TypeCertificat),
+            })}
+          />
         }
       />
 
@@ -72,12 +145,12 @@ export default function ListeCertificats() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
           libelle="Certificats actifs"
-          valeur={CERTIFICATS.filter((c) => c.etat === 'actif').length}
-          detail={`${CERTIFICATS.filter((c) => c.etat === 'en_emission').length} en émission`}
+          valeur={collection.items.filter((c) => c.etat === 'actif').length}
+          detail={`${collection.items.filter((c) => c.etat === 'en_emission').length} en émission`}
         />
         <StatTile
           libelle="Gratuits"
-          valeur={CERTIFICATS.filter((c) => c.prixAnnuel === 0).length}
+          valeur={collection.items.filter((c) => c.prixAnnuel === 0).length}
           detail="Let’s Encrypt"
           ton="ok"
         />
@@ -88,7 +161,7 @@ export default function ListeCertificats() {
         />
         <StatTile
           libelle="Échéance la plus proche"
-          valeur={`${Math.min(...CERTIFICATS.map((c) => joursAvant(c.expire)))} j`}
+          valeur={`${Math.min(...collection.items.map((c) => joursAvant(c.expire)))} j`}
           ton="warn"
         />
       </div>
@@ -114,7 +187,7 @@ export default function ListeCertificats() {
               </tr>
             </thead>
             <tbody>
-              {CERTIFICATS.map((c) => {
+              {collection.items.map((c) => {
                 const j = joursAvant(c.expire)
                 return (
                   <tr key={c.id} className="border-b border-g-100 last:border-0">
@@ -180,10 +253,17 @@ export default function ListeCertificats() {
         />
         <div className="flex flex-wrap items-end gap-2">
           <Field label="Hôte à couvrir" className="min-w-0 flex-1">
-            <Input placeholder="boutique.dba.africa" />
+            <Input
+              value={hote}
+              onChange={(e) => setHote(e.target.value)}
+              placeholder="boutique.dba.africa"
+            />
           </Field>
           <Field label="Type" className="w-56">
-            <Select defaultValue="letsencrypt">
+            <Select
+              value={typeCert}
+              onChange={(e) => setTypeCert(e.target.value as TypeCertificat)}
+            >
               {OFFRES_CERTIFICAT.map((o) => (
                 <option key={o.type} value={o.type}>
                   {o.nom} — {o.prix === 0 ? 'inclus' : `${money(o.prix)} / an`}
@@ -191,7 +271,9 @@ export default function ListeCertificats() {
               ))}
             </Select>
           </Field>
-          <Button>Vérifier et commander</Button>
+          <Button disabled={!hote.trim()} onClick={() => commander(hote.trim(), typeCert)}>
+            Vérifier et commander
+          </Button>
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">

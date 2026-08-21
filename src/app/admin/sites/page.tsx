@@ -4,15 +4,15 @@ import { useState } from 'react'
 import { Building, Cable, Fuel, Snowflake, Thermometer, Zap } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { dateCourte, num, pct } from '@/lib/format'
-import { DATACENTERS } from '@/lib/mock'
-import { BACKEND_LABEL, SITE_COURT, SITE_LABEL, type Site } from '@/lib/types'
+import { BACKENDS as BACKENDS_GRAINE, DATACENTERS } from '@/lib/mock'
+import { BACKEND_LABEL, SITE_COURT, SITE_LABEL, type Backend, type Site } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Tabs } from '@/components/ui/display'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { GrilleSparkCharts } from '@/components/business/observabilite'
-import { useAtelier } from '@/components/app/atelier'
+import { useCollection } from '@/components/app/atelier'
 
 const ONGLETS = [
   { id: 'sites', label: 'Sites physiques' },
@@ -74,12 +74,12 @@ const CARACTERISTIQUES: Record<
 }
 
 export default function Sites() {
-  const { backends } = useAtelier()
-  const [onglet, setOnglet] = useState('sites')
-
   // Un socle passé en maintenance depuis Capacité ou Santé doit se voir ici
   // aussi : les deux écrans parlent du même parc.
-  const BACKENDS = backends.liste
+  const parc = useCollection<Backend>('backends', BACKENDS_GRAINE)
+  const [onglet, setOnglet] = useState('sites')
+
+  const BACKENDS = parc.items
 
   return (
     <div className="space-y-5">

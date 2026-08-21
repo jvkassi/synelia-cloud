@@ -6,7 +6,8 @@ import { ArrowRightLeft, Globe, Search, Server, ShieldCheck } from 'lucide-react
 import { cn } from '@/lib/utils'
 import { dateCourte, money, num } from '@/lib/format'
 import { SITE_LABEL } from '@/lib/types'
-import { SITES_WEB, entreesWebCloud, joursAvant, sitesDeLHebergement } from '@/lib/mock'
+import { DOMAINES, SITES_WEB, entreesWebCloud, joursAvant, sitesDeLHebergement } from '@/lib/mock'
+import type { Domaine } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -14,6 +15,8 @@ import { Field, Input, Select } from '@/components/ui/field'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 /** Tarifs annuels indicatifs, en francs CFA. */
 const EXTENSIONS = [
@@ -27,8 +30,44 @@ const EXTENSIONS = [
 
 export default function PortefeuilleWebCloud() {
   const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const portefeuille = useCollection<Domaine>('domaines', DOMAINES)
   const [recherche, setRecherche] = useState('')
   const [extension, setExtension] = useState('.ci')
+  const [aTransferer, setATransferer] = useState('')
+
+  /** Un nom pris est un nom déjà dans le portefeuille : le reste est libre. */
+  const nomComplet = `${recherche.trim().toLowerCase()}${extension}`
+  const dejaPris = portefeuille.items.some((d) => d.nom === nomComplet)
+
+  const enregistrer = (nom: string, ext: string) =>
+    executer({
+      action: 'service.admin',
+      titre: `${nom} enregistré`,
+      detail: 'Le titulaire déclaré au registre est votre organisation, jamais Synelia.',
+      job: {
+        type: 'domaine.register',
+        label: `Enregistrement de ${nom}`,
+        etapes: [
+          'Vérifier la disponibilité au registre',
+          'Déposer le nom',
+          'Créer la zone DNS',
+          'Activer la protection WHOIS',
+        ],
+        dureeEtapeMs: 1100,
+      },
+      effetFinal: () =>
+        portefeuille.creer({
+          id: portefeuille.identifiant('dom'),
+          orgId: 'org-dba',
+          nom,
+          extension: ext,
+          expiration: '2027-08-19',
+          renouvellementAuto: true,
+          whoisProtege: true,
+          verrouTransfert: true,
+        }),
+    })
 
   const entrees = entreesWebCloud()
   const heberges = entrees.filter((e) => e.hebergement)
@@ -51,14 +90,96 @@ export default function PortefeuilleWebCloud() {
         sousTitre="Un domaine est attaché à un serveur et à un seul. Sur ce serveur vivent vos sites, vos bases, vos accès fichiers et vos services partagés — tout se règle depuis la fiche du domaine, dans le panneau de gauche."
         actions={
           <>
-            <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-              <Button iconBefore={<Globe size={14} />}>Enregistrer un domaine</Button>
-            </GatedAction>
-            <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-              <Button variant="secondary" iconBefore={<ArrowRightLeft size={14} />}>
-                Transférer
-              </Button>
-            </GatedAction>
+            <BoutonFormulaire
+              libelle="Enregistrer un domaine"
+              size="md"
+              variant="primary"
+              icone={<Globe size={14} />}
+              action="service.admin"
+              titre="Enregistrer un nom de domaine"
+              description="Le titulaire déclaré au registre est votre organisation. Vous pouvez demander le code de transfert à tout moment, sans justification."
+              champs={[
+                { id: 'nom', label: 'Nom recherché', placeholder: 'mon-entreprise', obligatoire: true },
+                {
+                  id: 'extension',
+                  label: 'Extension',
+                  type: 'select',
+                  options: EXTENSIONS.map((x) => ({ value: x.ext, label: `${x.ext} · ${money(x.prix)} / an` })),
+                },
+                { id: 'whois', label: 'Protection WHOIS', type: 'switch', placeholder: 'Activée' },
+                { id: 'auto', label: 'Renouvellement automatique', type: 'switch', placeholder: 'Activé' },
+              ]}
+              valeursDepart={{ extension: '.ci', whois: true, auto: true }}
+              libelleValider="Enregistrer"
+              operation={(v) => {
+                const nom = `${String(v.nom).trim().toLowerCase()}${v.extension}`
+                return {
+                  titre: `${nom} enregistré`,
+                  detail: `${money(EXTENSIONS.find((x) => x.ext === v.extension)?.prix ?? 9500)} par an, au prorata du mois en cours.`,
+                  job: {
+                    type: 'domaine.register',
+                    label: `Enregistrement de ${nom}`,
+                    etapes: [
+                      'Vérifier la disponibilité au registre',
+                      'Déposer le nom',
+                      'Créer la zone DNS',
+                      ...(v.whois ? ['Activer la protection WHOIS'] : []),
+                    ],
+                    dureeEtapeMs: 1100,
+                  },
+                  effetFinal: () =>
+                    portefeuille.creer({
+                      id: portefeuille.identifiant('dom'),
+                      orgId: 'org-dba',
+                      nom,
+                      extension: String(v.extension),
+                      expiration: '2027-08-19',
+                      renouvellementAuto: Boolean(v.auto),
+                      whoisProtege: Boolean(v.whois),
+                      verrouTransfert: true,
+                    }),
+                }
+              }}
+            />
+            <BoutonFormulaire
+              libelle="Transférer"
+              size="md"
+              icone={<ArrowRightLeft size={14} />}
+              action="service.admin"
+              titre="Transférer un domaine vers Synelia"
+              description="Nous copions la zone actuelle avant la bascule et vous la faites vérifier : votre site ne coupe pas."
+              champs={[
+                { id: 'domaine', label: 'Domaine à transférer', placeholder: 'mon-entreprise.ci', obligatoire: true },
+                { id: 'code', label: 'Code d’autorisation', placeholder: 'fourni par votre bureau d’enregistrement actuel', obligatoire: true },
+              ]}
+              libelleValider="Lancer le transfert"
+              operation={(v) => ({
+                ton: 'info',
+                titre: `Transfert de ${v.domaine} engagé`,
+                detail: 'Cinq à sept jours pour un .com, jusqu’à dix jours ouvrés pour un .ci : le registre impose son délai.',
+                job: {
+                  type: 'domaine.transfer',
+                  label: `Transfert de ${v.domaine}`,
+                  etapes: [
+                    'Vérifier le code d’autorisation',
+                    'Recopier la zone actuelle',
+                    'Demander le transfert au registre',
+                    'Attendre la confirmation du registre',
+                  ],
+                },
+                effetFinal: () =>
+                  portefeuille.creer({
+                    id: portefeuille.identifiant('dom'),
+                    orgId: 'org-dba',
+                    nom: String(v.domaine),
+                    extension: `.${String(v.domaine).split('.').pop()}`,
+                    expiration: '2027-08-19',
+                    renouvellementAuto: true,
+                    whoisProtege: true,
+                    verrouTransfert: true,
+                  }),
+              })}
+            />
           </>
         }
       />
@@ -223,7 +344,21 @@ export default function PortefeuilleWebCloud() {
                 ))}
               </Select>
             </Field>
-            <Button iconBefore={<Search size={14} />}>Vérifier</Button>
+            <Button
+              iconBefore={<Search size={14} />}
+              disabled={!recherche.trim()}
+              onClick={() =>
+                executer({
+                  ton: dejaPris ? 'warn' : 'ok',
+                  titre: dejaPris ? `${nomComplet} est déjà dans votre portefeuille` : `${nomComplet} est disponible`,
+                  detail: dejaPris
+                    ? 'Ouvrez sa fiche pour le gérer.'
+                    : `${money(EXTENSIONS.find((x) => x.ext === extension)?.prix ?? 9500)} par an — enregistrez-le depuis le bouton en haut de page.`,
+                })
+              }
+            >
+              Vérifier
+            </Button>
           </div>
 
           <ul className="mt-4 divide-y divide-g-100 border-t border-g-100 pt-1">
@@ -266,9 +401,23 @@ export default function PortefeuilleWebCloud() {
 
           <div className="mt-4 flex flex-wrap items-end gap-2 border-t border-g-100 pt-4">
             <Field label="Domaine à transférer" className="min-w-0 flex-1">
-              <Input placeholder="mon-entreprise.ci" />
+              <Input
+                value={aTransferer}
+                onChange={(e) => setATransferer(e.target.value)}
+                placeholder="mon-entreprise.ci"
+              />
             </Field>
-            <Button variant="secondary">Vérifier l’éligibilité</Button>
+            <BoutonAction
+              libelle="Vérifier l’éligibilité"
+              size="md"
+              desactive={!aTransferer.trim()}
+              operation={{
+                ton: 'info',
+                titre: `${aTransferer} est transférable`,
+                detail:
+                  'Le domaine a plus de 60 jours et n’est pas verrouillé. Il vous reste à fournir le code d’autorisation.',
+              }}
+            />
           </div>
 
           <Callout ton="info" className="mt-3" titre="Durée réelle">

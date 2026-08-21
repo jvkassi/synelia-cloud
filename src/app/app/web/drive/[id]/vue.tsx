@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { ExternalLink, Plus, Share2, Trash2 } from 'lucide-react'
 import { money, relatif } from '@/lib/format'
-import { USERS, driveById } from '@/lib/mock'
+import { DRIVES, USERS, type DriveDomaine } from '@/lib/mock'
 import { configurationDuService } from '@/lib/configurations'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink, IconButton } from '@/components/ui/button'
@@ -14,6 +14,8 @@ import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { ConfigurationServicePanel } from '@/components/business/configuration-service'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'sieges', label: 'Sièges' },
@@ -24,14 +26,18 @@ const ONGLETS = [
 
 export function VueDrive({ id }: { id: string }) {
   const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const drives = useCollection<DriveDomaine>('drives', DRIVES)
   const [onglet, setOnglet] = useState('sieges')
   const [externe, setExterne] = useState(true)
   const [motDePasse, setMotDePasse] = useState(true)
+  /** Sièges retirés dans la session : le jeu de données n'a pas de table. */
+  const [retires, setRetires] = useState<string[]>([])
 
-  const d = driveById(id)
+  const d = drives.items.find((x) => x.id === id)
   if (!d) return null
   const config = configurationDuService('drive-pro')
-  const titulaires = USERS.slice(0, d.sieges.attribues)
+  const titulaires = USERS.slice(0, d.sieges.attribues).filter((u) => !retires.includes(u.id))
 
   return (
     <div className="space-y-5">
@@ -57,9 +63,42 @@ export function VueDrive({ id }: { id: string }) {
           d.actif ? (
             <>
               <GatedAction autorise={autorise('seat.assign')} message={refus('seat.assign')}>
-                <Button variant="secondary" iconBefore={<Plus size={14} />}>
-                  Attribuer un siège
-                </Button>
+                <BoutonFormulaire
+                  libelle="Attribuer un siège"
+                  size="md"
+                  icone={<Plus size={14} />}
+                  action="seat.assign"
+                  titre="Attribuer un siège de drive"
+                  description="Un siège attribué est facturé, qu’il soit utilisé ou non. Le titulaire accède au drive en SSO, sans mot de passe supplémentaire."
+                  champs={[
+                    {
+                      id: 'membre',
+                      label: 'Membre',
+                      type: 'select',
+                      options: USERS.slice(0, 12).map((u) => ({ value: u.id, label: `${u.nom} · ${u.email}` })),
+                    },
+                  ]}
+                  libelleValider="Attribuer"
+                  operation={(v) => {
+                    const membre = USERS.find((u) => u.id === v.membre)
+                    return {
+                      titre: `Siège attribué à ${membre?.nom ?? ''}`,
+                      detail:
+                        d.sieges.attribues + 1 > d.sieges.souscrits
+                          ? 'Un siège supplémentaire est souscrit automatiquement, facturé au prorata.'
+                          : `${d.sieges.attribues + 1} sièges attribués sur ${d.sieges.souscrits} souscrits.`,
+                      effet: () => {
+                        setRetires((prev) => prev.filter((x) => x !== v.membre))
+                        drives.modifier(d.id, (x) => ({
+                          sieges: {
+                            attribues: x.sieges.attribues + 1,
+                            souscrits: Math.max(x.sieges.souscrits, x.sieges.attribues + 1),
+                          },
+                        }))
+                      },
+                    }
+                  }}
+                />
               </GatedAction>
               <ButtonLink
                 href={`https://${d.hote}`}
@@ -71,7 +110,28 @@ export function VueDrive({ id }: { id: string }) {
             </>
           ) : (
             <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-              <Button iconBefore={<Plus size={14} />}>Activer le drive</Button>
+              <BoutonAction
+                libelle="Activer le drive"
+                variant="primary"
+                size="md"
+                icone={<Plus size={14} />}
+                operation={{
+                  action: 'service.admin',
+                  titre: `Drive de ${d.domaine} en cours d’activation`,
+                  detail: `${money(d.prixSiege)} par siège et par mois.`,
+                  job: {
+                    type: 'drive.activate',
+                    label: `Activation du drive · ${d.domaine}`,
+                    etapes: [
+                      'Créer l’instance',
+                      `Poser le certificat sur ${d.hote}`,
+                      'Déclarer le client SSO',
+                      'Appliquer le plan de sauvegarde',
+                    ],
+                  },
+                  effetFinal: () => drives.modifier(d.id, { actif: true }),
+                }}
+              />
             </GatedAction>
           )
         }
@@ -140,7 +200,28 @@ export function VueDrive({ id }: { id: string }) {
                           {(((d.quota.utiliseGo / Math.max(1, titulaires.length)) * (1 + (i % 3) * 0.4)) / 1).toFixed(0)} Go
                         </span>
                         <GatedAction autorise={autorise('seat.assign')} message={refus('seat.assign')}>
-                          <IconButton label={`Retirer le siège de ${u.nom}`} size="sm">
+                          <IconButton
+                            label={`Retirer le siège de ${u.nom}`}
+                            size="sm"
+                            onClick={() =>
+                              executer({
+                                action: 'seat.assign',
+                                ton: 'warn',
+                                titre: `Siège de ${u.nom} retiré`,
+                                detail:
+                                  'Ses fichiers personnels restent trente jours avant suppression ; les fichiers partagés restent au groupe.',
+                                effet: () => {
+                                  setRetires((prev) => [...prev, u.id])
+                                  drives.modifier(d.id, (x) => ({
+                                    sieges: {
+                                      ...x.sieges,
+                                      attribues: Math.max(0, x.sieges.attribues - 1),
+                                    },
+                                  }))
+                                },
+                              })
+                            }
+                          >
                             <Trash2 size={13} className="text-err" />
                           </IconButton>
                         </GatedAction>
@@ -154,7 +235,20 @@ export function VueDrive({ id }: { id: string }) {
                 <CardHeader titre="Dimensionnement" />
                 <div className="space-y-3">
                   <Field label="Sièges souscrits" hint="modifiable à chaud, facturé au prorata">
-                    <Select defaultValue={String(d.sieges.souscrits)}>
+                    <Select
+                      value={String(d.sieges.souscrits)}
+                      onChange={(e) =>
+                        executer({
+                          action: 'seat.assign',
+                          titre: `${e.target.value} sièges souscrits`,
+                          detail: 'Modification à chaud, facturée au prorata du mois en cours.',
+                          effet: () =>
+                            drives.modifier(d.id, (x) => ({
+                              sieges: { ...x.sieges, souscrits: Number(e.target.value) },
+                            })),
+                        })
+                      }
+                    >
                       {[10, 20, 50, 100].map((n) => (
                         <option key={n} value={n}>
                           {n} sièges

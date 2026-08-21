@@ -4,8 +4,13 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { CheckCircle2, Clock, Paperclip, Send, Shield } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
-import { dateHeure, dureeMin, relatif } from '@/lib/format'
-import { EVENEMENTS_SUPERVISION, LOGS_EXECUTION, TICKETS } from '@/lib/mock'
+import { MAINTENANT, dateHeure, dureeMin, relatif } from '@/lib/format'
+import {
+  EVENEMENTS_SUPERVISION,
+  LOGS_EXECUTION,
+  TICKETS,
+  UTILISATEUR_COURANT,
+} from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Avatar, Tabs } from '@/components/ui/display'
@@ -14,7 +19,8 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { Timeline } from '@/components/composition/flow'
 import { EventList, GrilleSparkCharts, LogPeek } from '@/components/business/observabilite'
-import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, useOperation } from '@/components/app/actions'
 import type { Ticket } from '@/lib/types'
 
 const LIBELLE_STATUT: Record<Ticket['statut'], string> = {
@@ -54,11 +60,14 @@ const ONGLETS = [
 ]
 
 export function VueTicket({ id }: { id: string }) {
-  const { pousser } = useApp()
+  const executer = useOperation()
+  const tickets = useCollection<Ticket>('tickets', TICKETS)
   const [onglet, setOnglet] = useState('echanges')
   const [reponse, setReponse] = useState('')
+  const [lectureContexte, setLectureContexte] = useState(true)
+  const [interventionAutorisee, setInterventionAutorisee] = useState(false)
 
-  const t = TICKETS.find((x) => x.id === id)!
+  const t = tickets.items.find((x) => x.id === id)!
   const ouvert = !['resolu', 'ferme'].includes(t.statut)
 
   const premiereReponse = t.messages.find((m) => m.role === 'synelia')
@@ -99,19 +108,39 @@ export function VueTicket({ id }: { id: string }) {
               <Button
                 variant="secondary"
                 onClick={() =>
-                  pousser({
-                    ton: 'ok',
+                  executer({
                     titre: 'Ticket marqué comme résolu',
                     detail: 'Il reste consultable et peut être réouvert pendant sept jours.',
+                    effet: () => tickets.modifier(t.id, { statut: 'resolu', slaRestantMin: undefined }),
                   })
                 }
               >
                 Marquer comme résolu
               </Button>
-              <Button variant="ghost">Demander une escalade</Button>
+              <BoutonAction
+                libelle="Demander une escalade"
+                variant="ghost"
+                size="md"
+                operation={{
+                  ton: 'warn',
+                  titre: 'Escalade demandée',
+                  detail:
+                    'Le responsable d’astreinte est notifié et reprend le ticket. L’engagement de résolution ne change pas : c’est le niveau d’attention qui change.',
+                  effet: () => tickets.modifier(t.id, { statut: 'en_cours' }),
+                }}
+              />
             </>
           ) : (
-            <Button variant="secondary">Réouvrir le ticket</Button>
+            <BoutonAction
+              libelle="Réouvrir le ticket"
+              size="md"
+              operation={{
+                ton: 'info',
+                titre: `Ticket ${t.numero} réouvert`,
+                detail: 'L’équipe qui l’avait traité est notifiée en priorité.',
+                effet: () => tickets.modifier(t.id, { statut: 'ouvert' }),
+              }}
+            />
           )
         }
       />
@@ -235,21 +264,46 @@ export function VueTicket({ id }: { id: string }) {
                 />
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <Button size="sm" variant="ghost" iconBefore={<Paperclip size={12} />}>
-                      Joindre un fichier
-                    </Button>
-                    <Button size="sm" variant="ghost">
-                      Joindre les journaux récents
-                    </Button>
+                    <BoutonAction
+                      libelle="Joindre un fichier"
+                      variant="ghost"
+                      icone={<Paperclip size={12} />}
+                      operation={{
+                        ton: 'info',
+                        titre: 'Pièce jointe ajoutée à la réponse',
+                        detail: 'Captures, extraits de journaux et traces sont acceptés jusqu’à 25 Mo.',
+                      }}
+                    />
+                    <BoutonAction
+                      libelle="Joindre les journaux récents"
+                      variant="ghost"
+                      operation={{
+                        ton: 'info',
+                        titre: 'Journaux joints',
+                        detail: `Vingt dernières lignes des ressources liées${t.ressourcesLiees.length ? ` (${t.ressourcesLiees.join(', ')})` : ''}, plus les métriques des deux dernières heures.`,
+                      }}
+                    />
                   </div>
                   <Button
                     iconBefore={<Send size={13} />}
                     disabled={reponse.trim().length === 0}
                     onClick={() => {
-                      pousser({
-                        ton: 'ok',
+                      executer({
                         titre: 'Réponse envoyée',
                         detail: `L’équipe est notifiée. Engagement de réponse : ${dureeMin(t.slaCible.premiereReponseMin)}.`,
+                        effet: () =>
+                          tickets.modifier(t.id, (x) => ({
+                            statut: 'en_cours',
+                            messages: [
+                              ...x.messages,
+                              {
+                                auteur: UTILISATEUR_COURANT.nom,
+                                role: 'client' as const,
+                                date: MAINTENANT,
+                                contenu: reponse,
+                              },
+                            ],
+                          })),
                       })
                       setReponse('')
                     }}
@@ -328,12 +382,36 @@ export function VueTicket({ id }: { id: string }) {
               <CardHeader titre="Accès de nos équipes" sousTitre="Ce que le support peut voir et faire." />
               <div className="space-y-3">
                 <Switch
-                  checked
+                  checked={lectureContexte}
+                  onChange={(v) =>
+                    executer({
+                      ton: v ? 'ok' : 'warn',
+                      titre: v
+                        ? 'Lecture du contexte technique autorisée'
+                        : 'Lecture du contexte technique retirée',
+                      detail: v
+                        ? undefined
+                        : 'Sans ce contexte, le diagnostic prendra plus longtemps : il faudra vous demander chaque élément.',
+                      effet: () => setLectureContexte(v),
+                    })
+                  }
                   label="Lecture du contexte technique"
                   description="Métriques, journaux, emplacement d’exécution, historique des déploiements des ressources liées à ce ticket."
                 />
                 <Switch
-                  checked={false}
+                  checked={interventionAutorisee}
+                  onChange={(v) =>
+                    executer({
+                      ton: v ? 'warn' : 'info',
+                      titre: v
+                        ? 'Intervention autorisée pour 4 heures'
+                        : 'Autorisation d’intervention retirée',
+                      detail: v
+                        ? 'Accès nominatif, limité à 4 heures, chaque action journalisée dans votre audit.'
+                        : undefined,
+                      effet: () => setInterventionAutorisee(v),
+                    })
+                  }
                   label="Autoriser une intervention sur mes ressources"
                   description="À n’accorder que si nous vous le demandons. L’accès est nominatif, limité à 4 heures, et chaque action est journalisée dans votre audit."
                 />

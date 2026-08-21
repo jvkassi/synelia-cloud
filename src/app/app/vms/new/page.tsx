@@ -5,7 +5,8 @@ import { useMemo, useState } from 'react'
 import { Copy, Layers, Plus, Server, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money, num } from '@/lib/format'
-import { BACKUP_PLANS, ESPACES, SECURITY_GROUPS, PUBLIC_IPS, LOAD_BALANCERS } from '@/lib/mock'
+import { BACKUP_PLANS, ESPACES, SECURITY_GROUPS, PUBLIC_IPS, LOAD_BALANCERS, VMS } from '@/lib/mock'
+import type { EspaceCloud, VM } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, IconButton } from '@/components/ui/button'
 import {
@@ -21,6 +22,7 @@ import {
 import { Card, CardHeader, Callout, KeyValueList } from '@/components/composition/card'
 import { CostPreview, WizardShell } from '@/components/composition/flow'
 import { useApp, useEspace } from '@/components/app/contexte'
+import { useAtelier, useCollection } from '@/components/app/atelier'
 
 const ETAPES = [
   { numero: 1, titre: 'Mode' },
@@ -90,6 +92,9 @@ export default function NouvellesVms() {
   const router = useRouter()
   const { pousser } = useApp()
   const espaceCourant = useEspace()
+  const parc = useCollection<VM>('vms', VMS)
+  const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
+  const { lancerJob } = useAtelier()
 
   const [etape, setEtape] = useState(1)
   const [mode, setMode] = useState<'identique' | 'differencie'>('identique')
@@ -125,7 +130,7 @@ export default function NouvellesVms() {
   const images = sourceImage === 'synelia' ? IMAGES_SYNELIA : IMAGES_PRIVEES
   const imageChoisie = [...IMAGES_SYNELIA, ...IMAGES_PRIVEES].find((i) => i.id === image)
   const flavorChoisi = FLAVORS.find((f) => f.id === flavor)!
-  const espace = ESPACES.find((e) => e.id === espaceId)!
+  const espace = espaces.items.find((e) => e.id === espaceId)!
 
   const machinesACreer = useMemo(() => {
     if (mode === 'differencie') {
@@ -197,6 +202,82 @@ export default function NouvellesVms() {
 
   const peutContinuer = etape === 6 ? conditions && quotaSuffisant : true
 
+  /**
+   * Les machines apparaissent tout de suite dans la liste, à l'état
+   * « creating » : c'est ce que fait un orchestrateur, et cela donne au job
+   * du centre de tâches quelque chose à faire basculer en fin de course.
+   */
+  const creerLeLot = () => {
+    const octet = parc.items.length + 11
+    const nouvelles: VM[] = machinesACreer.map((m, i) => ({
+      id: parc.identifiant('vm'),
+      espaceId: espace.id,
+      nom: m.nom,
+      os: [...IMAGES_SYNELIA, ...IMAGES_PRIVEES].find((img) => img.id === m.image)?.nom ?? m.image,
+      vcpu: m.vcpu,
+      ramGo: m.ram,
+      diskGo: m.disk,
+      flavor: personnalise ? 'personnalisé' : flavor,
+      ips: [
+        { adresse: `10.0.1.${octet + i}`, type: 'privee' as const },
+        ...(ipPublique
+          ? [{ adresse: `102.176.20.${octet + i}`, type: 'publique' as const }]
+          : []),
+      ],
+      statut: 'creating',
+      hardware: {
+        scsiControllers: 1,
+        nics: 1,
+        usb: false,
+        secureBoot: true,
+        videoMo: 16,
+        vtpm: true,
+      },
+      backupPlanId: planSauvegarde || undefined,
+      site: espace.site,
+      tags: [prefixe.split('-')[0]].filter(Boolean),
+    }))
+
+    parc.creer(nouvelles)
+    espaces.modifier(espace.id, (e) => ({
+      usage: {
+        ...e.usage,
+        vcpu: e.usage.vcpu + totalVcpu,
+        ramGo: e.usage.ramGo + totalRam,
+      },
+    }))
+
+    pousser({
+      ton: 'info',
+      titre: `Création de ${nouvelles.length} machine${nouvelles.length > 1 ? 's' : ''} lancée`,
+      detail: 'Le quota est réservé. Suivi dans le centre de tâches.',
+    })
+
+    lancerJob({
+      type: 'vm.create',
+      label: `Création de ${nouvelles.length} machine${nouvelles.length > 1 ? 's' : ''} · ${espace.code}`,
+      etapes: [
+        'Réserver le quota de l’espace',
+        'Cloner l’image et provisionner les disques',
+        'Rattacher le réseau et les groupes de sécurité',
+        'Appliquer cloud-init',
+        ...(planSauvegarde ? ['Appliquer le plan de sauvegarde'] : []),
+        'Enregistrer les sondes de supervision',
+      ],
+      alFin: () => {
+        parc.modifierPlusieurs(
+          nouvelles.map((v) => v.id),
+          { statut: 'running', derniereSauvegarde: undefined },
+        )
+        pousser({
+          ton: 'ok',
+          titre: `${nouvelles.length} machine${nouvelles.length > 1 ? 's' : ''} en marche`,
+          detail: nouvelles.map((v) => v.nom).join(', '),
+        })
+      },
+    })
+  }
+
   return (
     <WizardShell
       etapes={ETAPES}
@@ -249,11 +330,7 @@ export default function NouvellesVms() {
             <Button
               disabled={!peutContinuer}
               onClick={() => {
-                pousser({
-                  ton: 'info',
-                  titre: `Création de ${machinesACreer.length} machine(s) lancée`,
-                  detail: 'Le quota est réservé. Suivi dans le centre de tâches.',
-                })
+                creerLeLot()
                 router.push('/app/vms')
               }}
             >

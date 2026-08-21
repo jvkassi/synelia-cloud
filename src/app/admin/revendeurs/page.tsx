@@ -2,20 +2,21 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Handshake, Palette, Pause, Play, Plus, TrendingUp } from 'lucide-react'
-import { slugify, surfaceMarque } from '@/lib/utils'
-import { money, pct } from '@/lib/format'
-import { MODELE_PARTENAIRE, OFFRES } from '@/lib/mock'
+import { Handshake, Palette, Plus, TrendingUp } from 'lucide-react'
+import { cn, surfaceMarque } from '@/lib/utils'
+import { money, num, pct } from '@/lib/format'
+import { MODELE_PARTENAIRE, ORGANISATIONS, RELEVES_REVSHARE, RESELLERS } from '@/lib/mock'
+import type { Reseller } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
 import { Field, Input, Select, Switch } from '@/components/ui/field'
-import { ConfirmDialog, Modal } from '@/components/ui/overlay'
+import { Modal } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
-import { useActe, useAtelier } from '@/components/app/atelier'
-import type { Reseller } from '@/lib/types'
+import { useCollection } from '@/components/app/atelier'
+import { useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'partenaires', label: 'Partenaires' },
@@ -23,145 +24,68 @@ const ONGLETS = [
   { id: 'regles', label: 'Règles de conduite' },
 ]
 
-const FORMULAIRE_VIDE = {
-  nom: '',
-  niveau: 'Revendeur',
-  revsharePct: 22,
-  domaine: '',
-  primary: '#1B3A5C',
-  accent: '#E8952B',
-  contact: '',
-  catalogueTechnique: true,
-  releveDetaille: true,
-  facturationDirecte: false,
-}
-
 export default function Revendeurs() {
   const { autorise, refus } = useApp()
-  const { revendeurs, organisations, revshare } = useAtelier()
-  const acte = useActe()
-
+  const partenaires = useCollection<Reseller>('revendeurs', RESELLERS)
+  const executer = useOperation()
   const [onglet, setOnglet] = useState('partenaires')
   const [creation, setCreation] = useState(false)
-  const [form, setForm] = useState(FORMULAIRE_VIDE)
-  const [retrait, setRetrait] = useState<Reseller | null>(null)
-
-  const liste = revendeurs.liste
-  const caTotal = liste.reduce((a, r) => a + r.caGenere, 0)
-  const margeTotal = liste.reduce((a, r) => a + r.marge, 0)
-  const clientsTotal = liste.reduce((a, r) => a + r.clientsFinaux.length, 0)
-  const revshareDu = revshare.liste
-    .filter((r) => r.statut !== 'réglé')
-    .reduce((a, r) => a + r.montant, 0)
-
-  const modifierForm = <C extends keyof typeof FORMULAIRE_VIDE>(
-    champ: C,
-    valeur: (typeof FORMULAIRE_VIDE)[C],
-  ) => setForm((f) => ({ ...f, [champ]: valeur }))
-
-  const nomValide = form.nom.trim().length >= 2
-  const domaineValide = /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(form.domaine.trim())
-  const contactValide = /.+@.+\..+/.test(form.contact.trim())
-  const formValide = nomValide && domaineValide && contactValide
+  const [nom, setNom] = useState('')
+  const [niveau, setNiveau] = useState('revendeur')
+  const [revsharePct, setRevsharePct] = useState(22)
+  const [domaine, setDomaine] = useState('')
+  const [primary, setPrimary] = useState('#1B3A5C')
+  const [accent, setAccent] = useState('#E8952B')
+  const [contact, setContact] = useState('')
+  const [catalogueComplet, setCatalogueComplet] = useState(true)
+  const [releveDetaille, setReleveDetaille] = useState(true)
+  const [facturationDirecte, setFacturationDirecte] = useState(false)
 
   const agreer = () => {
-    const nom = form.nom.trim()
-    const base = slugify(nom).slice(0, 20) || 'partenaire'
-    let idOrg = `org-${base}`
-    let n = 2
-    while (organisations.parId(idOrg)) {
-      idOrg = `org-${base}-${n}`
-      n += 1
-    }
-    const idRevendeur = `res-${idOrg.slice(4)}`
-    const partenaire: Reseller = {
-      id: idRevendeur,
-      orgId: idOrg,
-      nom,
-      theme: {
-        logoUrl: `/logos/${base}.svg`,
-        primary: form.primary,
-        accent: form.accent,
-        domaine: form.domaine.trim().toLowerCase(),
+    executer({
+      action: 'reseller.manage',
+      titre: `${nom.trim()} agréé`,
+      detail:
+        'Le portail sous sa marque est provisionné et son organisation revendeur est créée. Le contact administratif reçoit son invitation.',
+      job: {
+        type: 'reseller.onboard',
+        label: `Agrément · ${nom.trim()}`,
+        etapes: [
+          'Création de l’organisation revendeur',
+          'Application de la grille d’achat',
+          'Provisionnement du portail thématisé',
+          domaine ? `Émission du certificat pour ${domaine}` : 'Émission du certificat du portail',
+          'Invitation du contact administratif',
+        ],
       },
-      // Grille d'achat amorcée sur les offres publiées, à la remise du niveau
-      // choisi : un partenaire agréé sans grille ne peut rien vendre.
-      grille: OFFRES.filter((o) => o.statut === 'publiee' && !o.surDevis).map((o) => ({
-        offerId: o.id,
-        prixAchat: o.prix.revendeur,
-        prixVente: o.prix.direct,
-      })),
-      catalogue: form.catalogueTechnique ? ['drive-pro', 'email-pro', 'visio'] : [],
-      revsharePct: form.revsharePct,
-      clientsFinaux: [],
-      caGenere: 0,
-      marge: 0,
-      statut: 'onboarding',
-    }
-
-    acte({
-      faire: () => {
-        revendeurs.ajouter(partenaire)
-        organisations.ajouter({
-          id: idOrg,
-          nom,
-          pays: 'Côte d’Ivoire',
-          secteur: 'Partenaire revendeur',
-          type: 'revendeur',
-          statut: 'active',
-          createdAt: '2026-08-19',
-          espaces: 0,
-          utilisateurs: 1,
-          caMensuel: 0,
-          consommationVcpu: 0,
-          tenantPlan: 'Partenaire',
-          domaine: form.domaine.trim().toLowerCase(),
-        })
-      },
-      titre: `${nom} agréé`,
-      detail: `Portail servi sur ${form.domaine.trim().toLowerCase()}, grille d’achat amorcée sur ${partenaire.grille.length} offres, invitation envoyée à ${form.contact.trim()}. L’agrément reste en phase d’intégration jusqu’à la première certification.`,
-      action: 'reseller.create',
-      cible: idRevendeur,
-      orgId: idOrg,
-      orgNom: nom,
+      effet: () =>
+        partenaires.creer({
+          id: partenaires.identifiant('res'),
+          orgId: partenaires.identifiant('org'),
+          nom: nom.trim(),
+          theme: { logoUrl: '', primary, accent, domaine: domaine || 'portail.partenaire.ci' },
+          grille: [],
+          catalogue: catalogueComplet ? ['*'] : [],
+          revsharePct,
+          clientsFinaux: [],
+          caGenere: 0,
+          marge: 0,
+          statut: 'onboarding',
+        }),
     })
-    setForm(FORMULAIRE_VIDE)
+    setNom('')
+    setDomaine('')
+    setContact('')
     setCreation(false)
   }
 
-  const basculerAgrement = (r: Reseller) => {
-    const suspendre = r.statut !== 'suspendu'
-    acte({
-      faire: () => revendeurs.modifier(r.id, { statut: suspendre ? 'suspendu' : 'actif' }),
-      ton: suspendre ? 'warn' : 'ok',
-      titre: suspendre ? `Agrément de ${r.nom} suspendu` : `Agrément de ${r.nom} rétabli`,
-      detail: suspendre
-        ? 'Il ne peut plus souscrire de nouvelle offre. Ses clients finaux continuent d’être servis normalement — une suspension d’agrément ne se répercute jamais sur eux.'
-        : 'Il peut de nouveau souscrire. Sa grille d’achat est celle qui était garantie avant la suspension.',
-      action: suspendre ? 'reseller.suspend' : 'reseller.reactivate',
-      cible: r.id,
-      orgNom: r.nom,
-    })
-  }
-
-  const retirerAgrement = (r: Reseller) => {
-    acte({
-      faire: () => {
-        revendeurs.supprimer(r.id)
-        organisations.modifier(r.orgId, { statut: 'fermee' })
-        r.clientsFinaux.forEach((idClient) =>
-          organisations.modifier(idClient, { type: 'direct', resellerId: undefined }),
-        )
-      },
-      ton: 'warn',
-      titre: `Agrément de ${r.nom} retiré`,
-      detail: `${r.clientsFinaux.length} client${r.clientsFinaux.length > 1 ? 's' : ''} final${r.clientsFinaux.length > 1 ? 'aux' : ''} basculé${r.clientsFinaux.length > 1 ? 's' : ''} en direct, sans rupture de service. Chacun reste libre de choisir un autre partenaire.`,
-      action: 'reseller.delete',
-      cible: r.id,
-      orgNom: r.nom,
-    })
-    setRetrait(null)
-  }
+  const caTotal = partenaires.items.reduce((a, r) => a + r.caGenere, 0)
+  const margeTotal = partenaires.items.reduce((a, r) => a + r.marge, 0)
+  const clientsTotal = partenaires.items.reduce((a, r) => a + r.clientsFinaux.length, 0)
+  const revshareDu = RELEVES_REVSHARE.filter((r) => r.statut !== 'réglé').reduce(
+    (a, r) => a + r.montant,
+    0,
+  )
 
   return (
     <div className="space-y-5">
@@ -178,7 +102,7 @@ export default function Revendeurs() {
         meta={
           <>
             <Badge tone="neutral" size="sm">
-              {liste.length} partenaires agréés
+              {partenaires.items.length} partenaires agréés
             </Badge>
             <Badge tone="neutral" size="sm">
               {clientsTotal} clients finaux
@@ -193,11 +117,11 @@ export default function Revendeurs() {
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatTile libelle="Partenaires agréés" valeur={liste.length} ton="ok" />
+        <StatTile libelle="Partenaires agréés" valeur={partenaires.items.length} ton="ok" />
         <StatTile
           libelle="Clients finaux"
           valeur={clientsTotal}
-          detail={`sur ${organisations.liste.length} organisations`}
+          detail={`sur ${ORGANISATIONS.length} organisations`}
         />
         <StatTile
           libelle="Chiffre d’affaires apporté"
@@ -223,17 +147,9 @@ export default function Revendeurs() {
 
       {onglet === 'partenaires' && (
         <div className="space-y-4">
-          {liste.length === 0 && (
-            <Card>
-              <p className="rounded-[8px] border border-dashed border-g-300 px-4 py-10 text-center text-[12.5px] text-g-500">
-                Aucun partenaire agréé. Un revendeur porte la relation commerciale et le premier
-                niveau de support : c’est ce qui permet de couvrir un pays sans y ouvrir de bureau.
-              </p>
-            </Card>
-          )}
-          {liste.map((r) => {
-            const clients = organisations.liste.filter((o) => r.clientsFinaux.includes(o.id))
-            const releves = revshare.liste.filter((x) => x.reseller === r.nom)
+          {partenaires.items.map((r) => {
+            const clients = ORGANISATIONS.filter((o) => r.clientsFinaux.includes(o.id))
+            const releves = RELEVES_REVSHARE.filter((x) => x.reseller === r.nom)
             return (
               <Card key={r.id}>
                 <CardHeader
@@ -254,57 +170,12 @@ export default function Revendeurs() {
                   sousTitre={`${clients.length} clients finaux · ${r.catalogue.length} offres au catalogue · partage de ${r.revsharePct} %`}
                   actions={
                     <span className="flex flex-wrap items-center gap-1.5">
-                      <Badge
-                        tone={
-                          r.statut === 'actif'
-                            ? 'ok'
-                            : r.statut === 'onboarding'
-                              ? 'info'
-                              : 'warn'
-                        }
-                        dot
-                        size="sm"
-                      >
-                        {r.statut === 'actif'
-                          ? 'Agrément actif'
-                          : r.statut === 'onboarding'
-                            ? 'En intégration'
-                            : 'Agrément suspendu'}
-                      </Badge>
                       <Badge tone="accent" size="sm">
                         {pct(r.revsharePct)} de partage
                       </Badge>
                       <ButtonLink size="sm" variant="secondary" href={`/admin/revendeurs/${r.id}`}>
                         Ouvrir la fiche
                       </ButtonLink>
-                      <GatedAction
-                        autorise={autorise('reseller.manage')}
-                        message={refus('reseller.manage')}
-                      >
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          iconBefore={
-                            r.statut === 'suspendu' ? <Play size={12} /> : <Pause size={12} />
-                          }
-                          onClick={() => basculerAgrement(r)}
-                        >
-                          {r.statut === 'suspendu' ? 'Rétablir' : 'Suspendre'}
-                        </Button>
-                      </GatedAction>
-                      <GatedAction
-                        autorise={autorise('reseller.manage')}
-                        message={refus('reseller.manage')}
-                      >
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-err hover:bg-err-bg"
-                          onClick={() => setRetrait(r)}
-                        >
-                          Retirer l’agrément
-                        </Button>
-                      </GatedAction>
                     </span>
                   }
                 />
@@ -645,31 +516,23 @@ export default function Revendeurs() {
             <Button variant="ghost" onClick={() => setCreation(false)}>
               Annuler
             </Button>
-            <Button disabled={!formValide} onClick={agreer}>
+            <Button disabled={nom.trim().length === 0} onClick={agreer}>
               Agréer le partenaire
             </Button>
           </>
         }
       >
         <div className="space-y-4">
-          <Field
-            label="Raison sociale du partenaire"
-            required
-            error={form.nom !== '' && !nomValide ? 'Deux caractères au minimum.' : undefined}
-          >
+          <Field label="Raison sociale du partenaire" required>
             <Input
-              value={form.nom}
-              onChange={(e) => modifierForm('nom', e.target.value)}
               placeholder="Nom de l’entreprise partenaire"
-              autoFocus
+              value={nom}
+              onChange={(e) => setNom(e.target.value)}
             />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Niveau de partenariat">
-              <Select
-                value={form.niveau}
-                onChange={(e) => modifierForm('niveau', e.target.value)}
-              >
+              <Select value={niveau} onChange={(e) => setNiveau(e.target.value)}>
                 {MODELE_PARTENAIRE.map((m) => (
                   <option key={m.niveau} value={m.niveau}>
                     {m.niveau} — remise {m.remise}
@@ -681,71 +544,50 @@ export default function Revendeurs() {
               <Input
                 type="number"
                 min={0}
-                max={60}
-                value={form.revsharePct}
-                onChange={(e) =>
-                  modifierForm(
-                    'revsharePct',
-                    Math.min(60, Math.max(0, Number(e.target.value) || 0)),
-                  )
-                }
+                max={40}
+                value={revsharePct}
                 suffix="%"
+                onChange={(e) => setRevsharePct(Number(e.target.value))}
               />
             </Field>
           </div>
-          <Field
-            label="Domaine du portail sous sa marque"
-            required
-            hint="il devra créer un CNAME vers nos serveurs"
-            error={
-              form.domaine !== '' && !domaineValide
-                ? 'Un nom de domaine complet est attendu — cloud.partenaire.ci.'
-                : undefined
-            }
-          >
+          <Field label="Domaine du portail sous sa marque" hint="il devra créer un CNAME vers nos serveurs">
             <Input
-              value={form.domaine}
-              onChange={(e) => modifierForm('domaine', e.target.value)}
               placeholder="cloud.partenaire.ci"
+              value={domaine}
+              onChange={(e) => setDomaine(e.target.value)}
             />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Couleur principale">
               <Input
                 type="color"
-                value={form.primary}
-                onChange={(e) => modifierForm('primary', e.target.value)}
+                value={primary}
                 className="h-10"
+                onChange={(e) => setPrimary(e.target.value)}
               />
             </Field>
             <Field label="Couleur d’accentuation">
               <Input
                 type="color"
-                value={form.accent}
-                onChange={(e) => modifierForm('accent', e.target.value)}
+                value={accent}
                 className="h-10"
+                onChange={(e) => setAccent(e.target.value)}
               />
             </Field>
           </div>
-          <Field
-            label="Contact administratif"
-            required
-            hint="recevra l’invitation d’administrateur"
-            error={
-              form.contact !== '' && !contactValide ? 'Adresse électronique invalide.' : undefined
-            }
-          >
+          <Field label="Contact administratif" hint="recevra l’invitation d’administrateur">
             <Input
               type="email"
-              value={form.contact}
-              onChange={(e) => modifierForm('contact', e.target.value)}
               placeholder="direction@partenaire.ci"
+              value={contact}
+              onChange={(e) => setContact(e.target.value)}
             />
           </Field>
           <div className="space-y-3">
             <Switch
-              checked={form.catalogueTechnique}
-              onChange={(v) => modifierForm('catalogueTechnique', v)}
+              checked={catalogueComplet}
+              onChange={setCatalogueComplet}
               label="Accès au catalogue technique complet"
               description="Fiches détaillées, spécifications d’architecture, réponses aux questions d’appel d’offres."
             />
@@ -756,14 +598,14 @@ export default function Revendeurs() {
               description="Non désactivable. Un client apporté par ce partenaire ne pourra pas être démarché en direct par nos équipes."
             />
             <Switch
-              checked={form.releveDetaille}
-              onChange={(v) => modifierForm('releveDetaille', v)}
+              checked={releveDetaille}
+              onChange={setReleveDetaille}
               label="Relevé de partage mensuel détaillé"
               description="Ligne par ligne, client par client, vérifiable."
             />
             <Switch
-              checked={form.facturationDirecte}
-              onChange={(v) => modifierForm('facturationDirecte', v)}
+              checked={facturationDirecte}
+              onChange={setFacturationDirecte}
               label="Facturation directe des clients finaux par le partenaire"
               description="Le partenaire facture lui-même ses clients et nous règle en gros. Exige une garantie financière."
             />
@@ -775,21 +617,6 @@ export default function Revendeurs() {
           </Callout>
         </div>
       </Modal>
-
-      <ConfirmDialog
-        open={retrait !== null}
-        onClose={() => setRetrait(null)}
-        titre="Retirer un agrément"
-        ressource={retrait?.nom ?? ''}
-        libelleAction="Retirer l’agrément"
-        pertes={[
-          'Le portail sous sa marque cesse d’être servi',
-          'Sa grille d’achat est retirée : plus aucune souscription nouvelle n’est possible',
-          `Ses ${retrait?.clientsFinaux.length ?? 0} clients finaux basculent en direct, sans rupture de service`,
-          'Chaque client reste libre de choisir un autre partenaire — nous ne préemptons pas ce choix',
-        ]}
-        onConfirm={() => retrait && retirerAgrement(retrait)}
-      />
     </div>
   )
 }

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Camera, Plus, Power, RotateCw, Shield, Tag, Layers} from 'lucide-react'
 import { num, relatif } from '@/lib/format'
 import { SITE_COURT, type VM } from '@/lib/types'
-import { ESPACES, VMS,
+import { BACKUP_PLANS, ESPACES, VMS,
   hrefDuService,
 } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
@@ -14,11 +14,34 @@ import { PageHeader, Card, Callout } from '@/components/composition/card'
 import { HealthBadge, StatTile } from '@/components/composition/metrics'
 import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { useApp, useEspace } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 export default function ListeVms() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
   const espace = useEspace()
-  const vms = VMS.filter((v) => v.espaceId === espace.id)
+  const parc = useCollection<VM>('vms', VMS)
+  const executer = useOperation()
+  const vms = parc.items.filter((v) => v.espaceId === espace.id)
+
+  /** Une opération de cycle de vie : job court, puis bascule d'état. */
+  const cycleDeVie = (
+    ids: string[],
+    libelle: string,
+    etapes: string[],
+    statutFinal: VM['statut'],
+  ) =>
+    executer({
+      ton: 'info',
+      titre: `${libelle} de ${ids.length} machine${ids.length > 1 ? 's' : ''}`,
+      job: {
+        type: 'vm.power',
+        label: `${libelle} · ${ids.length} machine${ids.length > 1 ? 's' : ''}`,
+        etapes,
+        dureeEtapeMs: 900,
+      },
+      effetFinal: () => parc.modifierPlusieurs(ids, { statut: statutFinal }),
+    })
 
   const colonnes: Array<Colonne<VM>> = [
     {
@@ -239,42 +262,110 @@ export default function ListeVms() {
                 variant="secondary"
                 iconBefore={<Power size={13} />}
                 onClick={() =>
-                  pousser({
-                    ton: 'info',
-                    titre: `Démarrage de ${ids.length} machine(s)`,
-                    detail: 'Suivi dans le centre de tâches.',
-                  })
+                  cycleDeVie(ids, 'Démarrage', ['Allumer la machine', 'Attendre les agents'], 'running')
                 }
               >
                 Démarrer
               </Button>
             </GatedAction>
             <GatedAction autorise={autorise('vm.power')} message={refus('vm.power')}>
-              <Button size="sm" variant="secondary" iconBefore={<Power size={13} />}>
+              <Button
+                size="sm"
+                variant="secondary"
+                iconBefore={<Power size={13} />}
+                onClick={() =>
+                  cycleDeVie(
+                    ids,
+                    'Arrêt',
+                    ['Demander un arrêt propre au système', 'Libérer les verrous de stockage'],
+                    'stopped',
+                  )
+                }
+              >
                 Arrêter
               </Button>
             </GatedAction>
             <GatedAction autorise={autorise('vm.power')} message={refus('vm.power')}>
-              <Button size="sm" variant="secondary" iconBefore={<RotateCw size={13} />}>
+              <Button
+                size="sm"
+                variant="secondary"
+                iconBefore={<RotateCw size={13} />}
+                onClick={() =>
+                  cycleDeVie(
+                    ids,
+                    'Redémarrage',
+                    ['Arrêt propre', 'Rallumage', 'Attendre les agents'],
+                    'running',
+                  )
+                }
+              >
                 Redémarrer
               </Button>
             </GatedAction>
             <GatedAction autorise={autorise('vm.create_delete')} message={refus('vm.create_delete')}>
-              <Button size="sm" variant="secondary" iconBefore={<Camera size={13} />}>
+              <Button
+                size="sm"
+                variant="secondary"
+                iconBefore={<Camera size={13} />}
+                onClick={() =>
+                  executer({
+                    titre: `Snapshot de ${ids.length} machine${ids.length > 1 ? 's' : ''} demandé`,
+                    detail:
+                      'Un snapshot n’est pas une sauvegarde : il vit sur le même stockage que la machine.',
+                    job: {
+                      type: 'vm.snapshot',
+                      label: `Snapshot · ${ids.length} machine${ids.length > 1 ? 's' : ''}`,
+                      etapes: ['Geler les écritures', 'Capturer les disques', 'Reprendre les écritures'],
+                      dureeEtapeMs: 900,
+                    },
+                  })
+                }
+              >
                 Snapshot
               </Button>
             </GatedAction>
-            <GatedAction
-              autorise={autorise('backup.plan.write')}
-              message={refus('backup.plan.write')}
-            >
-              <Button size="sm" variant="secondary" iconBefore={<Shield size={13} />}>
-                Appliquer un plan de sauvegarde
-              </Button>
-            </GatedAction>
-            <Button size="sm" variant="ghost" iconBefore={<Tag size={13} />}>
-              Étiqueter
-            </Button>
+            <BoutonFormulaire
+              libelle="Appliquer un plan de sauvegarde"
+              icone={<Shield size={13} />}
+              action="backup.plan.write"
+              titre="Appliquer un plan de sauvegarde"
+              description={`${ids.length} machine${ids.length > 1 ? 's' : ''} sélectionnée${ids.length > 1 ? 's' : ''}. Le plan s’applique à la prochaine fenêtre de sauvegarde.`}
+              champs={[
+                {
+                  id: 'plan',
+                  label: 'Plan de sauvegarde',
+                  type: 'select',
+                  options: BACKUP_PLANS.map((p) => ({ value: p.id, label: p.nom })),
+                },
+              ]}
+              operation={(v) => ({
+                titre: 'Plan de sauvegarde appliqué',
+                detail: BACKUP_PLANS.find((p) => p.id === v.plan)?.nom,
+                effet: () => parc.modifierPlusieurs(ids, { backupPlanId: String(v.plan) }),
+              })}
+            />
+            <BoutonFormulaire
+              libelle="Étiqueter"
+              variant="ghost"
+              icone={<Tag size={13} />}
+              titre="Ajouter une étiquette"
+              description="Les plans de sauvegarde et les règles de pare-feu peuvent cibler une étiquette : toute machine qui la porte est couverte, y compris celles créées plus tard."
+              champs={[
+                {
+                  id: 'etiquette',
+                  label: 'Étiquette',
+                  placeholder: 'production',
+                  obligatoire: true,
+                },
+              ]}
+              operation={(v) => ({
+                titre: `Étiquette « ${v.etiquette} » posée sur ${ids.length} machine${ids.length > 1 ? 's' : ''}`,
+                effet: () =>
+                  parc.modifierPlusieurs(ids, (vm) => ({
+                    tags: Array.from(new Set([...(vm.tags ?? []), String(v.etiquette)])),
+                  })),
+              })}
+            />
           </>
         )}
         vide={{
@@ -305,7 +396,7 @@ export default function ListeVms() {
               <Link href={`/app/espaces/${e.id}`} className="font-semibold text-p-700 hover:text-m-600">
                 {e.code}
               </Link>{' '}
-              · {VMS.filter((v) => v.espaceId === e.id).length} machines
+              · {parc.items.filter((v) => v.espaceId === e.id).length} machines
             </span>
           ))}
         </Callout>
