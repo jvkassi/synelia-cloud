@@ -7,7 +7,7 @@ import {
   TYPE_SITE_LABEL,
 } from '@/lib/mock'
 import type { Tone } from '@/components/ui/badge'
-import { CadreSection } from '@/components/app/cadre-webcloud'
+import { CadreSection } from '@/components/app/cadre-section'
 
 /** Panneau de la section — liste les applications de l'organisation. */
 export function CadreApplications({ children }: { children: React.ReactNode }) {

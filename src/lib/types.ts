@@ -17,40 +17,30 @@ export const SITE_COURT: Record<Site, string> = {
 
 // ─── Tenancy & identité ───────────────────────────────────────────────
 
-export type OrgType = 'direct' | 'revendeur' | 'client_revendeur'
-
+/**
+ * Une organisation est cliente de Synelia, directement et sans intermédiaire.
+ *
+ * Il n'y a pas de niveau revendeur : la plateforme ne connaît que deux sortes
+ * d'acteurs, les organisations clientes et l'équipe Synelia qui l'exploite.
+ * Aucun contrat ne transite par un tiers, donc aucun écran n'a à répondre à
+ * « qui facture qui ».
+ */
 export interface Organisation {
   id: string
   nom: string
   pays: string
   secteur?: string
   tva?: string
-  type: OrgType
-  resellerId?: string
   statut: 'active' | 'suspendue' | 'fermee'
   logoUrl?: string
   createdAt: string
-  /** Champs de démonstration côté fournisseur. */
+  /** Champs de démonstration côté super admin. */
   espaces?: number
   utilisateurs?: number
   caMensuel?: number
   consommationVcpu?: number
   tenantPlan?: string
   domaine?: string
-}
-
-export interface Reseller {
-  id: string
-  orgId: string
-  nom: string
-  theme: { logoUrl: string; primary: string; accent: string; domaine: string }
-  grille: Array<{ offerId: string; prixAchat: number; prixVente: number }>
-  catalogue: string[]
-  revsharePct: number
-  clientsFinaux: string[]
-  caGenere: number
-  marge: number
-  statut: 'actif' | 'suspendu' | 'onboarding'
 }
 
 export interface User {
@@ -65,10 +55,15 @@ export interface User {
   statut?: 'actif' | 'invite' | 'suspendu'
 }
 
+/**
+ * Deux familles de rôles, et deux seulement : ceux de l'équipe Synelia qui
+ * exploite la plateforme, et ceux d'une organisation cliente. Rien entre les
+ * deux — pas de revendeur, pas d'apporteur d'affaires, pas d'intégrateur qui
+ * hériterait d'un sous-ensemble des droits du super admin.
+ */
 export type Role =
-  | 'provider_admin'
-  | 'provider_operator'
-  | 'reseller_admin'
+  | 'super_admin'
+  | 'platform_operator'
   | 'org_admin'
   | 'espace_admin'
   | 'project_owner'
@@ -79,9 +74,8 @@ export type Role =
   | 'read_only'
 
 export const ROLE_LABEL: Record<Role, string> = {
-  provider_admin: 'Provider Admin',
-  provider_operator: 'Provider Operator',
-  reseller_admin: 'Reseller Admin',
+  super_admin: 'Super Admin',
+  platform_operator: 'Platform Operator',
   org_admin: 'Org Admin',
   espace_admin: 'Espace Cloud Admin',
   project_owner: 'Project Owner',
@@ -924,7 +918,12 @@ export interface Offer {
   categorie: 'espace_cloud' | 'image_vm' | 'k8s' | 'stack' | 'web'
   specs: string
   caracteristiques: string[]
-  prix: { direct: number; revendeur: number; operateur: number }
+  /**
+   * Un prix, un seul, celui de la vitrine. Il n'y a pas de grille d'achat
+   * partenaire parce qu'il n'y a pas de partenaire : ce que le client voit
+   * publié est ce qu'il paie.
+   */
+  prix: number
   populaire?: boolean
   statut: 'brouillon' | 'publiee' | 'depreciee'
   souscriptionsActives: number

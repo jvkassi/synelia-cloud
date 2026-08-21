@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Building2, Plus, ShieldAlert, UserCog } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateCourte, money, num, relatif } from '@/lib/format'
-import { IMPAYES, ORGANISATIONS, RESELLERS, USERS } from '@/lib/mock'
+import { IMPAYES, ORGANISATIONS, USERS } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -24,7 +24,6 @@ export default function Organisations() {
 
   const actives = ORGANISATIONS.filter((o) => o.statut === 'active')
   const suspendues = ORGANISATIONS.filter((o) => o.statut === 'suspendue')
-  const viaRevendeur = ORGANISATIONS.filter((o) => o.type === 'client_revendeur')
   const caTotal = ORGANISATIONS.reduce((a, o) => a + (o.caMensuel ?? 0), 0)
   const orgsImpayees = new Set(IMPAYES.map((i) => i.org))
 
@@ -34,7 +33,7 @@ export default function Organisations() {
         titre="Organisations"
         sousTitre="Chaque organisation est un cloisonnement complet : ses espaces, ses membres, ses données et sa facturation. Aucune donnée ne traverse la frontière entre deux organisations, y compris pour nos propres équipes."
         actions={
-          <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
+          <GatedAction autorise={autorise('org.manage')} message={refus('org.manage')}>
             <Button iconBefore={<Plus size={14} />} onClick={() => setCreation(true)}>
               Créer une organisation
             </Button>
@@ -44,9 +43,6 @@ export default function Organisations() {
           <>
             <Badge tone="neutral" size="sm">
               {ORGANISATIONS.length} organisations
-            </Badge>
-            <Badge tone="neutral" size="sm">
-              {RESELLERS.length} revendeurs
             </Badge>
             {suspendues.length > 0 && (
               <Badge tone="warn" dot size="sm">
@@ -68,8 +64,8 @@ export default function Organisations() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatTile libelle="Organisations actives" valeur={actives.length} ton="ok" />
         <StatTile
-          libelle="Via un revendeur"
-          valeur={viaRevendeur.length}
+          libelle="Secteurs représentés"
+          valeur={new Set(ORGANISATIONS.map((o) => o.secteur ?? o.pays)).size}
           ton="accent"
           detail={`sur ${ORGANISATIONS.length} organisations`}
         />
@@ -110,13 +106,13 @@ export default function Organisations() {
                 ],
               },
               {
-                id: 'type',
-                libelle: 'Type',
+                id: 'secteur',
+                libelle: 'Secteur',
                 options: [
-                  { value: 'tous', label: 'Tous les types' },
-                  { value: 'direct', label: 'Client direct' },
-                  { value: 'client_revendeur', label: 'Client d’un revendeur' },
-                  { value: 'revendeur', label: 'Revendeur' },
+                  { value: 'tous', label: 'Tous les secteurs' },
+                  ...[...new Set(ORGANISATIONS.map((o) => o.secteur).filter(Boolean))].map(
+                    (sect) => ({ value: sect as string, label: sect as string }),
+                  ),
                 ],
               },
               {
@@ -134,8 +130,8 @@ export default function Organisations() {
             selection={(l, fid, val) =>
               fid === 'statut'
                 ? l.statut === val
-                : fid === 'type'
-                  ? l.type === val
+                : fid === 'secteur'
+                  ? l.secteur === val
                   : fid === 'pays'
                     ? l.pays === val
                     : true
@@ -164,35 +160,12 @@ export default function Organisations() {
                 ),
               },
               {
-                id: 'type',
-                entete: 'Type',
-                cle: (o) => o.type,
-                rendu: (o) => {
-                  const rev = RESELLERS.find((r) => r.id === o.resellerId)
-                  return (
-                    <span className="block">
-                      <Badge
-                        tone={
-                          o.type === 'revendeur'
-                            ? 'accent'
-                            : o.type === 'client_revendeur'
-                              ? 'info'
-                              : 'neutral'
-                        }
-                        size="sm"
-                      >
-                        {o.type === 'revendeur'
-                          ? 'Revendeur'
-                          : o.type === 'client_revendeur'
-                            ? 'Via revendeur'
-                            : 'Direct'}
-                      </Badge>
-                      {rev && (
-                        <span className="mt-0.5 block text-[10.5px] text-g-500">{rev.nom}</span>
-                      )}
-                    </span>
-                  )
-                },
+                id: 'secteur',
+                entete: 'Secteur',
+                cle: (o) => o.secteur ?? '',
+                rendu: (o) => (
+                  <span className="text-[11.5px] text-g-700">{o.secteur ?? '—'}</span>
+                ),
               },
               {
                 id: 'plan',
@@ -289,8 +262,8 @@ export default function Organisations() {
                       Ouvrir
                     </ButtonLink>
                     <GatedAction
-                      autorise={autorise('reseller.manage')}
-                      message={refus('reseller.manage')}
+                      autorise={autorise('org.manage')}
+                      message={refus('org.manage')}
                     >
                       <Button
                         size="sm"
@@ -377,25 +350,6 @@ export default function Organisations() {
             </Field>
             <Field label="Secteur">
               <Input placeholder="Banque, industrie, administration…" />
-            </Field>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Type de relation">
-              <Select defaultValue="direct">
-                <option value="direct">Client direct</option>
-                <option value="client_revendeur">Client d’un revendeur</option>
-                <option value="revendeur">Revendeur</option>
-              </Select>
-            </Field>
-            <Field label="Revendeur rattaché" hint="uniquement si client d’un revendeur">
-              <Select defaultValue="">
-                <option value="">Aucun</option>
-                {RESELLERS.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.nom}
-                  </option>
-                ))}
-              </Select>
             </Field>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

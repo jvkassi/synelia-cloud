@@ -237,7 +237,7 @@ export default function VuePlateforme() {
             <table className="w-full min-w-max border-collapse">
               <thead>
                 <tr className="border-b border-g-300 bg-g-050">
-                  {['Organisation', 'Type', 'Espaces', 'Utilisateurs', 'vCPU', 'CA mensuel', 'Statut', ''].map(
+                  {['Organisation', 'Plan', 'Espaces', 'Utilisateurs', 'vCPU', 'CA mensuel', 'Statut', ''].map(
                     (h) => (
                       <th key={h} className="type-micro px-3 py-2 text-left font-semibold text-g-500">
                         {h}
@@ -263,21 +263,8 @@ export default function VuePlateforme() {
                       </span>
                     </td>
                     <td className="px-3 py-2.5">
-                      <Badge
-                        tone={
-                          o.type === 'revendeur'
-                            ? 'accent'
-                            : o.type === 'client_revendeur'
-                              ? 'info'
-                              : 'neutral'
-                        }
-                        size="sm"
-                      >
-                        {o.type === 'revendeur'
-                          ? 'Revendeur'
-                          : o.type === 'client_revendeur'
-                            ? 'Via revendeur'
-                            : 'Direct'}
+                      <Badge tone="neutral" size="sm">
+                        {o.tenantPlan ?? 'Standard'}
                       </Badge>
                     </td>
                     <td className="tnum px-3 py-2.5 text-[12px] text-g-700">{o.espaces ?? 0}</td>

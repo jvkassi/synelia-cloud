@@ -54,7 +54,7 @@ export const SYNTHESE_CLIENT = {
   prochainRdv: '2026-08-26T10:00:00Z',
 }
 
-/** Agrégats du tableau de bord fournisseur (§8.2). */
+/** Agrégats du tableau de bord super admin (§8.2). */
 export const SYNTHESE_PLATEFORME = {
   vcpuTotal: BACKENDS.reduce((a, b) => a + b.capacite.vcpu, 0),
   vcpuUtilise: Math.round(
@@ -120,7 +120,7 @@ export const CONSOMMATION_JOURS = Array.from({ length: 19 }, (_, i) => {
   }
 })
 
-/** Marge par backend — vue fournisseur (§8.8). */
+/** Marge par backend — vue super admin (§8.8). */
 export const MARGE_BACKENDS = [
   { backend: 'CL-GRA-01', type: 'VMware vSphere', coutInfra: 2_840_000, revenu: 4_120_000, marge: 31.1 },
   { backend: 'OS-GRA-02', type: 'OpenStack', coutInfra: 1_180_000, revenu: 2_640_000, marge: 55.3 },
@@ -128,14 +128,6 @@ export const MARGE_BACKENDS = [
   { backend: 'HV-RBX-01', type: 'Microsoft Hyper-V', coutInfra: 1_020_000, revenu: 1_340_000, marge: 23.9 },
   { backend: 'OS-ABJ-01', type: 'OpenStack', coutInfra: 480_000, revenu: 940_000, marge: 48.9 },
   { backend: 'CS-ABJ-03', type: 'Apache CloudStack', coutInfra: 640_000, revenu: 1_120_000, marge: 42.9 },
-]
-
-/** Relevés de revshare partenaires (§8.7). */
-export const RELEVES_REVSHARE = [
-  { periode: 'Juillet 2026', reseller: 'OC²S', caGenere: 1_240_000, revsharePct: 22, montant: 272_800, statut: 'réglé' },
-  { periode: 'Juin 2026', reseller: 'OC²S', caGenere: 1_104_000, revsharePct: 22, montant: 242_880, statut: 'réglé' },
-  { periode: 'Mai 2026', reseller: 'OC²S', caGenere: 968_000, revsharePct: 22, montant: 212_960, statut: 'réglé' },
-  { periode: 'Août 2026', reseller: 'OC²S', caGenere: 1_318_000, revsharePct: 22, montant: 289_960, statut: 'en cours' },
 ]
 
 /** Impayés et relances (§8.8). */

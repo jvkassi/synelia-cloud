@@ -11,7 +11,6 @@ import {
   FACTURES,
   IMPAYES,
   ORGANISATIONS,
-  RESELLERS,
   SERVICES_MANAGES,
   SOUSCRIPTIONS,
   TICKETS_PLATEFORME,
@@ -46,7 +45,6 @@ export function VueOrganisation({ id }: { id: string }) {
   const [suspension, setSuspension] = useState(false)
 
   const org = ORGANISATIONS.find((o) => o.id === id)!
-  const reseller = RESELLERS.find((r) => r.id === org.resellerId)
   const membres = membresDeLOrg(org.id)
   const factures = FACTURES.filter((f) => f.orgId === org.id)
   const impayees = factures.filter((f) => f.statut === 'impayee')
@@ -61,12 +59,12 @@ export function VueOrganisation({ id }: { id: string }) {
     <div className="space-y-5">
       <PageHeader
         fil={[
-          { label: 'Espace fournisseur', href: '/admin' },
+          { label: 'Espace super admin', href: '/admin' },
           { label: 'Organisations', href: '/admin/organisations' },
           { label: org.nom },
         ]}
         titre={org.nom}
-        sousTitre={`${org.pays}${org.secteur ? ` · ${org.secteur}` : ''} · cliente depuis le ${dateCourte(org.createdAt)}${reseller ? ` · contrat via ${reseller.nom}` : ' · contrat direct'}`}
+        sousTitre={`${org.pays}${org.secteur ? ` · ${org.secteur}` : ''} · cliente en direct depuis le ${dateCourte(org.createdAt)}`}
         meta={
           <>
             <Badge
@@ -80,22 +78,6 @@ export function VueOrganisation({ id }: { id: string }) {
                   ? 'Suspendue'
                   : 'Fermée'}
             </Badge>
-            <Badge
-              tone={
-                org.type === 'revendeur'
-                  ? 'accent'
-                  : org.type === 'client_revendeur'
-                    ? 'info'
-                    : 'neutral'
-              }
-              size="sm"
-            >
-              {org.type === 'revendeur'
-                ? 'Revendeur'
-                : org.type === 'client_revendeur'
-                  ? 'Client d’un revendeur'
-                  : 'Client direct'}
-            </Badge>
             {org.tenantPlan && (
               <Badge tone="neutral" size="sm">
                 Plan {org.tenantPlan}
@@ -108,7 +90,7 @@ export function VueOrganisation({ id }: { id: string }) {
         }
         actions={
           <>
-            <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
+            <GatedAction autorise={autorise('org.manage')} message={refus('org.manage')}>
               <Button
                 variant="secondary"
                 iconBefore={<UserCog size={14} />}
@@ -117,7 +99,7 @@ export function VueOrganisation({ id }: { id: string }) {
                 Demander une élévation
               </Button>
             </GatedAction>
-            <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
+            <GatedAction autorise={autorise('org.manage')} message={refus('org.manage')}>
               <Button
                 variant={org.statut === 'active' ? 'ghost' : 'secondary'}
                 iconBefore={org.statut === 'active' ? <Pause size={13} /> : <Play size={13} />}
@@ -187,10 +169,7 @@ export function VueOrganisation({ id }: { id: string }) {
                 { cle: 'Numéro de contribuable', valeur: org.tva ?? '—' },
                 { cle: 'Domaine principal', valeur: org.domaine ?? '—' },
                 { cle: 'Plan de service', valeur: org.tenantPlan ?? 'Standard' },
-                {
-                  cle: 'Contrat',
-                  valeur: reseller ? `Via ${reseller.nom} (${reseller.revsharePct} % de partage)` : 'Direct',
-                },
+                { cle: 'Contrat', valeur: 'Direct, sans intermédiaire' },
                 { cle: 'Créée le', valeur: dateCourte(org.createdAt) },
                 { cle: 'Royaume d’identité', valeur: `identite.synelia.cloud/realms/${org.id}` },
               ]}
@@ -579,8 +558,8 @@ export function VueOrganisation({ id }: { id: string }) {
                             </Button>
                             {f.statut === 'impayee' && (
                               <GatedAction
-                                autorise={autorise('reseller.manage')}
-                                message={refus('reseller.manage')}
+                                autorise={autorise('org.manage')}
+                                message={refus('org.manage')}
                               >
                                 <Button size="sm" variant="secondary">
                                   Relancer
@@ -810,7 +789,7 @@ export function VueOrganisation({ id }: { id: string }) {
           <Card>
             <CardHeader
               titre="Plan de service et limites"
-              sousTitre="Ce que nous pouvons ajuster côté fournisseur, sans toucher aux ressources du client."
+              sousTitre="Ce que nous pouvons ajuster côté super admin, sans toucher aux ressources du client."
             />
             <div className="space-y-4">
               <Field label="Plan de service">
@@ -847,7 +826,7 @@ export function VueOrganisation({ id }: { id: string }) {
                 />
               </div>
             </div>
-            <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
+            <GatedAction autorise={autorise('org.manage')} message={refus('org.manage')}>
               <Button
                 className="mt-4"
                 onClick={() =>
@@ -932,8 +911,8 @@ export function VueOrganisation({ id }: { id: string }) {
                     visible dans son journal d’audit.
                   </p>
                   <GatedAction
-                    autorise={autorise('reseller.manage')}
-                    message={refus('reseller.manage')}
+                    autorise={autorise('org.manage')}
+                    message={refus('org.manage')}
                   >
                     <Button
                       size="sm"
@@ -957,8 +936,8 @@ export function VueOrganisation({ id }: { id: string }) {
                     conservation en lecture, puis effacement avec attestation.
                   </p>
                   <GatedAction
-                    autorise={autorise('reseller.manage')}
-                    message={refus('reseller.manage')}
+                    autorise={autorise('org.manage')}
+                    message={refus('org.manage')}
                   >
                     <Button size="sm" variant="danger" className="mt-2">
                       Ouvrir la procédure de clôture

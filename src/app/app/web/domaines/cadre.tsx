@@ -1,7 +1,7 @@
 'use client'
 
 import { entreesWebCloud } from '@/lib/mock'
-import { CadreSection } from '@/components/app/cadre-webcloud'
+import { CadreSection } from '@/components/app/cadre-section'
 
 /** Panneau de la section — liste les domaines de l'organisation. */
 export function CadreDomaines({ children }: { children: React.ReactNode }) {

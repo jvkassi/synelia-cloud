@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardHeader, Callout } from '@/components/composition/card'
 import { HealthBadge, QuotaBar } from '@/components/composition/metrics'
 
-/** Jauge d'un backend de la plateforme — visible côté fournisseur seulement. */
+/** Jauge d'un backend de la plateforme — visible côté super admin seulement. */
 export function BackendGauge({
   backend,
   compact,
@@ -86,7 +86,7 @@ export function BackendGauge({
 
 /**
  * Répartition en pourcentage d'un Espace Cloud entre plusieurs backends,
- * somme contrainte à 100 % (§8.4). Écran fournisseur uniquement.
+ * somme contrainte à 100 % (§8.4). Écran super admin uniquement.
  */
 export function PlacementSlider({
   backends,

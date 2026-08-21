@@ -8,12 +8,14 @@ import {
 } from '@/components/composition/selecteur-ressource'
 
 /**
- * Coquille maître-détail d'une section de Web Cloud.
+ * Coquille maître-détail d'une section : un panneau de sélection à gauche, la
+ * fiche de la ressource choisie à droite.
  *
- * Chaque section de la barre — domaines, hébergements, bases, messageries,
- * drives, applications, certificats, sauvegardes — liste ses propres ressources
- * dans le panneau et ouvre la fiche correspondante à droite. Seul « Accueil »
- * n'en a pas : c'est un tableau de bord, il ne porte pas sur une ressource.
+ * Web Cloud l'emploie pour chacune de ses sections — domaines, hébergements,
+ * bases, messageries, drives, applications, certificats, sauvegardes — et
+ * l'espace super admin pour ses organisations clientes. Le point commun : un
+ * écran qui porte sur une ressource parmi beaucoup, qu'on veut pouvoir changer
+ * sans repasser par une liste. Un tableau de bord, lui, n'en a pas besoin.
  *
  * Le panneau vit dans le `layout` de la section, pas dans ses pages : changer de
  * ressource ou d'onglet ne le reconstruit pas, et la sélection reste visible.

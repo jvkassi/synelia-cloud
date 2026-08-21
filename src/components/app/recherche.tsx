@@ -13,6 +13,7 @@ import { ORGANISATIONS } from '@/lib/mock/orgs'
 import { DOMAINES } from '@/lib/mock/web'
 import { HEBERGEMENTS, SERVICES_PARTAGES, nomServi } from '@/lib/mock/hebergement'
 import { BACKENDS } from '@/lib/mock/iaas'
+import type { Portee } from '@/lib/navigation'
 
 interface Entree {
   id: string
@@ -111,14 +112,14 @@ function entreesClient(): Entree[] {
   ]
 }
 
-function entreesFournisseur(): Entree[] {
+function entreesSuperAdmin(): Entree[] {
   return [
     ...ORGANISATIONS.map((o) => ({
       id: o.id,
       label: o.nom,
       categorie: 'Organisations',
       href: `/admin/organisations/${o.id}`,
-      meta: o.type,
+      meta: o.secteur,
     })),
     ...BACKENDS.map((b) => ({
       id: b.id,
@@ -159,13 +160,13 @@ function entreesFournisseur(): Entree[] {
 }
 
 /** Recherche globale ⌘K (§1.6). */
-export function RechercheGlobale({ portee = 'client' }: { portee?: 'client' | 'fournisseur' }) {
+export function RechercheGlobale({ portee = 'client' }: { portee?: Portee }) {
   const router = useRouter()
   const [ouvert, setOuvert] = useState(false)
   const [q, setQ] = useState('')
 
   const entrees = useMemo(
-    () => (portee === 'client' ? entreesClient() : entreesFournisseur()),
+    () => (portee === 'client' ? entreesClient() : entreesSuperAdmin()),
     [portee],
   )
 

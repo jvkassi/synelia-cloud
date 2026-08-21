@@ -19,7 +19,6 @@ export default function CreationOrganisation() {
   const [tva, setTva] = useState('')
   const [taille, setTaille] = useState('')
   const [domaine, setDomaine] = useState('')
-  const [revendeur, setRevendeur] = useState(false)
   const [conditions, setConditions] = useState(false)
 
   const domaineValide = domaine === '' || REGEX_DOMAINE.test(domaine.trim().toLowerCase())
@@ -110,41 +109,6 @@ export default function CreationOrganisation() {
 
         <div className="border-t border-g-100 pt-4">
           <Checkbox
-            checked={revendeur}
-            onChange={(e) => setRevendeur(e.target.checked)}
-            label="Je suis revendeur ou intégrateur"
-            description="Je souhaite revendre les offres Synelia à mes propres clients, sous ma marque."
-          />
-          {revendeur && (
-            <div className="mt-3 rounded-[8px] border border-p-300 bg-p-050 p-3.5">
-              <span className="flex items-center gap-2">
-                <Store size={14} className="text-p-700" />
-                <MicroLabel className="text-p-700">Parcours partenaire</MicroLabel>
-              </span>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-g-700">
-                Votre organisation sera créée comme tenant revendeur. Un chargé de partenariat vous
-                contactera sous un jour ouvré pour établir votre grille d’achat, définir votre
-                périmètre de catalogue et, si vous le souhaitez, thématiser le portail à vos
-                couleurs. Vos clients finaux sont strictement cloisonnés : ils ne voient jamais
-                Synelia, et vous ne voyez que les vôtres.
-              </p>
-              <div className="mt-2.5 flex flex-wrap gap-1.5">
-                <Badge tone="violet" size="sm">
-                  Remise 25 à 45 %
-                </Badge>
-                <Badge tone="violet" size="sm">
-                  Marque blanche
-                </Badge>
-                <Badge tone="violet" size="sm">
-                  Revshare mensuel
-                </Badge>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="border-t border-g-100 pt-4">
-          <Checkbox
             checked={conditions}
             onChange={(e) => setConditions(e.target.checked)}
             label="J’accepte les conditions générales de vente et la politique de confidentialité"
@@ -157,10 +121,7 @@ export default function CreationOrganisation() {
         <MicroLabel className="text-p-700">Ce qui va être créé</MicroLabel>
         <dl className="mt-2.5 space-y-2">
           <Recap cle="Organisation" valeur={nom.trim() || '—'} />
-          <Recap
-            cle="Type de tenant"
-            valeur={revendeur ? 'Revendeur (marque blanche possible)' : 'Direct'}
-          />
+          <Recap cle="Type de contrat" valeur="Direct avec Synelia Cloud" />
           <Recap
             cle="Identifiant technique"
             valeur={nom.trim() ? `org-${slugify(nom).slice(0, 18)}` : '—'}

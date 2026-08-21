@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Building2, Globe, Palette, Terminal, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateCourte, money } from '@/lib/format'
-import { ESPACES, MES_ORGANISATIONS, ORG_COURANTE, RESELLERS } from '@/lib/mock'
+import { ESPACES, MES_ORGANISATIONS, ORG_COURANTE } from '@/lib/mock'
 import { ROLE_LABEL, SITE_LABEL } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
@@ -27,8 +27,6 @@ export default function Parametres() {
   const { autorise, refus, pousser } = useApp()
   const [onglet, setOnglet] = useState('organisation')
   const [fermeture, setFermeture] = useState(false)
-
-  const reseller = RESELLERS.find((r) => r.clientsFinaux.includes(ORG_COURANTE.id))
 
   return (
     <div className="space-y-5">
@@ -114,21 +112,7 @@ export default function Parametres() {
                 colonnes={1}
                 items={[
                   { cle: 'Identifiant d’organisation', valeur: ORG_COURANTE.id },
-                  {
-                    cle: 'Type',
-                    valeur:
-                      ORG_COURANTE.type === 'direct'
-                        ? 'Client direct'
-                        : ORG_COURANTE.type === 'client_revendeur'
-                          ? 'Client d’un revendeur'
-                          : 'Revendeur',
-                  },
-                  {
-                    cle: 'Contrat',
-                    valeur: reseller
-                      ? `Via ${reseller.nom}, revendeur agréé`
-                      : 'Direct avec Synelia Cloud',
-                  },
+                  { cle: 'Contrat', valeur: 'Direct avec Synelia Cloud' },
                   { cle: 'Plan de service', valeur: ORG_COURANTE.tenantPlan ?? 'Standard' },
                   { cle: 'Espaces Cloud', valeur: String(ESPACES.length) },
                   { cle: 'Cliente depuis', valeur: dateCourte(ORG_COURANTE.createdAt) },
@@ -138,13 +122,11 @@ export default function Parametres() {
                   },
                 ]}
               />
-              {reseller && (
-                <Callout ton="info" className="mt-4" titre={`Votre contrat passe par ${reseller.nom}`}>
-                  Votre facturation, votre support de premier niveau et votre relation commerciale sont
-                  assurés par ce revendeur. Nous exploitons la plateforme ; votre interlocuteur reste
-                  votre revendeur. En cas de manquement de sa part, vous pouvez nous saisir directement.
-                </Callout>
-              )}
+              <Callout ton="info" className="mt-4" titre="Votre contrat est direct, sans intermédiaire">
+                Synelia exploite la plateforme, vous facture et assure votre support : il n’y a pas de
+                revendeur entre nous. Vous n’avez qu’un interlocuteur à saisir, et un seul contrat à
+                lire.
+              </Callout>
             </Card>
 
             <Card>

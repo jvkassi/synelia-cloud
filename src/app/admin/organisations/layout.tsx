@@ -1,14 +1,12 @@
 import type { Metadata } from 'next'
+import { CadreOrganisations } from './cadre'
 
-/**
- * Une page « use client » ne peut pas exporter `metadata`. Ce layout minimal
- * n'existe que pour nommer l'onglet du navigateur — il n'ajoute aucun rendu.
- */
 export const metadata: Metadata = {
   title: 'Organisations',
-  description: 'Clients directs, revendeurs et clients de revendeurs.',
+  description:
+    'Les organisations clientes de la plateforme : consommation, ressources, facturation, tickets et audit.',
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return children
+  return <CadreOrganisations>{children}</CadreOrganisations>
 }

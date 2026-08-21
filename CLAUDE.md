@@ -1,7 +1,7 @@
 # Synelia Cloud — repères pour travailler sur ce dépôt
 
 Maquette fonctionnelle d'une plateforme de gestion de cloud multi-tenant :
-vitrine publique, espace client, espace fournisseur. **Toutes les données sont
+vitrine publique, espace client, espace super admin. **Toutes les données sont
 fictives** et vivent dans `src/lib/mock/`. Aucun appel réseau, aucune base.
 
 Le cahier des charges d'origine (`SPECBUILDSYNELIACLOUD.md`, 1143 lignes) et la
@@ -15,7 +15,7 @@ décisions déjà prises.
 |---|---|
 | Paquets | `bun install` — **bun 1.4.0**, `bun.lock` fait foi, pas de npm |
 | Développement | `bun run dev` — Next avec Turbopack |
-| Construction | `bun run build` — Turbopack, ~32 s pour 128 routes |
+| Construction | `bun run build` — Turbopack, ~30 s pour 124 routes |
 | Comparaison | `bun run build:webpack` — ~50 s, gardé pour lever un doute |
 | Types | `bun run typecheck` |
 | Lint | `bun run lint` |
@@ -27,7 +27,7 @@ l'installation locale de la distante. Ne remettez pas de caret.
 
 ### L'audit
 
-`outils/audit.mjs` ouvre les 128 routes de `outils/routes.json` dans Chromium et
+`outils/audit.mjs` ouvre les 124 routes de `outils/routes.json` dans Chromium et
 relève : erreurs console et HTTP, débordement horizontal, contraste sous le seuil
 WCAG AA, boutons sans nom accessible, titres d'onglet laissés par défaut.
 
@@ -87,9 +87,16 @@ Deux barres, pas de barre latérale de navigation. `src/lib/navigation.ts` porte
 modèle ; `topbar.tsx` le rend.
 
 - **Barre 1** : les univers. Client — `Global · Infrastructure · Applications ·
-  Web Cloud · IAM & sécurité`. Fournisseur — `Pilotage · Clients ·
+  Web Cloud · IAM & sécurité`. Super admin — `Pilotage · Clients ·
   Infrastructure · Produit · Finance · Exploitation`.
 - **Barre 2** : les sections de l'univers courant.
+
+L'univers **Clients** du super admin fait exception à « pas de barre latérale » :
+il monte le panneau de sélection des organisations dans
+`app/admin/organisations/layout.tsx`, par le même `CadreSection` que Web Cloud, et
+`ConteneurAdmin` retire la borne de 1400 px pour ce segment. Un exploitant saute
+d'un client à l'autre toute la journée ; sans panneau persistant, chaque saut
+repasse par la liste.
 
 `sectionActive()` résout au **préfixe le plus long** : `/app/reseau/lb` désigne
 les load balancers, pas le réseau. Le champ `aussi` rattache les routes sans
@@ -121,6 +128,7 @@ aucune page ne dit tout ce qui le concerne.
 | Polices | Montserrat + Open Sans + JetBrains Mono. La charte interdit Inter, qui était pourtant suggéré par le cahier : la charte gagne. |
 | Socle du PaaS | Kubernetes managé via OpenStack Magnum, namespace par projet. Sans effet sur la maquette. |
 | Sauvegardes | Un onglet par ressource **et** une section transverse `Sauvegardes & PRA` dans Infrastructure, qui porte les plans réutilisables, la restauration granulaire et le tableau de conformité 3-2-1 qu'on montre à un auditeur. |
+| Revendeurs | **Il n'y en a pas.** Deux acteurs seulement : l'organisation cliente et le super admin qui exploite la plateforme. Ni rôle `reseller_admin`, ni type d'organisation indirect, ni grille d'achat partenaire, ni revshare, ni page `/partenaires`. Une offre porte **un** prix, celui de la vitrine. |
 | Marketplace | Supprimé en tant qu'univers. Le partagé (messagerie, drive, CMS) est passé dans Web Cloud, attaché au domaine ; le dédié est devenu des modèles déployables dans un projet. |
 | Applications web | Section à part de `Hébergement Web` : « installer WordPress » et « régler PHP » ne sont pas la même intention. |
 | Bases mutualisées | Aucun accès distant, présenté comme une propriété de l'offre et non un réglage. Une base mutualisée n'a pas à être joignable depuis Internet. |
@@ -159,16 +167,15 @@ lien, deux ancres imbriquées étant du HTML que React refuse d'hydrater.
    clés d'API existent, sous `/app/parametres`.
 3. **`/app/docs`** — pas de parcours de formation, ni de suivi de complétion, ni
    d'accès au bac à sable.
-4. **Fiche revendeur** — il manque *Périmètre de catalogue* et *API & intégration*.
-5. **`/admin/catalogue`** — le cahier demande un découpage par famille (Espace
+4. **`/admin/catalogue`** — le cahier demande un découpage par famille (Espace
    Cloud, images VM, clusters, stacks, web) ; on a un tableau unique.
-6. **IaaS** — déploiement de plusieurs serveurs d'un coup en glisser-déposer,
+5. **IaaS** — déploiement de plusieurs serveurs d'un coup en glisser-déposer,
    avec ce qu'on installe, le processeur, la mémoire, le disque et la carte
    réseau. Demandé, pas commencé.
-7. **Anglais** — aucun mécanisme d'internationalisation ; tous les libellés sont
+6. **Anglais** — aucun mécanisme d'internationalisation ; tous les libellés sont
    en français en dur. Le cahier ne demande que la structure, pas la traduction.
    C'est le seul chantier de la liste qui se compte en jours.
-8. **Lanceur comme page d'accueil** — l'écran existe et l'explique, mais aucun
+7. **Lanceur comme page d'accueil** — l'écran existe et l'explique, mais aucun
    réglage ne le fixe pour les membres au rôle purement utilisateur.
 
 ## Style d'écriture

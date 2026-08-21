@@ -1,6 +1,10 @@
 /**
  * Matrice RBAC — Synelia Cloud (spécification Partie 10).
  *
+ * Deux familles de rôles seulement : l'équipe Synelia qui exploite la
+ * plateforme, et l'organisation cliente. Aucun rôle intermédiaire de type
+ * revendeur ou apporteur d'affaires — la plateforme ne vend qu'en direct.
+ *
  * Règle de rendu : une action interdite n'est pas masquée, elle est
  * désactivée avec une infobulle qui nomme le rôle requis. Les refus sont
  * journalisés dans l'audit.
@@ -12,9 +16,8 @@ import { ROLE_LABEL, type Role } from './types'
 export type Permission = 'full' | 'read' | 'none'
 
 export const ROLES_ORDRE: Role[] = [
-  'provider_admin',
-  'provider_operator',
-  'reseller_admin',
+  'super_admin',
+  'platform_operator',
   'org_admin',
   'espace_admin',
   'project_owner',
@@ -32,7 +35,7 @@ export interface ActionRbac {
   perms: Record<Role, Permission>
 }
 
-/** Fabrique compacte : chaîne de 11 caractères dans l'ordre de `ROLES_ORDRE`. */
+/** Fabrique compacte : chaîne de 10 caractères dans l'ordre de `ROLES_ORDRE`. */
 function ligne(id: string, libelle: string, groupe: string, motif: string): ActionRbac {
   const perms = {} as Record<Role, Permission>
   ROLES_ORDRE.forEach((role, i) => {
@@ -42,66 +45,66 @@ function ligne(id: string, libelle: string, groupe: string, motif: string): Acti
   return { id, libelle, groupe, perms }
 }
 
-//                                                          PA PO RA OA EA PO OP SA BI CO RO
+//                                                          SA PO OA EA PO OP SA BI CO RO
 export const MATRICE_RBAC: ActionRbac[] = [
   ligne('org.dashboard.view', 'Voir le tableau de bord org', 'Organisation',
-        '●●●●●◐◐◐◐◐◐'),
+        '●●●●◐◐◐◐◐◐'),
   ligne('espace.create', 'Créer un Espace Cloud', 'Infrastructure',
-        '●—●●———————'),
+        '●—●●——————'),
   ligne('espace.quota.update', "Modifier le quota d'un espace", 'Infrastructure',
-        '●—●●◐——————'),
+        '●—●●◐—————'),
   ligne('vm.create_delete', 'Créer / supprimer une VM', 'Infrastructure',
-        '●●●●●——————'),
+        '●●●●●—————'),
   ligne('vm.power', 'Démarrer / arrêter une VM', 'Infrastructure',
-        '●●●●●●●————'),
+        '●●●●●●●———'),
   ligne('vm.hardware.update', 'Modifier le matériel virtuel', 'Infrastructure',
-        '●●●●●——————'),
+        '●●●●●—————'),
   ligne('network.manage', 'Gérer réseau, IP, pare-feu', 'Infrastructure',
-        '●●●●●——————'),
+        '●●●●●—————'),
   ligne('lb.create', 'Créer un load balancer', 'Infrastructure',
-        '●●●●●——————'),
+        '●●●●●—————'),
   ligne('backup.plan.write', 'Créer / modifier un plan de sauvegarde', 'Protection',
-        '●●●●●——●—◐—'),
+        '●●●●●——●—◐'),
   ligne('backup.restore', 'Lancer une restauration', 'Protection',
-        '●●●●●——●———'),
+        '●●●●●——●——'),
   ligne('dr.failover.real', 'Déclencher une bascule PRA réelle', 'Protection',
-        '●——●———————'),
+        '●—●●——————'),
   ligne('dr.failover.test', 'Déclencher une bascule PRA de test', 'Protection',
-        '●●●●●————◐—'),
+        '●●●●●———◐—'),
   ligne('app.deploy', 'Déployer une application', 'Plateforme applicative',
-        '●●●●●●—————'),
+        '●●●●●●————'),
   ligne('app.rollback', "Rollback d'un déploiement", 'Plateforme applicative',
-        '●●●●●●—————'),
+        '●●●●●●————'),
   ligne('component.restart', 'Redémarrer un composant', 'Plateforme applicative',
-        '●●●●●●●————'),
+        '●●●●●●●———'),
   ligne('secrets.update', 'Modifier variables et secrets', 'Plateforme applicative',
-        '●—●●●●—————'),
+        '●—●●●●————'),
   ligne('marketplace.subscribe', 'Souscrire un service du marketplace', 'Services',
-        '●—●●———————'),
+        '●—●●——————'),
   ligne('seat.assign', 'Attribuer / retirer un siège', 'Services',
-        '●●●●———●———'),
+        '●●●●———●——'),
   ligne('service.open', 'Ouvrir un service managé (SSO)', 'Services',
-        '●●●●●●●●——●'),
+        '●●●●●●●●—●'),
   ligne('service.admin', 'Administrer un service managé', 'Services',
-        '●●●●———●———'),
+        '●●●●———●——'),
   ligne('member.invite', 'Inviter un membre / changer un rôle', 'Organisation',
-        '●—●●◐——————'),
+        '●—●●◐—————'),
   ligne('sso.configure', 'Configurer la fédération SSO', 'Organisation',
-        '●—●●———————'),
+        '●—●●——————'),
   ligne('invoice.view', 'Voir les factures', 'Finance',
-        '●◐●●————●——'),
+        '●◐●●———●——'),
   ligne('payment.update', 'Modifier les moyens de paiement', 'Finance',
-        '●—●●————●——'),
+        '●—●●———●——'),
   ligne('audit.view', "Voir le journal d'audit de l'org", 'Conformité',
-        '●●●●◐————●◐'),
+        '●●●●◐———●◐'),
   ligne('compliance.export', 'Exporter un rapport de conformité', 'Conformité',
-        '●●●●—————●—'),
-  ligne('capacity.manage', 'Gérer la capacité et les backends', 'Fournisseur',
-        '●●—————————'),
-  ligne('catalog.edit', 'Éditer le catalogue et les tarifs', 'Fournisseur',
-        '●—◐————————'),
-  ligne('reseller.manage', 'Gérer un revendeur', 'Fournisseur',
-        '●——————————'),
+        '●●●●————●—'),
+  ligne('capacity.manage', 'Gérer la capacité et les backends', 'Plateforme',
+        '●●————————'),
+  ligne('catalog.edit', 'Éditer le catalogue et les tarifs', 'Plateforme',
+        '●—————————'),
+  ligne('org.manage', 'Créer / suspendre une organisation cliente', 'Plateforme',
+        '●—————————'),
 ]
 
 const INDEX = new Map(MATRICE_RBAC.map((a) => [a.id, a]))
@@ -130,7 +133,7 @@ export function rolesRequis(actionId: string): Role[] {
  */
 export function messageRefus(actionId: string): string {
   const roles = rolesRequis(actionId).filter(
-    (r) => !r.startsWith('provider_') && r !== 'reseller_admin',
+    (r) => r !== 'super_admin' && r !== 'platform_operator',
   )
   const cible = roles.length ? roles : rolesRequis(actionId)
   if (!cible.length) return 'Action réservée à Synelia.'
@@ -154,10 +157,7 @@ export const ROLES_CLIENT: Role[] = [
   'read_only',
 ]
 
-export const ROLES_FOURNISSEUR: Role[] = [
-  'provider_admin',
-  'provider_operator',
-  'reseller_admin',
-]
+/** Rôles de l'équipe Synelia, simulables depuis l'espace super admin. */
+export const ROLES_SUPER_ADMIN: Role[] = ['super_admin', 'platform_operator']
 
 export const GROUPES_RBAC = Array.from(new Set(MATRICE_RBAC.map((a) => a.groupe)))

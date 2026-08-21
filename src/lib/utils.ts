@@ -157,7 +157,7 @@ function assombrir(hex: string, luminanceVisee: number): string {
 /**
  * Rend lisible une vignette portant les initiales d'une marque amont.
  *
- * Les teintes des solutions et des revendeurs sont imposées par leur charte :
+ * Les teintes des solutions tierces sont imposées par leur charte :
  * un bleu clair ou un jaune ne tiennent pas 4,5:1 face au blanc. Plutôt que
  * de renoncer à la couleur — elle sert à reconnaître la solution d'un coup
  * d'œil — on choisit le texte qui passe : encre sombre sur une teinte claire,

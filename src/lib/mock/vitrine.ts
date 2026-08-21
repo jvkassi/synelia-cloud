@@ -1509,32 +1509,6 @@ export const DATACENTERS = [
   },
 ]
 
-// ─── Partenaires / revendeurs (§2.7) ──────────────────────────────────
-
-export const MODELE_PARTENAIRE = [
-  {
-    niveau: 'Revendeur',
-    description: 'Vous vendez nos offres sous votre marque commerciale, nous facturons votre client ou vous, à votre choix.',
-    remise: '25 à 35 % sur le tarif public',
-    engagement: 'Aucun volume minimum la première année',
-    inclus: ['Grille d’achat dédiée', 'Support niveau 2 dédié', 'Formation technique et commerciale', 'Environnement de démonstration'],
-  },
-  {
-    niveau: 'Marque blanche',
-    description: 'Le portail porte votre identité : logo, palette, domaine, modèles d’e-mails, en-tête de factures. Vos clients ne voient jamais Synelia.',
-    remise: '35 à 45 % sur le tarif public',
-    engagement: 'Volume annuel négocié',
-    inclus: ['Thématisation complète du portail', 'Tarification à deux étages', 'Cloisonnement strict de vos clients', 'API et webhooks vers votre SI'],
-  },
-  {
-    niveau: 'Opérateur',
-    description: 'Intégration au niveau de votre catalogue et de votre facturation. Vous restez l’unique interlocuteur commercial et contractuel.',
-    remise: 'Sur négociation',
-    engagement: 'Contrat cadre pluriannuel',
-    inclus: ['Revshare mensuel calculé automatiquement', 'Capacité réservée', 'Feuille de route produit partagée', 'Marque blanche incluse'],
-  },
-]
-
 // ─── Ressources & documentation (§2.7) ────────────────────────────────
 
 export const RESSOURCES = [

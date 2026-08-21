@@ -53,7 +53,7 @@ export default function NouvelEspace() {
       {
         libelle: `${offre.nom} · ${offre.specs}`,
         detail: `Site ${site} · plage ${cidr}`,
-        montant: offre.prix.direct,
+        montant: offre.prix,
       },
     ]
     if (planSauvegarde !== 'aucun') {
@@ -161,7 +161,7 @@ export default function NouvelEspace() {
                 </div>
                 <p className="mt-1 text-[12px] text-g-500">{o.specs}</p>
                 <p className="tnum mt-3 text-[19px] font-bold [font-family:var(--font-display)] text-p-700">
-                  {o.surDevis ? <span className="text-[15px]">Sur devis</span> : money(o.prix.direct)}
+                  {o.surDevis ? <span className="text-[15px]">Sur devis</span> : money(o.prix)}
                   {!o.surDevis && (
                     <span className="text-[11px] font-semibold text-g-500">/mois</span>
                   )}

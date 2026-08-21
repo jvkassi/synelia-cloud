@@ -16,21 +16,22 @@ import {
 import { cn } from '@/lib/utils'
 import { relatif } from '@/lib/format'
 import { ROLE_LABEL, type Role } from '@/lib/types'
-import { ROLES_CLIENT, ROLES_FOURNISSEUR } from '@/lib/rbac'
+import { ROLES_CLIENT, ROLES_SUPER_ADMIN } from '@/lib/rbac'
 import { MES_ORGANISATIONS, ORG_COURANTE, UTILISATEUR_COURANT } from '@/lib/mock/orgs'
 import { ESPACES } from '@/lib/mock/iaas'
 import { JOBS, JOBS_PLATEFORME } from '@/lib/mock/ops'
 import {
   UNIVERS_CLIENT,
-  UNIVERS_FOURNISSEUR,
+  UNIVERS_SUPER_ADMIN,
   sectionActive,
   universActif,
+  type Portee,
   type UniversNav,
 } from '@/lib/navigation'
 import { Avatar } from '@/components/ui/display'
 import { Badge } from '@/components/ui/badge'
 import { Popover } from '@/components/ui/overlay'
-import { Logo, BadgeFournisseur } from '@/components/brand/logo'
+import { Logo, BadgeSuperAdmin } from '@/components/brand/logo'
 import { RechercheGlobale } from './recherche'
 import { useApp } from './contexte'
 
@@ -79,9 +80,9 @@ const NOTIFICATIONS = [
  * Il n'y a plus de barre latérale : un seul chemin mène à un écran, et le
  * contenu occupe toute la largeur disponible.
  */
-export function TopBar({ portee = 'client' }: { portee?: 'client' | 'fournisseur' }) {
+export function TopBar({ portee = 'client' }: { portee?: Portee }) {
   const pathname = usePathname()
-  const univers = portee === 'client' ? UNIVERS_CLIENT : UNIVERS_FOURNISSEUR
+  const univers = portee === 'client' ? UNIVERS_CLIENT : UNIVERS_SUPER_ADMIN
   const courant = universActif(univers, pathname)
 
   return (
@@ -99,18 +100,18 @@ function BarreUnivers({
   univers,
   courant,
 }: {
-  portee: 'client' | 'fournisseur'
+  portee: Portee
   univers: UniversNav[]
   courant: UniversNav
 }) {
-  const fournisseur = portee === 'fournisseur'
-  const racine = fournisseur ? '/admin' : '/app'
+  const superAdmin = portee === 'super_admin'
+  const racine = superAdmin ? '/admin' : '/app'
 
   return (
     <header className="flex h-14 items-center gap-2 border-b border-white/10 bg-p-900 px-3 sm:px-4">
       <Link href={racine} className="flex shrink-0 items-center gap-2">
         <Logo variante="sombre" size={26} compact />
-        {fournisseur && <BadgeFournisseur />}
+        {superAdmin && <BadgeSuperAdmin />}
       </Link>
 
       {/* Univers — bande déroulante sur grand écran, liste dépliante en dessous */}
@@ -173,15 +174,15 @@ function BarreUnivers({
         </Popover>
       </div>
 
-      {!fournisseur && <SelecteurContexte />}
+      {!superAdmin && <SelecteurContexte />}
 
       <RechercheGlobale portee={portee} />
 
-      <CentreDeTaches fournisseur={fournisseur} />
+      <CentreDeTaches superAdmin={superAdmin} />
 
       <NotificationsPopover />
 
-      <MenuCompte fournisseur={fournisseur} />
+      <MenuCompte superAdmin={superAdmin} />
     </header>
   )
 }
@@ -192,12 +193,12 @@ function BarreSections({
   portee,
   univers,
 }: {
-  portee: 'client' | 'fournisseur'
+  portee: Portee
   univers: UniversNav
 }) {
   const pathname = usePathname()
   const active = sectionActive(
-    portee === 'client' ? UNIVERS_CLIENT : UNIVERS_FOURNISSEUR,
+    portee === 'client' ? UNIVERS_CLIENT : UNIVERS_SUPER_ADMIN,
     pathname,
   )?.section
 
@@ -206,9 +207,9 @@ function BarreSections({
       aria-label={`Sections — ${univers.nom}`}
       className={cn(
         'no-scrollbar overflow-x-auto border-b border-g-300',
-        // Fond légèrement teinté côté fournisseur : les deux espaces partagent
+        // Fond légèrement teinté côté super admin : les deux espaces partagent
         // désormais la même barre supérieure, il faut un repère de plus.
-        portee === 'fournisseur' ? 'bg-p-050' : 'bg-white',
+        portee === 'super_admin' ? 'bg-p-050' : 'bg-white',
       )}
     >
       <ul className="mx-auto flex min-w-max max-w-[1400px] items-stretch px-2 sm:px-4">
@@ -326,8 +327,8 @@ function SelecteurContexte() {
 
 // ─── Contrôles de droite ───────────────────────────────────────────────
 
-function CentreDeTaches({ fournisseur }: { fournisseur: boolean }) {
-  const jobs = fournisseur ? JOBS_PLATEFORME : JOBS
+function CentreDeTaches({ superAdmin }: { superAdmin: boolean }) {
+  const jobs = superAdmin ? JOBS_PLATEFORME : JOBS
   const enCours = jobs.filter((j) => j.statut === 'running' || j.statut === 'queued')
   const echecs = jobs.filter((j) => j.statut === 'failed')
 
@@ -363,7 +364,7 @@ function CentreDeTaches({ fournisseur }: { fournisseur: boolean }) {
               return (
                 <Link
                   key={j.id}
-                  href={fournisseur ? '/admin' : `/app/taches/${j.id}`}
+                  href={superAdmin ? '/admin' : `/app/taches/${j.id}`}
                   onClick={close}
                   className="block px-3 py-2 transition-colors hover:bg-p-050"
                 >
@@ -466,9 +467,9 @@ function NotificationsPopover() {
  * c'est un réglage de session, pas une destination, et la barre n'a pas la
  * place d'un troisième contrôle de contexte.
  */
-function MenuCompte({ fournisseur }: { fournisseur: boolean }) {
+function MenuCompte({ superAdmin }: { superAdmin: boolean }) {
   const { role, setRole } = useApp()
-  const roles = fournisseur ? ROLES_FOURNISSEUR : ROLES_CLIENT
+  const roles = superAdmin ? ROLES_SUPER_ADMIN : ROLES_CLIENT
 
   return (
     <Popover
@@ -521,7 +522,7 @@ function MenuCompte({ fournisseur }: { fournisseur: boolean }) {
           </div>
 
           <div className="pt-1.5">
-            {fournisseur ? (
+            {superAdmin ? (
               <MenuLien href="/app" onClick={close} icone={<CloudCog size={13} />}>
                 Basculer vers l’espace client
               </MenuLien>
@@ -530,7 +531,7 @@ function MenuCompte({ fournisseur }: { fournisseur: boolean }) {
                 Lanceur d’applications
               </MenuLien>
             )}
-            {fournisseur ? (
+            {superAdmin ? (
               <MenuLien href="/admin/equipe" onClick={close} icone={<Settings size={13} />}>
                 Équipe & rôles
               </MenuLien>

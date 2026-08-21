@@ -327,8 +327,8 @@ export default function AuditAdmin() {
                           Expire à {m.elevation?.jusqua ? dateHeure(m.elevation.jusqua).slice(-5) : '—'}
                         </Badge>
                         <GatedAction
-                          autorise={autorise('reseller.manage')}
-                          message={refus('reseller.manage')}
+                          autorise={autorise('org.manage')}
+                          message={refus('org.manage')}
                         >
                           <Button
                             size="sm"

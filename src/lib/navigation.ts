@@ -27,6 +27,12 @@ export interface UniversNav {
   sections: SectionNav[]
 }
 
+/**
+ * Les deux espaces authentifiés du portail, et il n'y en a que deux :
+ * l'organisation cliente, et l'équipe Synelia qui exploite la plateforme.
+ */
+export type Portee = 'client' | 'super_admin'
+
 /** Espace client (§4 à §9). */
 export const UNIVERS_CLIENT: UniversNav[] = [
   {
@@ -100,8 +106,8 @@ export const UNIVERS_CLIENT: UniversNav[] = [
   },
 ]
 
-/** Espace fournisseur (§11). */
-export const UNIVERS_FOURNISSEUR: UniversNav[] = [
+/** Espace super admin (§11) — l'équipe Synelia qui exploite la plateforme. */
+export const UNIVERS_SUPER_ADMIN: UniversNav[] = [
   {
     id: 'pilotage',
     nom: 'Pilotage',
@@ -113,10 +119,10 @@ export const UNIVERS_FOURNISSEUR: UniversNav[] = [
   {
     id: 'clients',
     nom: 'Clients',
-    sections: [
-      { nom: 'Organisations', href: '/admin/organisations' },
-      { nom: 'Revendeurs', href: '/admin/revendeurs' },
-    ],
+    // Une seule section : toutes les organisations sont clientes en direct.
+    // La navigation entre elles se fait dans le panneau de sélection monté
+    // par le layout de la section, pas par un onglet de plus.
+    sections: [{ nom: 'Organisations', href: '/admin/organisations' }],
   },
   {
     id: 'infrastructure',
@@ -138,10 +144,7 @@ export const UNIVERS_FOURNISSEUR: UniversNav[] = [
   {
     id: 'finance',
     nom: 'Finance',
-    sections: [
-      { nom: 'Facturation & marge', href: '/admin/facturation' },
-      { nom: 'Revshare partenaires', href: '/admin/revshare' },
-    ],
+    sections: [{ nom: 'Facturation & marge', href: '/admin/facturation' }],
   },
   {
     id: 'exploitation',

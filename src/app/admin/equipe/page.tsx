@@ -5,7 +5,7 @@ import { KeyRound, Plus, ShieldCheck, UserMinus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateHeure, relatif } from '@/lib/format'
 import { AUDIT, EQUIPE_SYNELIA, TICKETS_PLATEFORME } from '@/lib/mock'
-import { MATRICE_RBAC, ROLES_FOURNISSEUR, can } from '@/lib/rbac'
+import { MATRICE_RBAC, ROLES_SUPER_ADMIN, can } from '@/lib/rbac'
 import { ROLE_LABEL, type Role } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
@@ -19,7 +19,7 @@ import { useApp } from '@/components/app/contexte'
 
 const ONGLETS = [
   { id: 'membres', label: 'Membres de l’équipe' },
-  { id: 'roles', label: 'Rôles fournisseur' },
+  { id: 'roles', label: 'Rôles super admin' },
   { id: 'astreinte', label: 'Astreinte' },
   { id: 'acces', label: 'Politique d’accès' },
 ]
@@ -42,9 +42,9 @@ export default function Equipe() {
     <div className="space-y-5">
       <PageHeader
         titre="Équipe Synelia"
-        sousTitre="Qui a accès à quoi, du côté fournisseur. Les rôles sont volontairement étroits : un opérateur qui exploite la capacité n’a pas besoin de pouvoir modifier le catalogue, et personne n’a d’accès permanent aux données d’un client."
+        sousTitre="Qui a accès à quoi, du côté super admin. Les rôles sont volontairement étroits : un opérateur qui exploite la capacité n’a pas besoin de pouvoir modifier le catalogue, et personne n’a d’accès permanent aux données d’un client."
         actions={
-          <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
+          <GatedAction autorise={autorise('org.manage')} message={refus('org.manage')}>
             <Button iconBefore={<Plus size={14} />} onClick={() => setAjout(true)}>
               Ajouter un membre
             </Button>
@@ -177,8 +177,8 @@ export default function Equipe() {
                               Détail
                             </Button>
                             <GatedAction
-                              autorise={autorise('reseller.manage')}
-                              message={refus('reseller.manage')}
+                              autorise={autorise('org.manage')}
+                              message={refus('org.manage')}
                             >
                               <Button
                                 size="sm"
@@ -276,20 +276,20 @@ export default function Equipe() {
         <div className="space-y-4">
           <Card>
             <CardHeader
-              titre="Matrice des permissions fournisseur"
+              titre="Matrice des permissions super admin"
               sousTitre="Les mêmes règles que côté client s’appliquent à nous : une action interdite n’est pas cachée, elle est désactivée et le refus est journalisé."
             />
-            <RoleMatrix roles={ROLES_FOURNISSEUR} />
+            <RoleMatrix roles={ROLES_SUPER_ADMIN} />
           </Card>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader
-                titre="Rôles fournisseur"
-                sousTitre="Trois rôles seulement, aux périmètres nettement séparés."
+                titre="Rôles super admin"
+                sousTitre="Deux rôles seulement, aux périmètres nettement séparés. Il n’y en a pas de troisième : nous n’avons ni revendeur ni partenaire à qui déléguer une partie de ces droits."
               />
               <div className="space-y-2.5">
-                {ROLES_FOURNISSEUR.map((r) => {
+                {ROLES_SUPER_ADMIN.map((r) => {
                   const actions = MATRICE_RBAC.filter((a) => can(r, a.id) === 'full')
                   const lecture = MATRICE_RBAC.filter((a) => can(r, a.id) === 'read')
                   const membres = EQUIPE_SYNELIA.filter((m) => m.role === r)
@@ -307,11 +307,9 @@ export default function Equipe() {
                         </span>
                       </div>
                       <p className="mt-1.5 text-[11.5px] leading-relaxed text-g-700">
-                        {r === 'provider_admin'
-                          ? 'Pilotage complet de la plateforme : capacité, catalogue, organisations, partenaires, finance. Le rôle le plus étendu, réservé à deux ou trois personnes.'
-                          : r === 'provider_operator'
-                            ? 'Exploitation quotidienne : capacité, provisionnements, tickets, supervision. Ne peut pas modifier le catalogue, la tarification ni les contrats partenaires.'
-                            : 'Consultation seule sur l’ensemble de la plateforme. Le rôle à donner à un auditeur externe ou pendant une période d’intégration.'}
+                        {r === 'super_admin'
+                          ? 'Pilotage complet de la plateforme : capacité, catalogue, organisations clientes, finance. Le rôle le plus étendu, réservé à deux ou trois personnes.'
+                          : 'Exploitation quotidienne : capacité, provisionnements, tickets, supervision. Ne peut ni modifier le catalogue et la tarification, ni créer ou suspendre une organisation cliente.'}
                       </p>
                       <p className="mt-2 text-[11px] text-g-500">
                         {membres.length} membre{membres.length > 1 ? 's' : ''} :{' '}
@@ -587,7 +585,7 @@ export default function Equipe() {
                 description="Écarté : nos équipes doivent pouvoir intervenir depuis n’importe où en astreinte. La contrainte serait contre-productive et contournée."
               />
             </div>
-            <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
+            <GatedAction autorise={autorise('org.manage')} message={refus('org.manage')}>
               <Button className="mt-4" variant="secondary">
                 Enregistrer la politique
               </Button>
@@ -754,7 +752,7 @@ export default function Equipe() {
             </div>
 
             <div className="flex flex-wrap gap-1.5 border-t border-g-100 pt-4">
-              <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
+              <GatedAction autorise={autorise('org.manage')} message={refus('org.manage')}>
                 <Button size="sm" variant="secondary">
                   Changer le rôle
                 </Button>
@@ -826,8 +824,8 @@ export default function Equipe() {
               </Select>
             </Field>
             <Field label="Rôle" hint="le droit minimum pour faire le travail">
-              <Select defaultValue="provider_operator">
-                {ROLES_FOURNISSEUR.map((r) => (
+              <Select defaultValue="platform_operator">
+                {ROLES_SUPER_ADMIN.map((r) => (
                   <option key={r} value={r}>
                     {ROLE_LABEL[r]} — {MATRICE_RBAC.filter((a) => can(r, a.id) === 'full').length}{' '}
                     actions

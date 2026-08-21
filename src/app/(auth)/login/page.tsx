@@ -13,7 +13,7 @@ export default function Connexion() {
       <div>
         <h1 className="type-h1">Se connecter</h1>
         <p className="mt-2 text-[13.5px] leading-relaxed text-g-500">
-          Accédez à votre espace client ou à votre espace fournisseur. L’authentification est
+          Accédez à votre espace client ou à votre espace super admin. L’authentification est
           déléguée à notre fournisseur d’identité.
         </p>
       </div>

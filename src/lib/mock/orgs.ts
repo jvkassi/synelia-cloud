@@ -3,7 +3,7 @@
  * Tout est fictif. Ancrage ouest-africain assumé.
  */
 
-import type { Membership, Organisation, Reseller, Role, User } from '../types'
+import type { Membership, Organisation, Role, User } from '../types'
 
 export const ORGANISATIONS: Organisation[] = [
   {
@@ -12,7 +12,6 @@ export const ORGANISATIONS: Organisation[] = [
     pays: "Côte d'Ivoire",
     secteur: 'Services numériques',
     tva: 'CI-2019-4472-B',
-    type: 'direct',
     statut: 'active',
     createdAt: '2024-03-11',
     espaces: 3,
@@ -28,7 +27,6 @@ export const ORGANISATIONS: Organisation[] = [
     pays: "Côte d'Ivoire",
     secteur: 'Microfinance',
     tva: 'CI-2016-1180-A',
-    type: 'direct',
     statut: 'active',
     createdAt: '2023-09-02',
     espaces: 2,
@@ -44,7 +42,6 @@ export const ORGANISATIONS: Organisation[] = [
     pays: "Côte d'Ivoire",
     secteur: 'Assurance mutualiste',
     tva: 'CI-2020-7731-C',
-    type: 'direct',
     statut: 'active',
     createdAt: '2025-01-20',
     espaces: 1,
@@ -60,7 +57,6 @@ export const ORGANISATIONS: Organisation[] = [
     pays: "Côte d'Ivoire",
     secteur: 'Institution publique',
     tva: 'CI-PUB-0031',
-    type: 'direct',
     statut: 'active',
     createdAt: '2024-11-04',
     espaces: 2,
@@ -76,14 +72,13 @@ export const ORGANISATIONS: Organisation[] = [
     pays: "Côte d'Ivoire",
     secteur: 'Opérateur télécom',
     tva: 'CI-2012-0001-T',
-    type: 'revendeur',
     statut: 'active',
     createdAt: '2025-06-16',
-    espaces: 0,
+    espaces: 4,
     utilisateurs: 9,
     caMensuel: 1240000,
-    consommationVcpu: 0,
-    tenantPlan: 'Marque blanche',
+    consommationVcpu: 296,
+    tenantPlan: 'Enterprise',
     domaine: 'cloud.oc2s.ci',
   },
   {
@@ -91,8 +86,6 @@ export const ORGANISATIONS: Organisation[] = [
     nom: 'SOTRA Mobilité',
     pays: "Côte d'Ivoire",
     secteur: 'Transport urbain',
-    type: 'client_revendeur',
-    resellerId: 'res-oc2s',
     statut: 'active',
     createdAt: '2025-07-28',
     espaces: 1,
@@ -107,8 +100,6 @@ export const ORGANISATIONS: Organisation[] = [
     nom: 'Ivoire Agro Négoce',
     pays: "Côte d'Ivoire",
     secteur: 'Agro-industrie',
-    type: 'client_revendeur',
-    resellerId: 'res-oc2s',
     statut: 'active',
     createdAt: '2026-02-09',
     espaces: 1,
@@ -123,7 +114,6 @@ export const ORGANISATIONS: Organisation[] = [
     nom: 'BICICI Lab',
     pays: "Côte d'Ivoire",
     secteur: 'Banque',
-    type: 'direct',
     statut: 'suspendue',
     createdAt: '2025-04-15',
     espaces: 1,
@@ -137,53 +127,6 @@ export const ORGANISATIONS: Organisation[] = [
 
 /** Organisation active dans la démonstration de l'espace client. */
 export const ORG_COURANTE = ORGANISATIONS[0]
-
-export const RESELLERS: Reseller[] = [
-  {
-    id: 'res-oc2s',
-    orgId: 'org-oc2s',
-    nom: 'OC²S — Orange Cloud & Cyber Solutions',
-    theme: {
-      logoUrl: '/logos/oc2s.svg',
-      primary: '#FF7900',
-      accent: '#4B2882',
-      domaine: 'cloud.oc2s.ci',
-    },
-    grille: [
-      { offerId: 'off-flex', prixAchat: 18000, prixVente: 29000 },
-      { offerId: 'off-pro', prixAchat: 61000, prixVente: 98000 },
-      { offerId: 'off-ent', prixAchat: 180000, prixVente: 275000 },
-      { offerId: 'off-k8s-starter', prixAchat: 32000, prixVente: 52000 },
-    ],
-    catalogue: ['drive-pro', 'email-pro', 'visio', 'wordpress', 'erp'],
-    revsharePct: 22,
-    clientsFinaux: ['org-sotra', 'org-ivoire-agro'],
-    caGenere: 1240000,
-    marge: 412000,
-    statut: 'actif',
-  },
-  {
-    id: 'res-technipole',
-    orgId: 'org-technipole',
-    nom: 'Technipôle Sahel',
-    theme: {
-      logoUrl: '/logos/technipole.svg',
-      primary: '#0F766E',
-      accent: '#C0297A',
-      domaine: 'portail.technipole-sahel.bf',
-    },
-    grille: [
-      { offerId: 'off-flex', prixAchat: 19000, prixVente: 31000 },
-      { offerId: 'off-pro', prixAchat: 64000, prixVente: 105000 },
-    ],
-    catalogue: ['drive-pro', 'email-pro', 'ged'],
-    revsharePct: 18,
-    clientsFinaux: [],
-    caGenere: 0,
-    marge: 0,
-    statut: 'onboarding',
-  },
-]
 
 export const USERS: User[] = [
   {
@@ -376,7 +319,7 @@ export const MES_ORGANISATIONS = [
   { org: ORGANISATIONS[5], role: 'espace_admin' as Role },
 ]
 
-/** Équipe Synelia — espace fournisseur (§8.8 `/admin/equipe`). */
+/** Équipe Synelia — espace super admin (§8.8 `/admin/equipe`). */
 export interface MembreEquipe {
   id: string
   nom: string
@@ -393,7 +336,7 @@ export const EQUIPE_SYNELIA: MembreEquipe[] = [
     id: 'syn-1',
     nom: 'Jean-Vincent Kassi',
     email: 'jv.kassi@synelia.tech',
-    role: 'provider_admin',
+    role: 'super_admin',
     equipe: 'Direction Innovation & Expertise',
     dernierAcces: '2026-08-19T15:12:00Z',
     privilegie: true,
@@ -407,7 +350,7 @@ export const EQUIPE_SYNELIA: MembreEquipe[] = [
     id: 'syn-2',
     nom: 'Stéphane Ouattara',
     email: 's.ouattara@synelia.tech',
-    role: 'provider_admin',
+    role: 'super_admin',
     equipe: 'Sponsor stratégique',
     dernierAcces: '2026-08-18T09:40:00Z',
     privilegie: true,
@@ -416,7 +359,7 @@ export const EQUIPE_SYNELIA: MembreEquipe[] = [
     id: 'syn-3',
     nom: 'Marina Gbagbo',
     email: 'm.gbagbo@synelia.tech',
-    role: 'provider_operator',
+    role: 'platform_operator',
     equipe: 'NOC Abidjan',
     dernierAcces: '2026-08-19T15:18:00Z',
     privilegie: false,
@@ -425,7 +368,7 @@ export const EQUIPE_SYNELIA: MembreEquipe[] = [
     id: 'syn-4',
     nom: 'Cheick Coulibaly',
     email: 'c.coulibaly@synelia.tech',
-    role: 'provider_operator',
+    role: 'platform_operator',
     equipe: 'NOC Abidjan · astreinte',
     dernierAcces: '2026-08-19T06:02:00Z',
     privilegie: false,
@@ -452,7 +395,7 @@ export const EQUIPE_SYNELIA: MembreEquipe[] = [
     id: 'syn-7',
     nom: 'Salif Dembélé',
     email: 's.dembele@synelia.tech',
-    role: 'provider_operator',
+    role: 'platform_operator',
     equipe: 'Support niveau 2',
     dernierAcces: '2026-08-19T14:47:00Z',
     privilegie: false,
@@ -472,8 +415,4 @@ export function membresDeLOrg(orgId: string) {
     membership: m,
     user: userById(m.userId)!,
   }))
-}
-
-export function resellerById(id: string): Reseller | undefined {
-  return RESELLERS.find((r) => r.id === id)
 }

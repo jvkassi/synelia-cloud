@@ -18,7 +18,7 @@ import type { Offer } from '@/lib/types'
 
 const ONGLETS = [
   { id: 'offres', label: 'Offres' },
-  { id: 'grille', label: 'Grille tarifaire' },
+  { id: 'grille', label: 'Tarification' },
   { id: 'depreciation', label: 'Dépréciation' },
 ]
 
@@ -46,7 +46,7 @@ export default function Catalogue() {
     <div className="space-y-5">
       <PageHeader
         titre="Catalogue d’offres"
-        sousTitre="Ce que nous vendons, à quel prix, et selon quel canal. Une offre publiée engage un prix : la modifier à la hausse ne s’applique jamais à une souscription en cours, seulement aux nouvelles."
+        sousTitre="Ce que nous vendons et à quel prix. Une offre publiée engage un prix : la modifier à la hausse ne s’applique jamais à une souscription en cours, seulement aux nouvelles."
         actions={
           <GatedAction autorise={autorise('catalog.edit')} message={refus('catalog.edit')}>
             <Button iconBefore={<Plus size={14} />} onClick={() => setCreation(true)}>
@@ -87,10 +87,12 @@ export default function Catalogue() {
           detail="Périmètre à qualifier"
         />
         <StatTile
-          libelle="Écart revendeur"
-          valeur={pct(18)}
+          libelle="Revenu récurrent"
+          valeur={moneyPerMonth(
+            OFFRES.reduce((a, o) => a + o.prix * o.souscriptionsActives, 0),
+          )}
           ton="accent"
-          detail="Remise moyenne sur le prix direct"
+          detail="Prix publics × souscriptions actives"
         />
       </div>
 
@@ -167,38 +169,13 @@ export default function Catalogue() {
                   ),
                 },
                 {
-                  id: 'direct',
-                  entete: 'Prix direct',
+                  id: 'prix',
+                  entete: 'Prix public',
                   aligne: 'right',
-                  cle: (o) => o.prix.direct,
+                  cle: (o) => o.prix,
                   rendu: (o) => (
                     <span className="tnum text-[12.5px] font-bold text-ink">
-                      {o.surDevis ? 'Sur devis' : moneyPerMonth(o.prix.direct)}
-                    </span>
-                  ),
-                },
-                {
-                  id: 'revendeur',
-                  entete: 'Prix revendeur',
-                  aligne: 'right',
-                  cle: (o) => o.prix.revendeur,
-                  masquable: true,
-                  rendu: (o) => (
-                    <span className="tnum text-[12px] text-g-700">
-                      {o.surDevis ? '—' : money(o.prix.revendeur)}
-                    </span>
-                  ),
-                },
-                {
-                  id: 'operateur',
-                  entete: 'Prix opérateur',
-                  aligne: 'right',
-                  cle: (o) => o.prix.operateur,
-                  masquable: true,
-                  masqueeParDefaut: true,
-                  rendu: (o) => (
-                    <span className="tnum text-[12px] text-g-700">
-                      {o.surDevis ? '—' : money(o.prix.operateur)}
+                      {o.surDevis ? 'Sur devis' : moneyPerMonth(o.prix)}
                     </span>
                   ),
                 },
@@ -306,18 +283,19 @@ export default function Catalogue() {
 
       {onglet === 'grille' && (
         <div className="space-y-4">
-          <Callout ton="violet" titre="Trois canaux, trois grilles, un seul prix affiché publiquement">
-            Le prix direct est celui de la vitrine : c’est le seul que nous publions. Le prix revendeur
-            et le prix opérateur sont des prix d’achat, négociés dans un contrat de partenariat. Un
-            revendeur reste libre de fixer son prix de vente — nous ne lui imposons pas de marge, et
-            nous ne cassons pas ses prix en vendant en direct au même client.
+          <Callout ton="violet" titre="Un seul prix, celui de la vitrine">
+            Nous vendons en direct, sans revendeur ni apporteur d'affaires : il n'y a donc pas de
+            grille d'achat partenaire à tenir à côté du prix public. Ce que le client lit sur la
+            vitrine est ce qu'il paie, et c'est le même montant pour tout le monde. Les remises
+            existent — volume, engagement annuel — mais elles se matérialisent dans un devis, pas
+            dans une seconde grille cachée.
           </Callout>
 
           <Card padding={false}>
             <div className="border-b border-g-100 px-4 py-3.5">
               <CardHeader
-                titre="Grille par canal"
-                sousTitre="Les écarts sont exprimés par rapport au prix direct."
+                titre="Prix publics des offres publiées"
+                sousTitre="Le revenu récurrent est le prix multiplié par les souscriptions actives, hors remises de volume."
                 className="mb-0"
               />
             </div>
@@ -325,54 +303,31 @@ export default function Catalogue() {
               <table className="w-full min-w-max border-collapse">
                 <thead>
                   <tr className="border-b border-g-300 bg-g-050">
-                    {['Offre', 'Direct', 'Revendeur', 'Écart', 'Opérateur', 'Écart', 'Marge à la revente'].map(
-                      (h) => (
-                        <th key={h} className="type-micro px-3 py-2 text-left font-semibold text-g-500">
-                          {h}
-                        </th>
-                      ),
-                    )}
+                    {['Offre', 'Prix public', 'Souscriptions actives', 'Revenu récurrent'].map((h) => (
+                      <th key={h} className="type-micro px-3 py-2 text-left font-semibold text-g-500">
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {OFFRES.filter((o) => !o.surDevis && o.statut === 'publiee').map((o) => {
-                    const ecartRev = Math.round(
-                      ((o.prix.direct - o.prix.revendeur) / o.prix.direct) * 1000,
-                    ) / 10
-                    const ecartOp = Math.round(
-                      ((o.prix.direct - o.prix.operateur) / o.prix.direct) * 1000,
-                    ) / 10
-                    return (
-                      <tr key={o.id} className="border-b border-g-100 last:border-0">
-                        <td className="px-3 py-2.5">
-                          <span className="block text-[12.5px] font-semibold text-ink">{o.nom}</span>
-                          <span className="block font-mono text-[10.5px] text-g-500">{o.code}</span>
-                        </td>
-                        <td className="tnum px-3 py-2.5 text-[12.5px] font-bold text-ink">
-                          {money(o.prix.direct)}
-                        </td>
-                        <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
-                          {money(o.prix.revendeur)}
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <Badge tone="accent" size="sm">
-                            − {pct(ecartRev, 1)}
-                          </Badge>
-                        </td>
-                        <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
-                          {money(o.prix.operateur)}
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <Badge tone="info" size="sm">
-                            − {pct(ecartOp, 1)}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-500">
-                          {money(o.prix.direct - o.prix.revendeur)} par mois si revendu au prix direct
-                        </td>
-                      </tr>
-                    )
-                  })}
+                  {OFFRES.filter((o) => !o.surDevis && o.statut === 'publiee').map((o) => (
+                    <tr key={o.id} className="border-b border-g-100 last:border-0">
+                      <td className="px-3 py-2.5">
+                        <span className="block text-[12.5px] font-semibold text-ink">{o.nom}</span>
+                        <span className="block font-mono text-[10.5px] text-g-500">{o.code}</span>
+                      </td>
+                      <td className="tnum px-3 py-2.5 text-[12.5px] font-bold text-ink">
+                        {moneyPerMonth(o.prix)}
+                      </td>
+                      <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
+                        {num(o.souscriptionsActives)}
+                      </td>
+                      <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
+                        {moneyPerMonth(o.prix * o.souscriptionsActives)}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -391,8 +346,8 @@ export default function Catalogue() {
                     d: 'Elle s’applique aux nouvelles souscriptions et aux renouvellements, avec un préavis de trois mois. Un client qui a signé à un prix le conserve pour la durée de son engagement.',
                   },
                   {
-                    r: 'Nous ne vendons pas en direct sous le prix d’un revendeur sur son client',
-                    d: 'Si un client apporté par un revendeur nous contacte, nous le renvoyons vers son revendeur. Court-circuiter un partenaire une fois suffit à détruire la confiance du réseau entier.',
+                    r: 'Le même prix pour tous, à caractéristiques égales',
+                    d: 'Vendre en direct et sans intermédiaire nous oblige à une chose : deux clients qui souscrivent la même offre paient le même montant. Une remise se justifie par un volume ou un engagement, jamais par la capacité de négociation de l’interlocuteur.',
                   },
                   {
                     r: 'Aucun prix d’appel non tenable',
@@ -492,7 +447,7 @@ export default function Catalogue() {
                     items={[
                       { cle: 'Code', valeur: o.code },
                       { cle: 'Souscriptions encore actives', valeur: String(o.souscriptionsActives) },
-                      { cle: 'Prix garanti', valeur: moneyPerMonth(o.prix.direct) },
+                      { cle: 'Prix garanti', valeur: moneyPerMonth(o.prix) },
                       { cle: 'Retirée de la vente', valeur: 'Oui — absente de la vitrine et du simulateur' },
                       { cle: 'Toujours servie', valeur: 'Oui, sans limite de durée annoncée' },
                     ]}
@@ -516,7 +471,7 @@ export default function Catalogue() {
                 { q: '12 août 2026', qui: 'Jean-Vincent Kassi', d: 'Publication de l’offre Cloud Souverain — placement exclusivement libre et local' },
                 { q: '4 août 2026', qui: 'Aïcha Bamba', d: 'Publication de l’offre Cloud Hybride — absorption d’une capacité VMware existante' },
                 { q: '28 juillet 2026', qui: 'Jean-Vincent Kassi', d: 'Dépréciation de Cloud Start 2024 — 4 souscriptions maintenues au prix garanti' },
-                { q: '11 juillet 2026', qui: 'Marc Ouattara', d: 'Ajustement du prix revendeur de Cloud Pro — de −15 % à −18 %' },
+                { q: '11 juillet 2026', qui: 'Marc Ouattara', d: 'Ajustement du prix public de Cloud Pro — de 96 000 à 85 000 FCFA par mois' },
                 { q: '2 juillet 2026', qui: 'Aïcha Bamba', d: 'Ajout de l’engagement 99,95 % sur les offres Espace Cloud' },
               ].map((x) => (
                 <div
@@ -601,18 +556,10 @@ export default function Catalogue() {
               placeholder={'Sauvegarde quotidienne incluse\nIP publique\nSupport en heures ouvrées'}
             />
           </Field>
-          <MicroLabel className="pt-2">Tarification par canal</MicroLabel>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Field label="Prix direct" hint="publié sur la vitrine">
-              <Input type="number" defaultValue={edition?.prix.direct ?? 0} suffix="FCFA" />
-            </Field>
-            <Field label="Prix revendeur" hint="prix d’achat partenaire">
-              <Input type="number" defaultValue={edition?.prix.revendeur ?? 0} suffix="FCFA" />
-            </Field>
-            <Field label="Prix opérateur" hint="volume négocié">
-              <Input type="number" defaultValue={edition?.prix.operateur ?? 0} suffix="FCFA" />
-            </Field>
-          </div>
+          <MicroLabel className="pt-2">Tarification</MicroLabel>
+          <Field label="Prix public" hint="publié sur la vitrine — c’est le seul prix de l’offre">
+            <Input type="number" defaultValue={edition?.prix ?? 0} suffix="FCFA" />
+          </Field>
           <Field label="Engagement de disponibilité">
             <Select defaultValue={edition?.sla ?? '99,9 %'}>
               <option value="">Aucun engagement chiffré</option>

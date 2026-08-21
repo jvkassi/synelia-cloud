@@ -40,7 +40,7 @@ export function Logo({
 }: {
   /** `clair` sur fond blanc, `sombre` sur fond violet. */
   variante?: 'clair' | 'sombre'
-  /** Badge de contexte, par exemple `FOURNISSEUR`. */
+  /** Badge de contexte, par exemple `SUPER ADMIN`. */
   contexte?: string
   size?: number
   /** Réduit la marque à son symbole sous 640 px, pour les barres denses. */
@@ -77,13 +77,13 @@ export function Logo({
   )
 }
 
-/** Badge de contexte fournisseur, à côté du logo (§8.1). */
-export function BadgeFournisseur() {
+/** Badge de contexte super admin, à côté du logo (§8.1). */
+export function BadgeSuperAdmin() {
   return (
     // Masqué sur les écrans étroits : la barre supérieure n'a pas la place et
-    // le fond sombre suffit déjà à distinguer l'espace fournisseur.
+    // le fond sombre suffit déjà à distinguer l'espace super admin.
     <span className="hidden rounded-[4px] border border-p-400/60 bg-white/10 px-1.5 py-0.5 text-[9.5px] font-bold tracking-[.08em] text-p-300 sm:inline-block">
-      FOURNISSEUR
+      SUPER ADMIN
     </span>
   )
 }

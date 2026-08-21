@@ -6,7 +6,7 @@ import type { Metadata } from 'next'
  */
 export const metadata: Metadata = {
   title: 'Catalogue et tarifs',
-  description: 'Offres, paliers et grilles direct, revendeur et opérateur.',
+  description: 'Offres, paliers et prix publics — un seul prix par offre, celui de la vitrine.',
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {

@@ -2,7 +2,7 @@
 
 import { sauvegardesWebDeLOrg } from '@/lib/mock'
 import type { Tone } from '@/components/ui/badge'
-import { CadreSection } from '@/components/app/cadre-webcloud'
+import { CadreSection } from '@/components/app/cadre-section'
 
 /** Panneau de la section — liste les sauvegardes de l'organisation. */
 export function CadreBackup({ children }: { children: React.ReactNode }) {

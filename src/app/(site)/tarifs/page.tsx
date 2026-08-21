@@ -37,7 +37,7 @@ const FAQ_TARIFS = [
   {
     question: 'Existe-t-il des remises de volume ?',
     reponse:
-      'Oui, à partir de dix souscriptions d’une même offre, ou d’un engagement annuel. La remise annuelle est de 15 % et s’applique en libre-service ; les remises de volume sont négociées et matérialisées dans un devis. Les partenaires revendeurs bénéficient d’une grille d’achat distincte, de 25 à 45 % selon le niveau.',
+      'Oui, à partir de dix souscriptions d’une même offre, ou d’un engagement annuel. La remise annuelle est de 15 % et s’applique en libre-service ; les remises de volume sont négociées et matérialisées dans un devis.',
   },
   {
     question: 'Le mobile money est-il vraiment accepté ?',

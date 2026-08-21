@@ -655,7 +655,7 @@ export default function MarketplaceAdmin() {
                   },
                   {
                     t: 'Nous n’accédons pas au contenu des données',
-                    d: 'Les fichiers, les courriels, les écritures comptables ne sont pas lisibles depuis le portail fournisseur. Une intervention exige une élévation nominative, autorisée par le client.',
+                    d: 'Les fichiers, les courriels, les écritures comptables ne sont pas lisibles depuis le portail super admin. Une intervention exige une élévation nominative, autorisée par le client.',
                   },
                   {
                     t: 'Nous ne verrouillons pas la sortie',

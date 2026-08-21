@@ -594,7 +594,7 @@ export default function Facturation() {
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
                         <span className="tnum text-[12px] font-semibold text-ink">
-                          {moneyPerMonth(o.prix.direct)}
+                          {moneyPerMonth(o.prix)}
                         </span>
                         <ButtonLink size="sm" variant="ghost" href={`/offres/${o.code.toLowerCase()}`}>
                           Voir

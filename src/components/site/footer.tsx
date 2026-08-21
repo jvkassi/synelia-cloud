@@ -35,7 +35,6 @@ const COLONNES = [
       { nom: 'Entreprises', href: '/entreprises' },
       { nom: 'Souveraineté', href: '/souverainete' },
       { nom: 'Datacenters', href: '/datacenters' },
-      { nom: 'Partenaires & revendeurs', href: '/partenaires' },
       { nom: 'Tarifs', href: '/tarifs' },
       { nom: 'Simulateur', href: '/simulateur' },
     ],
@@ -47,7 +46,7 @@ const COLONNES = [
       { nom: 'Documentation', href: '/docs' },
       { nom: 'État des services', href: '/statut' },
       { nom: 'Espace client', href: '/app' },
-      { nom: 'Espace fournisseur', href: '/admin' },
+      { nom: 'Espace super admin', href: '/admin' },
     ],
   },
   {

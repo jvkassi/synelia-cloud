@@ -719,7 +719,7 @@ export const SIEGES: Seat[] = [
   { id: 'st-16', managedServiceId: 'svc-coffre', userId: 'usr-yao', statut: 'actif', derniereActivite: '2026-08-19T09:02:00Z' },
 ]
 
-/** Parc d'instances toutes organisations confondues — écran fournisseur §8.6. */
+/** Parc d'instances toutes organisations confondues — écran super admin §8.6. */
 export interface InstanceParc {
   id: string
   orgId: string

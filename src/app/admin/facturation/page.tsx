@@ -10,7 +10,6 @@ import {
   IMPAYES,
   MARGE_BACKENDS,
   ORGANISATIONS,
-  RELEVES_REVSHARE,
   SYNTHESE_PLATEFORME,
   VENTILATION_DEPENSE,
 } from '@/lib/mock'
@@ -47,37 +46,23 @@ export default function FacturationAdmin() {
 
   const caMensuel = SYNTHESE_PLATEFORME.caMensuel
   const impayesTotal = IMPAYES.reduce((a, i) => a + i.montant, 0)
-  const revshareDu = RELEVES_REVSHARE.filter((r) => r.statut !== 'réglé').reduce(
-    (a, r) => a + r.montant,
-    0,
-  )
   const coutInfra = MARGE_BACKENDS.reduce((a, m) => a + m.coutInfra, 0)
   const revenuInfra = MARGE_BACKENDS.reduce((a, m) => a + m.revenu, 0)
   const margeBrute = Math.round(((revenuInfra - coutInfra) / revenuInfra) * 1000) / 10
 
-  const parCanal = [
-    {
-      canal: 'Direct',
-      montant: ORGANISATIONS.filter((o) => o.type === 'direct').reduce(
-        (a, o) => a + (o.caMensuel ?? 0),
-        0,
-      ),
-    },
-    {
-      canal: 'Via revendeur',
-      montant: ORGANISATIONS.filter((o) => o.type === 'client_revendeur').reduce(
-        (a, o) => a + (o.caMensuel ?? 0),
-        0,
-      ),
-    },
-    {
-      canal: 'Revendeurs (compte propre)',
-      montant: ORGANISATIONS.filter((o) => o.type === 'revendeur').reduce(
-        (a, o) => a + (o.caMensuel ?? 0),
-        0,
-      ),
-    },
-  ]
+  // Toutes les organisations sont clientes en direct : la question utile n'est
+  // plus « par quel canal » mais « sur quels secteurs repose le revenu », qui
+  // dit à quoi la plateforme est exposée si l'un d'eux se contracte.
+  const parSecteur = Array.from(
+    ORGANISATIONS.reduce((acc, o) => {
+      const cle = o.secteur ?? 'Autres'
+      acc.set(cle, (acc.get(cle) ?? 0) + (o.caMensuel ?? 0))
+      return acc
+    }, new Map<string, number>()),
+  )
+    .map(([secteur, montant]) => ({ secteur, montant }))
+    .filter((x) => x.montant > 0)
+    .sort((a, b) => b.montant - a.montant)
 
   return (
     <div className="space-y-5">
@@ -108,7 +93,7 @@ export default function FacturationAdmin() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatTile
           libelle="CA mensuel récurrent"
           valeur={money(caMensuel)}
@@ -136,12 +121,6 @@ export default function FacturationAdmin() {
           valeur={money(impayesTotal)}
           ton={impayesTotal > 0 ? 'err' : 'ok'}
           detail={`${IMPAYES.length} factures`}
-        />
-        <StatTile
-          libelle="Partage à verser"
-          valeur={money(revshareDu)}
-          ton={revshareDu > 0 ? 'warn' : 'ok'}
-          detail="Périodes non réglées"
         />
       </div>
 
@@ -198,23 +177,23 @@ export default function FacturationAdmin() {
             </Card>
 
             <Card>
-              <CardHeader titre="Répartition par canal" sousTitre="Revenu mensuel récurrent." />
+              <CardHeader titre="Répartition par secteur" sousTitre="Revenu mensuel récurrent." />
               <StackedBar
-                segments={parCanal.map((c, i) => ({
-                  label: c.canal,
+                segments={parSecteur.map((c, i) => ({
+                  label: c.secteur,
                   valeur: c.montant,
-                  couleur: COULEURS[i],
+                  couleur: COULEURS[i % COULEURS.length],
                 }))}
               />
               <div className="mt-4 space-y-1.5 border-t border-g-100 pt-3.5">
-                {parCanal.map((c, i) => (
-                  <div key={c.canal} className="flex items-baseline justify-between gap-3">
+                {parSecteur.map((c, i) => (
+                  <div key={c.secteur} className="flex items-baseline justify-between gap-3">
                     <span className="flex min-w-0 items-center gap-1.5">
                       <span
                         className="h-2 w-2 shrink-0 rounded-sm"
-                        style={{ background: COULEURS[i] }}
+                        style={{ background: COULEURS[i % COULEURS.length] }}
                       />
-                      <span className="truncate text-[12px] text-g-700">{c.canal}</span>
+                      <span className="truncate text-[12px] text-g-700">{c.secteur}</span>
                     </span>
                     <span className="tnum shrink-0 text-[12px] font-semibold text-ink">
                       {money(c.montant)}
@@ -222,10 +201,11 @@ export default function FacturationAdmin() {
                   </div>
                 ))}
               </div>
-              <Callout ton="info" className="mt-4" titre="Le canal indirect progresse">
-                Un client apporté par un partenaire coûte moins cher à acquérir et se révèle plus
-                stable, parce que le partenaire fait un travail de conseil que nous ne faisons pas.
-                C’est ce qui justifie la remise consentie.
+              <Callout ton="info" className="mt-4" titre="Nous vendons en direct, donc nous portons seuls le risque de concentration">
+                Aucun intermédiaire ne s’intercale entre nous et le client : c’est ce qui rend le
+                revenu lisible, et c’est aussi ce qui fait qu’un secteur qui se contracte se voit
+                immédiatement ici. Le premier secteur pèse{' '}
+                {pct(Math.round((parSecteur[0].montant / caMensuel) * 1000) / 10, 1)} du revenu.
               </Callout>
             </Card>
           </div>
@@ -242,7 +222,7 @@ export default function FacturationAdmin() {
               <table className="w-full min-w-max border-collapse">
                 <thead>
                   <tr className="border-b border-g-300 bg-g-050">
-                    {['Organisation', 'Canal', 'Plan', 'Espaces', 'CA mensuel', 'Part du revenu', 'Statut', ''].map(
+                    {['Organisation', 'Secteur', 'Plan', 'Espaces', 'CA mensuel', 'Part du revenu', 'Statut', ''].map(
                       (h) => (
                         <th key={h} className="type-micro px-3 py-2 text-left font-semibold text-g-500">
                           {h}
@@ -267,23 +247,8 @@ export default function FacturationAdmin() {
                               {o.nom}
                             </Link>
                           </td>
-                          <td className="px-3 py-2.5">
-                            <Badge
-                              tone={
-                                o.type === 'revendeur'
-                                  ? 'accent'
-                                  : o.type === 'client_revendeur'
-                                    ? 'info'
-                                    : 'neutral'
-                              }
-                              size="sm"
-                            >
-                              {o.type === 'revendeur'
-                                ? 'Revendeur'
-                                : o.type === 'client_revendeur'
-                                  ? 'Indirect'
-                                  : 'Direct'}
-                            </Badge>
+                          <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                            {o.secteur ?? '—'}
                           </td>
                           <td className="px-3 py-2.5 text-[11.5px] text-g-700">
                             {o.tenantPlan ?? '—'}

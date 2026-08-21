@@ -10,12 +10,6 @@ import { Callout } from '@/components/composition/card'
 
 export const metadata: Metadata = { title: 'Choisir une organisation' }
 
-const TYPES: Record<string, string> = {
-  direct: 'Tenant direct',
-  revendeur: 'Tenant revendeur',
-  client_revendeur: 'Client de revendeur',
-}
-
 export default function SelectionOrganisation() {
   return (
     <div className="space-y-6">
@@ -43,7 +37,7 @@ export default function SelectionOrganisation() {
                 <Badge tone="violet" size="sm">
                   {ROLE_LABEL[role]}
                 </Badge>
-                <span className="text-[11.5px] text-g-500">{TYPES[org.type]}</span>
+                <span className="text-[11.5px] text-g-500">{org.secteur ?? org.pays}</span>
                 <span className="text-[11.5px] text-g-500">
                   {org.espaces ?? 0} Espace{(org.espaces ?? 0) > 1 ? 's' : ''} Cloud ·{' '}
                   {org.utilisateurs ?? 0} utilisateurs

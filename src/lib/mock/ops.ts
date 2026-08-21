@@ -31,7 +31,7 @@ export const AUDIT: AuditEvent[] = [
     id: 'ev-2',
     ts: '2026-08-19T14:47:31Z',
     actor: { id: 'syn-1', nom: 'Jean-Vincent Kassi', email: 'jv.kassi@synelia.tech', type: 'user' },
-    role: 'provider_admin',
+    role: 'super_admin',
     scope: { type: 'plateforme', label: 'Plateforme Synelia Cloud' },
     action: 'capacity.rebalance',
     target: 'osp-gra ← vmw-gra',
@@ -59,7 +59,7 @@ export const AUDIT: AuditEvent[] = [
     orgId: 'org-dba',
     orgNom: 'Digital Business Africa',
     actor: { id: 'syn-3', nom: 'Marina Gbagbo', email: 'm.gbagbo@synelia.tech', type: 'user' },
-    role: 'provider_operator',
+    role: 'platform_operator',
     scope: { type: 'espace', id: 'ec-dba-01', label: 'EC-DBA-01' },
     action: 'lb.rule.create',
     target: 'lb-api-prod · exception ACME',
@@ -128,7 +128,7 @@ export const AUDIT: AuditEvent[] = [
     orgId: 'org-dba',
     orgNom: 'Digital Business Africa',
     actor: { id: 'sys-backup', nom: 'Orchestrateur de sauvegarde', email: 'system@synelia.cloud', type: 'systeme' },
-    role: 'provider_operator',
+    role: 'platform_operator',
     scope: { type: 'org', id: 'org-dba', label: 'Digital Business Africa' },
     action: 'backup.run',
     target: 'Production · quotidien immuable',
@@ -189,7 +189,7 @@ export const AUDIT: AuditEvent[] = [
     id: 'ev-14',
     ts: '2026-08-17T22:04:51Z',
     actor: { id: 'syn-4', nom: 'Cheick Coulibaly', email: 'c.coulibaly@synelia.tech', type: 'user' },
-    role: 'provider_operator',
+    role: 'platform_operator',
     scope: { type: 'plateforme', label: 'Backend OS-ABJ-01' },
     action: 'backend.maintenance.start',
     target: 'OS-ABJ-01',
@@ -202,8 +202,8 @@ export const AUDIT: AuditEvent[] = [
     ts: '2026-08-17T15:41:22Z',
     orgId: 'org-sotra',
     orgNom: 'SOTRA Mobilité',
-    actor: { id: 'res-oc2s-admin', nom: 'Support OC²S', email: 'cloud@oc2s.ci', type: 'user' },
-    role: 'reseller_admin',
+    actor: { id: 'usr-sotra-dsi', nom: 'Konan Brou', email: 'k.brou@sotra-mobilite.ci', type: 'user' },
+    role: 'org_admin',
     scope: { type: 'org', id: 'org-sotra', label: 'SOTRA Mobilité' },
     action: 'espace.create',
     target: 'EC-SOT-01 · Cloud Flex · ABJ',
@@ -311,7 +311,7 @@ export const JOBS: ProvisioningJob[] = [
   },
 ]
 
-/** Jobs de provisioning en cours, vue fournisseur (§8.2). */
+/** Jobs de provisioning en cours, vue super admin (§8.2). */
 export const JOBS_PLATEFORME: ProvisioningJob[] = [
   ...JOBS,
   {
@@ -377,7 +377,7 @@ export const EVENEMENTS_SUPERVISION: EvenementSupervision[] = [
   { id: 'sup-8', ts: '2026-08-18T18:52:18Z', gravite: 'majeure', ressource: 'analytics · Production', message: 'Latence P95 à 412 ms (seuil 200 ms)', site: 'ABJ' },
 ]
 
-/** Alertes plateforme — vue fournisseur (§8.2). */
+/** Alertes plateforme — vue super admin (§8.2). */
 export const ALERTES_PLATEFORME: EvenementSupervision[] = [
   { id: 'pf-1', ts: '2026-08-19T15:18:04Z', gravite: 'majeure', ressource: 'CL-GRA-01', message: 'Saturation vCPU projetée à 88 % dans 90 jours', site: 'ABJ' },
   { id: 'pf-2', ts: '2026-08-19T14:52:11Z', gravite: 'critique', ressource: 'EC-SOT-01', message: 'Migration inter-backend en échec — lot 2', site: 'GBM' },
@@ -476,7 +476,7 @@ export const INCIDENTS: Incident[] = [
   },
 ]
 
-/** Campagnes de conformité côté fournisseur (§8.8 `/admin/conformite`). */
+/** Campagnes de conformité côté super admin (§8.8 `/admin/conformite`). */
 export const CONFORMITE_PLATEFORME = {
   testsRestauration: [
     { id: 'tr-1', periode: 'Août 2026', perimetre: 'Échantillon 10 % du parc', planifies: 42, executes: 38, succes: 36, echecs: 2, statut: 'en cours' },
