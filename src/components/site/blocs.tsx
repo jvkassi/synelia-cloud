@@ -319,6 +319,97 @@ export function VisuelRack({ className }: { className?: string }) {
   )
 }
 
+/**
+ * Portrait en monogramme. La charte proscrit les photographies génériques, et
+ * un visage de banque d'images réchauffe moins qu'un nom : on affiche les
+ * initiales sur une teinte de la palette, choisie par la position pour rester
+ * stable d'un rendu à l'autre.
+ */
+const TEINTES_MONOGRAMME = [
+  'bg-p-700 text-white',
+  'bg-p-100 text-p-700',
+  'bg-p-600 text-white',
+  'bg-m-050 text-m-700',
+  'bg-p-800 text-white',
+  'bg-p-050 text-p-700',
+]
+
+export function Monogramme({
+  initiales,
+  index = 0,
+  taille = 'md',
+  className,
+}: {
+  initiales: string
+  index?: number
+  taille?: 'sm' | 'md' | 'lg'
+  className?: string
+}) {
+  const tailles = {
+    sm: 'h-9 w-9 text-[12px] rounded-[8px]',
+    md: 'h-12 w-12 text-[15px] rounded-[10px]',
+    lg: 'h-16 w-16 text-[19px] rounded-[12px]',
+  }[taille]
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'flex shrink-0 items-center justify-center font-bold [font-family:var(--font-display)]',
+        tailles,
+        TEINTES_MONOGRAMME[index % TEINTES_MONOGRAMME.length],
+        className,
+      )}
+    >
+      {initiales}
+    </span>
+  )
+}
+
+/** Citation mise en avant — le seul endroit de la vitrine où un client parle. */
+export function Citation({
+  texte,
+  auteur,
+  role,
+  initiales,
+  index = 0,
+  sombre,
+  className,
+}: {
+  texte: string
+  auteur: string
+  role: string
+  initiales: string
+  index?: number
+  sombre?: boolean
+  className?: string
+}) {
+  return (
+    <figure className={cn('flex flex-col', className)}>
+      <blockquote
+        className={cn(
+          'text-[16px] font-medium leading-relaxed [font-family:var(--font-display)] sm:text-[18px]',
+          sombre ? 'text-white' : 'text-ink',
+        )}
+      >
+        <span aria-hidden>«&nbsp;</span>
+        {texte}
+        <span aria-hidden>&nbsp;»</span>
+      </blockquote>
+      <figcaption className="mt-5 flex items-center gap-3">
+        <Monogramme initiales={initiales} index={index} taille="sm" />
+        <span className="min-w-0">
+          <span className={cn('block text-[13px] font-semibold', sombre ? 'text-white' : 'text-ink')}>
+            {auteur}
+          </span>
+          <span className={cn('block text-[12px] leading-snug', sombre ? 'text-p-300' : 'text-g-500')}>
+            {role}
+          </span>
+        </span>
+      </figcaption>
+    </figure>
+  )
+}
+
 /** Carrousel de logos du marketplace (§2.2 §7). */
 export function CarrouselLogos({
   logos,

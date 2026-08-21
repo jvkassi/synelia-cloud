@@ -10,8 +10,10 @@ import {
   AppelFinal,
   CarrouselLogos,
   ChiffreCle,
+  Citation,
   Container,
   LienFleche,
+  Monogramme,
   PastilleEtat,
   SectionTitle,
   SiteSection,
@@ -24,6 +26,7 @@ import {
   CARTES_PRODUIT,
   CATALOGUE,
   DATACENTERS,
+  EQUIPE,
   ETUDES_CAS,
   FAQ_ACCUEIL,
   INCIDENTS,
@@ -33,6 +36,7 @@ import {
   PARCOURS_LIMITES,
   PORTES_ENTREE,
   STATUT_SERVICES,
+  TEMOIGNAGES,
 } from '@/lib/mock'
 
 export const metadata: Metadata = {
@@ -130,6 +134,7 @@ function donneesStructurees() {
 
 export default function Accueil() {
   const etat = etatPlateforme()
+  const temoin = TEMOIGNAGES[0]
 
   return (
     <>
@@ -481,7 +486,32 @@ export default function Accueil() {
             titre="Trois chiffres, trois contextes réels"
             chapeau="Les organisations concernées sont anonymisées, les ordres de grandeur sont ceux que nous constatons."
           />
-          <div className="mt-9 grid grid-cols-1 gap-5 lg:grid-cols-3">
+
+          {/*
+            Trois nombres ne convainquent pas seuls : ils ne disent pas ce que
+            la migration a coûté à l'équipe d'en face. On ouvre donc sur une
+            voix, et on renvoie vers les récits complets.
+          */}
+          <div className="mt-8 grid grid-cols-1 items-center gap-6 rounded-[14px] border border-p-300 bg-p-050 p-6 lg:grid-cols-[1.35fr_0.65fr] sm:p-8">
+            <Citation
+              texte={temoin.citation}
+              auteur={temoin.auteur}
+              role={temoin.organisation}
+              initiales={temoin.initiales}
+            />
+            <div className="lg:border-l lg:border-p-300 lg:pl-8">
+              <p className="text-[13px] leading-relaxed text-g-700">
+                Quatre clients racontent leur migration en détail — l’état des lieux avant, ce qui a
+                été fait, et ce qui a dérapé en cours de route. Trois des quatre ont dépassé le
+                délai annoncé.
+              </p>
+              <div className="mt-4">
+                <LienFleche href="/temoignages">Lire les quatre récits</LienFleche>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-3">
             {ETUDES_CAS.map((e) => (
               <article
                 key={e.client}
@@ -502,7 +532,61 @@ export default function Accueil() {
         </Container>
       </SiteSection>
 
-      {/* ─── 9 · Parcours de démarrage ────────────────────────────────── */}
+      {/* ─── 9 · Les personnes ────────────────────────────────────────── */}
+      <SiteSection fond="clair">
+        <Container>
+          <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[0.95fr_1.05fr]">
+            <div>
+              <SectionTitle
+                surtitre="L’équipe"
+                titre="« Supervision 24/7 » veut dire huit personnes, à Abidjan"
+                chapeau="Tout le monde écrit cette phrase. Chez nous elle recouvre une équipe d’exploitation qui vit sur votre fuseau, connaît votre parc et a les droits pour agir — pas seulement pour ouvrir un ticket."
+              />
+              <ul className="mt-7 space-y-2.5">
+                {[
+                  'L’ingénieur de garde est à Abidjan, jamais sur un autre continent.',
+                  'Une semaine d’astreinte sur quatre, jamais deux d’affilée.',
+                  'C’est nous qui vous appelons. Si vous nous apprenez la panne, nous avons manqué quelque chose.',
+                ].map((x) => (
+                  <li key={x} className="flex items-start gap-2.5">
+                    <Check size={14} className="mt-[3px] shrink-0 text-p-700" />
+                    <span className="text-[13.5px] leading-relaxed text-g-700">{x}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-7 flex flex-wrap items-center gap-4">
+                <ButtonLink href="/equipe" variant="secondary" iconAfter={<ArrowRight size={14} />}>
+                  Rencontrer l’équipe
+                </ButtonLink>
+                <LienFleche href="/histoire">Pourquoi nous avons construit ceci</LienFleche>
+              </div>
+            </div>
+
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {EQUIPE.slice(0, 4).map((m, i) => (
+                <li
+                  key={m.nom}
+                  className="flex flex-col rounded-[12px] border border-g-300 bg-white p-4"
+                >
+                  <div className="flex items-center gap-3">
+                    <Monogramme initiales={m.initiales} index={i} taille="md" />
+                    <span className="min-w-0">
+                      <span className="block text-[13.5px] font-bold [font-family:var(--font-display)] text-ink">
+                        {m.nom}
+                      </span>
+                      <span className="block text-[11.5px] leading-snug text-g-500">{m.site}</span>
+                    </span>
+                  </div>
+                  <p className="mt-3 text-[12px] font-semibold text-p-700">{m.role}</p>
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-g-700">{m.texte}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Container>
+      </SiteSection>
+
+      {/* ─── 10 · Parcours de démarrage ───────────────────────────────── */}
       <SiteSection fond="violet-fonce" className="relative overflow-hidden">
         <span className="absolute inset-0 bg-grid-light opacity-50" aria-hidden />
         <Container className="relative">
@@ -551,7 +635,7 @@ export default function Accueil() {
         </Container>
       </SiteSection>
 
-      {/* ─── 10 · FAQ ─────────────────────────────────────────────────── */}
+      {/* ─── 11 · FAQ ─────────────────────────────────────────────────── */}
       <SiteSection fond="clair">
         <Container taille="md">
           <SectionTitle
@@ -570,7 +654,7 @@ export default function Accueil() {
         </Container>
       </SiteSection>
 
-      {/* ─── 11 · Appel final ─────────────────────────────────────────── */}
+      {/* ─── 12 · Appel final ─────────────────────────────────────────── */}
       <AppelFinal />
     </>
   )
