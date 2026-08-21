@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { ExternalLink, Globe, Plus, ShieldCheck } from 'lucide-react'
 import { cn, surfaceMarque } from '@/lib/utils'
+import type { SiteWeb } from '@/lib/types'
 import { num, relatif } from '@/lib/format'
 import {
   HEBERGEMENTS,
@@ -18,6 +19,8 @@ import { GatedAction } from '@/components/ui/display'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonFormulaire } from '@/components/app/actions'
 
 const TEINTE: Record<string, string> = {
   wordpress: '#21759B',
@@ -37,8 +40,9 @@ const CATALOGUE = [
 
 export default function ListeApplications() {
   const { autorise, refus } = useApp()
+  const tousSites = useCollection<SiteWeb>('sites-web', SITES_WEB)
   const miens = new Set(HEBERGEMENTS.filter((h) => h.orgId === ORG_COURANTE.id).map((h) => h.id))
-  const sites = SITES_WEB.filter((s) => miens.has(s.hebergementId))
+  const sites = tousSites.items.filter((s) => miens.has(s.hebergementId))
   const majEnAttente = sites.reduce((a, s) => a + (s.majEnAttente ?? 0), 0)
 
   return (
@@ -52,9 +56,85 @@ export default function ListeApplications() {
         titre="Applications"
         sousTitre="Les sites installés sur vos hébergements, chacun sur son sous-domaine et sa version de PHP. Nous opérons le socle, les mises à jour et les sauvegardes ; le contenu s’édite dans l’application."
         actions={
-          <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-            <Button iconBefore={<Plus size={14} />}>Installer une application</Button>
-          </GatedAction>
+          <BoutonFormulaire
+            libelle="Installer une application"
+            size="md"
+            variant="primary"
+            icone={<Plus size={14} />}
+            action="service.admin"
+            titre="Installer une application"
+            description="Nous posons le socle, les mises à jour et les sauvegardes. Le contenu s’édite ensuite dans l’application : le portail ne réimplémente pas son écran d’administration."
+            champs={[
+              { id: 'hote', label: 'Nom d’hôte', placeholder: 'boutique.dba.africa', obligatoire: true },
+              {
+                id: 'hebergement',
+                label: 'Hébergement de destination',
+                type: 'select',
+                options: HEBERGEMENTS.filter((h) => h.orgId === ORG_COURANTE.id).map((h) => ({
+                  value: h.id,
+                  label: `${h.serveur.nom} · ${h.palier}`,
+                })),
+              },
+              {
+                id: 'type',
+                label: 'Application',
+                type: 'select',
+                demi: true,
+                options: [
+                  { value: 'wordpress', label: 'WordPress' },
+                  { value: 'prestashop', label: 'PrestaShop' },
+                  { value: 'statique', label: 'Site statique' },
+                  { value: 'php', label: 'Application PHP' },
+                ],
+              },
+              {
+                id: 'php',
+                label: 'Version de PHP',
+                type: 'select',
+                demi: true,
+                options: ['8.3', '8.2', '8.1'].map((v) => ({ value: v, label: `PHP ${v}` })),
+              },
+            ]}
+            valeursDepart={{ type: 'wordpress', php: '8.3' }}
+            libelleValider="Installer"
+            operation={(v) => {
+              const idSite = tousSites.identifiant('site')
+              return {
+                titre: `Installation de ${v.hote} lancée`,
+                detail: `${v.type} · PHP ${v.php}`,
+                effet: () =>
+                  tousSites.creer({
+                    id: idSite,
+                    hebergementId: String(v.hebergement),
+                    hote: String(v.hote),
+                    racine: `/var/www/${String(v.hote).split('.')[0]}`,
+                    type: v.type as SiteWeb['type'],
+                    phpVersion: String(v.php),
+                    ssl: { etat: 'en_emission' },
+                    espaceMo: 0,
+                    visitesMois: 0,
+                    securite: { waf: true, bruteForce: true, scanMalware: true },
+                    statut: 'installation',
+                  }),
+                job: {
+                  type: 'site.install',
+                  label: `Installation de ${v.hote}`,
+                  etapes: [
+                    'Créer la racine et les droits',
+                    'Créer la base et son utilisateur',
+                    `Installer ${v.type}`,
+                    'Déclarer le sous-domaine dans la zone',
+                    'Émettre le certificat',
+                  ],
+                },
+                effetFinal: () =>
+                  tousSites.modifier(idSite, {
+                    statut: 'en_ligne',
+                    ssl: { etat: 'actif', emetteur: 'Let’s Encrypt', expire: '2026-11-17' },
+                  }),
+              }
+            }}
+          />
         }
       />
 

@@ -4,17 +4,21 @@ import Link from 'next/link'
 import { ExternalLink, FolderOpen, Plus, Share2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money, relatif } from '@/lib/format'
-import { drivesDeLOrg } from '@/lib/mock'
+import { DRIVES, drivesDeLOrg, type DriveDomaine } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonFormulaire } from '@/components/app/actions'
 
 export default function ListeDrives() {
   const { autorise, refus } = useApp()
-  const drives = drivesDeLOrg()
+  const collection = useCollection<DriveDomaine>('drives', DRIVES)
+  const perimetre = new Set(drivesDeLOrg().map((d) => d.id))
+  const drives = collection.items.filter((d) => perimetre.has(d.id))
   const actifs = drives.filter((d) => d.actif)
 
   return (
@@ -124,11 +128,42 @@ export default function ListeDrives() {
                   <span className="font-mono">{d.hote}</span>, déclare le client SSO et applique le
                   plan de sauvegarde. Les sièges s’attribuent ensuite depuis cette page.
                 </p>
-                <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-                  <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />} className="mt-3">
-                    Activer le drive
-                  </Button>
-                </GatedAction>
+                <BoutonFormulaire
+                  libelle="Activer le drive"
+                  className="mt-3"
+                  icone={<Plus size={13} />}
+                  action="service.admin"
+                  titre={`Activer le drive de ${d.domaine}`}
+                  description="L’activation crée l’instance, pose le certificat, déclare le client SSO et applique le plan de sauvegarde. Les sièges s’attribuent ensuite."
+                  champs={[
+                    { id: 'sieges', label: 'Sièges à souscrire', type: 'nombre', demi: true, min: 1, max: 500 },
+                    { id: 'quota', label: 'Quota total', type: 'nombre', demi: true, min: 100, suffixe: 'Go' },
+                    { id: 'externe', label: 'Partage externe autorisé', type: 'switch', placeholder: 'Avec mot de passe' },
+                  ]}
+                  valeursDepart={{ sieges: 10, quota: 500, externe: true }}
+                  libelleValider="Activer"
+                  operation={(v) => ({
+                    titre: `Drive de ${d.domaine} en cours d’activation`,
+                    detail: `${v.sieges} sièges · ${v.quota} Go`,
+                    job: {
+                      type: 'drive.activate',
+                      label: `Activation du drive · ${d.domaine}`,
+                      etapes: [
+                        'Créer l’instance',
+                        `Poser le certificat sur ${d.hote}`,
+                        'Déclarer le client SSO',
+                        'Appliquer le plan de sauvegarde',
+                      ],
+                    },
+                    effetFinal: () =>
+                      collection.modifier(d.id, (x) => ({
+                        actif: true,
+                        sieges: { attribues: 0, souscrits: Number(v.sieges) },
+                        quota: { utiliseGo: 0, totalGo: Number(v.quota) },
+                        partage: { ...x.partage, externeAutorise: Boolean(v.externe) },
+                      })),
+                  })}
+                />
               </>
             )}
           </Card>

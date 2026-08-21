@@ -4,17 +4,21 @@ import Link from 'next/link'
 import { Mail, Plus, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money } from '@/lib/format'
-import { messageriesDeLOrg } from '@/lib/mock'
+import { MESSAGERIES, messageriesDeLOrg, type MessagerieDomaine } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonFormulaire } from '@/components/app/actions'
 
 export default function ListeMessageries() {
   const { autorise, refus } = useApp()
-  const messageries = messageriesDeLOrg()
+  const collection = useCollection<MessagerieDomaine>('messageries', MESSAGERIES)
+  const perimetre = new Set(messageriesDeLOrg().map((m) => m.id))
+  const messageries = collection.items.filter((m) => perimetre.has(m.id))
   const actives = messageries.filter((m) => m.actif)
   const boites = actives.reduce((a, m) => a + m.boites.length, 0)
   const stockage = actives.reduce((a, m) => a + m.boites.reduce((x, b) => x + b.utiliseGo, 0), 0)
@@ -135,11 +139,52 @@ export default function ListeMessageries() {
                     dans la zone, et déclare le client SSO. Aucun courrier existant n’est touché :
                     si vous migrez d’un autre fournisseur, l’import se fait après vérification.
                   </p>
-                  <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-                    <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />} className="mt-3">
-                      Activer la messagerie
-                    </Button>
-                  </GatedAction>
+                  <BoutonFormulaire
+                    libelle="Activer la messagerie"
+                    className="mt-3"
+                    icone={<Plus size={13} />}
+                    action="service.admin"
+                    titre={`Activer la messagerie de ${m.domaine}`}
+                    description="L’activation pose les enregistrements MX, SPF, DKIM et DMARC dans la zone et déclare le client SSO. Aucun courrier existant n’est touché."
+                    champs={[
+                      { id: 'boites', label: 'Boîtes à créer', type: 'nombre', demi: true, min: 1, max: 200 },
+                      {
+                        id: 'palier',
+                        label: 'Palier',
+                        type: 'select',
+                        demi: true,
+                        options: [
+                          { value: 'Essentiel · 5 Go', label: 'Essentiel · 5 Go par boîte' },
+                          { value: 'Pro · 25 Go', label: 'Pro · 25 Go par boîte' },
+                          { value: 'Archivage · 100 Go', label: 'Archivage · 100 Go par boîte' },
+                        ],
+                      },
+                      { id: 'import', label: 'Importer depuis un autre fournisseur', type: 'switch', placeholder: 'Après vérification' },
+                    ]}
+                    valeursDepart={{ boites: 5, palier: 'Pro · 25 Go' }}
+                    libelleValider="Activer"
+                    operation={(v) => ({
+                      titre: `Messagerie de ${m.domaine} en cours d’activation`,
+                      detail: `${v.boites} boîte(s) · ${v.palier}`,
+                      job: {
+                        type: 'messagerie.activate',
+                        label: `Activation de la messagerie · ${m.domaine}`,
+                        etapes: [
+                          'Créer l’instance',
+                          'Poser les enregistrements MX, SPF, DKIM et DMARC',
+                          'Créer les boîtes',
+                          'Déclarer le client SSO',
+                          ...(v.import ? ['Préparer l’import depuis l’ancien fournisseur'] : []),
+                        ],
+                      },
+                      effetFinal: () =>
+                        collection.modifier(m.id, {
+                          actif: true,
+                          palier: String(v.palier),
+                          boitesIncluses: Number(v.boites),
+                        }),
+                    })}
+                  />
                 </>
               )}
             </Card>
