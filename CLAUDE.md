@@ -20,10 +20,22 @@ décisions déjà prises.
 | Types | `bun run typecheck` |
 | Lint | `bun run lint` |
 | Audit du rendu | `bun run build && bun run start` puis `node outils/audit.mjs` |
+| Contrat d'API | `bun run api:spec` — régénère `docs/openapi.json` |
 
 Les versions des dépendances sont **épinglées à l'exact** : le bun de Vercel ne
 sait pas lire un `bun.lock` en version 2 et résout à neuf, ce qui ferait diverger
 l'installation locale de la distante. Ne remettez pas de caret.
+
+### Le contrat d'API
+
+`docs/openapi.json` (OpenAPI 3.0.3, 474 opérations) décrit l'API que le backend
+doit servir pour remplacer `src/lib/mock/`. Il est **généré** par
+`outils/openapi/` : ne l'éditez pas à la main, éditez le générateur, qui refuse
+d'écrire un document incohérent. Les conventions — asynchrone par travail de
+provisioning, confirmation par le nom sur les actions destructives, `403` qui
+nomme le rôle requis, `424` daté quand une intégration amont tombe — sont
+détaillées dans `docs/API.md`. Les noms de champs reprennent `src/lib/types.ts`
+à l'identique : l'interface les consomme tels quels.
 
 ### L'audit
 

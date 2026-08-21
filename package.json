@@ -9,7 +9,8 @@
     "build:webpack": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "api:spec": "node outils/openapi/index.mjs"
   },
   "dependencies": {
     "lucide-react": "0.469.0",
