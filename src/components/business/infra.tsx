@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, Callout } from '@/components/composition/card'
 import { HealthBadge, QuotaBar } from '@/components/composition/metrics'
+import { BoutonAction } from '@/components/app/actions'
 
 /** Jauge d'un backend de la plateforme — visible côté fournisseur seulement. */
 export function BackendGauge({
@@ -194,9 +195,28 @@ export function PlacementSlider({
         </Callout>
       )}
 
-      <Button disabled={somme !== 100 || !modifie} fullWidth>
-        Appliquer la répartition
-      </Button>
+      <BoutonAction
+        libelle="Appliquer la répartition"
+        variant="primary"
+        size="md"
+        fullWidth
+        desactive={somme !== 100 || !modifie}
+        operation={{
+          action: 'capacity.manage',
+          ton: 'info',
+          titre: 'Rééquilibrage de charge lancé',
+          detail: 'Migration à chaud des machines entre hyperviseurs, transparente pour le client.',
+          job: {
+            type: 'capacite.rebalance',
+            label: 'Rééquilibrage de la répartition entre backends',
+            etapes: [
+              'Calculer le plan de migration',
+              'Migrer les machines à chaud',
+              'Vérifier l’équilibre atteint',
+            ],
+          },
+        }}
+      />
     </div>
   )
 }
