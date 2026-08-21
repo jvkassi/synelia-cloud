@@ -2,10 +2,19 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Download, Phone, Receipt, Send, TrendingUp } from 'lucide-react'
+import { Clock, Download, Phone, Receipt, Send } from 'lucide-react'
 import { cn, trendSeries } from '@/lib/utils'
-import { dateCourte, money, num, pct } from '@/lib/format'
-import { MARGE_BACKENDS, VENTILATION_DEPENSE } from '@/lib/mock'
+import { dateCourte, MAINTENANT, money, pct } from '@/lib/format'
+import { telechargerCsv } from '@/lib/export'
+import type { Impaye } from '@/lib/mock'
+import {
+  IMPAYES,
+  MARGE_BACKENDS,
+  ORGANISATIONS,
+  RELEVES_REVSHARE,
+  SYNTHESE_PLATEFORME,
+  VENTILATION_DEPENSE,
+} from '@/lib/mock'
 import { MOYEN_LABEL } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
@@ -15,7 +24,8 @@ import { Modal } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { StackedBar, StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
-import { useActe, useAtelier, type Impaye } from '@/components/app/atelier'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'revenus', label: 'Revenus' },
@@ -33,29 +43,84 @@ const COULEURS = [
   'var(--color-p-300)',
 ]
 
+const ACTIONS_RECOUVREMENT = [
+  { value: 'appel', label: 'Appel téléphonique effectué' },
+  { value: 'relance', label: 'Relance écrite envoyée' },
+  { value: 'echelonnement', label: 'Proposition d’échelonnement' },
+  { value: 'avoir', label: 'Avoir commercial accordé' },
+  { value: 'promesse', label: 'Promesse de règlement enregistrée' },
+  { value: 'regle', label: 'Règlement reçu — dossier clos' },
+]
+
 export default function FacturationAdmin() {
   const { autorise, refus } = useApp()
-  const { organisations, factures, impayes, revshare } = useAtelier()
-  const acte = useActe()
-
+  const impayes = useCollection<Impaye>('impayes', IMPAYES)
+  const executer = useOperation()
   const [onglet, setOnglet] = useState('revenus')
-  const [relance, setRelance] = useState<Impaye | null>(null)
-  const [dossier, setDossier] = useState({
-    action: 'appel',
-    compteRendu: '',
-    prochaine: '2026-09-05',
-    echelonnement: false,
-    suspension: false,
-  })
-  const [anomalieTraitee, setAnomalieTraitee] = useState(false)
+  const [relanceId, setRelanceId] = useState<string | null>(null)
+  const [historiqueId, setHistoriqueId] = useState<string | null>(null)
+  const [action, setAction] = useState('appel')
+  const [compteRendu, setCompteRendu] = useState('')
+  const [prochaine, setProchaine] = useState('2026-09-05')
+  const [echelonner, setEchelonner] = useState(false)
+  const [suspendre, setSuspendre] = useState(false)
+  // La revue d'anomalie du cycle : trois issues possibles, aucune automatique.
+  const [anomalie, setAnomalie] = useState<'ouverte' | 'verifiee' | 'confirmee'>('ouverte')
 
-  const ORGANISATIONS = organisations.liste
-  const FACTURES = factures.liste
-  const IMPAYES = impayes.liste
-  const RELEVES_REVSHARE = revshare.liste
-  const caMensuel = ORGANISATIONS.reduce((a, o) => a + (o.caMensuel ?? 0), 0)
-  const tenantsActifs = ORGANISATIONS.filter((o) => o.statut === 'active').length
-  const impayesTotal = IMPAYES.reduce((a, i) => a + i.montant, 0)
+  // Le tiroir doit relire la ligne dans la collection, pas la capturer à
+  // l'ouverture : sinon il affiche l'état d'avant l'action qu'on vient d'y saisir.
+  const relance = impayes.items.find((i) => i.id === relanceId) ?? null
+  const historique = impayes.items.find((i) => i.id === historiqueId) ?? null
+
+  const ouvrirRelance = (i: Impaye) => {
+    setAction(i.retardJours > 60 ? 'echelonnement' : i.retardJours > 30 ? 'appel' : 'relance')
+    setCompteRendu('')
+    setProchaine(i.prochaineRelance ?? '2026-09-05')
+    setEchelonner(Boolean(i.echelonnement))
+    setSuspendre(Boolean(i.suspendu))
+    setRelanceId(i.id)
+  }
+
+  const enregistrerRelance = () => {
+    if (!relance) return
+    const libelle = ACTIONS_RECOUVREMENT.find((a) => a.value === action)?.label ?? action
+    const clos = action === 'regle'
+    executer({
+      action: 'invoice.view',
+      ton: clos ? 'ok' : suspendre ? 'warn' : 'ok',
+      titre: clos
+        ? `Dossier ${relance.facture} clos`
+        : `Action de recouvrement enregistrée — ${relance.org}`,
+      detail: clos
+        ? 'Le règlement est encaissé, la facture sort des impayés.'
+        : suspendre
+          ? 'La suspension est consignée avec votre nom : elle arrête l’activité du client.'
+          : 'Le dossier est mis à jour et l’action est consignée dans son historique.',
+      effet: () =>
+        clos
+          ? impayes.supprimer(relance.id)
+          : impayes.modifier(relance.id, (i) => ({
+              relances: i.relances + 1,
+              echelonnement: echelonner,
+              suspendu: suspendre,
+              prochaineRelance: prochaine || undefined,
+              journal: [
+                ...(i.journal ?? []),
+                {
+                  date: MAINTENANT.slice(0, 10),
+                  action: libelle,
+                  note:
+                    compteRendu.trim() ||
+                    'Aucun compte rendu saisi — l’action est consignée sans détail.',
+                },
+              ],
+            })),
+    })
+    setRelanceId(null)
+  }
+
+  const caMensuel = SYNTHESE_PLATEFORME.caMensuel
+  const impayesTotal = impayes.items.reduce((a, i) => a + i.montant, 0)
   const revshareDu = RELEVES_REVSHARE.filter((r) => r.statut !== 'réglé').reduce(
     (a, r) => a + r.montant,
     0,
@@ -63,53 +128,6 @@ export default function FacturationAdmin() {
   const coutInfra = MARGE_BACKENDS.reduce((a, m) => a + m.coutInfra, 0)
   const revenuInfra = MARGE_BACKENDS.reduce((a, m) => a + m.revenu, 0)
   const margeBrute = Math.round(((revenuInfra - coutInfra) / revenuInfra) * 1000) / 10
-
-  const LIBELLE_ACTION: Record<string, string> = {
-    appel: 'Appel téléphonique effectué',
-    relance: 'Relance écrite envoyée',
-    echelonnement: 'Proposition d’échelonnement',
-    avoir: 'Avoir commercial accordé',
-    promesse: 'Promesse de règlement enregistrée',
-  }
-
-  const enregistrerRecouvrement = (i: Impaye) => {
-    const org = ORGANISATIONS.find((o) => o.nom === i.org)
-    acte({
-      faire: () => {
-        // Un avoir solde la créance ; tout le reste incrémente le compteur de
-        // relances, qui est ce qui détermine l'étape suivante.
-        if (dossier.action === 'avoir') {
-          impayes.supprimer(i.facture)
-          const f = FACTURES.find((x) => x.numero === i.facture)
-          if (f) factures.modifier(f.id, { statut: 'annulee' })
-        } else {
-          impayes.modifier(i.facture, (courant) => ({ relances: courant.relances + 1 }))
-        }
-        if (dossier.suspension && org) {
-          organisations.modifier(org.id, { statut: 'suspendue' })
-        }
-      },
-      ton: dossier.suspension ? 'err' : 'ok',
-      titre: dossier.suspension
-        ? `${i.org} suspendue après relances`
-        : 'Action de recouvrement enregistrée',
-      detail: dossier.suspension
-        ? `${LIBELLE_ACTION[dossier.action]}. La suspension est consignée à votre nom dans le journal d’audit du client.`
-        : `${LIBELLE_ACTION[dossier.action]} sur ${i.facture}. Le dossier est mis à jour et l’action est consignée dans l’historique du compte.`,
-      action: dossier.suspension ? 'organisation.suspend' : 'dunning.action.log',
-      cible: i.facture,
-      orgId: org?.id,
-      orgNom: i.org,
-    })
-    setDossier({
-      action: 'appel',
-      compteRendu: '',
-      prochaine: '2026-09-05',
-      echelonnement: false,
-      suspension: false,
-    })
-    setRelance(null)
-  }
 
   const parCanal = [
     {
@@ -141,23 +159,73 @@ export default function FacturationAdmin() {
         titre="Facturation de la plateforme"
         sousTitre="Revenus par canal, cycle d’émission, recouvrement et rentabilité par socle. Le recouvrement se fait par appel et échelonnement avant de parler de suspension : une entreprise dont la trésorerie est tendue reste un client, pas un problème."
         actions={
-          <GatedAction autorise={autorise('invoice.view')} message={refus('invoice.view')}>
-            <Button
-              variant="secondary"
-              iconBefore={<Download size={14} />}
-              onClick={() =>
-                acte({
-                  ton: 'info',
-                  titre: 'Export de la période lancé',
-                  detail: `${FACTURES.length} factures, ${money(caMensuel)} de chiffre d’affaires, ventilation par canal et par famille. L’export arrive par courriel dans quelques minutes.`,
-                  action: 'billing.export',
-                  cible: 'periode-courante',
-                })
-              }
-            >
-              Exporter la période
-            </Button>
-          </GatedAction>
+          <BoutonFormulaire
+            libelle="Exporter la période"
+            size="md"
+            icone={<Download size={14} />}
+            action="invoice.view"
+            titre="Exporter la période du 1er au 19 août 2026"
+            description="Le fichier produit est un CSV séparé par des points-virgules, lisible tel quel par un tableur configuré en français. Ce n’est pas un export comptable : il ne remplace pas le journal de ventes."
+            libelleValider="Télécharger"
+            champs={[
+              {
+                id: 'jeu',
+                label: 'Jeu de données',
+                type: 'select',
+                options: [
+                  { value: 'organisations', label: 'Revenu par organisation' },
+                  { value: 'impayes', label: 'Impayés en cours' },
+                  { value: 'socles', label: 'Rentabilité par socle' },
+                ],
+              },
+            ]}
+            operation={(v) => ({
+              titre: 'Export téléchargé',
+              detail: 'Le fichier est dans vos téléchargements.',
+              effet: () => {
+                if (v.jeu === 'impayes') {
+                  telechargerCsv(
+                    'impayes-2026-08',
+                    ['Organisation', 'Facture', 'Montant FCFA', 'Échéance', 'Retard (jours)', 'Relances'],
+                    impayes.items.map((i) => [
+                      i.org,
+                      i.facture,
+                      i.montant,
+                      i.echeance,
+                      i.retardJours,
+                      i.relances,
+                    ]),
+                  )
+                } else if (v.jeu === 'socles') {
+                  telechargerCsv(
+                    'rentabilite-socles-2026-08',
+                    ['Socle', 'Technologie', 'Coût FCFA', 'Revenu FCFA', 'Marge FCFA', 'Taux %'],
+                    MARGE_BACKENDS.map((m) => [
+                      m.backend,
+                      m.type,
+                      m.coutInfra,
+                      m.revenu,
+                      m.revenu - m.coutInfra,
+                      m.marge,
+                    ]),
+                  )
+                } else {
+                  telechargerCsv(
+                    'revenu-organisations-2026-08',
+                    ['Organisation', 'Canal', 'Plan', 'Espaces', 'CA mensuel FCFA', 'Statut'],
+                    ORGANISATIONS.filter((o) => (o.caMensuel ?? 0) > 0).map((o) => [
+                      o.nom,
+                      o.type,
+                      o.tenantPlan ?? '',
+                      o.espaces ?? 0,
+                      o.caMensuel ?? 0,
+                      o.statut,
+                    ]),
+                  )
+                }
+              },
+            })}
+          />
         }
         meta={
           <>
@@ -249,13 +317,13 @@ export default function FacturationAdmin() {
                 <div>
                   <MicroLabel className="text-g-500">Panier moyen</MicroLabel>
                   <p className="tnum mt-0.5 text-[15px] font-bold text-ink">
-                    {money(Math.round(caMensuel / tenantsActifs))}
+                    {money(Math.round(caMensuel / SYNTHESE_PLATEFORME.tenantsActifs))}
                   </p>
                 </div>
                 <div>
                   <MicroLabel className="text-g-500">Organisations facturées</MicroLabel>
                   <p className="tnum mt-0.5 text-[15px] font-bold text-ink">
-                    {tenantsActifs}
+                    {SYNTHESE_PLATEFORME.tenantsActifs}
                   </p>
                 </div>
                 <div>
@@ -505,9 +573,13 @@ export default function FacturationAdmin() {
               <div className="space-y-2">
                 {[
                   { l: 'Brouillons générés', v: 8, t: 'info' as const },
-                  { l: 'Anomalies à vérifier', v: 1, t: 'warn' as const },
+                  {
+                    l: 'Anomalies à vérifier',
+                    v: anomalie === 'ouverte' ? 1 : 0,
+                    t: anomalie === 'ouverte' ? ('warn' as const) : ('ok' as const),
+                  },
                   { l: 'Contestations client', v: 0, t: 'ok' as const },
-                  { l: 'Prêtes à émettre', v: 7, t: 'ok' as const },
+                  { l: 'Prêtes à émettre', v: anomalie === 'ouverte' ? 7 : 8, t: 'ok' as const },
                 ].map((x) => (
                   <div
                     key={x.l}
@@ -523,55 +595,100 @@ export default function FacturationAdmin() {
               <div
                 className={cn(
                   'mt-3.5 rounded-[6px] border px-3 py-2.5',
-                  anomalieTraitee ? 'border-ok/40 bg-ok-bg' : 'border-warn/40 bg-warn-bg',
+                  anomalie === 'ouverte'
+                    ? 'border-warn/40 bg-warn-bg'
+                    : anomalie === 'verifiee'
+                      ? 'border-ok/40 bg-ok-bg'
+                      : 'border-info/40 bg-info-bg',
                 )}
               >
                 <p className="text-[12.5px] font-semibold text-ink">
                   Anomalie : AMUGA, + 214 % sur le transfert sortant
                 </p>
                 <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">
-                  {anomalieTraitee
-                    ? 'Compteurs vérifiés : le client a mis en ligne un catalogue média le 4 août. La consommation est réelle, la facture peut être émise.'
-                    : '1,8 To de transfert sortant contre 580 Go le mois dernier. À vérifier avant émission : soit le client a mis en ligne un catalogue média, soit un compteur double-compte.'}
+                  {anomalie === 'ouverte'
+                    ? '1,8 To de transfert sortant contre 580 Go le mois dernier. À vérifier avant émission : soit le client a mis en ligne un catalogue média, soit un compteur double-compte.'
+                    : anomalie === 'verifiee'
+                      ? 'Recomptage terminé : les 1,8 To sont confirmés par les journaux du répartiteur de charge, sans double comptage. La facture peut être émise telle quelle.'
+                      : 'Le client a été appelé : mise en ligne d’un catalogue vidéo le 2 août, la consommation est assumée. La facture est débloquée pour émission.'}
                 </p>
-                {!anomalieTraitee && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() =>
-                        acte({
-                          faire: () => setAnomalieTraitee(true),
-                          titre: 'Compteurs vérifiés',
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {anomalie === 'ouverte' ? (
+                    <>
+                      <BoutonAction
+                        libelle="Vérifier les compteurs"
+                        operation={{
+                          action: 'invoice.view',
+                          titre: 'Recomptage lancé sur AMUGA',
                           detail:
-                            'Le relevé de transfert sortant est confirmé par deux sources indépendantes. La consommation est réelle : la facture peut être émise.',
-                          action: 'billing.anomaly.verify',
-                          cible: 'AMUGA/egress',
-                          orgNom: 'AMUGA',
-                        })
-                      }
-                    >
-                      Vérifier les compteurs
-                    </Button>
-                    <Button
-                      size="sm"
+                            'Le transfert sortant est recalculé depuis les journaux du répartiteur de charge, sur les trente derniers jours.',
+                          job: {
+                            type: 'metering.recount',
+                            label: 'Recomptage du transfert sortant · AMUGA',
+                            etapes: [
+                              'Extraction des journaux du répartiteur',
+                              'Agrégation par heure',
+                              'Comparaison avec le compteur de facturation',
+                              'Publication du rapport d’écart',
+                            ],
+                          },
+                          effetFinal: () => setAnomalie('verifiee'),
+                        }}
+                      />
+                      <BoutonFormulaire
+                        libelle="Appeler le client"
+                        variant="ghost"
+                        action="invoice.view"
+                        titre="Appeler AMUGA avant émission"
+                        description="Un appel avant émission coûte cinq minutes ; une facture contestée après émission coûte un avoir, un retard de règlement et une conversation bien moins agréable."
+                        libelleValider="Consigner l’appel"
+                        champs={[
+                          {
+                            id: 'issue',
+                            label: 'Issue de l’appel',
+                            type: 'select',
+                            options: [
+                              { value: 'assume', label: 'Consommation assumée par le client' },
+                              { value: 'conteste', label: 'Le client conteste, vérification demandée' },
+                              { value: 'injoignable', label: 'Injoignable, message laissé' },
+                            ],
+                          },
+                          {
+                            id: 'note',
+                            label: 'Compte rendu',
+                            type: 'zone',
+                            placeholder:
+                              'Mise en ligne d’un catalogue vidéo le 2 août. Le responsable technique confirme le volume et demande une estimation pour le mois prochain.',
+                          },
+                        ]}
+                        operation={(v) => ({
+                          ton: v.issue === 'assume' ? 'ok' : 'info',
+                          titre: 'Appel consigné au dossier AMUGA',
+                          detail:
+                            v.issue === 'assume'
+                              ? 'La facture est débloquée pour émission le 1er du mois.'
+                              : v.issue === 'conteste'
+                                ? 'La facture reste en attente : un recomptage est requis avant émission.'
+                                : 'La facture reste en attente. Nouvelle tentative demain.',
+                          effet: () => {
+                            if (v.issue === 'assume') setAnomalie('confirmee')
+                          },
+                        })}
+                      />
+                    </>
+                  ) : (
+                    <BoutonAction
+                      libelle="Rouvrir l’anomalie"
                       variant="ghost"
-                      onClick={() =>
-                        acte({
-                          ton: 'info',
-                          titre: 'Appel à passer consigné',
-                          detail:
-                            'Prévenir avant d’émettre une facture qui triple coûte cinq minutes ; ne pas le faire coûte une contestation et une relation abîmée.',
-                          action: 'billing.anomaly.call',
-                          cible: 'AMUGA/egress',
-                          orgNom: 'AMUGA',
-                        })
-                      }
-                    >
-                      Appeler le client
-                    </Button>
-                  </div>
-                )}
+                      operation={{
+                        ton: 'warn',
+                        titre: 'Anomalie rouverte',
+                        detail: 'La facture repasse en attente de vérification avant émission.',
+                        effet: () => setAnomalie('ouverte'),
+                      }}
+                    />
+                  )}
+                </div>
               </div>
             </Card>
 
@@ -647,11 +764,27 @@ export default function FacturationAdmin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[...IMPAYES]
+                  {[...impayes.items]
                     .sort((a, b) => b.retardJours - a.retardJours)
                     .map((i) => (
-                      <tr key={i.facture} className="border-b border-g-100 last:border-0">
-                        <td className="px-3 py-2.5 text-[12.5px] font-semibold text-ink">{i.org}</td>
+                      <tr key={i.id} className="border-b border-g-100 last:border-0">
+                        <td className="px-3 py-2.5">
+                          <span className="block text-[12.5px] font-semibold text-ink">{i.org}</span>
+                          {(i.echelonnement || i.suspendu) && (
+                            <span className="mt-0.5 flex flex-wrap gap-1">
+                              {i.echelonnement && (
+                                <Badge tone="info" size="sm">
+                                  Échelonné
+                                </Badge>
+                              )}
+                              {i.suspendu && (
+                                <Badge tone="err" size="sm">
+                                  Suspendue
+                                </Badge>
+                              )}
+                            </span>
+                          )}
+                        </td>
                         <td className="px-3 py-2.5 font-mono text-[12px] text-g-700">{i.facture}</td>
                         <td className="tnum px-3 py-2.5 text-[12.5px] font-bold text-ink">
                           {money(i.montant)}
@@ -671,11 +804,18 @@ export default function FacturationAdmin() {
                         </td>
                         <td className="tnum px-3 py-2.5 text-[12px] text-g-700">{i.relances}</td>
                         <td className="px-3 py-2.5 text-[11.5px] text-g-700">
-                          {i.retardJours > 60
-                            ? 'Appel de la direction, proposition d’échelonnement'
-                            : i.retardJours > 30
-                              ? 'Appel téléphonique'
-                              : 'Relance écrite'}
+                          {i.echelonnement
+                            ? 'Échelonnement en cours, relances suspendues'
+                            : i.retardJours > 60
+                              ? 'Appel de la direction, proposition d’échelonnement'
+                              : i.retardJours > 30
+                                ? 'Appel téléphonique'
+                                : 'Relance écrite'}
+                          {i.prochaineRelance && (
+                            <span className="block text-[10.5px] text-g-500">
+                              Prévue le {dateCourte(i.prochaineRelance)}
+                            </span>
+                          )}
                         </td>
                         <td className="px-3 py-2.5 text-right">
                           <span className="flex items-center justify-end gap-1.5">
@@ -687,7 +827,7 @@ export default function FacturationAdmin() {
                                 size="sm"
                                 variant="secondary"
                                 iconBefore={<Phone size={12} />}
-                                onClick={() => setRelance(i)}
+                                onClick={() => ouvrirRelance(i)}
                               >
                                 Traiter
                               </Button>
@@ -695,16 +835,8 @@ export default function FacturationAdmin() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() =>
-                                acte({
-                                  ton: 'info',
-                                  titre: `Historique de ${i.facture}`,
-                                  detail: `${i.relances} relance${i.relances > 1 ? 's' : ''} depuis le ${dateCourte(i.echeance)}, ${i.retardJours} jours de retard. Aucune suspension prononcée à ce jour.`,
-                                  action: 'dunning.history.open',
-                                  cible: i.facture,
-                                  orgNom: i.org,
-                                })
-                              }
+                              iconBefore={<Clock size={12} />}
+                              onClick={() => setHistoriqueId(i.id)}
                             >
                               Historique
                             </Button>
@@ -941,19 +1073,15 @@ export default function FacturationAdmin() {
 
       <Modal
         open={relance !== null}
-        onClose={() => setRelance(null)}
+        onClose={() => setRelanceId(null)}
         title={`Traiter l’impayé — ${relance?.org ?? ''}`}
         size="md"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setRelance(null)}>
+            <Button variant="ghost" onClick={() => setRelanceId(null)}>
               Annuler
             </Button>
-            <Button
-              iconBefore={<Send size={13} />}
-              disabled={dossier.compteRendu.trim().length < 10}
-              onClick={() => relance && enregistrerRecouvrement(relance)}
-            >
+            <Button iconBefore={<Send size={13} />} onClick={enregistrerRelance}>
               Enregistrer l’action
             </Button>
           </>
@@ -973,72 +1101,121 @@ export default function FacturationAdmin() {
               ]}
             />
             <Field label="Action">
-              <Select
-                value={dossier.action}
-                onChange={(e) => setDossier((d) => ({ ...d, action: e.target.value }))}
-              >
-                <option value="appel">Appel téléphonique effectué</option>
-                <option value="relance">Relance écrite envoyée</option>
-                <option value="echelonnement">Proposition d’échelonnement</option>
-                <option value="avoir">Avoir commercial accordé</option>
-                <option value="promesse">Promesse de règlement enregistrée</option>
+              <Select value={action} onChange={(e) => setAction(e.target.value)}>
+                {ACTIONS_RECOUVREMENT.map((a) => (
+                  <option key={a.value} value={a.value}>
+                    {a.label}
+                  </option>
+                ))}
               </Select>
             </Field>
-            <Field
-              label="Compte rendu"
-              required
-              hint="ce que le client a dit, et ce qui a été convenu"
-              error={
-                dossier.compteRendu !== '' && dossier.compteRendu.trim().length < 10
-                  ? 'Un compte rendu de deux mots ne servira à personne dans trois semaines.'
-                  : undefined
-              }
-            >
+            <Field label="Compte rendu" hint="ce que le client a dit, et ce qui a été convenu">
               <Textarea
                 rows={4}
-                value={dossier.compteRendu}
-                onChange={(e) => setDossier((d) => ({ ...d, compteRendu: e.target.value }))}
+                value={compteRendu}
+                onChange={(e) => setCompteRendu(e.target.value)}
                 placeholder="Appel au directeur financier. Difficulté de trésorerie liée à un retard de paiement de leur propre client public. Échelonnement en trois mensualités proposé et accepté, première échéance au 5 septembre."
               />
             </Field>
             <Field label="Prochaine relance" hint="laisser vide si le dossier est résolu">
               <Input
                 type="date"
-                value={dossier.prochaine}
-                onChange={(e) => setDossier((d) => ({ ...d, prochaine: e.target.value }))}
+                value={prochaine}
+                onChange={(e) => setProchaine(e.target.value)}
+                disabled={action === 'regle'}
               />
             </Field>
             <div className="space-y-3">
               <Switch
-                checked={dossier.echelonnement || dossier.action === 'echelonnement'}
-                disabled={dossier.action === 'echelonnement'}
-                onChange={(v) => setDossier((d) => ({ ...d, echelonnement: v }))}
+                checked={echelonner}
+                onChange={setEchelonner}
+                disabled={action === 'regle'}
                 label="Proposer un échelonnement"
                 description="Trois mensualités par défaut, sans pénalité. C’est le levier qui recouvre le mieux."
               />
               <Switch
-                checked={dossier.suspension}
-                onChange={(v) => setDossier((d) => ({ ...d, suspension: v }))}
+                checked={suspendre}
+                onChange={setSuspendre}
+                disabled={action === 'regle'}
                 label="Suspendre l’organisation"
                 description="Décision humaine, à ne prendre qu’après rappel écrit et quinze jours supplémentaires. Elle arrête l’activité du client et sera consignée avec votre nom."
               />
             </div>
-            {dossier.suspension && (
-              <Callout ton="err" titre="Vous êtes sur le point d’arrêter une activité">
-                {relance.org} perdra l’accès à ses services dès l’enregistrement. Les ressources
-                continuent de tourner et de facturer : une suspension n’est pas un arrêt, c’est une
-                coupure d’accès. Vérifiez qu’un appel a bien été passé avant.
+            {action === 'regle' ? (
+              <Callout ton="ok" titre="Le dossier sort des impayés">
+                Enregistrer un règlement clôt le dossier : la facture quitte cette liste et
+                l’historique du compte conserve la séquence des relances qui y ont mené.
+              </Callout>
+            ) : suspendre ? (
+              <Callout ton="err" titre="Une suspension arrête l’activité du client">
+                Elle sera consignée avec votre nom et la date, et le client en est prévenu par écrit
+                avant qu’elle prenne effet. Vérifiez qu’un appel a bien eu lieu et qu’un
+                échelonnement a été proposé : sans ces deux étapes, la suspension est prématurée.
+              </Callout>
+            ) : (
+              <Callout ton="violet" titre="Avant de suspendre, appelez">
+                Sur les six dossiers d’impayé traités cette année, cinq se sont résolus par un simple
+                appel et un échelonnement. Le sixième était une entreprise en cessation de paiement,
+                où la suspension n’aurait rien changé. La coupure n’a jamais fait rentrer d’argent
+                plus vite qu’une conversation.
               </Callout>
             )}
-            <Callout ton="violet" titre="Avant de suspendre, appelez">
-              Sur les six dossiers d’impayé traités cette année, cinq se sont résolus par un simple
-              appel et un échelonnement. Le sixième était une entreprise en cessation de paiement, où
-              la suspension n’aurait rien changé. La coupure n’a jamais fait rentrer d’argent plus vite
-              qu’une conversation.
-            </Callout>
           </div>
         )}
       </Modal>
+
+      <Modal
+        open={historique !== null}
+        onClose={() => setHistoriqueId(null)}
+        title={`Historique du dossier — ${historique?.facture ?? ''}`}
+        description="Toutes les actions consignées sur cet impayé, de la relance automatique au dernier appel. Le journal est en lecture seule : on n’efface pas une relance qui a eu lieu."
+        size="md"
+        footer={
+          <Button variant="ghost" onClick={() => setHistoriqueId(null)}>
+            Fermer
+          </Button>
+        }
+      >
+        {historique && (
+          <div className="space-y-4">
+            <KeyValueList
+              colonnes={2}
+              items={[
+                { cle: 'Organisation', valeur: historique.org },
+                { cle: 'Montant', valeur: money(historique.montant) },
+                { cle: 'Retard', valeur: `${historique.retardJours} jours` },
+                {
+                  cle: 'Prochaine relance',
+                  valeur: historique.prochaineRelance
+                    ? dateCourte(historique.prochaineRelance)
+                    : 'Aucune',
+                },
+              ]}
+            />
+            <ol className="space-y-2">
+              {(historique.journal ?? []).map((e, i) => (
+                <li
+                  key={`${e.date}-${i}`}
+                  className="rounded-[6px] border border-g-300 px-3 py-2.5"
+                >
+                  <span className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className="text-[12.5px] font-semibold text-ink">{e.action}</span>
+                    <span className="tnum text-[11px] text-g-500">{dateCourte(e.date)}</span>
+                  </span>
+                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">{e.note}</p>
+                </li>
+              ))}
+            </ol>
+            {(historique.journal ?? []).length === 0 && (
+              <p className="text-[12px] text-g-500">
+                Aucune action consignée sur ce dossier : la relance automatique n’a pas encore été
+                déclenchée.
+              </p>
+            )}
+          </div>
+        )}
+      </Modal>
+
     </div>
   )
 }

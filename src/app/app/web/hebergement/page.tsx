@@ -20,6 +20,7 @@ import { GatedAction } from '@/components/ui/display'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { BoutonFormulaire } from '@/components/app/actions'
 
 const PALIERS = [
   {
@@ -60,9 +61,63 @@ export default function ListeHebergements() {
         titre="Hébergement Web"
         sousTitre="Un domaine, un serveur. Sur ce serveur : Apache, PHP, un moteur de bases, vos accès fichiers et vos tâches planifiées. Tout ce qui y est installé partage ses ressources."
         actions={
-          <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-            <Button iconBefore={<Plus size={14} />}>Commander un hébergement</Button>
-          </GatedAction>
+          <BoutonFormulaire
+            libelle="Commander un hébergement"
+            size="md"
+            variant="primary"
+            icone={<Plus size={14} />}
+            action="service.admin"
+            titre="Commander un hébergement"
+            description="Un domaine, un serveur. Si vous n’avez pas encore de domaine, nous servons le site sur un nom provisoire le temps que vous l’enregistriez."
+            champs={[
+              {
+                id: 'palier',
+                label: 'Palier',
+                type: 'select',
+                options: PALIERS.map((p) => ({ value: p.nom, label: `${p.nom} · ${p.specs} · ${p.sites}` })),
+              },
+              { id: 'domaine', label: 'Domaine à servir', placeholder: 'mon-entreprise.ci — laissez vide pour un nom provisoire' },
+              {
+                id: 'site',
+                label: 'Site physique',
+                type: 'select',
+                demi: true,
+                options: [
+                  { value: 'ABJ', label: 'Abidjan' },
+                  { value: 'GBM', label: 'Grand-Bassam' },
+                ],
+              },
+              {
+                id: 'frequence',
+                label: 'Facturation',
+                type: 'select',
+                demi: true,
+                options: [
+                  { value: 'mensuelle', label: 'Mensuelle' },
+                  { value: 'annuelle', label: 'Annuelle · deux mois offerts' },
+                ],
+              },
+            ]}
+            valeursDepart={{ palier: 'Pro', site: 'ABJ', frequence: 'mensuelle' }}
+            libelleValider="Commander"
+            operation={(v) => ({
+              titre: `Hébergement ${v.palier} commandé`,
+              detail: v.domaine
+                ? `Servira ${v.domaine} depuis ${v.site === 'ABJ' ? 'Abidjan' : 'Grand-Bassam'}.`
+                : 'Un nom provisoire est attribué le temps que vous enregistriez votre domaine.',
+              job: {
+                type: 'hebergement.create',
+                label: `Création de l’hébergement ${v.palier}`,
+                etapes: [
+                  'Provisionner le serveur',
+                  'Installer le serveur web et PHP',
+                  'Démarrer le moteur de bases',
+                  'Créer le compte de transfert',
+                  'Poser le certificat',
+                ],
+              },
+            })}
+          />
         }
       />
 

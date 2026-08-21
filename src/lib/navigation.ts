@@ -60,9 +60,11 @@ export const UNIVERS_CLIENT: UniversNav[] = [
     id: 'global',
     nom: 'Global',
     sections: [
-      { nom: 'Tableau de bord', href: '/app', aussi: ['/app/taches'] },
+      // Le lanceur n'a plus d'onglet : on y arrive par le menu du compte et par
+      // la tuile du tableau de bord. Il reste rattaché ici pour que la barre
+      // des sections ne se retrouve pas sans repère quand on l'ouvre.
+      { nom: 'Tableau de bord', href: '/app', aussi: ['/app/taches', '/app/lanceur'] },
       { nom: 'Supervision', href: '/app/observabilite' },
-      { nom: "Lanceur d'applications", href: '/app/lanceur' },
       { nom: 'Facturation', href: '/app/facturation' },
       { nom: 'Support & SLA', href: '/app/support' },
       { nom: 'Documentation', href: '/app/docs' },
@@ -82,7 +84,7 @@ export const UNIVERS_CLIENT: UniversNav[] = [
       { nom: 'Machines virtuelles', href: '/app/vms' },
       { nom: 'Kubernetes', href: '/app/kubernetes' },
       { nom: 'Load balancers', href: '/app/reseau/lb' },
-      { nom: 'Réseau & IP', href: '/app/reseau' },
+      { nom: 'Réseau & VPN', href: '/app/reseau' },
       { nom: 'Stockage bloc', href: '/app/stockage' },
       { nom: 'Stockage objet S3', href: '/app/objet' },
       { nom: 'Bases managées', href: '/app/bases' },

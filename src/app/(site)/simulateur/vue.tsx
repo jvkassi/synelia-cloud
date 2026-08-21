@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { Calculator, Info, Save, Scale, TrendingDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money, num, pct, TVA_PCT, ventilationTva } from '@/lib/format'
+import { telechargerCsv } from '@/lib/export'
 import {
   HYPOTHESES_COMPARATEUR,
   REFERENCES_COMPARATEUR,
@@ -381,9 +382,34 @@ function Configurateur() {
         </Card>
 
         <div className="space-y-2">
-          <Button variant="secondary" fullWidth iconBefore={<Save size={14} />}>
+          <Button
+            variant="secondary"
+            fullWidth
+            iconBefore={<Save size={14} />}
+            disabled={toutes.length === 0}
+            onClick={() =>
+              telechargerCsv(
+                'estimation-synelia',
+                ['Ligne', 'Détail', 'Montant FCFA'],
+                [
+                  ...toutes.map((l) => [l.libelle, l.detail ?? '', l.montant]),
+                  ['Sous-total hors taxes', '', sousTotal],
+                  ...(reduction > 0
+                    ? [['Remise annuelle', '−15 %, engagement de douze mois', -reduction]]
+                    : []),
+                  [`TVA ${TVA_PCT} %`, '', tva],
+                  ['Total mensuel TTC', '', total],
+                  ['Total annuel TTC', '', total * 12],
+                ],
+              )
+            }
+          >
             Enregistrer cette configuration
           </Button>
+          <p className="text-[11px] leading-relaxed text-g-500">
+            La configuration part dans un fichier CSV lisible par un tableur : de quoi la joindre à
+            une demande de devis ou la comparer à une offre concurrente, ligne par ligne.
+          </p>
           <ButtonLink href="/entreprises#contact" variant="secondary" fullWidth>
             Demander un devis
           </ButtonLink>

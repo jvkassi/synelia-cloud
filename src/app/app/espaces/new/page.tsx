@@ -5,7 +5,8 @@ import { useMemo, useState } from 'react'
 import { Check, Network, Server, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money, num } from '@/lib/format'
-import { SITE_LABEL, type Site } from '@/lib/types'
+import { MAINTENANT } from '@/lib/format'
+import { SITE_LABEL, type EspaceCloud, type Site } from '@/lib/types'
 import { BACKUP_PLANS, ESPACES, OFFRES } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ import { Checkbox, Field, Input, Select, Switch } from '@/components/ui/field'
 import { Card, CardHeader, Callout, KeyValueList } from '@/components/composition/card'
 import { CostPreview, WizardShell } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
+import { useAtelier, useCollection } from '@/components/app/atelier'
 
 const ETAPES = [
   { numero: 1, titre: 'Offre' },
@@ -29,9 +31,21 @@ const LATENCE: Record<Site, string> = {
   GBM: '4 à 6 ms depuis Abidjan · 1 à 3 ms depuis Grand-Bassam',
 }
 
+/** « 12 vCPU · 48 Go · 2 To » → quota exploitable. */
+function quotaDepuisSpecs(specs: string) {
+  const nombres = specs.match(/[\d.]+/g) ?? []
+  return {
+    vcpu: Number(nombres[0] ?? 12),
+    ramGo: Number(nombres[1] ?? 48),
+    stockageTo: Number(nombres[2] ?? 2),
+  }
+}
+
 export default function NouvelEspace() {
   const router = useRouter()
   const { pousser } = useApp()
+  const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
+  const { lancerJob } = useAtelier()
 
   const [etape, setEtape] = useState(1)
   const [offerId, setOfferId] = useState('off-pro')
@@ -117,10 +131,49 @@ export default function NouvelEspace() {
             <Button
               disabled={!conditions}
               onClick={() => {
+                const nouvel: EspaceCloud = {
+                  id: espaces.identifiant('ec'),
+                  orgId: 'org-dba',
+                  code,
+                  offerId,
+                  offreNom: offre.nom,
+                  site,
+                  cidr,
+                  quota: quotaDepuisSpecs(offre.specs),
+                  usage: { vcpu: 0, ramGo: 0, stockageTo: 0 },
+                  projets: 0,
+                  statut: 'provisioning',
+                  createdAt: MAINTENANT,
+                  dnsInterne: dnsInterne
+                    ? `${code.toLowerCase()}.interne.synelia.cloud`
+                    : undefined,
+                }
+                espaces.creer(nouvel)
                 pousser({
                   ton: 'info',
                   titre: `Création de ${code} lancée`,
                   detail: 'Le quota est réservé, la plage réseau allouée. Suivi dans le centre de tâches.',
+                })
+                lancerJob({
+                  type: 'espace.create',
+                  label: `Création de l’Espace Cloud ${code} · ${site}`,
+                  etapes: [
+                    'Réserver le quota sur le site',
+                    `Allouer la plage réseau ${cidr}`,
+                    ...(dnsInterne ? ['Créer la zone DNS interne'] : []),
+                    ...(peering ? ['Établir le peering demandé'] : []),
+                    ...(planSauvegarde !== 'aucun' ? ['Rattacher le plan de sauvegarde'] : []),
+                    ...(supervision ? ['Déclarer les sondes de supervision'] : []),
+                    'Ouvrir la souscription facturable',
+                  ],
+                  alFin: () => {
+                    espaces.modifier(nouvel.id, { statut: 'active' })
+                    pousser({
+                      ton: 'ok',
+                      titre: `${code} est prêt`,
+                      detail: 'Vous pouvez y créer machines, clusters et volumes.',
+                    })
+                  },
                 })
                 router.push('/app/espaces')
               }}

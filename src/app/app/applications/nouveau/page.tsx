@@ -15,9 +15,17 @@ import {
   TriangleAlert,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { money } from '@/lib/format'
-import { ANALYSE_DEPOT, ESPACES, K8S_CLUSTERS, VMS } from '@/lib/mock'
+import { MAINTENANT, money } from '@/lib/format'
+import {
+  ANALYSE_DEPOT,
+  ESPACES,
+  K8S_CLUSTERS,
+  PROJETS,
+  SERVICES_PROJET,
+  VMS,
+} from '@/lib/mock'
 import { CATEGORIE_MODELE_LABEL, MODELES, modeleBySlug } from '@/lib/mock/modeles'
+import type { Projet, ServiceProjet } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, IconButton } from '@/components/ui/button'
 import { Checkbox, Field, Input, Select, Switch } from '@/components/ui/field'
@@ -25,6 +33,7 @@ import { Card, CardHeader, Callout, KeyValueList } from '@/components/compositio
 import { CostPreview, WizardShell } from '@/components/composition/flow'
 import { TopologyCanvas } from '@/components/business/rbac-canvas'
 import { useApp, useEspace } from '@/components/app/contexte'
+import { useAtelier, useCollection } from '@/components/app/atelier'
 
 const ETAPES = [
   { numero: 1, titre: 'Source' },
@@ -52,6 +61,9 @@ export default function NouvelleApplication() {
   const router = useRouter()
   const { pousser } = useApp()
   const espaceCourant = useEspace()
+  const projets = useCollection<Projet>('projets', PROJETS)
+  const services = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+  const { lancerJob } = useAtelier()
 
   const [etape, setEtape] = useState(1)
   const [source, setSource] = useState<'git' | 'image' | 'canvas' | 'modele'>('git')
@@ -155,10 +167,72 @@ export default function NouvelleApplication() {
             <Button
               disabled={!peutContinuer}
               onClick={() => {
+                const idProjet = projets.identifiant('prj')
+                const environnements = envsActifs.map((e) => e.nom)
+                projets.creer({
+                  id: idProjet,
+                  nom: nomApp,
+                  description:
+                    source === 'git'
+                      ? `Déployé depuis ${depot} (${branche}), construit avec ${builder}.`
+                      : source === 'image'
+                        ? `Déployé depuis l’image ${image}:${etiquette}.`
+                        : 'Créé depuis le canvas.',
+                  espaceId,
+                  cree: MAINTENANT.slice(0, 10),
+                  environnements,
+                  variables: [],
+                })
+                services.creer(
+                  environnements.map((env) => ({
+                    id: services.identifiant('svc'),
+                    projetId: idProjet,
+                    nom: nomApp,
+                    type: 'application' as const,
+                    environnement: env,
+                    statut: 'building' as const,
+                    ressources: { cpu: 1, ramMo: 1024, diskGo: 20 },
+                    emplacement: {
+                      site: ESPACES.find((e) => e.id === espaceId)?.site ?? 'ABJ',
+                      backend: cible === 'k8s' ? 'OpenStack Magnum' : 'OpenStack Nova',
+                      namespace: cible === 'k8s' ? `${nomApp}-${env.toLowerCase()}` : undefined,
+                    },
+                    derniereMaj: MAINTENANT,
+                    coutMensuel: 8600,
+                    appId: nomApp,
+                    source:
+                      source === 'image'
+                        ? { type: 'image' as const, ref: `${image}:${etiquette}` }
+                        : { type: 'git' as const, ref: depot, branche },
+                    portConteneur: 3000,
+                  })),
+                )
                 pousser({
                   ton: 'info',
                   titre: `Création de ${nomApp} lancée`,
                   detail: 'Build, analyse DevSecOps, provisioning puis déploiement. Suivi dans le centre de tâches.',
+                })
+                lancerJob({
+                  type: 'projet.create',
+                  label: `Création et déploiement de ${nomApp}`,
+                  etapes: [
+                    'Créer le projet et ses environnements',
+                    source === 'git' ? 'Construire l’image depuis la source' : 'Récupérer l’image',
+                    'Analyse DevSecOps de l’image',
+                    cible === 'k8s' ? 'Créer les namespaces' : 'Provisionner les machines',
+                    'Déployer les environnements',
+                    'Publier les adresses offertes',
+                  ],
+                  alFin: () => {
+                    services
+                      .items.filter((x) => x.projetId === idProjet)
+                      .forEach((x) => services.modifier(x.id, { statut: 'running' }))
+                    pousser({
+                      ton: 'ok',
+                      titre: `${nomApp} est déployé`,
+                      detail: `${environnements.length} environnement(s) en marche.`,
+                    })
+                  },
                 })
                 router.push('/app/applications/projets')
               }}

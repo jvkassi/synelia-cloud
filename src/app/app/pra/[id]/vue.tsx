@@ -14,6 +14,7 @@ import { cn, seededSeries } from '@/lib/utils'
 import { dateCourte, dureeMin, pct } from '@/lib/format'
 import { SITE_LABEL } from '@/lib/types'
 import { DR_PLANS } from '@/lib/mock'
+import type { DRPlan } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
@@ -22,6 +23,8 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { RpoRtoGauge } from '@/components/business/infra'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'composition', label: 'Composition' },
@@ -31,11 +34,52 @@ const ONGLETS = [
 ]
 
 export function VuePra({ id }: { id: string }) {
-  const plan = DR_PLANS.find((p) => p.id === id)!
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const plans = useCollection<DRPlan>('plans-pra', DR_PLANS)
   const [onglet, setOnglet] = useState('composition')
   const [bascule, setBascule] = useState(false)
+
+  const plan = plans.items.find((p) => p.id === id)!
   const [ordre, setOrdre] = useState(plan.groupes)
+
+  /** Séquence d'une bascule : un groupe par étape, dans l'ordre déclaré. */
+  const etapesBascule = (reelle: boolean) => [
+    ...(reelle ? ['Arrêter les écritures sur le site source'] : ['Créer le réseau isolé de test']),
+    ...plan.groupes.map((g) => `Démarrer le groupe ${g.ordre} · ${g.nom}`),
+    reelle ? 'Basculer le DNS public' : 'Vérifier les services dans le réseau isolé',
+    'Contrôler la santé des services',
+  ]
+
+  const basculeDeTest = () =>
+    executer({
+      action: 'dr.failover.test',
+      ton: 'info',
+      titre: 'Bascule de test lancée en réseau isolé',
+      detail: `Durée estimée ${dureeMin(plan.rtoCibleMin)}. Aucun impact sur la production.`,
+      job: {
+        type: 'dr.failover.test',
+        label: `Bascule de test · ${plan.nom}`,
+        etapes: etapesBascule(false),
+        dureeEtapeMs: 1100,
+      },
+      effetFinal: () =>
+        plans.modifier(plan.id, (p) => ({
+          statut: 'operationnel',
+          rtoConstateMin: p.rtoConstateMin || p.rtoCibleMin,
+          exercices: [
+            {
+              date: '2026-08-19',
+              type: 'test' as const,
+              dureeMin: p.rtoCibleMin,
+              rtoConstateMin: p.rtoConstateMin || p.rtoCibleMin,
+              succes: true,
+              rapportUrl: '#rapport-exercice',
+            },
+            ...p.exercices,
+          ],
+        })),
+    })
 
   return (
     <div className="space-y-5">
@@ -80,13 +124,7 @@ export function VuePra({ id }: { id: string }) {
               <Button
                 variant="secondary"
                 iconBefore={<FlaskConical size={14} />}
-                onClick={() =>
-                  pousser({
-                    ton: 'info',
-                    titre: 'Bascule de test lancée en réseau isolé',
-                    detail: 'Aucun impact sur la production. Suivi dans le centre de tâches.',
-                  })
-                }
+                onClick={basculeDeTest}
               >
                 Bascule de test
               </Button>
@@ -350,13 +388,7 @@ export function VuePra({ id }: { id: string }) {
                     <Button
                       className="mt-4"
                       iconBefore={<FlaskConical size={14} />}
-                      onClick={() =>
-                        pousser({
-                          ton: 'info',
-                          titre: 'Bascule de test lancée',
-                          detail: `Durée estimée ${dureeMin(plan.rtoCibleMin)}. Aucun impact sur la production.`,
-                        })
-                      }
+                      onClick={basculeDeTest}
                     >
                       Lancer une bascule de test
                     </Button>
@@ -429,9 +461,43 @@ export function VuePra({ id }: { id: string }) {
                 </li>
               ))}
             </ol>
-            <Button variant="secondary" className="mt-4" iconBefore={<RotateCcw size={13} />} disabled>
-              Retour arrière — disponible après une bascule
-            </Button>
+            <BoutonAction
+              libelle={
+                plan.exercices.some((e) => e.type === 'reel')
+                  ? 'Lancer le retour arrière'
+                  : 'Retour arrière — disponible après une bascule'
+              }
+              size="md"
+              className="mt-4"
+              icone={<RotateCcw size={13} />}
+              desactive={!plan.exercices.some((e) => e.type === 'reel')}
+              operation={{
+                action: 'dr.failover.real',
+                ton: 'warn',
+                titre: 'Retour arrière engagé',
+                detail: `La resynchronisation inverse doit se terminer avant la bascule DNS de retour vers ${SITE_LABEL[plan.siteSource]}.`,
+                job: {
+                  type: 'dr.failback',
+                  label: `Retour arrière · ${plan.nom}`,
+                  etapes: [
+                    'Resynchroniser les données vers le site d’origine',
+                    'Arrêter les services sur le site de repli',
+                    'Redémarrer les groupes sur le site d’origine',
+                    'Rebasculer le DNS public',
+                  ],
+                },
+              }}
+              confirmation={{
+                ressource: plan.nom,
+                titre: 'Déclencher le retour arrière ?',
+                pertes: [
+                  `Les services du site de repli ${SITE_LABEL[plan.siteRepli]} seront arrêtés`,
+                  'Les écritures en vol pendant la resynchronisation inverse seront perdues',
+                  'Une nouvelle interruption de service est nécessaire',
+                ],
+                libelleAction: 'Déclencher le retour arrière',
+              }}
+            />
           </Card>
         </div>
       )}
@@ -450,9 +516,62 @@ export function VuePra({ id }: { id: string }) {
                 autorise={autorise('dr.failover.test')}
                 message={refus('dr.failover.test')}
               >
-                <Button className="mt-4" iconBefore={<FlaskConical size={14} />}>
-                  Planifier le premier exercice
-                </Button>
+                <BoutonFormulaire
+                  libelle="Planifier le premier exercice"
+                  variant="primary"
+                  size="md"
+                  className="mt-4"
+                  icone={<FlaskConical size={14} />}
+                  action="dr.failover.test"
+                  titre="Planifier un exercice de bascule"
+                  description="L’exercice se déroule dans un réseau isolé : la production continue de tourner. Le rapport est daté et opposable à un auditeur."
+                  champs={[
+                    {
+                      id: 'quand',
+                      label: 'Fenêtre',
+                      type: 'select',
+                      options: [
+                        { value: 'nuit', label: 'La prochaine nuit · 02h00' },
+                        { value: 'week-end', label: 'Le prochain week-end · samedi 03h00' },
+                        { value: 'maintenant', label: 'Maintenant' },
+                      ],
+                    },
+                    { id: 'temoin', label: 'Personne témoin', placeholder: 'a.kone@dba.africa' },
+                  ]}
+                  libelleValider="Planifier"
+                  operation={(v) =>
+                    v.quand === 'maintenant'
+                      ? {
+                          ton: 'info',
+                          titre: 'Exercice lancé en réseau isolé',
+                          job: {
+                            type: 'dr.failover.test',
+                            label: `Exercice de bascule · ${plan.nom}`,
+                            etapes: etapesBascule(false),
+                            dureeEtapeMs: 1100,
+                          },
+                          effetFinal: () =>
+                            plans.modifier(plan.id, (p) => ({
+                              statut: 'operationnel',
+                              exercices: [
+                                {
+                                  date: '2026-08-19',
+                                  type: 'test' as const,
+                                  dureeMin: p.rtoCibleMin,
+                                  rtoConstateMin: p.rtoCibleMin,
+                                  succes: true,
+                                  rapportUrl: '#rapport-exercice',
+                                },
+                                ...p.exercices,
+                              ],
+                            })),
+                        }
+                      : {
+                          titre: 'Exercice planifié',
+                          detail: 'Un rappel est envoyé 24 heures avant, avec la liste des vérifications à mener.',
+                        }
+                  }
+                />
               </GatedAction>
             </Card>
           ) : (
@@ -573,10 +692,31 @@ export function VuePra({ id }: { id: string }) {
         open={bascule}
         onClose={() => setBascule(false)}
         onConfirm={() =>
-          pousser({
+          executer({
+            action: 'dr.failover.real',
             ton: 'warn',
             titre: 'Bascule réelle engagée',
             detail: `Séquence de ${plan.groupes.length} groupes en cours. Suivi dans le centre de tâches.`,
+            job: {
+              type: 'dr.failover.real',
+              label: `Bascule réelle · ${plan.nom} → ${SITE_LABEL[plan.siteRepli]}`,
+              etapes: etapesBascule(true),
+              dureeEtapeMs: 1400,
+            },
+            effetFinal: () =>
+              plans.modifier(plan.id, (p) => ({
+                exercices: [
+                  {
+                    date: '2026-08-19',
+                    type: 'reel' as const,
+                    dureeMin: p.rtoConstateMin || p.rtoCibleMin,
+                    rtoConstateMin: p.rtoConstateMin || p.rtoCibleMin,
+                    succes: true,
+                    rapportUrl: '#rapport-bascule',
+                  },
+                  ...p.exercices,
+                ],
+              })),
           })
         }
         titre="Déclencher une bascule réelle"

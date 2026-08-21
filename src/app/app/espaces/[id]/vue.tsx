@@ -5,20 +5,21 @@ import { useState } from 'react'
 import { Container, Link2, Plus, Server, Settings2, TrendingUp, Unlink } from 'lucide-react'
 import { cn, seededSeries, trendSeries } from '@/lib/utils'
 import { dateCourte, dateHeure, goHumain, money, num, pct, toHumain } from '@/lib/format'
-import { SITE_LABEL } from '@/lib/types'
+import { SITE_LABEL, type EspaceCloud, type K8sCluster, type VM, type Volume } from '@/lib/types'
 import {
+  APPLICATIONS,
   BACKUP_PLANS,
   ESPACES,
   EVENEMENTS_SUPERVISION,
   K8S_CLUSTERS,
   MEMBERSHIPS,
+  OFFRES,
   RESTORE_POINTS,
   VMS,
+  VOLUMES,
   ipsDeLEspace,
   reseauxDeLEspace,
   userById,
-  vmsDeLEspace,
-  volumesDeLEspace,
   hrefDuService,
 } from '@/lib/mock'
 import { ROLE_LABEL } from '@/lib/types'
@@ -30,6 +31,8 @@ import { HealthBadge, QuotaBar, Sparkline, StatTile } from '@/components/composi
 import { EmptyState } from '@/components/composition/states'
 import { EventList, GrilleSparkCharts } from '@/components/business/observabilite'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'apercu', label: 'Vue d’ensemble' },
@@ -42,13 +45,17 @@ const ONGLETS = [
 ]
 
 export function VueEspace({ id }: { id: string }) {
-  const espace = ESPACES.find((e) => e.id === id)!
   const { autorise, refus } = useApp()
+  const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
+  const parc = useCollection<VM>('vms', VMS)
+  const disques = useCollection<Volume>('volumes', VOLUMES)
+  const grappes = useCollection<K8sCluster>('clusters', K8S_CLUSTERS)
   const [onglet, setOnglet] = useState('apercu')
 
-  const vms = vmsDeLEspace(id)
-  const clusters = K8S_CLUSTERS.filter((c) => c.espaceId === id)
-  const volumes = volumesDeLEspace(id)
+  const espace = espaces.items.find((e) => e.id === id)!
+  const vms = parc.items.filter((v) => v.espaceId === id)
+  const clusters = grappes.items.filter((c) => c.espaceId === id)
+  const volumes = disques.items.filter((v) => v.espaceId === id)
   const reseaux = reseauxDeLEspace(id)
   const ips = ipsDeLEspace(id)
 
@@ -71,22 +78,79 @@ export function VueEspace({ id }: { id: string }) {
         }
         actions={
           <>
-            <GatedAction
-              autorise={autorise('espace.quota.update')}
-              message={refus('espace.quota.update')}
-            >
-              <Button variant="secondary" iconBefore={<TrendingUp size={14} />}>
-                Étendre la capacité
-              </Button>
-            </GatedAction>
-            <GatedAction
-              autorise={autorise('espace.quota.update')}
-              message={refus('espace.quota.update')}
-            >
-              <Button variant="ghost" iconBefore={<Settings2 size={14} />}>
-                Changer d’offre
-              </Button>
-            </GatedAction>
+            <BoutonFormulaire
+              libelle="Étendre la capacité"
+              size="md"
+              icone={<TrendingUp size={14} />}
+              action="espace.quota.update"
+              titre={`Étendre la capacité de ${espace.code}`}
+              description="Le quota est l’enveloppe de l’espace : l’étendre ne crée aucune ressource, cela autorise à en créer davantage. La facturation suit le quota réservé, au prorata du mois."
+              champs={[
+                { id: 'vcpu', label: 'vCPU', type: 'nombre', demi: true, min: espace.usage.vcpu },
+                { id: 'ram', label: 'Mémoire', type: 'nombre', demi: true, min: espace.usage.ramGo, suffixe: 'Go' },
+                { id: 'stockage', label: 'Stockage', type: 'nombre', demi: true, min: 1, suffixe: 'To' },
+              ]}
+              valeursDepart={{
+                vcpu: espace.quota.vcpu,
+                ram: espace.quota.ramGo,
+                stockage: espace.quota.stockageTo,
+              }}
+              libelleValider="Étendre"
+              operation={(v) => ({
+                titre: `Capacité de ${espace.code} étendue`,
+                detail: `${v.vcpu} vCPU · ${v.ram} Go · ${v.stockage} To`,
+                job: {
+                  type: 'espace.quota.update',
+                  label: `Extension de capacité · ${espace.code}`,
+                  etapes: ['Vérifier la capacité du site', 'Appliquer le nouveau quota', 'Mettre à jour la souscription'],
+                  dureeEtapeMs: 900,
+                },
+                effetFinal: () =>
+                  espaces.modifier(espace.id, {
+                    quota: {
+                      vcpu: Number(v.vcpu),
+                      ramGo: Number(v.ram),
+                      stockageTo: Number(v.stockage),
+                    },
+                  }),
+              })}
+            />
+            <BoutonFormulaire
+              libelle="Changer d’offre"
+              size="md"
+              variant="ghost"
+              icone={<Settings2 size={14} />}
+              action="espace.quota.update"
+              titre={`Changer l’offre de ${espace.code}`}
+              description="Le changement d’offre prend effet à la prochaine période de facturation. Aucune ressource n’est déplacée."
+              champs={[
+                {
+                  id: 'offre',
+                  label: 'Offre',
+                  type: 'select',
+                  options: OFFRES.filter((o) => o.categorie === 'espace_cloud').map((o) => ({
+                    value: o.id,
+                    label: `${o.nom} · ${o.specs}`,
+                  })),
+                },
+              ]}
+              valeursDepart={{ offre: espace.offerId }}
+              libelleValider="Changer d’offre"
+              operation={(v) => {
+                const offre = OFFRES.find((o) => o.id === v.offre)
+                return {
+                  titre: `Offre de ${espace.code} changée`,
+                  detail: offre ? `${offre.nom} · effet à la prochaine période` : undefined,
+                  effet: () =>
+                    offre
+                      ? espaces.modifier(espace.id, {
+                          offerId: offre.id,
+                          offreNom: offre.nom,
+                        })
+                      : undefined,
+                }
+              }}
+            />
           </>
         }
       />
@@ -274,9 +338,34 @@ export function VueEspace({ id }: { id: string }) {
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
                         <HealthBadge etat={v.statut} size="sm" />
-                        <Button size="sm" variant="ghost" iconBefore={<Link2 size={12} />}>
-                          Rattacher
-                        </Button>
+                        <BoutonFormulaire
+                          libelle="Rattacher"
+                          variant="ghost"
+                          icone={<Link2 size={12} />}
+                          action="vm.hardware.update"
+                          titre={`Rattacher ${v.nom} à une application`}
+                          description="Une machine rattachée apparaît dans la fiche de l’application, et son coût entre dans le showback de celle-ci."
+                          champs={[
+                            {
+                              id: 'application',
+                              label: 'Application',
+                              type: 'select',
+                              options: APPLICATIONS.map((a) => ({ value: a.id, label: a.nom })),
+                            },
+                          ]}
+                          libelleValider="Rattacher"
+                          operation={(f) => {
+                            const app = APPLICATIONS.find((a) => a.id === f.application)
+                            return {
+                              titre: `${v.nom} rattachée à ${app?.nom ?? f.application}`,
+                              effet: () =>
+                                parc.modifier(v.id, {
+                                  applicationId: app?.id,
+                                  applicationNom: app?.nom,
+                                }),
+                            }
+                          }}
+                        />
                       </span>
                     </li>
                   ))}
@@ -333,15 +422,42 @@ export function VueEspace({ id }: { id: string }) {
                         </Badge>
                       )}
                       <HealthBadge etat={c.statut} size="sm" />
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        iconBefore={
-                          c.applicationId ? <Unlink size={12} /> : <Link2 size={12} />
-                        }
-                      >
-                        {c.applicationId ? 'Détacher' : 'Rattacher'}
-                      </Button>
+                      {c.applicationId ? (
+                        <BoutonAction
+                          libelle="Détacher"
+                          variant="ghost"
+                          icone={<Unlink size={12} />}
+                          operation={{
+                            action: 'app.deploy',
+                            ton: 'warn',
+                            titre: `${c.nom} détaché de ${c.applicationId}`,
+                            detail: 'Le cluster continue de tourner : seul le rattachement change.',
+                            effet: () => grappes.modifier(c.id, { applicationId: undefined }),
+                          }}
+                        />
+                      ) : (
+                        <BoutonFormulaire
+                          libelle="Rattacher"
+                          variant="ghost"
+                          icone={<Link2 size={12} />}
+                          action="app.deploy"
+                          titre={`Rattacher ${c.nom} à une application`}
+                          champs={[
+                            {
+                              id: 'application',
+                              label: 'Application',
+                              type: 'select',
+                              options: APPLICATIONS.map((a) => ({ value: a.id, label: a.nom })),
+                            },
+                          ]}
+                          libelleValider="Rattacher"
+                          operation={(f) => ({
+                            titre: `${c.nom} rattaché à ${f.application}`,
+                            effet: () =>
+                              grappes.modifier(c.id, { applicationId: String(f.application) }),
+                          })}
+                        />
+                      )}
                     </span>
                   </li>
                 ))}
@@ -399,9 +515,24 @@ export function VueEspace({ id }: { id: string }) {
                             <HealthBadge etat={v.statut} size="sm" />
                           </td>
                           <td className="px-3 py-2.5 text-right">
-                            <Button size="sm" variant="ghost" iconBefore={<Unlink size={12} />}>
-                              Détacher
-                            </Button>
+                            <BoutonAction
+                              libelle="Détacher"
+                              variant="ghost"
+                              icone={<Unlink size={12} />}
+                              operation={{
+                                action: 'vm.hardware.update',
+                                ton: 'warn',
+                                titre: `Volume détaché de ${v.nom}`,
+                                detail: 'Le volume est conservé et reste facturé.',
+                                effet: () =>
+                                  disques.modifierPlusieurs(
+                                    disques.items
+                                      .filter((d) => d.attachedTo === v.id)
+                                      .map((d) => d.id),
+                                    { attachedTo: undefined, attachedLabel: undefined, montage: undefined },
+                                  ),
+                              }}
+                            />
                           </td>
                         </tr>
                       ))}

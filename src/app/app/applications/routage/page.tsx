@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { Globe, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dateCourte, relatif } from '@/lib/format'
+import { MAINTENANT, dateCourte, relatif } from '@/lib/format'
 import type { DomaineApplicatif } from '@/lib/types'
 import { SITE_LABEL } from '@/lib/types'
 import {
@@ -23,6 +23,8 @@ import { StatTile } from '@/components/composition/metrics'
 import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { Drawer } from '@/components/ui/overlay'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, useOperation } from '@/components/app/actions'
 
 const ETAT_VERIF = {
   ok: { ton: 'ok' as const, label: 'Vérifié' },
@@ -39,10 +41,11 @@ const ETAT_CERT = {
 
 export default function Routage() {
   const { autorise, refus } = useApp()
+  const domaines = useCollection<DomaineApplicatif>('domaines-applicatifs', DOMAINES_APPLICATIFS)
   const [ajout, setAjout] = useState(false)
 
-  const aVerifier = DOMAINES_APPLICATIFS.filter((d) => d.verification && d.verification.etat !== 'ok')
-  const generes = DOMAINES_APPLICATIFS.filter((d) => d.origine === 'genere')
+  const aVerifier = domaines.items.filter((d) => d.verification && d.verification.etat !== 'ok')
+  const generes = domaines.items.filter((d) => d.origine === 'genere')
 
   const colonnes: Array<Colonne<DomaineApplicatif>> = [
     {
@@ -163,7 +166,7 @@ export default function Routage() {
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile libelle="Domaines routés" valeur={DOMAINES_APPLICATIFS.length} />
+        <StatTile libelle="Domaines routés" valeur={domaines.items.length} />
         <StatTile
           libelle="Adresses offertes"
           valeur={generes.length}
@@ -314,11 +317,33 @@ export default function Routage() {
                 </div>
 
                 <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                  <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-                    <Button size="sm" variant="secondary" iconBefore={<RefreshCw size={12} />}>
-                      Vérifier maintenant
-                    </Button>
-                  </GatedAction>
+                  <BoutonAction
+                    libelle="Vérifier maintenant"
+                    icone={<RefreshCw size={12} />}
+                    operation={{
+                      action: 'app.deploy',
+                      ton: 'info',
+                      titre: `Vérification DNS de ${d.hote}`,
+                      detail: 'Nos résolveurs sont interrogés directement, sans cache.',
+                      job: {
+                        type: 'domaine.verify',
+                        label: `Vérification DNS · ${d.hote}`,
+                        etapes: [
+                          'Interroger les résolveurs',
+                          'Comparer à l’enregistrement attendu',
+                          'Émettre le certificat',
+                        ],
+                        dureeEtapeMs: 1100,
+                      },
+                      effetFinal: () =>
+                        domaines.modifier(d.id, (x) => ({
+                          verification: x.verification
+                            ? { ...x.verification, etat: 'ok', verifieLe: MAINTENANT, detail: undefined }
+                            : undefined,
+                          certificat: { etat: 'actif', emetteur: 'Let’s Encrypt', expire: '2026-11-17' },
+                        })),
+                    }}
+                  />
                   {d.verification!.verifieLe && (
                     <span className="text-[11px] text-g-500">
                       dernière tentative {relatif(d.verification!.verifieLe)}
@@ -337,7 +362,7 @@ export default function Routage() {
       )}
 
       <DataTable
-        lignes={DOMAINES_APPLICATIFS}
+        lignes={domaines.items}
         colonnes={colonnes}
         placeholderRecherche="Rechercher un hôte, un service…"
         filtres={[
@@ -438,9 +463,15 @@ export default function Routage() {
 }
 
 function TiroirBranchement({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const executer = useOperation()
+  const domaines = useCollection<DomaineApplicatif>('domaines-applicatifs', DOMAINES_APPLICATIFS)
   const [hote, setHote] = useState('')
   const [serviceId, setServiceId] = useState(SERVICES_PROJET[0].id)
   const [etape, setEtape] = useState<'saisie' | 'dns'>('saisie')
+  const [chemin, setChemin] = useState('/')
+  const [port, setPort] = useState<number | null>(null)
+  const [certificat, setCertificat] = useState('acme')
+  const [redirection, setRedirection] = useState(true)
 
   const service = serviceProjetById(serviceId)!
   const exposables = SERVICES_PROJET.filter(
@@ -467,9 +498,65 @@ function TiroirBranchement({ open, onClose }: { open: boolean; onClose: () => vo
             <Button
               iconBefore={<RefreshCw size={13} />}
               onClick={() => {
+                const id = domaines.identifiant('dom')
+                executer({
+                  action: 'app.deploy',
+                  ton: 'info',
+                  titre: `${hote} branché sur ${service.nom}`,
+                  detail: 'La vérification DNS démarre. L’adresse offerte du service continue de répondre.',
+                  effet: () =>
+                    domaines.creer({
+                      id,
+                      hote,
+                      origine: 'personnalise',
+                      serviceId,
+                      chemin,
+                      portConteneur: port ?? service.portConteneur ?? 80,
+                      https: redirection,
+                      certificat: { etat: certificat === 'acme' ? 'en_emission' : 'actif' },
+                      verification: {
+                        etat: 'attente',
+                        enregistrement: {
+                          type: 'A',
+                          nom: hote,
+                          valeur: ZONE_APPLICATIVE.ingress[0].ip,
+                        },
+                      },
+                    }),
+                  job: {
+                    type: 'domaine.attach',
+                    label: `Branchement de ${hote}`,
+                    etapes: [
+                      'Vérifier l’enregistrement DNS',
+                      'Déclarer la route sur l’entrée',
+                      ...(certificat === 'acme' ? ['Émettre le certificat'] : []),
+                      'Activer la redirection HTTPS',
+                    ],
+                    dureeEtapeMs: 1100,
+                  },
+                  effetFinal: () =>
+                    domaines.modifier(id, {
+                      verification: {
+                        etat: 'ok',
+                        enregistrement: {
+                          type: 'A',
+                          nom: hote,
+                          valeur: ZONE_APPLICATIVE.ingress[0].ip,
+                        },
+                        verifieLe: MAINTENANT,
+                      },
+                      certificat: {
+                        etat: 'actif',
+                        emetteur: certificat === 'acme' ? 'Let’s Encrypt' : 'Certificat fourni',
+                        expire: '2026-11-17',
+                      },
+                    }),
+                })
+                setHote('')
                 setEtape('saisie')
                 onClose()
               }}
+              disabled={!hote.trim()}
             >
               Vérifier et activer
             </Button>
@@ -509,21 +596,33 @@ function TiroirBranchement({ open, onClose }: { open: boolean; onClose: () => vo
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Chemin" hint="Laissez / pour tout le trafic.">
-              <Input defaultValue="/" className="font-mono" />
+              <Input
+                value={chemin}
+                onChange={(e) => setChemin(e.target.value)}
+                className="font-mono"
+              />
             </Field>
             <Field label="Port du conteneur">
-              <Input type="number" defaultValue={service.portConteneur ?? 80} />
+              <Input
+                type="number"
+                value={port ?? service.portConteneur ?? 80}
+                onChange={(e) => setPort(Number(e.target.value))}
+              />
             </Field>
           </div>
 
           <Field label="Certificat">
-            <Select defaultValue="acme">
+            <Select value={certificat} onChange={(e) => setCertificat(e.target.value)}>
               <option value="acme">Émission automatique (Let’s Encrypt)</option>
               <option value="fourni">Certificat que je fournis</option>
             </Select>
           </Field>
 
-          <Switch checked onChange={() => {}} label="Rediriger HTTP vers HTTPS" />
+          <Switch
+            checked={redirection}
+            onChange={setRedirection}
+            label="Rediriger HTTP vers HTTPS"
+          />
 
           <Callout ton="info" titre="Rien n’est coupé pendant la bascule">
             L’adresse offerte du service continue de répondre. Votre domaine s’ajoute, il ne

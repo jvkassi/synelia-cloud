@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, ChevronsUpDown, Columns3, Download } from 'lucide-react'
+import { telechargerCsv } from '@/lib/export'
 import { cn } from '@/lib/utils'
 import { Button, IconButton } from '@/components/ui/button'
 import { SearchInput, SegmentedControl, Select } from '@/components/ui/field'
@@ -47,6 +48,7 @@ export function DataTable<T extends { id: string }>({
   href,
   densiteInitiale = 'confortable',
   exportable,
+  nomExport,
   className,
 }: {
   lignes: T[]
@@ -68,6 +70,8 @@ export function DataTable<T extends { id: string }>({
   href?: (ligne: T) => string
   densiteInitiale?: 'compacte' | 'confortable'
   exportable?: boolean
+  /** Nom du fichier produit par l'export, sans extension. */
+  nomExport?: string
   className?: string
 }) {
   const [q, setQ] = useState('')
@@ -116,6 +120,20 @@ export function DataTable<T extends { id: string }>({
 
   const pagees = filtrees.slice((page - 1) * parPage, page * parPage)
   const cell = densite === 'compacte' ? 'px-3 py-1.5' : 'px-3 py-2.5'
+
+  /**
+   * Export réel des lignes filtrées et triées, telles qu'elles sont à l'écran.
+   * Seules les colonnes qui déclarent une `cle` en sortent : le `rendu` est du
+   * JSX, il n'a pas de représentation textuelle fiable.
+   */
+  const exporterCsv = () => {
+    const colonnesExportables = visibles.filter((c) => c.cle)
+    telechargerCsv(
+      nomExport ?? 'export',
+      colonnesExportables.map((c) => c.entete),
+      filtrees.map((l) => colonnesExportables.map((c) => c.cle!(l))),
+    )
+  }
 
   if (chargement) return <SkeletonTable colonnes={visibles.length} />
 
@@ -199,7 +217,12 @@ export function DataTable<T extends { id: string }>({
             </Popover>
           )}
           {exportable && (
-            <IconButton label="Exporter en CSV" variant="secondary" size="sm">
+            <IconButton
+              label="Exporter en CSV"
+              variant="secondary"
+              size="sm"
+              onClick={exporterCsv}
+            >
               <Download size={13} />
             </IconButton>
           )}

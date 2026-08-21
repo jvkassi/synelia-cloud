@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { Rocket, Server } from 'lucide-react'
-import { SITE_LABEL } from '@/lib/types'
-import { ESPACES, NETWORKS } from '@/lib/mock'
+import { SITE_LABEL, type EspaceCloud, type VM } from '@/lib/types'
+import { ESPACES, NETWORKS, VMS } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -17,6 +17,15 @@ import {
   type LotServeurs,
 } from '@/components/business/composeur-serveurs'
 import { useApp } from '@/components/app/contexte'
+import { useAtelier, useCollection } from '@/components/app/atelier'
+
+/** Systèmes proposés au lot — le libellé sert de nom d'image sur la machine. */
+const IMAGES: Record<'debian' | 'ubuntu' | 'rocky' | 'windows', { nom: string }> = {
+  debian: { nom: 'Debian 12' },
+  ubuntu: { nom: 'Ubuntu Server 24.04 LTS' },
+  rocky: { nom: 'Rocky Linux 9' },
+  windows: { nom: 'Windows Server 2022' },
+}
 
 /** Le plan de départ raconte une architecture courante : deux frontaux, une base. */
 const PLAN_INITIAL: LotServeurs[] = [
@@ -52,15 +61,20 @@ const PLAN_INITIAL: LotServeurs[] = [
 
 export default function ComposerServeurs() {
   const { autorise, refus, pousser } = useApp()
+  const parc = useCollection<VM>('vms', VMS)
+  const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
+  const { lancerJob } = useAtelier()
   const [espaceId, setEspaceId] = useState(ESPACES[0].id)
   const [image, setImage] = useState<'debian' | 'ubuntu' | 'rocky' | 'windows'>('debian')
   const [lots, setLots] = useState<LotServeurs[]>(PLAN_INITIAL)
   const [lance, setLance] = useState(false)
 
-  const espace = ESPACES.find((e) => e.id === espaceId) ?? ESPACES[0]
+  const espace = espaces.items.find((e) => e.id === espaceId) ?? ESPACES[0]
   const reseaux = NETWORKS.filter((r) => r.espaceId === espace.id).map((r) => r.nom)
   const machines = lots.reduce((a, l) => a + l.quantite, 0)
   const cout = lots.reduce((a, l) => a + coutLot(l), 0)
+  const vcpu = lots.reduce((a, l) => a + l.cpu * l.quantite, 0)
+  const ram = lots.reduce((a, l) => a + l.ramGo * l.quantite, 0)
 
   const depasse =
     espace.usage.vcpu + lots.reduce((a, l) => a + l.cpu * l.quantite, 0) > espace.quota.vcpu ||
@@ -213,10 +227,78 @@ export default function ComposerServeurs() {
                     disabled={depasse || machines === 0}
                     onClick={() => {
                       setLance(true)
+                      // Un lot livré crée réellement ses machines, à l'état
+                      // « creating » : c'est ce que le centre de tâches fera
+                      // basculer en marche, lot par lot.
+                      const octet = parc.items.length + 20
+                      let rang = 0
+                      const nouvelles: VM[] = lots.flatMap((l) =>
+                        Array.from({ length: l.quantite }, (_, i) => {
+                          rang += 1
+                          return {
+                            id: parc.identifiant('vm'),
+                            espaceId: espace.id,
+                            nom: `${l.prefixe}-${String(i + 1).padStart(2, '0')}`,
+                            os: IMAGES[image].nom,
+                            vcpu: l.cpu,
+                            ramGo: l.ramGo,
+                            diskGo: l.diskGo,
+                            flavor: 'composé',
+                            ips: [
+                              { adresse: `10.0.1.${octet + rang}`, type: 'privee' as const },
+                            ],
+                            statut: 'creating' as const,
+                            hardware: {
+                              scsiControllers: 1,
+                              nics: l.nics,
+                              usb: false,
+                              secureBoot: true,
+                              videoMo: 16,
+                              vtpm: true,
+                            },
+                            backupPlanId: l.sauvegarde ? 'bp-prod-quotidien' : undefined,
+                            site: espace.site,
+                            tags: [l.roleId],
+                          }
+                        }),
+                      )
+                      parc.creer(nouvelles)
+                      espaces.modifier(espace.id, (e) => ({
+                        usage: {
+                          ...e.usage,
+                          vcpu: e.usage.vcpu + vcpu,
+                          ramGo: e.usage.ramGo + ram,
+                        },
+                      }))
                       pousser({
                         ton: 'info',
                         titre: `${machines} machines en préparation`,
                         detail: `${espace.code} · ${SITE_LABEL[espace.site]} — suivi dans le centre de tâches.`,
+                      })
+                      lancerJob({
+                        type: 'vm.compose',
+                        label: `Livraison de ${machines} machines · ${espace.code}`,
+                        etapes: [
+                          'Réserver le quota de l’espace',
+                          ...lots.map(
+                            (l) =>
+                              `Provisionner le lot ${l.prefixe} (${l.quantite} machine${l.quantite > 1 ? 's' : ''})`,
+                          ),
+                          'Raccorder les réseaux et les groupes de sécurité',
+                          'Installer les logiciels cochés',
+                          'Poser les sondes de supervision',
+                        ],
+                        alFin: () => {
+                          parc.modifierPlusieurs(
+                            nouvelles.map((v) => v.id),
+                            { statut: 'running' },
+                          )
+                          pousser({
+                            ton: 'ok',
+                            titre: `${machines} machines livrées`,
+                            detail: 'Le paramétrage fin se fait ensuite en SSH ou dans le logiciel installé.',
+                          })
+                        },
                       })
                     }}
                   >

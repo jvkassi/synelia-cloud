@@ -26,7 +26,25 @@ import { ConfirmDialog, Drawer, Modal, Tooltip } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import type { DnsZone } from '@/lib/types'
+
+type Enregistrement = DnsZone['enregistrements'][number]
+
+/** Valeurs créées par un modèle rapide, une fois les jokers résolus. */
+const ENREGISTREMENTS_MODELE: Record<string, Enregistrement[]> = {
+  'mod-espace': [
+    { id: '', type: 'A', nom: '@', valeur: '102.176.20.13', ttl: 3600 },
+    { id: '', type: 'A', nom: 'www', valeur: '102.176.20.13', ttl: 3600 },
+  ],
+  'mod-mail': [
+    { id: '', type: 'MX', nom: '@', valeur: 'mx1.synelia.cloud.', ttl: 3600, priorite: 10 },
+    { id: '', type: 'MX', nom: '@', valeur: 'mx2.synelia.cloud.', ttl: 3600, priorite: 20 },
+    { id: '', type: 'TXT', nom: '@', valeur: 'v=spf1 include:spf.synelia.cloud -all', ttl: 3600 },
+    { id: '', type: 'TXT', nom: '_dmarc', valeur: 'v=DMARC1; p=quarantine; rua=mailto:dmarc@%DOMAINE%', ttl: 3600 },
+  ],
+}
 
 const ONGLETS = [
   { id: 'enregistrements', label: 'Enregistrements' },
@@ -50,17 +68,69 @@ const EXPLICATIONS: Record<string, string> = {
 }
 
 export function EditeurZone({ zoneId }: { zoneId: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const zones = useCollection<DnsZone>('zones-dns', ZONES_DNS)
   const [onglet, setOnglet] = useState('enregistrements')
   const [filtre, setFiltre] = useState<string>('tous')
   const [q, setQ] = useState('')
   const [edition, setEdition] = useState<string | null>(null)
   const [ajout, setAjout] = useState(false)
   const [modele, setModele] = useState<string | null>(null)
-  const [suppression, setSuppression] = useState<{ nom: string; type: string } | null>(null)
+  const [suppression, setSuppression] = useState<Enregistrement | null>(null)
 
-  const zone = ZONES_DNS.find((z) => z.id === zoneId) as DnsZone
-  const domaines = ZONES_DNS.map((z) => z.domaine)
+  const zone = zones.items.find((z) => z.id === zoneId) as DnsZone
+  const domaines = zones.items.map((z) => z.domaine)
+
+  /** Brouillon du tiroir d'enregistrement — l'ouvrir renseigne les valeurs. */
+  const [f, setF] = useState<{
+    type: Enregistrement['type']
+    nom: string
+    valeur: string
+    ttl: number
+    priorite: string
+  }>({ type: 'A', nom: '', valeur: '', ttl: 3600, priorite: '' })
+
+  const ouvrirAjout = () => {
+    setF({ type: 'A', nom: '', valeur: '', ttl: 3600, priorite: '' })
+    setAjout(true)
+  }
+
+  const ouvrirEdition = (r: Enregistrement) => {
+    setF({
+      type: r.type,
+      nom: r.nom,
+      valeur: r.valeur,
+      ttl: r.ttl,
+      priorite: r.priorite === undefined ? '' : String(r.priorite),
+    })
+    setEdition(r.id)
+  }
+
+  const enregistrerLigne = () => {
+    const patch: Enregistrement = {
+      id: edition ?? zones.identifiant('rr'),
+      type: f.type,
+      nom: f.nom || '@',
+      valeur: f.valeur,
+      ttl: f.ttl,
+      priorite: f.priorite === '' ? undefined : Number(f.priorite),
+    }
+    executer({
+      action: 'network.manage',
+      titre: edition ? 'Enregistrement modifié' : 'Enregistrement créé',
+      detail:
+        'Publié sur les trois serveurs de noms. Visible partout après expiration du TTL.',
+      effet: () =>
+        zones.modifier(zone.id, (z) => ({
+          enregistrements: edition
+            ? z.enregistrements.map((x) => (x.id === edition ? patch : x))
+            : [...z.enregistrements, patch],
+        })),
+    })
+    setAjout(false)
+    setEdition(null)
+  }
 
   const lignes = useMemo(() => {
     let out = zone.enregistrements
@@ -160,24 +230,141 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
               corriger dix-neuf enregistrements se fait à la souris.
             */}
             <div className="flex flex-wrap items-center gap-1.5">
-              <Button size="sm" variant="ghost" iconBefore={<Clock size={12} />}>
-                TTL par défaut
-              </Button>
-              <Button size="sm" variant="ghost" iconBefore={<FileCode size={12} />}>
-                Mode textuel
-              </Button>
-              <Button size="sm" variant="ghost" iconBefore={<History size={12} />}>
-                Historique
-              </Button>
-              <Button size="sm" variant="ghost" iconBefore={<Download size={12} />}>
-                Exporter
-              </Button>
-              <Button size="sm" variant="ghost" iconBefore={<Upload size={12} />}>
-                Importer
-              </Button>
-              <Button size="sm" variant="ghost" iconBefore={<RotateCcw size={12} />}>
-                Réinitialiser
-              </Button>
+              <BoutonFormulaire
+                libelle="TTL par défaut"
+                variant="ghost"
+                icone={<Clock size={12} />}
+                action="network.manage"
+                titre="Régler le TTL de toute la zone"
+                description="Vingt-quatre heures avant une bascule d’adresse, descendez à 300 secondes ; remontez ensuite, un TTL court multiplie les requêtes."
+                champs={[
+                  {
+                    id: 'ttl',
+                    label: 'TTL appliqué à tous les enregistrements',
+                    type: 'select',
+                    options: [
+                      { value: '60', label: '60 s — bascule imminente' },
+                      { value: '300', label: '300 s — 5 minutes' },
+                      { value: '3600', label: '3 600 s — 1 heure (recommandé)' },
+                      { value: '86400', label: '86 400 s — 1 jour' },
+                    ],
+                  },
+                ]}
+                valeursDepart={{ ttl: '3600' }}
+                libelleValider="Appliquer à toute la zone"
+                operation={(v) => ({
+                  titre: `TTL de la zone porté à ${v.ttl} s`,
+                  detail: `${zone.enregistrements.length} enregistrements modifiés.`,
+                  effet: () =>
+                    zones.modifier(zone.id, (z) => ({
+                      enregistrements: z.enregistrements.map((r) => ({ ...r, ttl: Number(v.ttl) })),
+                    })),
+                })}
+              />
+              <BoutonAction
+                libelle="Mode textuel"
+                variant="ghost"
+                icone={<FileCode size={12} />}
+                operation={{
+                  ton: 'info',
+                  titre: 'Fichier de zone ouvert',
+                  detail: 'Le fichier complet est éditable dans l’onglet Fichier de zone.',
+                  effet: () => setOnglet('brut'),
+                }}
+              />
+              <BoutonAction
+                libelle="Historique"
+                variant="ghost"
+                icone={<History size={12} />}
+                operation={{
+                  ton: 'info',
+                  titre: 'Historique de la zone',
+                  detail: `${zone.enregistrements.length} enregistrements au dernier point de reprise. Les sept derniers jours sont conservés.`,
+                }}
+              />
+              <BoutonAction
+                libelle="Exporter"
+                variant="ghost"
+                icone={<Download size={12} />}
+                operation={{
+                  ton: 'info',
+                  titre: `Zone ${zone.domaine} exportée`,
+                  detail: 'Format BIND, réimportable tel quel chez n’importe quel opérateur.',
+                }}
+              />
+              <BoutonFormulaire
+                libelle="Importer"
+                variant="ghost"
+                icone={<Upload size={12} />}
+                action="network.manage"
+                titre="Importer un fichier de zone"
+                description="Collez un fichier BIND. Les enregistrements existants de même type et même nom sont remplacés ; les autres sont conservés."
+                taille="lg"
+                champs={[
+                  {
+                    id: 'contenu',
+                    label: 'Fichier de zone',
+                    type: 'mono',
+                    placeholder: 'www 3600 IN A 203.0.113.10',
+                  },
+                ]}
+                libelleValider="Analyser et importer"
+                operation={(v) => {
+                  const lignesImport = String(v.contenu)
+                    .split('\n')
+                    .map((l) => l.trim())
+                    .filter((l) => l && !l.startsWith(';') && !l.startsWith('$'))
+                  return {
+                    titre: `${lignesImport.length} ligne(s) importée(s)`,
+                    detail: 'Les enregistrements non reconnus sont ignorés plutôt que devinés.',
+                    effet: () =>
+                      zones.modifier(zone.id, (z) => ({
+                        enregistrements: [
+                          ...z.enregistrements,
+                          ...lignesImport.flatMap((ligne) => {
+                            const parts = ligne.split(/\s+/)
+                            const iType = parts.findIndex((x) => (TYPES as readonly string[]).includes(x))
+                            if (iType < 0) return []
+                            return [
+                              {
+                                id: zones.identifiant('rr'),
+                                type: parts[iType] as Enregistrement['type'],
+                                nom: parts[0] || '@',
+                                valeur: parts.slice(iType + 1).join(' '),
+                                ttl: Number(parts[1]) || 3600,
+                              },
+                            ]
+                          }),
+                        ],
+                      })),
+                  }
+                }}
+              />
+              <BoutonAction
+                libelle="Réinitialiser"
+                variant="ghost"
+                icone={<RotateCcw size={12} />}
+                operation={{
+                  action: 'network.manage',
+                  ton: 'warn',
+                  titre: `Zone ${zone.domaine} réinitialisée`,
+                  detail: 'La zone revient au dernier point de reprise publié.',
+                  effet: () =>
+                    zones.modifier(zone.id, () => ({
+                      enregistrements:
+                        ZONES_DNS.find((z) => z.id === zone.id)?.enregistrements ?? [],
+                    })),
+                }}
+                confirmation={{
+                  ressource: zone.domaine,
+                  titre: 'Réinitialiser la zone ?',
+                  pertes: [
+                    'Toutes les modifications non publiées seront perdues',
+                    'La zone revient à son dernier point de reprise',
+                  ],
+                  libelleAction: 'Réinitialiser la zone',
+                }}
+              />
             </div>
           </div>
 
@@ -222,7 +409,7 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
                             label="Modifier"
                             size="sm"
                             variant="ghost"
-                            onClick={() => setEdition(r.id)}
+                            onClick={() => ouvrirEdition(r)}
                           >
                             <Pencil size={12} />
                           </IconButton>
@@ -235,7 +422,7 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
                             label="Supprimer"
                             size="sm"
                             variant="ghost"
-                            onClick={() => setSuppression({ nom: r.nom, type: r.type })}
+                            onClick={() => setSuppression(r)}
                           >
                             <Trash2 size={12} />
                           </IconButton>
@@ -311,6 +498,25 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
             />
             <Switch
               checked={zone.dnssec}
+              onChange={(v) =>
+                executer({
+                  action: 'network.manage',
+                  ton: v ? 'ok' : 'warn',
+                  titre: v ? 'DNSSEC activé' : 'DNSSEC désactivé',
+                  detail: v
+                    ? 'La publication de l’enregistrement DS au registre prend quelques heures.'
+                    : 'Le retrait du DS au registre doit précéder la dépublication des signatures, sinon la zone devient invalidable.',
+                  job: {
+                    type: 'dns.dnssec',
+                    label: `${v ? 'Activation' : 'Désactivation'} DNSSEC · ${zone.domaine}`,
+                    etapes: v
+                      ? ['Générer les clés', 'Signer la zone', 'Publier le DS au registre']
+                      : ['Retirer le DS au registre', 'Attendre l’expiration des caches', 'Dépublier les signatures'],
+                    dureeEtapeMs: 1100,
+                  },
+                  effetFinal: () => zones.modifier(zone.id, { dnssec: v }),
+                })
+              }
               label="DNSSEC"
               description="Nous gérons les clés, leur rotation et la publication de l’enregistrement DS auprès du registre. Aucune manipulation de clé de votre côté."
             />
@@ -436,9 +642,40 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
               </Field>
             </div>
             <GatedAction autorise={autorise('network.manage')} message={refus('network.manage')}>
-              <Button className="mt-3.5" variant="secondary">
-                Créer la délégation
-              </Button>
+              <BoutonFormulaire
+                libelle="Créer la délégation"
+                size="md"
+                className="mt-3.5"
+                action="network.manage"
+                titre="Déléguer un sous-domaine"
+                description="Une fois délégué, le sous-domaine n’est plus géré ici mais chez l’opérateur des serveurs de noms indiqués."
+                champs={[
+                  { id: 'sous', label: 'Sous-domaine', placeholder: 'labo', obligatoire: true },
+                  { id: 'ns1', label: 'Serveur de noms 1', placeholder: 'ns1.exemple.net', obligatoire: true },
+                  { id: 'ns2', label: 'Serveur de noms 2', placeholder: 'ns2.exemple.net' },
+                ]}
+                libelleValider="Créer la délégation"
+                operation={(v) => ({
+                  ton: 'warn',
+                  titre: `${v.sous}.${zone.domaine} délégué`,
+                  detail: 'Ses enregistrements ne sont plus gérés depuis ce portail.',
+                  effet: () =>
+                    zones.modifier(zone.id, (z) => ({
+                      enregistrements: [
+                        ...z.enregistrements,
+                        ...[v.ns1, v.ns2]
+                          .filter(Boolean)
+                          .map((ns) => ({
+                            id: zones.identifiant('rr'),
+                            type: 'NS' as const,
+                            nom: String(v.sous),
+                            valeur: `${String(ns).replace(/\.$/, '')}.`,
+                            ttl: 3600,
+                          })),
+                      ],
+                    })),
+                })}
+              />
             </GatedAction>
             <Callout ton="warn" className="mt-4" titre="Une délégation vous retire la main">
               Une fois le sous-domaine délégué, ses enregistrements ne sont plus gérés ici mais chez
@@ -455,9 +692,16 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
               titre="Fichier de zone"
               sousTitre="Format BIND standard. Utile pour un audit, une sauvegarde, ou une migration vers un autre fournisseur."
               actions={
-                <Button size="sm" variant="ghost" iconBefore={<Download size={12} />}>
-                  Télécharger
-                </Button>
+                <BoutonAction
+                  libelle="Télécharger"
+                  variant="ghost"
+                  icone={<Download size={12} />}
+                  operation={{
+                    ton: 'info',
+                    titre: `${zone.domaine}.zone téléchargé`,
+                    detail: `${zone.enregistrements.length} enregistrements au format BIND.`,
+                  }}
+                />
               }
             />
             <CodeBlock langue="dns" code={fichierZone} />
@@ -470,7 +714,16 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
             />
             <MonoTextarea rows={8} placeholder="@	3600	IN	A	203.0.113.10" />
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <Button variant="secondary">Analyser les différences</Button>
+              <BoutonAction
+                libelle="Analyser les différences"
+                size="md"
+                operation={{
+                  ton: 'info',
+                  titre: 'Comparatif prêt',
+                  detail:
+                    'Aucun enregistrement n’a été modifié : le comparatif liste ce qui serait ajouté, remplacé et laissé en place.',
+                }}
+              />
               <span className="text-[11.5px] text-g-500">
                 Aucun enregistrement n’est modifié avant votre validation du comparatif.
               </span>
@@ -498,25 +751,20 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
             >
               Annuler
             </Button>
-            <Button
-              onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: enEdition ? 'Enregistrement modifié' : 'Enregistrement créé',
-                  detail: 'Publié sur les trois serveurs de noms. Visible partout après expiration du TTL.',
-                })
-                setAjout(false)
-                setEdition(null)
-              }}
-            >
+            <Button disabled={!f.valeur.trim()} onClick={enregistrerLigne}>
               {enEdition ? 'Enregistrer' : 'Créer'}
             </Button>
           </>
         }
       >
         <div className="space-y-4">
-          <Field label="Type" hint={EXPLICATIONS[enEdition?.type ?? 'A']}>
-            <Select defaultValue={enEdition?.type ?? 'A'}>
+          <Field label="Type" hint={EXPLICATIONS[f.type]}>
+            <Select
+              value={f.type}
+              onChange={(e) =>
+                setF((p) => ({ ...p, type: e.target.value as Enregistrement['type'] }))
+              }
+            >
               {TYPES.map((t) => (
                 <option key={t} value={t}>
                   {t}
@@ -528,14 +776,26 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
             label="Nom"
             hint={`@ pour ${zone.domaine} lui-même, ou un sous-domaine comme www`}
           >
-            <Input defaultValue={enEdition?.nom ?? ''} placeholder="@" suffix={`.${zone.domaine}`} />
+            <Input
+              value={f.nom}
+              onChange={(e) => setF((p) => ({ ...p, nom: e.target.value }))}
+              placeholder="@"
+              suffix={`.${zone.domaine}`}
+            />
           </Field>
           <Field label="Valeur" hint="adresse IP, nom de domaine cible, ou contenu textuel">
-            <Input defaultValue={enEdition?.valeur ?? ''} placeholder="203.0.113.10" />
+            <Input
+              value={f.valeur}
+              onChange={(e) => setF((p) => ({ ...p, valeur: e.target.value }))}
+              placeholder="203.0.113.10"
+            />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="TTL" hint="secondes — 300 pendant une migration, 3 600 en régime stable">
-              <Select defaultValue={String(enEdition?.ttl ?? 3600)}>
+              <Select
+                value={String(f.ttl)}
+                onChange={(e) => setF((p) => ({ ...p, ttl: Number(e.target.value) }))}
+              >
                 <option value="60">60 s — bascule imminente</option>
                 <option value="300">300 s — 5 minutes</option>
                 <option value="3600">3 600 s — 1 heure (recommandé)</option>
@@ -543,7 +803,13 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
               </Select>
             </Field>
             <Field label="Priorité" hint="MX et SRV uniquement — la plus basse est essayée d’abord">
-              <Input type="number" defaultValue={enEdition?.priorite ?? ''} placeholder="10" />
+              <Input
+                type="number"
+                value={f.priorite}
+                onChange={(e) => setF((p) => ({ ...p, priorite: e.target.value }))}
+                placeholder="10"
+                disabled={f.type !== 'MX' && f.type !== 'SRV'}
+              />
             </Field>
           </div>
           <Callout ton="info" titre="Avant de valider">
@@ -567,10 +833,23 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
             </Button>
             <Button
               onClick={() => {
-                pousser({
-                  ton: 'ok',
+                const ajouts = (ENREGISTREMENTS_MODELE[modele ?? ''] ?? []).map((r) => ({
+                  ...r,
+                  id: zones.identifiant('rr'),
+                  valeur: r.valeur.replace('%DOMAINE%', zone.domaine),
+                }))
+                executer({
+                  action: 'network.manage',
                   titre: 'Modèle appliqué',
-                  detail: 'Les enregistrements ont été créés. Les enregistrements existants n’ont pas été touchés.',
+                  detail: ajouts.length
+                    ? `${ajouts.length} enregistrements créés. Les existants n’ont pas été touchés.`
+                    : 'Ce modèle demande des valeurs propres à votre infrastructure : les enregistrements ont été préparés, à compléter un par un.',
+                  effet: () =>
+                    ajouts.length
+                      ? zones.modifier(zone.id, (z) => ({
+                          enregistrements: [...z.enregistrements, ...ajouts],
+                        }))
+                      : undefined,
                 })
                 setModele(null)
               }}
@@ -623,11 +902,19 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
           'La suppression est journalisée dans l’audit, avec votre nom',
         ]}
         onConfirm={() => {
-          pousser({
-            ton: 'err',
-            titre: 'Enregistrement supprimé',
-            detail: 'Vous pouvez le recréer depuis l’historique de la zone dans les sept jours.',
-          })
+          const cible = suppression
+          if (cible) {
+            executer({
+              action: 'network.manage',
+              ton: 'err',
+              titre: 'Enregistrement supprimé',
+              detail: 'Vous pouvez le recréer depuis l’historique de la zone dans les sept jours.',
+              effet: () =>
+                zones.modifier(zone.id, (z) => ({
+                  enregistrements: z.enregistrements.filter((x) => x.id !== cible.id),
+                })),
+            })
+          }
           setSuppression(null)
         }}
       />

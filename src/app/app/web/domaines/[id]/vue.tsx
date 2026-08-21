@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/composition/states'
 import { CarteAbonnement } from '@/components/business/abonnement'
 import { EditeurZone } from '@/components/business/editeur-zone'
 import { useApp } from '@/components/app/contexte'
+import { BoutonFormulaire } from '@/components/app/actions'
 
 /**
  * Fiche d'un domaine auquel aucun serveur n'est attaché.
@@ -75,15 +76,87 @@ export function VueDomaine({ id }: { id: string }) {
                 Gérer l’hébergement
               </ButtonLink>
             ) : (
-              <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-                <Button iconBefore={<ServerCog size={14} />}>Attacher un hébergement</Button>
-              </GatedAction>
+              <BoutonFormulaire
+                libelle="Attacher un hébergement"
+                size="md"
+                variant="primary"
+                icone={<ServerCog size={14} />}
+                action="service.admin"
+                titre={`Attacher un hébergement à ${entree.nom}`}
+                description="L’attachement crée le serveur, son Apache, son PHP et son serveur de bases, puis pointe la zone vers son adresse. Rien n’est perdu si vous détachez plus tard : la zone reste."
+                champs={[
+                  {
+                    id: 'palier',
+                    label: 'Palier',
+                    type: 'select',
+                    options: [
+                      { value: 'Démarrage', label: 'Démarrage · 2 vCPU · 4 Go' },
+                      { value: 'Pro', label: 'Pro · 4 vCPU · 8 Go' },
+                      { value: 'Agence', label: 'Agence · 8 vCPU · 16 Go' },
+                    ],
+                  },
+                  {
+                    id: 'site',
+                    label: 'Site physique',
+                    type: 'select',
+                    options: [
+                      { value: 'ABJ', label: 'Abidjan' },
+                      { value: 'GBM', label: 'Grand-Bassam' },
+                    ],
+                  },
+                ]}
+                valeursDepart={{ palier: 'Pro', site: 'ABJ' }}
+                libelleValider="Attacher"
+                operation={(v) => ({
+                  titre: `Hébergement ${v.palier} en cours de création`,
+                  detail: `Serveur à ${v.site === 'ABJ' ? 'Abidjan' : 'Grand-Bassam'}. La zone sera pointée vers son adresse.`,
+                  job: {
+                    type: 'hebergement.create',
+                    label: `Attachement d’un hébergement · ${entree.nom}`,
+                    etapes: [
+                      'Provisionner le serveur',
+                      'Installer Apache et PHP',
+                      'Démarrer le serveur de bases',
+                      'Poser le certificat',
+                      'Pointer les enregistrements A de la zone',
+                    ],
+                  },
+                })}
+              />
             )}
-            <GatedAction autorise={autorise('network.manage')} message={refus('network.manage')}>
-              <Button variant="secondary" iconBefore={<ArrowRightLeft size={14} />}>
-                Transférer
-              </Button>
-            </GatedAction>
+            <BoutonFormulaire
+              libelle="Transférer"
+              size="md"
+              icone={<ArrowRightLeft size={14} />}
+              action="network.manage"
+              titre={`Transférer ${entree.nom}`}
+              description="Le transfert sortant demande le déverrouillage puis un code d’autorisation, que nous vous remettons sans justification. Nous ne retenons pas un nom."
+              champs={[
+                {
+                  id: 'sens',
+                  label: 'Sens du transfert',
+                  type: 'select',
+                  options: [
+                    { value: 'sortant', label: 'Vers un autre bureau d’enregistrement' },
+                    { value: 'interne', label: 'Vers une autre organisation Synelia' },
+                  ],
+                },
+                { id: 'destinataire', label: 'Destinataire', placeholder: 'organisation ou bureau d’enregistrement' },
+              ]}
+              valeursDepart={{ sens: 'sortant' }}
+              libelleValider="Demander le transfert"
+              operation={(v) => ({
+                ton: 'info',
+                titre:
+                  v.sens === 'sortant'
+                    ? `Code d’autorisation de ${entree.nom} envoyé`
+                    : `Transfert interne de ${entree.nom} demandé`,
+                detail:
+                  v.sens === 'sortant'
+                    ? 'Le verrou de transfert est levé pour cinq jours. Le code est envoyé au contact titulaire.'
+                    : 'L’organisation destinataire doit accepter le transfert depuis son espace.',
+              })}
+            />
           </>
         }
       />

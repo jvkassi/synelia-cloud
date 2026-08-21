@@ -7,9 +7,10 @@ import { dateHeure, num, relatif } from '@/lib/format'
 import {
   MOTEUR_WEB_LABEL,
   MOTEUR_WEB_TEINTE,
+  SERVEURS_BASES,
   hebergementById,
   nomServi,
-  serveurBasesById,
+  type ServeurBases,
 } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink, IconButton } from '@/components/ui/button'
@@ -20,13 +21,23 @@ import { PageHeader, Card, CardHeader, Callout, KeyValueList } from '@/component
 import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 export function VueServeurBases({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const serveurs = useCollection<ServeurBases>('serveurs-bases', SERVEURS_BASES)
   const [onglet, setOnglet] = useState('bases')
   const [creation, setCreation] = useState(false)
+  const [nomBase, setNomBase] = useState('')
+  const [collation, setCollation] = useState('utf8mb4_unicode_ci')
+  const [compteDedie, setCompteDedie] = useState('')
+  const [baseRestauree, setBaseRestauree] = useState<string | null>(null)
+  const [pointRestauration, setPointRestauration] = useState('hier')
+  const [nomCopie, setNomCopie] = useState<string | null>(null)
 
-  const s = serveurBasesById(id)
+  const s = serveurs.items.find((x) => x.id === id)
   if (!s) return null
   const h = hebergementById(s.hebergementId)
   const surface = surfaceMarque(MOTEUR_WEB_TEINTE[s.moteur])
@@ -79,20 +90,28 @@ export function VueServeurBases({ id }: { id: string }) {
               </Button>
             </GatedAction>
           ) : (
-            <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-              <Button
-                iconBefore={<Plus size={14} />}
-                onClick={() =>
-                  pousser({
-                    ton: 'ok',
-                    titre: 'Activation demandée',
-                    detail: `${MOTEUR_WEB_LABEL[s.moteur]} sera installé sur ${s.serveur} dans quelques minutes.`,
-                  })
-                }
-              >
-                Activer {MOTEUR_WEB_LABEL[s.moteur]}
-              </Button>
-            </GatedAction>
+            <BoutonAction
+              libelle={`Activer ${MOTEUR_WEB_LABEL[s.moteur]}`}
+              variant="primary"
+              size="md"
+              icone={<Plus size={14} />}
+              operation={{
+                action: 'service.admin',
+                titre: 'Activation demandée',
+                detail: `${MOTEUR_WEB_LABEL[s.moteur]} sera installé sur ${s.serveur} dans quelques minutes.`,
+                job: {
+                  type: 'base.activate',
+                  label: `Activation de ${MOTEUR_WEB_LABEL[s.moteur]} · ${s.serveur}`,
+                  etapes: [
+                    'Installer le moteur',
+                    'Ouvrir le port sur la boucle locale',
+                    'Ajouter au plan de sauvegarde de l’hébergement',
+                  ],
+                  dureeEtapeMs: 1100,
+                },
+                effetFinal: () => serveurs.modifier(s.id, { actif: true }),
+              }}
+            />
           )
         }
       />
@@ -141,12 +160,51 @@ export function VueServeurBases({ id }: { id: string }) {
                   {s.bases.length > 1 ? 's' : ''} · {(s.utiliseMo / 1024).toFixed(2)} Go
                 </p>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  <Button size="sm" variant="ghost" iconBefore={<Download size={12} />}>
-                    Exporter
-                  </Button>
-                  <Button size="sm" variant="ghost" iconBefore={<Upload size={12} />}>
-                    Importer
-                  </Button>
+                  <BoutonAction
+                    libelle="Exporter"
+                    variant="ghost"
+                    icone={<Download size={12} />}
+                    operation={{
+                      action: 'service.admin',
+                      titre: `Export de ${s.bases.length} ${cle}(s) préparé`,
+                      detail: `${(s.utiliseMo / 1024).toFixed(2)} Go · lien signé valable une heure`,
+                      job: {
+                        type: 'base.dump',
+                        label: `Export ${MOTEUR_WEB_LABEL[s.moteur]} · ${s.serveur}`,
+                        etapes: ['Verrouiller en lecture', 'Écrire le dump', 'Compresser'],
+                        dureeEtapeMs: 900,
+                      },
+                    }}
+                  />
+                  <BoutonFormulaire
+                    libelle="Importer"
+                    variant="ghost"
+                    icone={<Upload size={12} />}
+                    action="service.admin"
+                    titre={`Importer dans ${MOTEUR_WEB_LABEL[s.moteur]}`}
+                    description="L’import écrase les tables de même nom. Sur une base servant un site en ligne, faites-le d’abord sur une copie."
+                    champs={[
+                      {
+                        id: 'base',
+                        label: 'Base de destination',
+                        type: 'select',
+                        options: s.bases.map((b) => ({ value: b.nom, label: b.nom })),
+                      },
+                      { id: 'fichier', label: 'Nom du fichier', placeholder: 'dump-2026-08-19.sql', obligatoire: true },
+                    ]}
+                    libelleValider="Importer"
+                    operation={(v) => ({
+                      ton: 'warn',
+                      titre: `Import dans ${v.base} lancé`,
+                      detail: 'Les tables de même nom sont écrasées.',
+                      job: {
+                        type: 'base.import',
+                        label: `Import SQL · ${v.base}`,
+                        etapes: ['Vérifier le fichier', 'Charger les données', 'Reconstruire les index'],
+                        dureeEtapeMs: 1100,
+                      },
+                    })}
+                  />
                   {s.moteur !== 'redis' && (
                     <ButtonLink
                       href={`https://adminer.${h ? nomServi(h) : 'synelia.cloud'}`}
@@ -202,17 +260,36 @@ export function VueServeurBases({ id }: { id: string }) {
                         <td className="px-3 py-2.5 text-[12px] text-g-700">{b.utilise}</td>
                         <td className="px-3 py-2.5 text-right">
                           <span className="flex items-center justify-end gap-1">
-                            <IconButton label="Restaurer" size="sm">
+                            <IconButton
+                              label={`Restaurer ${b.nom}`}
+                              size="sm"
+                              onClick={() => {
+                                setBaseRestauree(b.nom)
+                                setNomCopie(`${b.nom}_restauree`)
+                                setOnglet('sauvegarde')
+                              }}
+                            >
                               <RotateCcw size={13} />
                             </IconButton>
-                            <GatedAction
-                              autorise={autorise('service.admin')}
-                              message={refus('service.admin')}
+                            <IconButton
+                              label={`Supprimer ${b.nom}`}
+                              size="sm"
+                              onClick={() =>
+                                executer({
+                                  action: 'service.admin',
+                                  ton: 'warn',
+                                  titre: `${b.nom} supprimée`,
+                                  detail: `Les sauvegardes restent disponibles ${s.sauvegarde.retentionJours} jours.`,
+                                  effet: () =>
+                                    serveurs.modifier(s.id, (x) => ({
+                                      bases: x.bases.filter((y) => y.nom !== b.nom),
+                                      utiliseMo: Math.max(0, x.utiliseMo - b.tailleMo),
+                                    })),
+                                })
+                              }
                             >
-                              <IconButton label={`Supprimer ${b.nom}`} size="sm">
-                                <Trash2 size={13} className="text-err" />
-                              </IconButton>
-                            </GatedAction>
+                              <Trash2 size={13} className="text-err" />
+                            </IconButton>
                           </span>
                         </td>
                       </tr>
@@ -229,11 +306,51 @@ export function VueServeurBases({ id }: { id: string }) {
                 titre="Comptes d’accès"
                 sousTitre="Un compte par application, avec les droits les plus étroits possible. Le mot de passe n’est affiché qu’à la création."
                 actions={
-                  <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-                    <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />}>
-                      Créer un compte
-                    </Button>
-                  </GatedAction>
+                  <BoutonFormulaire
+                    libelle="Créer un compte"
+                    icone={<Plus size={13} />}
+                    action="service.admin"
+                    titre="Créer un compte d’accès"
+                    description="Un compte par application, avec les droits les plus étroits possible. Le mot de passe n’est affiché qu’à la création."
+                    champs={[
+                      { id: 'nom', label: 'Identifiant', placeholder: 'monsite_rw', obligatoire: true },
+                      {
+                        id: 'base',
+                        label: 'Base',
+                        type: 'select',
+                        demi: true,
+                        options: s.bases.map((b) => ({ value: b.nom, label: b.nom })),
+                      },
+                      {
+                        id: 'droits',
+                        label: 'Droits',
+                        type: 'select',
+                        demi: true,
+                        options: [
+                          { value: 'lecture', label: 'Lecture seule' },
+                          { value: 'ecriture', label: 'Écriture' },
+                          { value: 'complet', label: 'Tous droits' },
+                        ],
+                      },
+                    ]}
+                    valeursDepart={{ droits: 'ecriture' }}
+                    libelleValider="Créer le compte"
+                    operation={(v) => ({
+                      titre: `Compte ${v.nom} créé`,
+                      detail: 'Notez le mot de passe maintenant : il ne sera plus affiché.',
+                      effet: () =>
+                        serveurs.modifier(s.id, (x) => ({
+                          utilisateurs: [
+                            ...x.utilisateurs,
+                            {
+                              nom: String(v.nom),
+                              droits: v.droits as ServeurBases['utilisateurs'][number]['droits'],
+                              base: String(v.base),
+                            },
+                          ],
+                        })),
+                    })}
+                  />
                 }
               />
               <ul className="divide-y divide-g-100">
@@ -261,7 +378,18 @@ export function VueServeurBases({ id }: { id: string }) {
                             ? 'Lecture seule'
                             : 'Écriture'}
                       </Badge>
-                      <IconButton label={`Réinitialiser le mot de passe de ${u.nom}`} size="sm">
+                      <IconButton
+                        label={`Réinitialiser le mot de passe de ${u.nom}`}
+                        size="sm"
+                        onClick={() =>
+                          executer({
+                            action: 'service.admin',
+                            titre: `Mot de passe de ${u.nom} réinitialisé`,
+                            detail:
+                              'Affiché une seule fois. Mettez à jour la configuration du site avant de quitter cette page.',
+                          })
+                        }
+                      >
                         <RotateCcw size={13} />
                       </IconButton>
                     </span>
@@ -373,20 +501,55 @@ export function VueServeurBases({ id }: { id: string }) {
                     </Select>
                   </Field>
                   <Field label="Point de restauration">
-                    <Select defaultValue="hier">
+                    <Select
+                      value={pointRestauration}
+                      onChange={(e) => setPointRestauration(e.target.value)}
+                    >
                       <option value="hier">19 août 2026 · 03:04</option>
                       <option value="avant">18 août 2026 · 03:03</option>
                       <option value="semaine">12 août 2026 · 03:02</option>
                     </Select>
                   </Field>
                   <Field label="Nom de la copie" hint="l’originale reste intacte">
-                    <Input defaultValue={`${s.bases[0]?.nom ?? 'base'}_restauree`} />
+                    <Input
+                      value={nomCopie ?? `${baseRestauree ?? s.bases[0]?.nom ?? 'base'}_restauree`}
+                      onChange={(e) => setNomCopie(e.target.value)}
+                    />
                   </Field>
-                  <GatedAction autorise={autorise('backup.restore')} message={refus('backup.restore')}>
-                    <Button variant="secondary" fullWidth>
-                      Lancer la restauration
-                    </Button>
-                  </GatedAction>
+                  <BoutonAction
+                    libelle="Lancer la restauration"
+                    fullWidth
+                    size="md"
+                    operation={{
+                      action: 'backup.restore',
+                      ton: 'info',
+                      titre: 'Restauration lancée',
+                      detail: `La copie est créée à côté de l’originale, qui reste intacte.`,
+                      job: {
+                        type: 'base.restore',
+                        label: `Restauration · ${nomCopie ?? baseRestauree ?? s.bases[0]?.nom ?? 'base'}`,
+                        etapes: ['Monter la sauvegarde', 'Charger les données', 'Vérifier l’intégrité'],
+                        dureeEtapeMs: 1100,
+                      },
+                      effetFinal: () => {
+                        const nomFinal =
+                          nomCopie ?? `${baseRestauree ?? s.bases[0]?.nom ?? 'base'}_restauree`
+                        serveurs.modifier(s.id, (x) => ({
+                          bases: [
+                            ...x.bases,
+                            {
+                              nom: nomFinal,
+                              tailleMo: x.bases[0]?.tailleMo ?? 0,
+                              tables: x.bases[0]?.tables,
+                              cles: x.bases[0]?.cles,
+                              collation: x.bases[0]?.collation,
+                              utilise: 'copie de restauration',
+                            },
+                          ],
+                        }))
+                      },
+                    }}
+                  />
                 </div>
               </Card>
             </div>
@@ -404,13 +567,36 @@ export function VueServeurBases({ id }: { id: string }) {
               Annuler
             </Button>
             <Button
+              disabled={!nomBase.trim()}
               onClick={() => {
-                setCreation(false)
-                pousser({
-                  ton: 'ok',
-                  titre: `${cle === 'base' ? 'Base' : 'Index'} créé`,
+                executer({
+                  action: 'service.admin',
+                  titre: `${cle === 'base' ? 'Base' : 'Index'} ${nomBase} créé`,
                   detail: `Disponible immédiatement sur ${s.hoteInterne}:${s.port}.`,
+                  effet: () =>
+                    serveurs.modifier(s.id, (x) => ({
+                      bases: [
+                        ...x.bases,
+                        {
+                          nom: nomBase,
+                          tailleMo: 0,
+                          tables: s.moteur === 'redis' ? undefined : 0,
+                          cles: s.moteur === 'redis' ? 0 : undefined,
+                          collation: s.moteur === 'redis' ? undefined : collation,
+                          utilise: compteDedie ? `compte ${compteDedie}` : 'aucun site',
+                        },
+                      ],
+                      utilisateurs: compteDedie
+                        ? [
+                            ...x.utilisateurs,
+                            { nom: compteDedie, droits: 'complet' as const, base: nomBase },
+                          ]
+                        : x.utilisateurs,
+                    })),
                 })
+                setNomBase('')
+                setCompteDedie('')
+                setCreation(false)
               }}
             >
               Créer
@@ -420,11 +606,15 @@ export function VueServeurBases({ id }: { id: string }) {
       >
         <div className="space-y-3">
           <Field label="Nom" hint="lettres, chiffres et tirets bas">
-            <Input placeholder={`${s.moteur === 'postgresql' ? 'app_prod' : 'monsite_wp'}`} />
+            <Input
+              value={nomBase}
+              onChange={(e) => setNomBase(e.target.value)}
+              placeholder={`${s.moteur === 'postgresql' ? 'app_prod' : 'monsite_wp'}`}
+            />
           </Field>
           {s.moteur !== 'redis' && (
             <Field label="Jeu de caractères">
-              <Select defaultValue="utf8mb4_unicode_ci">
+              <Select value={collation} onChange={(e) => setCollation(e.target.value)}>
                 <option value="utf8mb4_unicode_ci">utf8mb4_unicode_ci</option>
                 <option value="utf8mb4_general_ci">utf8mb4_general_ci</option>
                 <option value="fr_FR.UTF-8">fr_FR.UTF-8</option>
@@ -432,7 +622,11 @@ export function VueServeurBases({ id }: { id: string }) {
             </Field>
           )}
           <Field label="Créer un compte dédié" hint="recommandé : un compte par application">
-            <Input placeholder="monsite_rw" />
+            <Input
+              value={compteDedie}
+              onChange={(e) => setCompteDedie(e.target.value)}
+              placeholder="monsite_rw"
+            />
           </Field>
           <Callout ton="info" titre="Le mot de passe n’est affiché qu’une fois">
             Notez-le à la création. Nous ne le stockons pas en clair et ne pourrons pas vous le

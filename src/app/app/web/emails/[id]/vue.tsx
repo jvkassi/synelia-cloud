@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { ExternalLink, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money, relatif } from '@/lib/format'
-import { messagerieById } from '@/lib/mock'
+import { MESSAGERIES, type MessagerieDomaine } from '@/lib/mock'
 import { configurationDuService } from '@/lib/configurations'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink, IconButton } from '@/components/ui/button'
@@ -16,6 +16,8 @@ import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { ConfigurationServicePanel } from '@/components/business/configuration-service'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'boites', label: 'Boîtes aux lettres' },
@@ -26,14 +28,19 @@ const ONGLETS = [
 ]
 
 export function VueMessagerie({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const messageries = useCollection<MessagerieDomaine>('messageries', MESSAGERIES)
+  const [adresse, setAdresse] = useState('')
+  const [titulaire, setTitulaire] = useState('')
+  const [quota, setQuota] = useState('25')
   const [onglet, setOnglet] = useState('boites')
   const [creation, setCreation] = useState(false)
   const [antivirus, setAntivirus] = useState(true)
   const [rapport, setRapport] = useState(true)
   const [mfaExige, setMfaExige] = useState(true)
 
-  const m = messagerieById(id)
+  const m = messageries.items.find((x) => x.id === id)
   if (!m) return null
   const config = configurationDuService('email-pro')
   const utilise = m.boites.reduce((a, b) => a + b.utiliseGo, 0)
@@ -76,9 +83,28 @@ export function VueMessagerie({ id }: { id: string }) {
               </ButtonLink>
             </>
           ) : (
-            <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-              <Button iconBefore={<Plus size={14} />}>Activer la messagerie</Button>
-            </GatedAction>
+            <BoutonAction
+              libelle="Activer la messagerie"
+              variant="primary"
+              size="md"
+              icone={<Plus size={14} />}
+              operation={{
+                action: 'service.admin',
+                titre: `Messagerie de ${m.domaine} en cours d’activation`,
+                detail: `${money(m.prixSiege)} par boîte et par mois, au prorata.`,
+                job: {
+                  type: 'messagerie.activate',
+                  label: `Activation de la messagerie · ${m.domaine}`,
+                  etapes: [
+                    'Créer l’instance',
+                    'Poser les enregistrements MX, SPF, DKIM et DMARC',
+                    'Déclarer le client SSO',
+                    'Appliquer le plan de sauvegarde',
+                  ],
+                },
+                effetFinal: () => messageries.modifier(m.id, { actif: true }),
+              }}
+            />
           )
         }
       />
@@ -168,14 +194,39 @@ export function VueMessagerie({ id }: { id: string }) {
                         </td>
                         <td className="px-3 py-2.5 text-right">
                           <span className="flex items-center justify-end gap-1">
-                            <IconButton label={`Réinitialiser ${b.adresse}`} size="sm">
+                            <IconButton
+                              label={`Réinitialiser ${b.adresse}`}
+                              size="sm"
+                              onClick={() =>
+                                executer({
+                                  action: 'seat.assign',
+                                  titre: `Lien de réinitialisation envoyé à ${b.adresse}`,
+                                  detail:
+                                    'Le portail ne voit jamais le mot de passe : le titulaire le choisit lui-même.',
+                                })
+                              }
+                            >
                               <RotateCcw size={13} />
                             </IconButton>
-                            <GatedAction autorise={autorise('seat.assign')} message={refus('seat.assign')}>
-                              <IconButton label={`Supprimer ${b.adresse}`} size="sm">
-                                <Trash2 size={13} className="text-err" />
-                              </IconButton>
-                            </GatedAction>
+                            <IconButton
+                              label={`Supprimer ${b.adresse}`}
+                              size="sm"
+                              onClick={() =>
+                                executer({
+                                  action: 'seat.assign',
+                                  ton: 'warn',
+                                  titre: `Boîte ${b.adresse} supprimée`,
+                                  detail:
+                                    'Le contenu reste dans la sauvegarde le temps de la rétention ; le siège est libéré.',
+                                  effet: () =>
+                                    messageries.modifier(m.id, (x) => ({
+                                      boites: x.boites.filter((y) => y.adresse !== b.adresse),
+                                    })),
+                                })
+                              }
+                            >
+                              <Trash2 size={13} className="text-err" />
+                            </IconButton>
                           </span>
                         </td>
                       </tr>
@@ -193,9 +244,39 @@ export function VueMessagerie({ id }: { id: string }) {
                   titre="Alias"
                   sousTitre="Une adresse qui distribue vers une ou plusieurs boîtes existantes. Un alias ne consomme pas de siège."
                   actions={
-                    <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />}>
-                      Ajouter
-                    </Button>
+                    <BoutonFormulaire
+                      libelle="Ajouter"
+                      icone={<Plus size={13} />}
+                      action="seat.assign"
+                      titre="Ajouter un alias"
+                      description="Une adresse qui distribue vers des boîtes existantes. Un alias ne consomme pas de siège."
+                      champs={[
+                        { id: 'de', label: 'Adresse', placeholder: `contact@${m.domaine}`, obligatoire: true },
+                        {
+                          id: 'vers',
+                          label: 'Distribue vers',
+                          placeholder: 'une ou plusieurs adresses, séparées par des virgules',
+                          obligatoire: true,
+                        },
+                      ]}
+                      libelleValider="Ajouter l’alias"
+                      operation={(v) => ({
+                        titre: `Alias ${v.de} créé`,
+                        effet: () =>
+                          messageries.modifier(m.id, (x) => ({
+                            alias: [
+                              ...x.alias,
+                              {
+                                de: String(v.de),
+                                vers: String(v.vers)
+                                  .split(',')
+                                  .map((a) => a.trim())
+                                  .filter(Boolean),
+                              },
+                            ],
+                          })),
+                      })}
+                    />
                   }
                 />
                 <ul className="divide-y divide-g-100">
@@ -223,9 +304,31 @@ export function VueMessagerie({ id }: { id: string }) {
                   titre="Redirections"
                   sousTitre="Le message part vers une adresse externe. Avec copie, un exemplaire reste dans la boîte."
                   actions={
-                    <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />}>
-                      Ajouter
-                    </Button>
+                    <BoutonFormulaire
+                      libelle="Ajouter"
+                      icone={<Plus size={13} />}
+                      action="seat.assign"
+                      titre="Ajouter une redirection"
+                      description="Le message part vers une adresse externe. Avec copie, un exemplaire reste dans la boîte — sans copie, rien ne reste chez vous."
+                      champs={[
+                        { id: 'de', label: 'Adresse source', placeholder: `direction@${m.domaine}`, obligatoire: true },
+                        { id: 'vers', label: 'Redirigée vers', placeholder: 'adresse externe', obligatoire: true },
+                        { id: 'copie', label: 'Garder une copie', type: 'switch', placeholder: 'Recommandé' },
+                      ]}
+                      valeursDepart={{ copie: true }}
+                      libelleValider="Ajouter la redirection"
+                      operation={(v) => ({
+                        titre: `Redirection de ${v.de} créée`,
+                        detail: v.copie ? undefined : 'Sans copie : aucun exemplaire ne reste chez vous.',
+                        effet: () =>
+                          messageries.modifier(m.id, (x) => ({
+                            redirections: [
+                              ...x.redirections,
+                              { de: String(v.de), vers: String(v.vers), copie: Boolean(v.copie) },
+                            ],
+                          })),
+                      })}
+                    />
                   }
                 />
                 {m.redirections.length === 0 ? (
@@ -311,9 +414,25 @@ export function VueMessagerie({ id }: { id: string }) {
                     </div>
                   ))}
                 </div>
-                <Button variant="secondary" size="sm" className="mt-3">
-                  Vérifier la publication
-                </Button>
+                <BoutonAction
+                  libelle="Vérifier la publication"
+                  className="mt-3"
+                  operation={{
+                    ton: 'info',
+                    titre: 'Vérification des enregistrements d’expédition',
+                    detail: 'SPF, DKIM et DMARC sont relus depuis nos résolveurs, sans cache.',
+                    job: {
+                      type: 'messagerie.verify',
+                      label: `Vérification SPF, DKIM et DMARC · ${m.domaine}`,
+                      etapes: ['Interroger la zone', 'Comparer aux enregistrements attendus'],
+                      dureeEtapeMs: 900,
+                    },
+                    effetFinal: () =>
+                      messageries.modifier(m.id, (x) => ({
+                        authentification: { ...x.authentification, spf: 'valide', dkim: 'valide' },
+                      })),
+                  }}
+                />
               </Card>
 
               <Card>
@@ -430,13 +549,30 @@ export function VueMessagerie({ id }: { id: string }) {
               Annuler
             </Button>
             <Button
+              disabled={!adresse.trim()}
               onClick={() => {
-                setCreation(false)
-                pousser({
-                  ton: 'ok',
-                  titre: 'Boîte créée',
+                executer({
+                  action: 'seat.assign',
+                  titre: `Boîte ${adresse}@${m.domaine} créée`,
                   detail: 'Le titulaire reçoit son lien de première connexion par SMS.',
+                  effet: () =>
+                    messageries.modifier(m.id, (x) => ({
+                      boites: [
+                        ...x.boites,
+                        {
+                          adresse: `${adresse}@${m.domaine}`,
+                          nom: titulaire || adresse,
+                          quotaGo: Number(quota),
+                          utiliseGo: 0,
+                          statut: 'active' as const,
+                          mfa: mfaExige,
+                        },
+                      ],
+                    })),
                 })
+                setAdresse('')
+                setTitulaire('')
+                setCreation(false)
               }}
             >
               Créer la boîte
@@ -447,15 +583,24 @@ export function VueMessagerie({ id }: { id: string }) {
         <div className="space-y-3">
           <Field label="Adresse">
             <div className="flex items-center gap-1.5">
-              <Input placeholder="prenom.nom" className="min-w-0 flex-1" />
+              <Input
+                value={adresse}
+                onChange={(e) => setAdresse(e.target.value)}
+                placeholder="prenom.nom"
+                className="min-w-0 flex-1"
+              />
               <span className="shrink-0 font-mono text-[12.5px] text-g-500">@{m.domaine}</span>
             </div>
           </Field>
           <Field label="Titulaire">
-            <Input placeholder="Prénom Nom" />
+            <Input
+              value={titulaire}
+              onChange={(e) => setTitulaire(e.target.value)}
+              placeholder="Prénom Nom"
+            />
           </Field>
           <Field label="Quota" hint={`${m.boites.length + 1} boîtes sur ${m.boitesIncluses} incluses`}>
-            <Select defaultValue="25">
+            <Select value={quota} onChange={(e) => setQuota(e.target.value)}>
               <option value="10">10 Go</option>
               <option value="25">25 Go</option>
               <option value="50">50 Go</option>

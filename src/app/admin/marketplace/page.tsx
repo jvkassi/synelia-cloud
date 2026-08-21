@@ -1,21 +1,28 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2, ExternalLink, PauseCircle, PlayCircle, Rocket } from 'lucide-react'
+import { CheckCircle2, ExternalLink, FileText, PauseCircle, PlayCircle, Rocket } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dateCourte, dateHeure, num, pct, relatif } from '@/lib/format'
-import { CONTRAT_INTEGRATION, TACHES_PROVISIONING } from '@/lib/mock'
+import { dateCourte, dateHeure, MAINTENANT, num, pct, relatif } from '@/lib/format'
+import {
+  CAMPAGNES_MAJ,
+  CATALOGUE,
+  CONTRAT_INTEGRATION,
+  PARC_INSTANCES,
+  TACHES_PROVISIONING,
+} from '@/lib/mock'
 import { CATEGORIE_LABEL, SITE_COURT } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction, SolutionLogo, Tabs } from '@/components/ui/display'
 import { Field, Input, Select, Switch } from '@/components/ui/field'
-import { ConfirmDialog, Modal } from '@/components/ui/overlay'
+import { ConfirmDialog, Drawer } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { HealthBadge, StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
-import { useActe, useAtelier } from '@/components/app/atelier'
+import { useCollection, type Entite } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import type { CampagneMaj, InstanceParc } from '@/lib/mock'
 
 const ONGLETS = [
@@ -25,157 +32,36 @@ const ONGLETS = [
   { id: 'contrat', label: 'Contrat d’intégration' },
 ]
 
+/**
+ * Les certifications prononcées pendant la session. Le catalogue est indexé par
+ * `slug` et n'a pas d'identifiant : plutôt que d'en faire une collection, on
+ * garde à part les slugs certifiés depuis le portail — c'est la seule propriété
+ * du catalogue que cet écran modifie.
+ */
+const CERTIFICATIONS: readonly Entite[] = []
+
 export default function MarketplaceAdmin() {
   const { autorise, refus } = useApp()
-  const { catalogue, parc, campagnes } = useAtelier()
-  const acte = useActe()
-
+  const parc = useCollection<InstanceParc>('parc-instances', PARC_INSTANCES)
+  const campagnes = useCollection<CampagneMaj>('campagnes-maj', CAMPAGNES_MAJ)
+  const certifications = useCollection('certifications-catalogue', CERTIFICATIONS)
+  const executer = useOperation()
   const [onglet, setOnglet] = useState('catalogue')
-  const [arret, setArret] = useState<CampagneMaj | null>(null)
-  const [nouvelleCampagne, setNouvelleCampagne] = useState<{
-    catalogSlug: string
-    versionCible: string
-    fenetre: string
-  } | null>(null)
-  const [certification, setCertification] = useState<string | null>(null)
+  const [arretId, setArretId] = useState<string | null>(null)
+  const [ficheSlug, setFicheSlug] = useState<string | null>(null)
 
-  const CATALOGUE = catalogue.liste
-  const PARC_INSTANCES = parc.liste
-  const CAMPAGNES_MAJ = campagnes.liste
+  const arret = campagnes.items.find((c) => c.id === arretId) ?? null
+  const fiche = CATALOGUE.find((c) => c.slug === ficheSlug) ?? null
 
-  const demarrer = (c: CampagneMaj) => {
-    acte({
-      faire: () =>
-        campagnes.modifier(c.id, (courant) => ({
-          statut: 'en_cours',
-          vagues: courant.vagues.map((v, i) =>
-            i === 0 && v.statut === 'planifiee' ? { ...v, statut: 'en_cours' as const } : v,
-          ),
-        })),
-      ton: 'info',
-      titre: `${c.nom} démarrée`,
-      detail:
-        'La vague 1 démarre. Un snapshot est pris avant chaque instance, et le point d’arrêt bloquera la suite en cas d’anomalie.',
-      action: 'campaign.start',
-      cible: c.id,
-    })
-  }
+  const estCertifie = (slug: string) =>
+    CATALOGUE.find((c) => c.slug === slug)?.certifie === true ||
+    certifications.items.some((x) => x.id === slug)
 
-  const leverPointArret = (c: CampagneMaj) => {
-    const suivante = c.vagues.findIndex((v) => v.statut === 'planifiee')
-    const derniere = suivante === -1
-    acte({
-      faire: () =>
-        campagnes.modifier(c.id, (courant) => ({
-          vagues: courant.vagues.map((v, i) =>
-            v.statut === 'en_cours'
-              ? { ...v, statut: 'terminee' as const }
-              : i === suivante
-                ? { ...v, statut: 'en_cours' as const }
-                : v,
-          ),
-          statut: derniere ? ('terminee' as const) : courant.statut,
-        })),
-      titre: derniere ? `${c.nom} terminée` : 'Vague suivante autorisée',
-      detail: derniere
-        ? 'Toutes les vagues sont appliquées et vérifiées. Le parc est homogène sur la version cible.'
-        : 'Le point d’arrêt est levé. La vague suivante démarre à la prochaine fenêtre.',
-      action: derniere ? 'campaign.complete' : 'campaign.wave.approve',
-      cible: c.id,
-    })
-  }
-
-  const arreter = (c: CampagneMaj) => {
-    acte({
-      faire: () =>
-        campagnes.modifier(c.id, (courant) => ({
-          statut: 'arretee',
-          vagues: courant.vagues.map((v) =>
-            v.statut === 'en_cours' || v.statut === 'planifiee'
-              ? { ...v, statut: 'arretee' as const }
-              : v,
-          ),
-        })),
-      ton: 'warn',
-      titre: `${c.nom} arrêtée`,
-      detail:
-        'Les instances déjà traitées peuvent être ramenées à leur version antérieure depuis leur snapshot, pendant sept jours.',
-      action: 'campaign.stop',
-      cible: c.id,
-    })
-    setArret(null)
-  }
-
-  const creerCampagne = () => {
-    if (!nouvelleCampagne) return
-    const service = CATALOGUE.find((c) => c.slug === nouvelleCampagne.catalogSlug)
-    const instances = PARC_INSTANCES.filter(
-      (i) => i.catalogSlug === nouvelleCampagne.catalogSlug,
-    )
-    // Trois vagues au plus : un pilote, puis le gros du parc, puis le reste.
-    const tailles =
-      instances.length <= 2
-        ? [instances.length]
-        : [1, Math.ceil((instances.length - 1) / 2), instances.length - 1 - Math.ceil((instances.length - 1) / 2)]
-    const id = `camp-session-${CAMPAGNES_MAJ.length + 1}`
-    acte({
-      faire: () =>
-        campagnes.ajouter({
-          id,
-          nom: `${service?.solutionOSS ?? nouvelleCampagne.catalogSlug} ${nouvelleCampagne.versionCible} — parc complet`,
-          catalogSlug: nouvelleCampagne.catalogSlug,
-          versionCible: nouvelleCampagne.versionCible.trim(),
-          fenetre: nouvelleCampagne.fenetre.trim(),
-          instances: instances.length,
-          vagues: tailles
-            .filter((n) => n > 0)
-            .map((n, i) => ({ numero: i + 1, instances: n, statut: 'planifiee' as const })),
-          statut: 'planifiee',
-          pointArret: true,
-        }),
-      titre: 'Campagne planifiée',
-      detail: `${instances.length} instance${instances.length > 1 ? 's' : ''} de ${service?.nom ?? nouvelleCampagne.catalogSlug} à passer en ${nouvelleCampagne.versionCible.trim()}, en ${tailles.filter((n) => n > 0).length} vagues avec point d’arrêt.`,
-      action: 'campaign.create',
-      cible: id,
-    })
-    setNouvelleCampagne(null)
-  }
-
-  const planifierInstance = (i: InstanceParc) => {
-    acte({
-      faire: () => parc.modifier(i.id, { derniereMaj: '2026-08-24' }),
-      ton: 'info',
-      titre: `Mise à jour planifiée pour ${i.serviceNom}`,
-      detail: `${i.orgNom} · fenêtre du 24 août, 22 h → 4 h GMT. Un snapshot est pris avant l’opération ; le retour arrière reste possible sept jours.`,
-      action: 'instance.update.schedule',
-      cible: i.id,
-      orgId: i.orgId,
-      orgNom: i.orgNom,
-    })
-  }
-
-  const basculerCertification = (slug: string) => {
-    const service = CATALOGUE.find((c) => c.slug === slug)
-    if (!service) return
-    acte({
-      faire: () => catalogue.modifier(slug, { certifie: !service.certifie }),
-      ton: service.certifie ? 'warn' : 'ok',
-      titre: service.certifie
-        ? `Certification de ${service.nom} retirée`
-        : `${service.nom} certifiée`,
-      detail: service.certifie
-        ? 'Le service reste exploité pour ceux qui l’ont souscrit, mais il n’est plus proposé comme certifié : la version suivie n’a pas passé les tests de réversibilité.'
-        : `Version ${service.versionsSupportees[0]} testée : installation, sauvegarde, restauration, export au format ${service.reversibilite.formats[0]}, et remise en service depuis un export. C’est ce qui distingue « nous savons l’installer » de « nous savons le tenir ».`,
-      action: service.certifie ? 'catalog.decertify' : 'catalog.certify',
-      cible: slug,
-    })
-    setCertification(null)
-  }
-
-  const certifies = CATALOGUE.filter((c) => c.certifie)
-  const enRetard = PARC_INSTANCES.filter((i) => i.derniereMaj < '2026-05-01')
-  const degrades = PARC_INSTANCES.filter((i) => i.sante !== 'ok')
-  const campagnesActives = CAMPAGNES_MAJ.filter((c) => c.statut === 'en_cours')
+  const certifies = CATALOGUE.filter((c) => estCertifie(c.slug))
+  const aCertifier = CATALOGUE.filter((c) => !estCertifie(c.slug))
+  const enRetard = parc.items.filter((i) => i.derniereMaj < '2026-05-01')
+  const degrades = parc.items.filter((i) => i.sante !== 'ok')
+  const campagnesActives = campagnes.items.filter((c) => c.statut === 'en_cours')
 
   return (
     <div className="space-y-5">
@@ -183,14 +69,68 @@ export default function MarketplaceAdmin() {
         titre="Marketplace"
         sousTitre="Ces solutions sont des logiciels libres tiers, et le resteront. Nous les provisionnons, dimensionnons, sauvegardons, supervisons, mettons à jour et facturons — nous ne réimplémentons aucun de leurs écrans, et nous n’en modifions pas le code."
         actions={
-          <GatedAction autorise={autorise('catalog.edit')} message={refus('catalog.edit')}>
-            <Button
-              iconBefore={<Rocket size={14} />}
-              onClick={() => setCertification(CATALOGUE.find((c) => !c.certifie)?.slug ?? CATALOGUE[0]?.slug ?? null)}
-            >
-              Certifier une solution
-            </Button>
-          </GatedAction>
+          <BoutonFormulaire
+            libelle="Certifier une solution"
+            size="md"
+            icone={<Rocket size={14} />}
+            action="catalog.edit"
+            titre="Certifier une solution du catalogue"
+            description="Certifier, c’est s’engager à exploiter la solution : provisionnement, dimensionnement, sauvegarde, supervision, montée de version et export testé. Les neuf capacités du contrat d’intégration doivent être vérifiées avant."
+            libelleValider="Lancer la certification"
+            taille="md"
+            champs={[
+              {
+                id: 'slug',
+                label: 'Solution',
+                type: 'select',
+                options:
+                  aCertifier.length > 0
+                    ? aCertifier.map((c) => ({ value: c.slug, label: `${c.nom} — ${c.solutionOSS}` }))
+                    : [{ value: '', label: 'Tout le catalogue est déjà certifié' }],
+              },
+              {
+                id: 'version',
+                label: 'Version de référence',
+                demi: true,
+                placeholder: '2026.02.1',
+                hint: 'la version que nous nous engageons à exploiter',
+              },
+              {
+                id: 'reimport',
+                label: 'Réimport de l’export réellement testé',
+                type: 'switch',
+                demi: true,
+                placeholder: 'Test de réimport concluant',
+              },
+            ]}
+            complement={(v) =>
+              v.reimport ? null : (
+                <Callout ton="warn" titre="Sans test de réimport, la réversibilité n’est pas acquise">
+                  La solution peut être certifiée, mais sa fiche indiquera « réimport non testé » —
+                  c’est ce que voit le client. Un export dont on n’a jamais vérifié qu’il se réimporte
+                  n’est pas une garantie de sortie.
+                </Callout>
+              )
+            }
+            operation={(v) => ({
+              titre: `Certification de ${CATALOGUE.find((c) => c.slug === v.slug)?.nom ?? 'la solution'} lancée`,
+              detail: 'Les neuf capacités du contrat d’intégration sont vérifiées une à une.',
+              job: {
+                type: 'catalog.certify',
+                label: `Certification · ${CATALOGUE.find((c) => c.slug === v.slug)?.nom ?? 'solution'}`,
+                etapes: [
+                  'Provisionnement d’une instance de recette',
+                  'Vérification des neuf capacités',
+                  'Test de sauvegarde et de restauration granulaire',
+                  'Test d’export et de réimport',
+                  'Publication au catalogue',
+                ],
+              },
+              effetFinal: () => {
+                if (v.slug) certifications.creer({ id: String(v.slug) })
+              },
+            })}
+          />
         }
         meta={
           <>
@@ -201,7 +141,7 @@ export default function MarketplaceAdmin() {
               {certifies.length} certifiées
             </Badge>
             <Badge tone="neutral" size="sm">
-              {PARC_INSTANCES.length} instances exploitées
+              {parc.items.length} instances exploitées
             </Badge>
           </>
         }
@@ -221,7 +161,7 @@ export default function MarketplaceAdmin() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatTile libelle="Solutions certifiées" valeur={certifies.length} ton="ok" detail={`sur ${CATALOGUE.length} au catalogue`} />
-        <StatTile libelle="Instances exploitées" valeur={PARC_INSTANCES.length} />
+        <StatTile libelle="Instances exploitées" valeur={parc.items.length} />
         <StatTile
           libelle="Instances dégradées"
           valeur={degrades.length}
@@ -254,7 +194,7 @@ export default function MarketplaceAdmin() {
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
             {CATALOGUE.map((c) => {
-              const instances = PARC_INSTANCES.filter((i) => i.catalogSlug === c.slug)
+              const instances = parc.items.filter((i) => i.catalogSlug === c.slug)
               return (
                 <Card key={c.slug} className="flex flex-col" hover>
                   <div className="flex items-start justify-between gap-3">
@@ -265,7 +205,7 @@ export default function MarketplaceAdmin() {
                         <span className="block truncate text-[11px] text-g-500">{c.solutionOSS}</span>
                       </span>
                     </span>
-                    {c.certifie ? (
+                    {estCertifie(c.slug) ? (
                       <Badge tone="ok" size="sm">
                         Certifiée
                       </Badge>
@@ -323,31 +263,11 @@ export default function MarketplaceAdmin() {
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() =>
-                        acte({
-                          ton: 'info',
-                          titre: `Fiche technique — ${c.nom}`,
-                          detail: `${c.solutionOSS}, versions ${c.versionsSupportees.join(', ')}. Réversibilité : ${c.reversibilite.formats.join(', ')} sous ${c.reversibilite.delaiJours} jours. La fiche part par courriel, à joindre à une réponse d’appel d’offres.`,
-                          action: 'catalog.datasheet',
-                          cible: c.slug,
-                        })
-                      }
+                      iconBefore={<FileText size={12} />}
+                      onClick={() => setFicheSlug(c.slug)}
                     >
                       Fiche technique
                     </Button>
-                    <GatedAction
-                      autorise={autorise('catalog.edit')}
-                      message={refus('catalog.edit')}
-                    >
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        iconBefore={<CheckCircle2 size={11} />}
-                        onClick={() => setCertification(c.slug)}
-                      >
-                        {c.certifie ? 'Retirer la certification' : 'Certifier'}
-                      </Button>
-                    </GatedAction>
                     <ButtonLink
                       size="sm"
                       variant="ghost"
@@ -369,7 +289,7 @@ export default function MarketplaceAdmin() {
         <Card padding={false}>
           <div className="p-4">
             <DataTable<InstanceParc>
-              lignes={PARC_INSTANCES}
+              lignes={parc.items}
               exportable
               parPage={12}
               densiteInitiale="compacte"
@@ -380,7 +300,7 @@ export default function MarketplaceAdmin() {
                   libelle: 'Service',
                   options: [
                     { value: 'tous', label: 'Tous les services' },
-                    ...[...new Set(PARC_INSTANCES.map((i) => i.catalogSlug))].map((s) => ({
+                    ...[...new Set(parc.items.map((i) => i.catalogSlug))].map((s) => ({
                       value: s,
                       label: CATALOGUE.find((c) => c.slug === s)?.nom ?? s,
                     })),
@@ -518,18 +438,67 @@ export default function MarketplaceAdmin() {
                         Organisation
                       </ButtonLink>
                       {i.derniereMaj < '2026-05-01' && (
-                        <GatedAction
-                          autorise={autorise('catalog.edit')}
-                          message={refus('catalog.edit')}
-                        >
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => planifierInstance(i)}
-                          >
-                            Planifier la mise à jour
-                          </Button>
-                        </GatedAction>
+                        <BoutonFormulaire
+                          libelle="Planifier la mise à jour"
+                          action="catalog.edit"
+                          titre={`Mettre à jour ${i.serviceNom} — ${i.orgNom}`}
+                          description="Un snapshot est pris avant l’opération et le retour arrière reste possible pendant sept jours. Le client est prévenu de la fenêtre choisie."
+                          libelleValider="Planifier"
+                          champs={[
+                            {
+                              id: 'version',
+                              label: 'Version cible',
+                              demi: true,
+                              placeholder: CATALOGUE.find((c) => c.slug === i.catalogSlug)
+                                ?.versionsSupportees[0],
+                            },
+                            {
+                              id: 'fenetre',
+                              label: 'Fenêtre',
+                              type: 'select',
+                              demi: true,
+                              options: [
+                                { value: 'nuit', label: 'Nuit prochaine · 22:00 → 04:00 GMT' },
+                                { value: 'weekend', label: 'Week-end · samedi 22:00 → dimanche 06:00' },
+                                { value: 'immediat', label: 'Immédiatement — interruption assumée' },
+                              ],
+                            },
+                            {
+                              id: 'prevenir',
+                              label: 'Prévenir le client par courriel',
+                              type: 'switch',
+                              placeholder: 'Envoyer l’avis de maintenance',
+                            },
+                          ]}
+                          valeursDepart={{
+                            version:
+                              CATALOGUE.find((c) => c.slug === i.catalogSlug)
+                                ?.versionsSupportees[0] ?? i.version,
+                            fenetre: 'nuit',
+                            prevenir: true,
+                          }}
+                          operation={(v) => ({
+                            titre: `Mise à jour de ${i.serviceNom} planifiée`,
+                            detail: `Version ${v.version}${v.prevenir ? ' · le client est prévenu par courriel' : ' · aucun avis envoyé au client'}.`,
+                            job: {
+                              type: 'service.upgrade',
+                              label: `Montée de version · ${i.serviceNom} (${i.orgNom})`,
+                              etapes: [
+                                'Snapshot avant opération',
+                                'Arrêt propre du service',
+                                `Montée en ${v.version}`,
+                                'Vérification post-migration',
+                                'Remise en service',
+                              ],
+                            },
+                            effetFinal: () =>
+                              parc.modifier(i.id, {
+                                version: String(v.version),
+                                derniereMaj: MAINTENANT.slice(0, 10),
+                                sante: 'ok',
+                              }),
+                          })}
+                        />
                       )}
                     </span>
                   ),
@@ -553,7 +522,7 @@ export default function MarketplaceAdmin() {
             plus n’est touché.
           </Callout>
 
-          {CAMPAGNES_MAJ.map((c) => {
+          {campagnes.items.map((c) => {
             const solution = CATALOGUE.find((x) => x.slug === c.catalogSlug)
             return (
               <Card
@@ -651,79 +620,83 @@ export default function MarketplaceAdmin() {
 
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-g-100 pt-4">
                   {c.statut === 'planifiee' && (
-                    <GatedAction autorise={autorise('catalog.edit')} message={refus('catalog.edit')}>
-                      <Button
-                        size="sm"
-                        iconBefore={<PlayCircle size={13} />}
-                        onClick={() => demarrer(c)}
-                      >
-                        Démarrer la campagne
-                      </Button>
-                    </GatedAction>
+                    <BoutonAction
+                      libelle="Démarrer la campagne"
+                      icone={<PlayCircle size={13} />}
+                      operation={{
+                        action: 'catalog.edit',
+                        ton: 'info',
+                        titre: `${c.nom} démarrée`,
+                        detail:
+                          'La vague 1 démarre. Un snapshot est pris avant chaque instance, et le point d’arrêt bloquera la suite en cas d’anomalie.',
+                        effet: () =>
+                          campagnes.modifier(c.id, (camp) => ({
+                            statut: 'en_cours',
+                            vagues: camp.vagues.map((v) =>
+                              v.numero === 1 ? { ...v, statut: 'en_cours' } : v,
+                            ),
+                          })),
+                      }}
+                    />
                   )}
                   {c.statut === 'en_cours' && (
                     <>
+                      <BoutonAction
+                        libelle={
+                          c.vagues.every((v) => v.statut === 'terminee')
+                            ? 'Clôturer la campagne'
+                            : 'Lever le point d’arrêt'
+                        }
+                        operation={{
+                          action: 'catalog.edit',
+                          titre: c.vagues.every((v) => v.statut === 'terminee')
+                            ? `${c.nom} terminée`
+                            : 'Vague suivante autorisée',
+                          detail: c.vagues.every((v) => v.statut === 'terminee')
+                            ? 'Tout le parc concerné est sur la version cible.'
+                            : 'Le point d’arrêt est levé. La vague suivante démarre à la prochaine fenêtre.',
+                          // Une vague terminée, la suivante démarre : c'est
+                          // exactement ce que le point d'arrêt autorise.
+                          effet: () =>
+                            campagnes.modifier(c.id, (camp) => {
+                              const vagues = camp.vagues.map((v) =>
+                                v.statut === 'en_cours' ? { ...v, statut: 'terminee' as const } : v,
+                              )
+                              const suivante = vagues.find((v) => v.statut === 'planifiee')
+                              return {
+                                statut: suivante ? 'en_cours' : 'terminee',
+                                vagues: suivante
+                                  ? vagues.map((v) =>
+                                      v.numero === suivante.numero
+                                        ? { ...v, statut: 'en_cours' as const }
+                                        : v,
+                                    )
+                                  : vagues,
+                              }
+                            }),
+                        }}
+                      />
                       <GatedAction
                         autorise={autorise('catalog.edit')}
                         message={refus('catalog.edit')}
                       >
                         <Button
                           size="sm"
-                          variant="secondary"
-                          onClick={() => leverPointArret(c)}
+                          variant="ghost"
+                          iconBefore={<PauseCircle size={13} />}
+                          onClick={() => setArretId(c.id)}
                         >
-                          Lever le point d’arrêt
+                          Arrêter la campagne
                         </Button>
                       </GatedAction>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        iconBefore={<PauseCircle size={13} />}
-                        onClick={() => setArret(c)}
-                      >
-                        Arrêter la campagne
-                      </Button>
                     </>
                   )}
                   {c.statut === 'arretee' && (
-                    <>
-                      <GatedAction
-                        autorise={autorise('catalog.edit')}
-                        message={refus('catalog.edit')}
-                      >
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          iconBefore={<PlayCircle size={13} />}
-                          onClick={() =>
-                            acte({
-                              faire: () =>
-                                campagnes.modifier(c.id, (courant) => ({
-                                  statut: 'planifiee',
-                                  vagues: courant.vagues.map((v) =>
-                                    v.statut === 'arretee'
-                                      ? { ...v, statut: 'planifiee' as const }
-                                      : v,
-                                  ),
-                                })),
-                              ton: 'info',
-                              titre: `${c.nom} replanifiée`,
-                              detail:
-                                'Les vagues arrêtées repassent en attente. Corrigez la cause de l’anomalie avant de redémarrer, sinon le point d’arrêt se déclenchera de nouveau.',
-                              action: 'campaign.reschedule',
-                              cible: c.id,
-                            })
-                          }
-                        >
-                          Replanifier
-                        </Button>
-                      </GatedAction>
-                      <Callout ton="err" titre="Campagne arrêtée par le point de contrôle">
-                        Une anomalie a été détectée sur la vague en cours. Les instances déjà mises à
-                        jour peuvent être ramenées à leur version antérieure depuis le snapshot pris
-                        avant l’opération. Les instances non encore touchées ne l’ont pas été.
-                      </Callout>
-                    </>
+                    <Callout ton="err" titre="Campagne arrêtée par le point de contrôle">
+                      Une anomalie a été détectée sur la vague en cours. Les instances déjà mises à
+                      jour peuvent être ramenées à leur version antérieure depuis le snapshot pris
+                      avant l’opération. Les instances non encore touchées ne l’ont pas été.
+                    </Callout>
                   )}
                   <span className="text-[11.5px] text-g-500">
                     Un snapshot est pris avant chaque instance ; le retour arrière reste possible
@@ -917,9 +890,133 @@ export default function MarketplaceAdmin() {
         </div>
       )}
 
+      <Drawer
+        open={fiche !== null}
+        onClose={() => setFicheSlug(null)}
+        title={fiche ? `Fiche technique — ${fiche.nom}` : ''}
+        description="Ce que nous nous engageons à exploiter, et ce que le client obtient s’il part. La fiche décrit notre exploitation de la solution ; elle ne documente pas son usage, qui reste celui du projet amont."
+        size="lg"
+      >
+        {fiche && (
+          <div className="space-y-4">
+            <KeyValueList
+              colonnes={2}
+              items={[
+                { cle: 'Solution amont', valeur: fiche.solutionOSS },
+                { cle: 'Catégorie', valeur: CATEGORIE_LABEL[fiche.categorie] },
+                { cle: 'Certification', valeur: estCertifie(fiche.slug) ? 'Certifiée' : 'Disponible' },
+                { cle: 'Engagement', valeur: fiche.sla },
+                { cle: 'Versions suivies', valeur: fiche.versionsSupportees.join(', ') },
+                {
+                  cle: 'Modes',
+                  valeur: fiche.modes.map((m) => (m === 'dedie' ? 'Dédié' : 'Mutualisé')).join(' · '),
+                },
+                { cle: 'Politique de sauvegarde', valeur: fiche.backupPolicyDefault },
+                {
+                  cle: 'Instances exploitées',
+                  valeur: String(parc.items.filter((i) => i.catalogSlug === fiche.slug).length),
+                },
+              ]}
+            />
+
+            <div>
+              <MicroLabel className="mb-2">Paliers vendus</MicroLabel>
+              <div className="space-y-2">
+                {fiche.paliers.map((pa) => (
+                  <div key={pa.code} className="rounded-[6px] border border-g-300 px-3 py-2.5">
+                    <span className="flex flex-wrap items-baseline justify-between gap-2">
+                      <span className="text-[12.5px] font-semibold text-ink">
+                        {pa.nom}
+                        {pa.recommande && (
+                          <Badge tone="violet" size="sm" className="ml-1.5">
+                            Recommandé
+                          </Badge>
+                        )}
+                      </span>
+                      <span className="font-mono text-[11px] text-g-500">{pa.code}</span>
+                    </span>
+                    <p className="mt-0.5 text-[11.5px] text-g-700">{pa.specs}</p>
+                    <p className="mt-0.5 text-[11px] text-g-500">{pa.limites.join(' · ')}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <MicroLabel className="mb-2">Réversibilité</MicroLabel>
+              <div className="rounded-[6px] border border-p-300 bg-p-050 px-3 py-2.5">
+                <p className="text-[12px] text-ink">
+                  Export dans {fiche.reversibilite.formats.join(', ')}, mis à disposition en{' '}
+                  {fiche.reversibilite.delaiJours} jour
+                  {fiche.reversibilite.delaiJours > 1 ? 's' : ''}.
+                </p>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">
+                  Granularité de restauration : {fiche.granulariteRestauration.join(', ')}. Migration
+                  entrante depuis {fiche.migrationEntrante.join(', ')}
+                  {fiche.migrationDelais ? ` (${fiche.migrationDelais})` : ''}.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <MicroLabel className="mb-2">Réglages propres à cette solution</MicroLabel>
+              <div className="space-y-1.5">
+                {fiche.parametresSpecifiques.map((x) => (
+                  <div key={x.titre} className="rounded-[6px] border border-g-300 px-3 py-2">
+                    <p className="text-[12px] font-semibold text-ink">{x.titre}</p>
+                    <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">{x.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Callout ton="violet" titre="Ce que la fiche ne contient pas">
+              Aucun écran de la solution n’est décrit ici, et aucun ne sera reconstruit dans le
+              portail. La documentation d’usage reste celle du projet amont, à laquelle le bouton{' '}
+              <span className="font-semibold">Projet amont</span> renvoie directement.
+            </Callout>
+
+            <div className="flex flex-wrap gap-1.5 border-t border-g-100 pt-4">
+              {!estCertifie(fiche.slug) && (
+                <BoutonAction
+                  libelle="Certifier cette solution"
+                  icone={<Rocket size={12} />}
+                  operation={{
+                    action: 'catalog.edit',
+                    titre: `Certification de ${fiche.nom} lancée`,
+                    detail: 'Les neuf capacités du contrat d’intégration sont vérifiées une à une.',
+                    job: {
+                      type: 'catalog.certify',
+                      label: `Certification · ${fiche.nom}`,
+                      etapes: [
+                        'Provisionnement d’une instance de recette',
+                        'Vérification des neuf capacités',
+                        'Test de sauvegarde et de restauration granulaire',
+                        'Test d’export et de réimport',
+                        'Publication au catalogue',
+                      ],
+                    },
+                    effetFinal: () => certifications.creer({ id: fiche.slug }),
+                  }}
+                />
+              )}
+              <ButtonLink
+                size="sm"
+                variant="ghost"
+                external
+                href={fiche.urlDemo}
+                iconAfter={<ExternalLink size={11} />}
+              >
+                Projet amont
+              </ButtonLink>
+            </div>
+          </div>
+        )}
+      </Drawer>
+
       <ConfirmDialog
         open={arret !== null}
-        onClose={() => setArret(null)}
+        onClose={() => setArretId(null)}
         titre="Arrêter une campagne de mise à jour"
         ressource={arret?.nom ?? ''}
         libelleAction="Arrêter la campagne"
@@ -928,154 +1025,27 @@ export default function MarketplaceAdmin() {
           'Les instances déjà mises à jour restent sur la nouvelle version',
           'Le parc se retrouve avec deux versions en production, ce qui complique le support',
         ]}
-        onConfirm={() => arret && arreter(arret)}
+        onConfirm={() => {
+          if (!arret) return
+          executer({
+            action: 'catalog.edit',
+            ton: 'warn',
+            titre: `${arret.nom} arrêtée`,
+            detail:
+              'Les instances déjà traitées peuvent être ramenées à leur version antérieure depuis leur snapshot, pendant sept jours.',
+            effet: () =>
+              campagnes.modifier(arret.id, (camp) => ({
+                statut: 'arretee',
+                vagues: camp.vagues.map((v) =>
+                  v.statut === 'en_cours' || v.statut === 'planifiee'
+                    ? { ...v, statut: 'arretee' as const }
+                    : v,
+                ),
+              })),
+          })
+          setArretId(null)
+        }}
       />
-
-      <Modal
-        open={certification !== null}
-        onClose={() => setCertification(null)}
-        title="Certifier une solution du catalogue"
-        description="Certifier, c’est s’engager à tenir la solution : l’installer, la sauvegarder, la restaurer, et savoir en sortir."
-        size="md"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setCertification(null)}>
-              Annuler
-            </Button>
-            <Button
-              variant={
-                CATALOGUE.find((c) => c.slug === certification)?.certifie ? 'danger' : 'primary'
-              }
-              onClick={() => certification && basculerCertification(certification)}
-            >
-              {CATALOGUE.find((c) => c.slug === certification)?.certifie
-                ? 'Retirer la certification'
-                : 'Certifier la solution'}
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <Field label="Solution">
-            <Select
-              value={certification ?? ''}
-              onChange={(e) => setCertification(e.target.value)}
-            >
-              {CATALOGUE.map((c) => (
-                <option key={c.slug} value={c.slug}>
-                  {c.nom} — {c.solutionOSS}
-                  {c.certifie ? ' (certifiée)' : ''}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          {(() => {
-            const c = CATALOGUE.find((x) => x.slug === certification)
-            if (!c) return null
-            return (
-              <>
-                <KeyValueList
-                  colonnes={1}
-                  items={[
-                    { cle: 'Projet amont', valeur: c.solutionOSS },
-                    { cle: 'Versions suivies', valeur: c.versionsSupportees.join(', ') },
-                    { cle: 'Modes proposés', valeur: c.modes.join(', ') },
-                    { cle: 'Engagement', valeur: c.sla },
-                    {
-                      cle: 'Réversibilité',
-                      valeur: `${c.reversibilite.formats.join(', ')} sous ${c.reversibilite.delaiJours} jours`,
-                    },
-                    {
-                      cle: 'Instances en production',
-                      valeur: String(PARC_INSTANCES.filter((i) => i.catalogSlug === c.slug).length),
-                    },
-                  ]}
-                />
-                <Callout
-                  ton={c.certifie ? 'warn' : 'violet'}
-                  titre={
-                    c.certifie
-                      ? 'Ce que retirer la certification change'
-                      : 'Ce que la certification engage'
-                  }
-                >
-                  {c.certifie
-                    ? 'La solution disparaît des offres certifiées mais reste exploitée pour ceux qui l’ont souscrite. Nous ne coupons pas un service parce que nous cessons de le recommander.'
-                    : 'Un cycle complet testé sur la version suivie : installation, sauvegarde, restauration granulaire, export dans un format ouvert, et remise en service depuis cet export. Sans le dernier point, on vend une prison dorée.'}
-                </Callout>
-              </>
-            )
-          })()}
-        </div>
-      </Modal>
-
-      <Modal
-        open={nouvelleCampagne !== null}
-        onClose={() => setNouvelleCampagne(null)}
-        title="Planifier une campagne de mise à jour"
-        description="Le parc se met à jour par vagues, avec un point d’arrêt entre chacune. Une mise à jour de tout le parc d’un coup ne laisse aucune marge de retour."
-        size="md"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setNouvelleCampagne(null)}>
-              Annuler
-            </Button>
-            <Button
-              disabled={
-                nouvelleCampagne === null ||
-                nouvelleCampagne.versionCible.trim() === '' ||
-                nouvelleCampagne.fenetre.trim() === ''
-              }
-              onClick={creerCampagne}
-            >
-              Planifier la campagne
-            </Button>
-          </>
-        }
-      >
-        {nouvelleCampagne && (
-          <div className="space-y-4">
-            <Field label="Service concerné">
-              <Select
-                value={nouvelleCampagne.catalogSlug}
-                onChange={(e) =>
-                  setNouvelleCampagne((c) => (c ? { ...c, catalogSlug: e.target.value } : c))
-                }
-              >
-                {CATALOGUE.map((c) => (
-                  <option key={c.slug} value={c.slug}>
-                    {c.nom} — {PARC_INSTANCES.filter((i) => i.catalogSlug === c.slug).length}{' '}
-                    instances
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="Version cible" required>
-              <Input
-                value={nouvelleCampagne.versionCible}
-                onChange={(e) =>
-                  setNouvelleCampagne((c) => (c ? { ...c, versionCible: e.target.value } : c))
-                }
-                placeholder="30.0.1"
-                autoFocus
-              />
-            </Field>
-            <Field label="Fenêtre" required hint="heure GMT — hors heures ouvrées du client">
-              <Input
-                value={nouvelleCampagne.fenetre}
-                onChange={(e) =>
-                  setNouvelleCampagne((c) => (c ? { ...c, fenetre: e.target.value } : c))
-                }
-                placeholder="2026-09-07 · 23:00 → 03:00 GMT"
-              />
-            </Field>
-            <Callout ton="info" titre="Un pilote, puis le parc">
-              La première vague ne touche qu’une instance. Si elle passe, la suivante en prend la
-              moitié, puis le reste. Le point d’arrêt entre chaque vague n’est pas désactivable.
-            </Callout>
-          </div>
-        )}
-      </Modal>
     </div>
   )
 }

@@ -1,9 +1,10 @@
 'use client'
 
 import { Plus } from 'lucide-react'
+import { MAINTENANT } from '@/lib/format'
 import { goHumain, money, num } from '@/lib/format'
-import type { Volume } from '@/lib/types'
-import { VOLUMES } from '@/lib/mock'
+import type { VM, Volume } from '@/lib/types'
+import { VMS, VOLUMES } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -11,6 +12,8 @@ import { PageHeader, Card, Callout } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { useApp, useEspace } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire } from '@/components/app/actions'
 
 const PRIX_GO: Record<Volume['classe'], number> = {
   nvme: 5.4,
@@ -29,7 +32,26 @@ const LIBELLE_CLASSE: Record<Volume['classe'], string> = {
 export default function Stockage() {
   const espace = useEspace()
   const { autorise, refus } = useApp()
-  const volumes = VOLUMES.filter((v) => v.espaceId === espace.id)
+  const disques = useCollection<Volume>('volumes', VOLUMES)
+  const parc = useCollection<VM>('vms', VMS)
+  const volumes = disques.items.filter((v) => v.espaceId === espace.id)
+  const machines = parc.items.filter((v) => v.espaceId === espace.id)
+
+  const champsVolume = [
+    { id: 'nom', label: 'Nom du volume', placeholder: 'data-postgres-03', obligatoire: true },
+    { id: 'taille', label: 'Taille', type: 'nombre' as const, demi: true, min: 10, max: 8000, suffixe: 'Go' },
+    {
+      id: 'classe',
+      label: 'Classe',
+      type: 'select' as const,
+      demi: true,
+      options: (['nvme', 'ssd', 'hdd', 'archive'] as const).map((c) => ({
+        value: c,
+        label: LIBELLE_CLASSE[c],
+      })),
+    },
+    { id: 'chiffre', label: 'Chiffrement au repos', type: 'switch' as const, placeholder: 'Activé' },
+  ]
   const total = volumes.reduce((a, v) => a + v.tailleGo, 0)
   const cout = volumes.reduce((a, v) => a + Math.round(v.tailleGo * PRIX_GO[v.classe]), 0)
 
@@ -120,14 +142,70 @@ export default function Stockage() {
       aligne: 'right',
       rendu: (v) => (
         <span className="flex justify-end gap-1">
-          <GatedAction autorise={autorise('network.manage')} message={refus('network.manage')}>
-            <Button size="sm" variant="ghost">
-              Étendre
-            </Button>
-          </GatedAction>
-          <Button size="sm" variant="ghost">
-            {v.attachedTo ? 'Détacher' : 'Attacher'}
-          </Button>
+          <BoutonFormulaire
+            libelle="Étendre"
+            variant="ghost"
+            action="network.manage"
+            titre={`Étendre ${v.nom}`}
+            description="L’extension est appliquée à chaud. Un volume ne rétrécit jamais : le système de fichiers de l’invité doit ensuite être étendu à son tour."
+            champs={[
+              { id: 'taille', label: 'Nouvelle taille', type: 'nombre', min: v.tailleGo, max: 8000, suffixe: 'Go' },
+            ]}
+            valeursDepart={{ taille: v.tailleGo }}
+            libelleValider="Étendre"
+            operation={(f) => ({
+              titre: `${v.nom} étendu à ${num(Number(f.taille))} Go`,
+              effet: () => disques.modifier(v.id, { tailleGo: Number(f.taille) }),
+            })}
+          />
+          {v.attachedTo ? (
+            <BoutonAction
+              libelle="Détacher"
+              variant="ghost"
+              operation={{
+                action: 'network.manage',
+                ton: 'warn',
+                titre: `${v.nom} détaché`,
+                detail: 'Le volume reste facturé tant qu’il existe.',
+                effet: () =>
+                  disques.modifier(v.id, {
+                    attachedTo: undefined,
+                    attachedLabel: undefined,
+                    montage: undefined,
+                  }),
+              }}
+            />
+          ) : (
+            <BoutonFormulaire
+              libelle="Attacher"
+              variant="ghost"
+              action="network.manage"
+              titre={`Attacher ${v.nom}`}
+              champs={[
+                {
+                  id: 'machine',
+                  label: 'Machine de destination',
+                  type: 'select',
+                  options: machines.map((m) => ({ value: m.id, label: m.nom })),
+                },
+                { id: 'montage', label: 'Point de montage', placeholder: '/srv/data' },
+              ]}
+              valeursDepart={{ montage: '/srv/data' }}
+              libelleValider="Attacher"
+              operation={(f) => {
+                const cible = machines.find((m) => m.id === f.machine)
+                return {
+                  titre: `${v.nom} attaché à ${cible?.nom ?? ''}`,
+                  effet: () =>
+                    disques.modifier(v.id, {
+                      attachedTo: cible?.id,
+                      attachedLabel: cible?.nom,
+                      montage: String(f.montage) || undefined,
+                    }),
+                }
+              }}
+            />
+          )}
         </span>
       ),
     },
@@ -144,9 +222,40 @@ export default function Stockage() {
         titre="Volumes"
         sousTitre="Des disques attachables, extensibles à chaud, chiffrés au repos. Séparer les données du disque système permet de les déplacer, de les sauvegarder et de les étendre indépendamment."
         actions={
-          <GatedAction autorise={autorise('network.manage')} message={refus('network.manage')}>
-            <Button iconBefore={<Plus size={14} />}>Créer un volume</Button>
-          </GatedAction>
+          <BoutonFormulaire
+            libelle="Créer un volume"
+            size="md"
+            variant="primary"
+            icone={<Plus size={14} />}
+            action="network.manage"
+            titre="Créer un volume"
+            description="Un volume est un disque indépendant du système : il s’étend à chaud, se déplace d’une machine à l’autre et se sauvegarde séparément."
+            champs={champsVolume}
+            valeursDepart={{ taille: 100, classe: 'ssd', chiffre: true }}
+            libelleValider="Créer le volume"
+            operation={(v) => ({
+              titre: `Volume ${v.nom} créé`,
+              detail: `${v.taille} Go · ${String(v.classe).toUpperCase()} · détaché`,
+              effet: () =>
+                disques.creer({
+                  id: disques.identifiant('vol'),
+                  espaceId: espace.id,
+                  nom: String(v.nom),
+                  tailleGo: Number(v.taille),
+                  classe: v.classe as Volume['classe'],
+                  chiffre: Boolean(v.chiffre),
+                  ephemere: false,
+                  iops:
+                    v.classe === 'nvme'
+                      ? 12000
+                      : v.classe === 'ssd'
+                        ? 6000
+                        : v.classe === 'hdd'
+                          ? 900
+                          : 120,
+                }),
+            })}
+          />
         }
       />
 
@@ -195,12 +304,29 @@ export default function Stockage() {
         exportable
         actionsGroupees={(ids) => (
           <>
-            <Button size="sm" variant="secondary">
-              Créer un snapshot ({ids.length})
-            </Button>
-            <Button size="sm" variant="secondary">
-              Appliquer un plan de sauvegarde
-            </Button>
+            <BoutonAction
+              libelle={`Créer un snapshot (${ids.length})`}
+              operation={{
+                action: 'backup.plan.write',
+                titre: `Snapshot de ${ids.length} volume(s) demandé`,
+                detail:
+                  'Un snapshot de volume vit sur le même stockage : ce n’est pas une sauvegarde hors site.',
+                job: {
+                  type: 'volume.snapshot',
+                  label: `Snapshot · ${ids.length} volume(s)`,
+                  etapes: ['Geler les écritures', 'Capturer les blocs', 'Reprendre les écritures'],
+                  dureeEtapeMs: 900,
+                },
+              }}
+            />
+            <BoutonAction
+              libelle="Appliquer un plan de sauvegarde"
+              operation={{
+                action: 'backup.plan.write',
+                titre: `Plan appliqué à ${ids.length} volume(s)`,
+                detail: `Prise en compte à la prochaine fenêtre, le ${MAINTENANT.slice(8, 10)} à 02h00.`,
+              }}
+            />
           </>
         )}
         vide={{

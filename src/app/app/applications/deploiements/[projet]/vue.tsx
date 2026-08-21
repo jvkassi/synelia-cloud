@@ -168,7 +168,7 @@ export function VueDeploiements({ id }: { id: string }) {
                       </p>
                     </div>
 
-                    <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       {d.findings.length > 0 && (
                         <Badge
                           tone={
