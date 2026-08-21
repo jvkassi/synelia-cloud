@@ -97,6 +97,35 @@ export function SectionTitle({
   )
 }
 
+/**
+ * Pastille d'état posée dans un héros sombre. Le héros affirmait « 99,98 % de
+ * disponibilité » sans jamais renvoyer vers la page qui le prouve : la pastille
+ * fait le lien, et dit l'état du moment plutôt qu'une moyenne.
+ */
+export function PastilleEtat({
+  ton,
+  texte,
+  href,
+}: {
+  ton: 'ok' | 'warn' | 'err'
+  texte: string
+  href: string
+}) {
+  const pastille = { ok: 'bg-ok', warn: 'bg-warn', err: 'bg-err' }[ton]
+  return (
+    <Link
+      href={href}
+      className="group inline-flex items-center gap-2 rounded-full border border-p-400/60 bg-white/5 py-1 pl-2.5 pr-3 transition-colors hover:border-p-300 hover:bg-white/10"
+    >
+      <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full animate-pulse-dot', pastille)} />
+      <span className="text-[12px] font-semibold text-white">{texte}</span>
+      <span className="text-[12px] text-p-300 transition-transform group-hover:translate-x-0.5">
+        →
+      </span>
+    </Link>
+  )
+}
+
 /** Héros court des pages secondaires. */
 export function HeroCourt({
   surtitre,

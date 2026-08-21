@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowRight, Check, ShieldCheck } from 'lucide-react'
 import { money } from '@/lib/format'
+import { surfaceMarque } from '@/lib/utils'
 import { ButtonLink } from '@/components/ui/button'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import {
@@ -11,6 +12,7 @@ import {
   ChiffreCle,
   Container,
   LienFleche,
+  PastilleEtat,
   SectionTitle,
   SiteSection,
   VisuelRack,
@@ -21,10 +23,16 @@ import {
   BLOC_SOUVERAINETE,
   CARTES_PRODUIT,
   CATALOGUE,
+  DATACENTERS,
   ETUDES_CAS,
   FAQ_ACCUEIL,
+  INCIDENTS,
   INDICATEURS_HERO,
+  MOYENS_PAIEMENT,
+  PARCOURS_DEMARRAGE,
+  PARCOURS_LIMITES,
   PORTES_ENTREE,
+  STATUT_SERVICES,
 } from '@/lib/mock'
 
 export const metadata: Metadata = {
@@ -33,9 +41,109 @@ export const metadata: Metadata = {
     'Espaces Cloud, machines virtuelles, Kubernetes managé, sauvegarde immuable, plan de reprise exercé, et solutions open source opérées par Synelia. Deux sites à Abidjan et Grand-Bassam, équipe et supervision 24/7 sur place.',
 }
 
+/**
+ * L'état du moment, dérivé des mêmes sondes que `/statut`. Le héros affichait
+ * une moyenne de disponibilité sans jamais dire ce qui se passe maintenant :
+ * quand un service est dégradé, l'annoncer vaut mieux que le taire.
+ */
+function etatPlateforme() {
+  const enPanne = STATUT_SERVICES.filter((s) =>
+    Object.values(s.etats).some((e) => e === 'panne'),
+  ).length
+  const degrades = STATUT_SERVICES.filter((s) =>
+    Object.values(s.etats).some((e) => e === 'degrade'),
+  ).length
+  const ouverts = INCIDENTS.filter((i) => i.statut !== 'resolu' && i.gravite !== 'maintenance')
+
+  if (enPanne > 0) {
+    return {
+      ton: 'err' as const,
+      texte: `${enPanne} service${enPanne > 1 ? 's' : ''} en panne sur ${STATUT_SERVICES.length}`,
+    }
+  }
+  if (degrades > 0) {
+    return {
+      ton: 'warn' as const,
+      texte: `${degrades} service${degrades > 1 ? 's' : ''} dégradé${degrades > 1 ? 's' : ''} sur ${STATUT_SERVICES.length}`,
+    }
+  }
+  if (ouverts.length > 0) {
+    const n = ouverts.length
+    return { ton: 'warn' as const, texte: `${n} incident${n > 1 ? 's' : ''} en cours` }
+  }
+  return { ton: 'ok' as const, texte: `${STATUT_SERVICES.length} services opérationnels` }
+}
+
+/**
+ * Données structurées — la vitrine n'en publiait aucune. `FAQPage` reprend
+ * mot pour mot l'accordéon affiché : Google déclasse un balisage qui décrit
+ * autre chose que le contenu visible.
+ */
+function donneesStructurees() {
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': 'https://cloud.synelia.tech/#organisation',
+        name: 'Synelia Cloud',
+        legalName: 'Synelia Group Afrique',
+        url: 'https://cloud.synelia.tech/',
+        description:
+          'Infrastructure cloud souveraine opérée depuis deux datacenters ivoiriens : Espaces Cloud, machines virtuelles, Kubernetes managé, sauvegarde immuable, plan de reprise exercé et solutions open source opérées.',
+        areaServed: { '@type': 'Country', name: 'Côte d’Ivoire' },
+        address: {
+          '@type': 'PostalAddress',
+          addressLocality: 'Abidjan',
+          addressRegion: 'Cocody',
+          addressCountry: 'CI',
+        },
+        location: DATACENTERS.map((d) => ({
+          '@type': 'Place',
+          name: d.nom,
+          address: {
+            '@type': 'PostalAddress',
+            addressLocality: d.ville,
+            addressCountry: 'CI',
+          },
+        })),
+      },
+      {
+        '@type': 'WebSite',
+        '@id': 'https://cloud.synelia.tech/#site',
+        url: 'https://cloud.synelia.tech/',
+        name: 'Synelia Cloud',
+        inLanguage: 'fr-CI',
+        publisher: { '@id': 'https://cloud.synelia.tech/#organisation' },
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: FAQ_ACCUEIL.map((f) => ({
+          '@type': 'Question',
+          name: f.question,
+          acceptedAnswer: { '@type': 'Answer', text: f.reponse },
+        })),
+      },
+    ],
+  }
+}
+
 export default function Accueil() {
+  const etat = etatPlateforme()
+
   return (
     <>
+      {/*
+        Sérialisé à la main : `<` échappé pour qu'un futur libellé contenant
+        une balise ne referme pas le script.
+      */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(donneesStructurees()).replace(/</g, '\\u003c'),
+        }}
+      />
+
       {/* ─── 1 · Héros ────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-p-900">
         <span className="absolute inset-0 bg-grid-light opacity-60" aria-hidden />
@@ -50,9 +158,12 @@ export default function Accueil() {
         <Container className="relative py-16 sm:py-24">
           <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
             <div>
-              <MicroLabel className="text-p-300">
-                Infrastructure cloud · Côte d’Ivoire
-              </MicroLabel>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
+                <MicroLabel className="text-p-300">
+                  Infrastructure cloud · Côte d’Ivoire
+                </MicroLabel>
+                <PastilleEtat ton={etat.ton} texte={etat.texte} href="/statut" />
+              </div>
               <h1 className="mt-4 text-[34px] font-bold leading-[1.08] tracking-[-0.02em] [font-family:var(--font-display)] text-white sm:text-[52px]">
                 Votre infrastructure,
                 <br />
@@ -201,6 +312,42 @@ export default function Accueil() {
             </ButtonLink>
             <LienFleche href="/simulateur">Estimer mon budget en trois minutes</LienFleche>
           </div>
+
+          {/*
+            Le mobile money était relégué dans la FAQ. Sur ce marché, c'est
+            souvent le premier moyen disponible : il vaut mieux le montrer à
+            côté des prix qu'à la neuvième question.
+          */}
+          <div className="mt-10 rounded-[12px] border border-g-300 bg-white p-5 sm:p-6">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+              <p className="text-[15px] font-bold [font-family:var(--font-display)] text-ink">
+                Payé comme vous payez déjà
+              </p>
+              <p className="text-[12.5px] text-g-500">
+                Facturation en FCFA, TVA 18 %, aucun frais de sortie
+              </p>
+            </div>
+            <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {MOYENS_PAIEMENT.map((m) => (
+                <li key={m.nom} className="flex items-start gap-3">
+                  <span
+                    className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[10.5px] font-bold"
+                    style={{
+                      background: surfaceMarque(m.teinte).fond,
+                      color: surfaceMarque(m.teinte).texte,
+                    }}
+                    aria-hidden
+                  >
+                    {m.initiales}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[13px] font-semibold text-ink">{m.nom}</span>
+                    <span className="block text-[12px] leading-snug text-g-700">{m.detail}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </Container>
       </SiteSection>
 
@@ -285,6 +432,7 @@ export default function Accueil() {
               surtitre="Marketplace"
               titre="Des solutions open source, opérées par Synelia, réversibles"
               chapeau="Nous ne réimplémentons pas ces produits : nous les provisionnons, les dimensionnons, gérons les sièges, les sauvegardons, les supervisons et les facturons. Vous les utilisez dans leur interface d’origine, via une redirection SSO."
+              className="max-w-3xl"
             />
             <ButtonLink href="/marketplace" variant="secondary">
               Voir le catalogue
@@ -354,7 +502,56 @@ export default function Accueil() {
         </Container>
       </SiteSection>
 
-      {/* ─── 9 · FAQ ──────────────────────────────────────────────────── */}
+      {/* ─── 9 · Parcours de démarrage ────────────────────────────────── */}
+      <SiteSection fond="violet-fonce" className="relative overflow-hidden">
+        <span className="absolute inset-0 bg-grid-light opacity-50" aria-hidden />
+        <Container className="relative">
+          <SectionTitle
+            sombre
+            surtitre="Démarrage"
+            titre="De la signature à la première reprise exercée"
+            chapeau="La page vous a montré le produit et les chiffres. Voici le chemin entre les deux, avec ce que vous recevez à chaque jalon."
+          />
+          <ol className="mt-10 grid grid-cols-1 gap-px overflow-hidden rounded-[14px] border border-p-400/50 bg-p-400/40 sm:grid-cols-2 lg:grid-cols-4">
+            {PARCOURS_DEMARRAGE.map((e, i) => (
+              <li key={e.titre} className="flex flex-col bg-p-900/80 p-5">
+                <div className="flex items-baseline gap-2.5">
+                  <span className="tnum text-[13px] font-bold [font-family:var(--font-display)] text-m-400">
+                    0{i + 1}
+                  </span>
+                  <span className="type-micro text-p-300">{e.jalon}</span>
+                </div>
+                <h3 className="mt-3 text-[16px] font-bold leading-tight [font-family:var(--font-display)] text-white">
+                  {e.titre}
+                </h3>
+                <p className="mt-2.5 flex-1 text-[13px] leading-relaxed text-p-300">{e.texte}</p>
+                <p className="mt-4 border-t border-white/10 pt-3">
+                  <span className="type-micro text-p-300">Vous recevez</span>
+                  <span className="mt-1 block text-[12.5px] font-semibold text-white">
+                    {e.livrable}
+                  </span>
+                </p>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-7 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <p className="max-w-2xl text-[12.5px] leading-relaxed text-p-300">
+              {PARCOURS_LIMITES} Les durées sont des ordres de grandeur constatés sur nos
+              migrations, pas un engagement contractuel : celui-ci est daté dans le plan de bascule.
+            </p>
+            <div className="flex shrink-0 flex-wrap items-center gap-3">
+              <ButtonLink href="/entreprises#contact" variant="inverse">
+                Demander un atelier de cadrage
+              </ButtonLink>
+              <LienFleche href="/docs" sombre>
+                Lire la documentation de migration
+              </LienFleche>
+            </div>
+          </div>
+        </Container>
+      </SiteSection>
+
+      {/* ─── 10 · FAQ ─────────────────────────────────────────────────── */}
       <SiteSection fond="clair">
         <Container taille="md">
           <SectionTitle
@@ -373,7 +570,7 @@ export default function Accueil() {
         </Container>
       </SiteSection>
 
-      {/* ─── 10 · Appel final ─────────────────────────────────────────── */}
+      {/* ─── 11 · Appel final ─────────────────────────────────────────── */}
       <AppelFinal />
     </>
   )
