@@ -17,6 +17,7 @@ import {
   vmsDeLEspace,
   hrefDuService,
 } from '@/lib/mock'
+import type { AlerteRegle } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
@@ -25,6 +26,39 @@ import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/
 import { HealthBadge, StatTile } from '@/components/composition/metrics'
 import { EventList, GrilleSparkCharts, LiensSortie, LogPeek } from '@/components/business/observabilite'
 import { useApp, useEspace } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonFormulaire } from '@/components/app/actions'
+
+/** Champs d'une règle d'alerte — mêmes champs à la création et à la reprise. */
+const CHAMPS_ALERTE = [
+  { id: 'metrique', label: 'Règle', placeholder: 'CPU soutenu au-delà de 85 %', obligatoire: true },
+  { id: 'cible', label: 'Portée', placeholder: 'étiquette production', obligatoire: true },
+  { id: 'seuil', label: 'Seuil', placeholder: '> 85 %', demi: true, obligatoire: true },
+  {
+    id: 'plage',
+    label: 'Pendant',
+    type: 'select' as const,
+    demi: true,
+    options: [
+      { value: '5 min', label: '5 minutes' },
+      { value: '15 min', label: '15 minutes' },
+      { value: '30 min', label: '30 minutes' },
+      { value: '1 h', label: '1 heure' },
+    ],
+  },
+  {
+    id: 'canal',
+    label: 'Canal de notification',
+    type: 'select' as const,
+    options: [
+      { value: 'email', label: 'Courriel' },
+      { value: 'sms', label: 'SMS' },
+      { value: 'whatsapp', label: 'WhatsApp' },
+      { value: 'webhook', label: 'Webhook' },
+    ],
+  },
+  { id: 'actif', label: 'Active', type: 'switch' as const, placeholder: 'Règle armée' },
+]
 import { SITE_COURT } from '@/lib/types'
 
 const LIBELLE_GRAVITE = {
@@ -59,6 +93,7 @@ const PERIMETRES = [
 export default function Observabilite() {
   const espace = useEspace()
   const { autorise, refus, pousser } = useApp()
+  const alertes = useCollection<AlerteRegle>('regles-alertes', REGLES_ALERTES)
   const [onglet, setOnglet] = useState('vue')
   const [perimetre, setPerimetre] = useState('espace')
 
@@ -84,11 +119,30 @@ export default function Observabilite() {
         titre="Observabilité"
         sousTitre="Une vue de synthèse, volontairement resserrée : l’état de santé, quelques courbes, les derniers événements, un aperçu des journaux. Pour l’analyse fine, nous vous ouvrons Centreon, Grafana et le moteur de recherche de journaux — ce sont des outils spécialisés, nous ne cherchons pas à les remplacer."
         actions={
-          <GatedAction autorise={autorise('org.dashboard.view')} message={refus('org.dashboard.view')}>
-            <Button variant="secondary" iconBefore={<BellRing size={14} />}>
-              Nouvelle règle d’alerte
-            </Button>
-          </GatedAction>
+          <BoutonFormulaire
+            libelle="Nouvelle règle d’alerte"
+            size="md"
+            icone={<BellRing size={14} />}
+            titre="Nouvelle règle d’alerte"
+            description="Sans durée de dépassement, une alerte se déclenche sur le moindre pic et finit par être ignorée. C’est le réglage qui fait la différence entre une alerte utile et du bruit."
+            champs={CHAMPS_ALERTE}
+            valeursDepart={{ plage: '15 min', canal: 'email', actif: true }}
+            libelleValider="Créer la règle"
+            operation={(v) => ({
+              titre: `Règle « ${v.metrique} » créée`,
+              detail: `${v.seuil} pendant ${v.plage} · ${v.canal}`,
+              effet: () =>
+                alertes.creer({
+                  id: alertes.identifiant('alerte'),
+                  cible: String(v.cible),
+                  metrique: String(v.metrique),
+                  seuil: String(v.seuil),
+                  canaux: [v.canal as AlerteRegle['canaux'][number]],
+                  plage: String(v.plage),
+                  actif: Boolean(v.actif),
+                }),
+            })}
+          />
         }
         meta={
           <>
@@ -419,9 +473,27 @@ export default function Observabilite() {
                 sousTitre="Une règle définit un seuil, une durée de dépassement et un canal de notification. Sans durée, une alerte se déclenche sur le moindre pic et finit par être ignorée."
                 className="mb-0"
                 actions={
-                  <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />}>
-                    Ajouter
-                  </Button>
+                  <BoutonFormulaire
+                    libelle="Ajouter"
+                    icone={<Plus size={13} />}
+                    titre="Ajouter une règle d’alerte"
+                    champs={CHAMPS_ALERTE}
+                    valeursDepart={{ plage: '15 min', canal: 'email', actif: true }}
+                    libelleValider="Ajouter la règle"
+                    operation={(v) => ({
+                      titre: `Règle « ${v.metrique} » ajoutée`,
+                      effet: () =>
+                        alertes.creer({
+                          id: alertes.identifiant('alerte'),
+                          cible: String(v.cible),
+                          metrique: String(v.metrique),
+                          seuil: String(v.seuil),
+                          canaux: [v.canal as AlerteRegle['canaux'][number]],
+                          plage: String(v.plage),
+                          actif: Boolean(v.actif),
+                        }),
+                    })}
+                  />
                 }
               />
             </div>
@@ -437,7 +509,7 @@ export default function Observabilite() {
                   </tr>
                 </thead>
                 <tbody>
-                  {REGLES_ALERTES.map((r) => (
+                  {alertes.items.map((r) => (
                     <tr key={r.id} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2.5 text-[12.5px] font-semibold text-ink">
                         {r.metrique}
@@ -465,9 +537,33 @@ export default function Observabilite() {
                         </Badge>
                       </td>
                       <td className="px-3 py-2.5 text-right">
-                        <Button size="sm" variant="ghost">
-                          Modifier
-                        </Button>
+                        <BoutonFormulaire
+                          libelle="Modifier"
+                          variant="ghost"
+                          titre={`Modifier « ${r.metrique} »`}
+                          champs={CHAMPS_ALERTE}
+                          valeursDepart={{
+                            metrique: r.metrique,
+                            cible: r.cible,
+                            seuil: r.seuil,
+                            plage: r.plage,
+                            canal: r.canaux[0] ?? 'email',
+                            actif: r.actif,
+                          }}
+                          operation={(v) => ({
+                            titre: `Règle « ${v.metrique} » modifiée`,
+                            detail: v.actif ? undefined : 'La règle est désarmée : elle ne notifiera plus.',
+                            effet: () =>
+                              alertes.modifier(r.id, {
+                                metrique: String(v.metrique),
+                                cible: String(v.cible),
+                                seuil: String(v.seuil),
+                                plage: String(v.plage),
+                                canaux: [v.canal as AlerteRegle['canaux'][number]],
+                                actif: Boolean(v.actif),
+                              }),
+                          })}
+                        />
                       </td>
                     </tr>
                   ))}
