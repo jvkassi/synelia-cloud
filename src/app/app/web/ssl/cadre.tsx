@@ -3,7 +3,7 @@
 import { joursAvant } from '@/lib/mock'
 import { CERTIFICATS, TYPE_CERTIFICAT_LABEL } from '@/lib/mock'
 import type { Tone } from '@/components/ui/badge'
-import { CadreSection } from '@/components/app/cadre-webcloud'
+import { CadreSection } from '@/components/app/cadre-section'
 
 /** Panneau de la section — liste les certificats de l'organisation. */
 export function CadreSsl({ children }: { children: React.ReactNode }) {

@@ -14,6 +14,7 @@ import type {
   TypeServiceProjet,
   ZoneApplicative,
 } from '../types'
+import { seededSeries } from '../utils'
 
 export const PROJETS: Projet[] = [
   {
@@ -702,14 +703,60 @@ export const serviceDeLApp = (appId: string) => SERVICES_PROJET.find((s) => s.ap
  * désormais le service dans son projet.
  */
 export const hrefDuService = (appId: string | undefined): string => {
-  if (!appId) return '/app/projets'
+  if (!appId) return '/app/applications/projets'
   const service = SERVICES_PROJET.find((s) => s.appId === appId)
-  return service ? `/app/projets/${service.projetId}/${service.id}` : '/app/projets'
+  return service ? `/app/applications/projets/${service.projetId}/${service.id}` : '/app/applications/projets'
 }
 
 export const projetDeLApp = (appId: string) => {
   const svc = serviceDeLApp(appId)
   return svc ? projetById(svc.projetId) : undefined
+}
+
+export interface PointRestaurationService {
+  id: string
+  ts: string
+  tailleGo: number
+  type: 'complete' | 'incrementale'
+  verifie: boolean
+  immuableJusquau: string
+}
+
+/**
+ * Historique de sauvegarde d'un service applicatif.
+ *
+ * Dérivé du plan porté par le service plutôt que saisi ligne à ligne : la
+ * maquette a besoin d'un historique plausible, pas d'un journal réel. Le calcul
+ * part de la dernière exécution connue et remonte d'un jour à la fois — aucune
+ * date « maintenant », donc aucun risque de divergence entre serveur et client.
+ */
+export function pointsRestaurationDuService(
+  serviceId: string,
+  combien = 7,
+): PointRestaurationService[] {
+  const service = serviceProjetById(serviceId)
+  if (!service?.sauvegarde) return []
+
+  const base = Number(service.sauvegarde.taille.replace(/[^\d,.]/g, '').replace(',', '.')) || 1
+  const jitter = seededSeries(`${serviceId}-taille`, combien, -8, 8)
+  const dernier = new Date(service.sauvegarde.dernier)
+
+  return Array.from({ length: combien }, (_, i) => {
+    const ts = new Date(dernier)
+    ts.setUTCDate(ts.getUTCDate() - i)
+    const fin = new Date(ts)
+    fin.setUTCDate(fin.getUTCDate() + service.sauvegarde!.retentionJours)
+    return {
+      id: `${serviceId}-rp-${i}`,
+      ts: ts.toISOString(),
+      tailleGo: Math.max(0.1, Math.round(base * (1 + jitter[i] / 100) * 10) / 10),
+      // Une complète par semaine, des incrémentales entre les deux : c'est le
+      // mode « incrémentale avec complète hebdomadaire » des plans réutilisables.
+      type: i % 7 === 0 ? ('complete' as const) : ('incrementale' as const),
+      verifie: i > 0 || service.statut !== 'failed',
+      immuableJusquau: fin.toISOString().slice(0, 10),
+    }
+  })
 }
 
 /** Synthèse d'un projet, pour sa carte dans la liste. */

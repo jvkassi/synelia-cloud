@@ -2,23 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Ban, KeyRound, Pause, Play, ShieldAlert, UserCog } from 'lucide-react'
-import { cn, trendSeries } from '@/lib/utils'
-import { dateCourte, dateHeure, goHumain, money, num, pct, relatif } from '@/lib/format'
-import {
-  AUDIT,
-  ESPACES,
-  FACTURES,
-  IMPAYES,
-  ORGANISATIONS,
-  RESELLERS,
-  SERVICES_MANAGES,
-  SOUSCRIPTIONS,
-  TICKETS_PLATEFORME,
-  USERS,
-  membresDeLOrg,
-} from '@/lib/mock'
-import { MOYEN_LABEL, ROLE_LABEL, SITE_COURT, type Role } from '@/lib/types'
+import { Ban, KeyRound, Pause, Play, Plus, ShieldAlert, UserCog } from 'lucide-react'
+import { cn, slugify, trendSeries } from '@/lib/utils'
+import { dateCourte, dateHeure, money, num, relatif } from '@/lib/format'
+import { ESPACES, SERVICES_MANAGES } from '@/lib/mock'
+import { MOYEN_LABEL, ROLE_LABEL, SITE_COURT, type Organisation, type Role } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Avatar, GatedAction, Tabs } from '@/components/ui/display'
@@ -28,6 +16,7 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { Timeline } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
+import { useActe, useAtelier } from '@/components/app/atelier'
 
 const ONGLETS = [
   { id: 'synthese', label: 'Synthèse' },
@@ -39,23 +28,295 @@ const ONGLETS = [
   { id: 'administration', label: 'Administration' },
 ]
 
+/** Élévations d'accès posées pendant la session, par organisation. */
+interface Elevation {
+  id: string
+  qui: string
+  quand: string
+  duree: string
+  motif: string
+  actif: boolean
+}
+
+const ELEVATIONS_INITIALES: Record<string, Elevation[]> = {
+  'org-dba': [
+    {
+      id: 'elev-1',
+      qui: 'Jean-Vincent Kassi',
+      quand: '2026-08-19T13:00:00Z',
+      duree: '4 h',
+      motif: 'Ticket SYN-8814 — diagnostic de latence sur app-metier',
+      actif: true,
+    },
+    {
+      id: 'elev-2',
+      qui: 'Aïcha Bamba',
+      quand: '2026-08-12T09:20:00Z',
+      duree: '2 h',
+      motif: 'Ticket SYN-8702 — restauration accompagnée',
+      actif: false,
+    },
+  ],
+}
+
+/**
+ * Une organisation créée pendant la session n'existe pas dans le jeu figé :
+ * la route est donc servie, et c'est cette vue qui dit ce qu'elle ne trouve
+ * pas. Un 404 du serveur laisserait croire à une panne.
+ */
+function OrganisationIntrouvable({ id }: { id: string }) {
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        fil={[
+          { label: 'Espace fournisseur', href: '/admin' },
+          { label: 'Organisations', href: '/admin/organisations' },
+          { label: 'Introuvable' },
+        ]}
+        titre="Organisation introuvable"
+        sousTitre={`Aucune organisation ne porte l’identifiant ${id}. Elle a peut-être été fermée, ou l’adresse a été recopiée à la main.`}
+      />
+      <Card>
+        <p className="rounded-[8px] border border-dashed border-g-300 px-4 py-10 text-center text-[12.5px] text-g-500">
+          Les organisations fermées disparaissent du portail à l’issue de leur période de
+          réversibilité.
+        </p>
+        <ButtonLink variant="secondary" className="mt-4" href="/admin/organisations">
+          Revenir à la liste
+        </ButtonLink>
+      </Card>
+    </div>
+  )
+}
+
 export function VueOrganisation({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { organisations } = useAtelier()
+  const org = organisations.parId(id)
+  if (!org) return <OrganisationIntrouvable id={id} />
+  return <FicheOrganisation org={org} />
+}
+
+function FicheOrganisation({ org }: { org: Organisation }) {
+  const { autorise, refus } = useApp()
+  const {
+    organisations,
+    revendeurs,
+    utilisateurs,
+    adhesions,
+    factures: registreFactures,
+    impayes,
+    tickets: registreTickets,
+    souscriptions: registreSouscriptions,
+    journal,
+  } = useAtelier()
+  const acte = useActe()
+
   const [onglet, setOnglet] = useState('synthese')
   const [elevation, setElevation] = useState(false)
   const [suspension, setSuspension] = useState(false)
+  const [cloture, setCloture] = useState(false)
+  const [invitation, setInvitation] = useState(false)
+  const [elevations, setElevations] = useState<Elevation[]>(ELEVATIONS_INITIALES[org.id] ?? [])
+  const [demande, setDemande] = useState({
+    motif: '',
+    duree: '4',
+    perimetre: 'lecture',
+    ticket: '',
+    notifier: true,
+  })
+  const [nouveauMembre, setNouveauMembre] = useState({ nom: '', email: '' })
+  const [reglages, setReglages] = useState({
+    plan: org.tenantPlan ?? 'Standard',
+    plafond: org.caMensuel ? org.caMensuel * 2 : 500000,
+    quotaEspaces: 10,
+    libreService: true,
+    marketplace: true,
+    souverain: false,
+  })
 
-  const org = ORGANISATIONS.find((o) => o.id === id)!
-  const reseller = RESELLERS.find((r) => r.id === org.resellerId)
-  const membres = membresDeLOrg(org.id)
-  const factures = FACTURES.filter((f) => f.orgId === org.id)
+  const reseller = revendeurs.liste.find((r) => r.id === org.resellerId)
+  const membres = adhesions.liste
+    .filter((m) => m.orgId === org.id)
+    .map((m) => ({ membership: m, user: utilisateurs.parId(m.userId) }))
+    .filter((x): x is { membership: (typeof adhesions.liste)[number]; user: NonNullable<typeof x.user> } => Boolean(x.user))
+  const factures = registreFactures.liste.filter((f) => f.orgId === org.id)
   const impayees = factures.filter((f) => f.statut === 'impayee')
-  const tickets = TICKETS_PLATEFORME.filter((t) => t.orgId === org.id)
-  const audit = AUDIT.filter((a) => a.orgId === org.id)
+  const tickets = registreTickets.liste.filter((t) => t.orgId === org.id)
+  const audit = journal.liste.filter((a) => a.orgId === org.id)
   const espaces = org.id === 'org-dba' ? ESPACES : []
   const services = org.id === 'org-dba' ? SERVICES_MANAGES : []
-  const souscriptions = SOUSCRIPTIONS.filter((s) => s.orgId === org.id)
-  const impayeReleve = IMPAYES.find((i) => i.org === org.nom)
+  const souscriptions = registreSouscriptions.liste.filter((s) => s.orgId === org.id)
+  const impayeReleve = impayes.liste.find((i) => i.org === org.nom)
+
+  const portee = { type: 'org' as const, id: org.id, label: org.nom }
+
+  const basculerStatut = () => {
+    const suspendre = org.statut === 'active'
+    acte({
+      faire: () => organisations.modifier(org.id, { statut: suspendre ? 'suspendue' : 'active' }),
+      ton: suspendre ? 'err' : 'ok',
+      titre: suspendre ? `${org.nom} suspendue` : `${org.nom} réactivée`,
+      detail:
+        'L’opération est journalisée dans l’audit de l’organisation et dans celui de la plateforme.',
+      action: suspendre ? 'organisation.suspend' : 'organisation.reactivate',
+      cible: org.id,
+      orgId: org.id,
+      orgNom: org.nom,
+      portee,
+    })
+    setSuspension(false)
+  }
+
+  const cloturer = () => {
+    acte({
+      faire: () => {
+        organisations.modifier(org.id, { statut: 'fermee', caMensuel: 0 })
+        impayes.liste
+          .filter((i) => i.org === org.nom)
+          .forEach((i) => impayes.supprimer(i.facture))
+      },
+      ton: 'warn',
+      titre: `Clôture de ${org.nom} engagée`,
+      detail:
+        'Trente jours de récupération, trente jours de conservation en lecture, puis effacement avec attestation.',
+      action: 'organisation.close',
+      cible: org.id,
+      orgId: org.id,
+      orgNom: org.nom,
+      portee,
+    })
+    setCloture(false)
+  }
+
+  const demanderElevation = () => {
+    const duree = `${demande.duree} h`
+    acte({
+      faire: () =>
+        setElevations((l) => [
+          {
+            id: `elev-session-${l.length + 1}`,
+            qui: 'Jean-Vincent Kassi',
+            quand: '2026-08-19T15:20:00Z',
+            duree,
+            motif: demande.motif.trim() || 'Motif non renseigné',
+            actif: true,
+          },
+          ...l,
+        ]),
+      ton: 'warn',
+      titre: 'Élévation accordée',
+      detail: `Une entrée apparaît immédiatement dans le journal d’audit de ${org.nom}, avec votre nom et le motif.`,
+      action: 'access.elevation.grant',
+      cible: org.id,
+      orgId: org.id,
+      orgNom: org.nom,
+      portee,
+    })
+    setDemande({ motif: '', duree: '4', perimetre: 'lecture', ticket: '', notifier: true })
+    setElevation(false)
+  }
+
+  const revoquerElevation = (e: Elevation) => {
+    acte({
+      faire: () => setElevations((l) => l.map((x) => (x.id === e.id ? { ...x, actif: false } : x))),
+      titre: 'Élévation révoquée',
+      detail: `L’accès de ${e.qui} est coupé immédiatement, avant son expiration.`,
+      action: 'access.elevation.revoke',
+      cible: org.id,
+      orgId: org.id,
+      orgNom: org.nom,
+      portee,
+    })
+  }
+
+  /**
+   * La seule intervention du fournisseur sur les identités d'un client : lui
+   * rendre un administrateur quand il a perdu le dernier. Tout le reste — créer,
+   * changer de rôle, révoquer — appartient à l'organisation elle-même, depuis son
+   * propre espace. Le faire à sa place serait exactement ce que le cloisonnement
+   * est censé empêcher.
+   */
+  const retablirAdministrateur = () => {
+    const nom = nouveauMembre.nom.trim()
+    const idUtilisateur = `usr-${slugify(nom).slice(0, 20) || 'admin'}-secours`
+    acte({
+      faire: () => {
+        utilisateurs.ajouter({
+          id: idUtilisateur,
+          email: nouveauMembre.email.trim(),
+          nom,
+          mfaEnabled: true,
+          idpSource: 'local',
+          orgId: org.id,
+          statut: 'invite',
+        })
+        adhesions.ajouter({
+          id: `mb-${idUtilisateur}`,
+          userId: idUtilisateur,
+          orgId: org.id,
+          role: 'org_admin',
+          scopeType: 'org',
+          scopeLabel: 'Toute l’organisation',
+        })
+        organisations.modifier(org.id, (o) => ({ utilisateurs: (o.utilisateurs ?? 0) + 1 }))
+      },
+      ton: 'warn',
+      titre: `Administrateur rétabli pour ${org.nom}`,
+      detail: `${nom} reçoit une invitation à ${nouveauMembre.email.trim()}, avec deuxième facteur obligatoire. L’opération figure en tête du journal d’audit du client.`,
+      action: 'member.recovery',
+      cible: idUtilisateur,
+      orgId: org.id,
+      orgNom: org.nom,
+      portee,
+    })
+    setNouveauMembre({ nom: '', email: '' })
+    setInvitation(false)
+  }
+
+  const relancer = (f: (typeof factures)[number]) => {
+    acte({
+      faire: () =>
+        impayes.modifier(f.numero, (i) => ({ relances: i.relances + 1 })),
+      ton: 'info',
+      titre: `Relance envoyée sur ${f.numero}`,
+      detail:
+        'Courriel au contact de facturation et à l’administrateur. Une relance n’est jamais suivie d’une coupure automatique.',
+      action: 'invoice.dunning',
+      cible: f.numero,
+      orgId: org.id,
+      orgNom: org.nom,
+      portee,
+    })
+  }
+
+  const encaisser = (f: (typeof factures)[number]) => {
+    acte({
+      faire: () => {
+        registreFactures.modifier(f.id, { statut: 'payee', moyen: f.moyen ?? 'virement' })
+        impayes.supprimer(f.numero)
+      },
+      titre: `${f.numero} encaissée`,
+      detail: `${money(f.total, f.devise)} rapprochés. La facture sort du recouvrement.`,
+      action: 'invoice.payment.record',
+      cible: f.numero,
+      orgId: org.id,
+      orgNom: org.nom,
+      portee,
+    })
+  }
+
+  const enregistrerReglages = () => {
+    acte({
+      faire: () => organisations.modifier(org.id, { tenantPlan: reglages.plan }),
+      titre: 'Paramètres enregistrés',
+      detail: `Plan ${reglages.plan}, plafond ${money(reglages.plafond)}, ${reglages.quotaEspaces} Espaces Cloud au maximum. La modification est journalisée dans l’audit du client, avec votre nom.`,
+      action: 'organisation.settings.update',
+      cible: org.id,
+      orgId: org.id,
+      orgNom: org.nom,
+      portee,
+    })
+  }
 
   return (
     <div className="space-y-5">
@@ -415,6 +676,21 @@ export function VueOrganisation({ id }: { id: string }) {
               titre="Membres de l’organisation"
               sousTitre="Nous voyons les identités et leurs rôles, jamais leurs mots de passe — ils n’existent pas chez nous."
               className="mb-0"
+              actions={
+                <GatedAction
+                  autorise={autorise('reseller.manage')}
+                  message={refus('reseller.manage')}
+                >
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    iconBefore={<Plus size={12} />}
+                    onClick={() => setInvitation(true)}
+                  >
+                    Rétablir un administrateur
+                  </Button>
+                </GatedAction>
+              }
             />
           </div>
           {membres.length === 0 ? (
@@ -476,10 +752,10 @@ export function VueOrganisation({ id }: { id: string }) {
           )}
           <div className="border-t border-g-100 px-4 py-3">
             <p className="text-[11.5px] leading-relaxed text-g-500">
-              Nous ne modifions jamais les rôles d’une organisation à sa place. Si un client perd
-              l’accès de son dernier administrateur, la procédure de récupération exige une
-              vérification d’identité auprès du signataire du contrat, et l’opération est journalisée
-              dans son audit.
+              Nous ne créons, ne modifions et ne révoquons jamais un membre à la place d’une
+              organisation : elle le fait depuis son propre espace. La seule exception est la
+              récupération du dernier administrateur perdu — elle exige une vérification d’identité
+              auprès du signataire du contrat, et l’opération apparaît en tête de son journal d’audit.
             </p>
           </div>
         </Card>
@@ -574,7 +850,22 @@ export function VueOrganisation({ id }: { id: string }) {
                         </td>
                         <td className="px-3 py-2.5 text-right">
                           <span className="flex items-center justify-end gap-1.5">
-                            <Button size="sm" variant="ghost">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() =>
+                                acte({
+                                  ton: 'info',
+                                  titre: `${f.numero} téléchargée`,
+                                  detail: `Facture ${f.periode}, ${money(f.total, f.devise)}. Le téléchargement figure dans le journal du client.`,
+                                  action: 'invoice.download',
+                                  cible: f.numero,
+                                  orgId: org.id,
+                                  orgNom: org.nom,
+                                  portee,
+                                })
+                              }
+                            >
                               PDF
                             </Button>
                             {f.statut === 'impayee' && (
@@ -582,8 +873,18 @@ export function VueOrganisation({ id }: { id: string }) {
                                 autorise={autorise('reseller.manage')}
                                 message={refus('reseller.manage')}
                               >
-                                <Button size="sm" variant="secondary">
+                                <Button size="sm" variant="secondary" onClick={() => relancer(f)}>
                                   Relancer
+                                </Button>
+                              </GatedAction>
+                            )}
+                            {f.statut === 'impayee' && (
+                              <GatedAction
+                                autorise={autorise('reseller.manage')}
+                                message={refus('reseller.manage')}
+                              >
+                                <Button size="sm" variant="ghost" onClick={() => encaisser(f)}>
+                                  Encaisser
                                 </Button>
                               </GatedAction>
                             )}
@@ -636,13 +937,62 @@ export function VueOrganisation({ id }: { id: string }) {
                 ]}
               />
               <div className="mt-4 flex flex-wrap gap-1.5 border-t border-g-100 pt-4">
-                <Button size="sm" variant="secondary">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() =>
+                    acte({
+                      faire: () =>
+                        impayes.modifier(impayeReleve.facture, (i) => ({
+                          relances: i.relances + 1,
+                        })),
+                      titre: 'Appel consigné',
+                      detail: `Quatrième étape du recouvrement pour ${impayeReleve.facture}. Le compteur de relances passe à ${impayeReleve.relances + 1}.`,
+                      action: 'dunning.call.log',
+                      cible: impayeReleve.facture,
+                      orgId: org.id,
+                      orgNom: org.nom,
+                      portee,
+                    })
+                  }
+                >
                   Enregistrer un appel
                 </Button>
-                <Button size="sm" variant="ghost">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    acte({
+                      ton: 'info',
+                      titre: 'Échelonnement proposé',
+                      detail: `${money(impayeReleve.montant)} en trois mensualités, sans frais. La proposition attend l’accord écrit du client.`,
+                      action: 'dunning.installment.offer',
+                      cible: impayeReleve.facture,
+                      orgId: org.id,
+                      orgNom: org.nom,
+                      portee,
+                    })
+                  }
+                >
                   Proposer un échelonnement
                 </Button>
-                <Button size="sm" variant="ghost">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    acte({
+                      faire: () => impayes.supprimer(impayeReleve.facture),
+                      ton: 'warn',
+                      titre: 'Avoir commercial passé',
+                      detail: `${money(impayeReleve.montant)} annulés sur ${impayeReleve.facture}. La créance sort du recouvrement et l’écart apparaîtra au rapprochement.`,
+                      action: 'invoice.credit_note',
+                      cible: impayeReleve.facture,
+                      orgId: org.id,
+                      orgNom: org.nom,
+                      portee,
+                    })
+                  }
+                >
                   Passer un avoir commercial
                 </Button>
               </div>
@@ -755,6 +1105,12 @@ export function VueOrganisation({ id }: { id: string }) {
           </Callout>
 
           <Card padding={false}>
+            {audit.length === 0 ? (
+              <p className="px-4 py-8 text-center text-[12.5px] text-g-500">
+                Aucun événement consigné pour cette organisation. Le journal se remplit dès la
+                première action — la sienne comme la nôtre.
+              </p>
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-max border-collapse">
                 <thead>
@@ -769,7 +1125,7 @@ export function VueOrganisation({ id }: { id: string }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {(audit.length > 0 ? audit : AUDIT.slice(0, 10)).map((a) => (
+                  {audit.map((a) => (
                     <tr key={a.id} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2 text-[11px] text-g-700">{dateHeure(a.ts)}</td>
                       <td className="px-3 py-2">
@@ -801,6 +1157,7 @@ export function VueOrganisation({ id }: { id: string }) {
                 </tbody>
               </table>
             </div>
+            )}
           </Card>
         </div>
       )}
@@ -814,7 +1171,10 @@ export function VueOrganisation({ id }: { id: string }) {
             />
             <div className="space-y-4">
               <Field label="Plan de service">
-                <Select defaultValue={org.tenantPlan ?? 'Standard'}>
+                <Select
+                  value={reglages.plan}
+                  onChange={(e) => setReglages((r) => ({ ...r, plan: e.target.value }))}
+                >
                   <option value="Standard">Standard</option>
                   <option value="Avancé">Avancé — support prioritaire</option>
                   <option value="Entreprise">Entreprise — interlocuteur dédié</option>
@@ -824,40 +1184,52 @@ export function VueOrganisation({ id }: { id: string }) {
                 label="Plafond de dépense mensuelle"
                 hint="au-delà, la création de nouvelles ressources est bloquée et le client averti"
               >
-                <Input type="number" defaultValue={org.caMensuel ? org.caMensuel * 2 : 500000} />
+                <Input
+                  type="number"
+                  min={0}
+                  value={reglages.plafond}
+                  suffix="FCFA"
+                  onChange={(e) =>
+                    setReglages((r) => ({ ...r, plafond: Math.max(0, Number(e.target.value)) }))
+                  }
+                />
               </Field>
               <Field label="Quota maximal d’Espaces Cloud">
-                <Input type="number" defaultValue={10} />
+                <Input
+                  type="number"
+                  min={1}
+                  value={reglages.quotaEspaces}
+                  onChange={(e) =>
+                    setReglages((r) => ({
+                      ...r,
+                      quotaEspaces: Math.max(1, Number(e.target.value)),
+                    }))
+                  }
+                />
               </Field>
               <div className="space-y-3">
                 <Switch
-                  checked
+                  checked={reglages.libreService}
+                  onChange={(v) => setReglages((r) => ({ ...r, libreService: v }))}
                   label="Autoriser le libre-service"
                   description="Le client peut créer et supprimer ses propres ressources sans passer par nous. Désactiver revient à imposer un ticket pour chaque création."
                 />
                 <Switch
-                  checked
+                  checked={reglages.marketplace}
+                  onChange={(v) => setReglages((r) => ({ ...r, marketplace: v }))}
                   label="Autoriser la marketplace"
                   description="Souscription en autonomie aux services managés du catalogue."
                 />
                 <Switch
-                  checked={false}
+                  checked={reglages.souverain}
+                  onChange={(v) => setReglages((r) => ({ ...r, souverain: v }))}
                   label="Restreindre aux socles souverains"
                   description="Les ressources de cette organisation ne seront placées que sur des socles libres et localisés en Côte d’Ivoire. À activer pour les organisations soumises à une contrainte réglementaire."
                 />
               </div>
             </div>
             <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
-              <Button
-                className="mt-4"
-                onClick={() =>
-                  pousser({
-                    ton: 'ok',
-                    titre: 'Paramètres enregistrés',
-                    detail: 'La modification est journalisée dans l’audit du client, avec votre nom.',
-                  })
-                }
-              >
+              <Button className="mt-4" onClick={enregistrerReglages}>
                 Enregistrer
               </Button>
             </GatedAction>
@@ -869,51 +1241,47 @@ export function VueOrganisation({ id }: { id: string }) {
                 titre="Élévations récentes"
                 sousTitre="Chaque accès de nos équipes aux ressources de cette organisation."
               />
-              <div className="space-y-2">
-                {[
-                  {
-                    qui: 'Jean-Vincent Kassi',
-                    quand: '2026-08-19T13:00:00Z',
-                    duree: '4 h',
-                    motif: 'Ticket SYN-8814 — diagnostic de latence sur app-metier',
-                    actif: true,
-                  },
-                  {
-                    qui: 'Aïcha Bamba',
-                    quand: '2026-08-12T09:20:00Z',
-                    duree: '2 h',
-                    motif: 'Ticket SYN-8702 — restauration accompagnée',
-                    actif: false,
-                  },
-                ].map((e) => (
-                  <div
-                    key={e.quand}
-                    className={cn(
-                      'rounded-[6px] border px-3 py-2.5',
-                      e.actif ? 'border-warn/40 bg-warn-bg' : 'border-g-300',
-                    )}
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="flex items-center gap-1.5 text-[12.5px] font-semibold text-ink">
-                        <KeyRound size={12} className="shrink-0 text-g-500" />
-                        {e.qui}
-                      </span>
-                      <Badge tone={e.actif ? 'warn' : 'neutral'} dot={e.actif} size="sm">
-                        {e.actif ? 'Active' : 'Expirée'}
-                      </Badge>
+              {elevations.length === 0 ? (
+                <p className="rounded-[6px] border border-dashed border-g-300 px-3 py-6 text-center text-[12px] text-g-500">
+                  Aucune de nos équipes n’a accédé aux ressources de cette organisation.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {elevations.map((e) => (
+                    <div
+                      key={e.id}
+                      className={cn(
+                        'rounded-[6px] border px-3 py-2.5',
+                        e.actif ? 'border-warn/40 bg-warn-bg' : 'border-g-300',
+                      )}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="flex items-center gap-1.5 text-[12.5px] font-semibold text-ink">
+                          <KeyRound size={12} className="shrink-0 text-g-500" />
+                          {e.qui}
+                        </span>
+                        <Badge tone={e.actif ? 'warn' : 'neutral'} dot={e.actif} size="sm">
+                          {e.actif ? 'Active' : 'Expirée'}
+                        </Badge>
+                      </div>
+                      <p className="mt-0.5 text-[11.5px] text-g-700">{e.motif}</p>
+                      <p className="mt-0.5 text-[10.5px] text-g-500">
+                        {dateHeure(e.quand)} · durée {e.duree}
+                      </p>
+                      {e.actif && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="mt-1.5"
+                          onClick={() => revoquerElevation(e)}
+                        >
+                          Révoquer maintenant
+                        </Button>
+                      )}
                     </div>
-                    <p className="mt-0.5 text-[11.5px] text-g-700">{e.motif}</p>
-                    <p className="mt-0.5 text-[10.5px] text-g-500">
-                      {dateHeure(e.quand)} · durée {e.duree}
-                    </p>
-                    {e.actif && (
-                      <Button size="sm" variant="ghost" className="mt-1.5">
-                        Révoquer maintenant
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </Card>
 
             <Card className="border-err/30">
@@ -960,8 +1328,16 @@ export function VueOrganisation({ id }: { id: string }) {
                     autorise={autorise('reseller.manage')}
                     message={refus('reseller.manage')}
                   >
-                    <Button size="sm" variant="danger" className="mt-2">
-                      Ouvrir la procédure de clôture
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      className="mt-2"
+                      disabled={org.statut === 'fermee'}
+                      onClick={() => setCloture(true)}
+                    >
+                      {org.statut === 'fermee'
+                        ? 'Clôture déjà engagée'
+                        : 'Ouvrir la procédure de clôture'}
                     </Button>
                   </GatedAction>
                 </div>
@@ -982,14 +1358,11 @@ export function VueOrganisation({ id }: { id: string }) {
               Annuler
             </Button>
             <Button
-              onClick={() => {
-                pousser({
-                  ton: 'warn',
-                  titre: 'Élévation demandée',
-                  detail: `Une entrée apparaît immédiatement dans le journal d’audit de ${org.nom}, avec votre nom et le motif.`,
-                })
-                setElevation(false)
-              }}
+              disabled={
+                demande.motif.trim().length < 12 ||
+                (demande.perimetre === 'intervention' && demande.ticket.trim() === '')
+              }
+              onClick={demanderElevation}
             >
               Demander l’accès
             </Button>
@@ -997,33 +1370,60 @@ export function VueOrganisation({ id }: { id: string }) {
         }
       >
         <div className="space-y-4">
-          <Field label="Motif" hint="visible par le client dans son journal d’audit — soyez précis">
+          <Field
+            label="Motif"
+            required
+            hint="visible par le client dans son journal d’audit — soyez précis"
+            error={
+              demande.motif !== '' && demande.motif.trim().length < 12
+                ? 'Un motif d’un mot ne renseigne personne : douze caractères au minimum.'
+                : undefined
+            }
+          >
             <Textarea
               rows={3}
+              value={demande.motif}
+              onChange={(e) => setDemande((d) => ({ ...d, motif: e.target.value }))}
               placeholder="Ticket SYN-8814 — diagnostic de la latence signalée sur app-metier, lecture des métriques et journaux de l’environnement de production."
             />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Durée" hint="l’accès expire automatiquement">
-              <Select defaultValue="4">
+              <Select
+                value={demande.duree}
+                onChange={(e) => setDemande((d) => ({ ...d, duree: e.target.value }))}
+              >
                 <option value="1">1 heure</option>
                 <option value="4">4 heures</option>
                 <option value="8">8 heures</option>
               </Select>
             </Field>
             <Field label="Périmètre">
-              <Select defaultValue="lecture">
+              <Select
+                value={demande.perimetre}
+                onChange={(e) => setDemande((d) => ({ ...d, perimetre: e.target.value }))}
+              >
                 <option value="lecture">Lecture seule des métadonnées et métriques</option>
                 <option value="logs">Lecture, journaux applicatifs inclus</option>
                 <option value="intervention">Intervention — modification de ressources</option>
               </Select>
             </Field>
           </div>
-          <Field label="Ticket associé" hint="obligatoire pour une intervention">
-            <Input placeholder="SYN-8814" />
+          <Field
+            label="Ticket associé"
+            hint="obligatoire pour une intervention"
+            required={demande.perimetre === 'intervention'}
+          >
+            <Input
+              value={demande.ticket}
+              onChange={(e) => setDemande((d) => ({ ...d, ticket: e.target.value }))}
+              placeholder="SYN-8814"
+            />
           </Field>
           <Switch
-            checked
+            checked={demande.perimetre === 'intervention' ? true : demande.notifier}
+            disabled={demande.perimetre === 'intervention'}
+            onChange={(v) => setDemande((d) => ({ ...d, notifier: v }))}
             label="Notifier l’administrateur de l’organisation"
             description="Non désactivable pour une intervention. Un accès dont le client n’est pas averti n’est pas un accès légitime."
           />
@@ -1055,18 +1455,84 @@ export function VueOrganisation({ id }: { id: string }) {
                 'La facturation reprend son cours normal',
               ]
         }
-        onConfirm={() => {
-          pousser({
-            ton: org.statut === 'active' ? 'err' : 'ok',
-            titre:
-              org.statut === 'active'
-                ? `${org.nom} suspendue`
-                : `${org.nom} réactivée`,
-            detail: 'L’opération est journalisée dans l’audit de l’organisation et dans celui de la plateforme.',
-          })
-          setSuspension(false)
-        }}
+        onConfirm={basculerStatut}
       />
+
+      <ConfirmDialog
+        open={cloture}
+        onClose={() => setCloture(false)}
+        titre="Clôturer l’organisation"
+        ressource={org.nom}
+        libelleAction="Engager la clôture"
+        pertes={[
+          'Trente jours pour récupérer les données, en libre-service et sans frais de sortie',
+          'Trente jours supplémentaires de conservation en lecture seule',
+          'Puis effacement des ressources et des sauvegardes, avec attestation de destruction',
+          'La facturation s’arrête à la date d’engagement, au prorata',
+        ]}
+        onConfirm={cloturer}
+      />
+
+      <Modal
+        open={invitation}
+        onClose={() => setInvitation(false)}
+        title="Rétablir un administrateur"
+        description="Procédure de récupération — à n’ouvrir qu’après vérification d’identité auprès du signataire du contrat."
+        size="md"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setInvitation(false)}>
+              Annuler
+            </Button>
+            <Button
+              disabled={
+                nouveauMembre.nom.trim().length < 2 ||
+                !/.+@.+\..+/.test(nouveauMembre.email.trim())
+              }
+              onClick={retablirAdministrateur}
+            >
+              Envoyer l’invitation
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <Callout ton="warn" titre="Ce n’est pas une création de compte ordinaire">
+            Nous ne gérons pas les membres d’une organisation à sa place. Cette procédure existe pour
+            un seul cas : le client a perdu l’accès de son dernier administrateur et ne peut plus se
+            le rendre lui-même.
+          </Callout>
+          <Field label="Nom du bénéficiaire" required>
+            <Input
+              value={nouveauMembre.nom}
+              onChange={(e) => setNouveauMembre((m) => ({ ...m, nom: e.target.value }))}
+              placeholder="Nom figurant au contrat"
+              autoFocus
+            />
+          </Field>
+          <Field
+            label="Adresse électronique"
+            required
+            hint="doit appartenir au domaine de l’organisation"
+          >
+            <Input
+              type="email"
+              value={nouveauMembre.email}
+              onChange={(e) => setNouveauMembre((m) => ({ ...m, email: e.target.value }))}
+              placeholder={`admin@${org.domaine ?? 'entreprise.ci'}`}
+            />
+          </Field>
+          <KeyValueList
+            colonnes={1}
+            items={[
+              { cle: 'Rôle attribué', valeur: ROLE_LABEL.org_admin },
+              { cle: 'Deuxième facteur', valeur: 'Obligatoire dès la première connexion' },
+              { cle: 'Portée', valeur: 'Toute l’organisation' },
+              { cle: 'Trace', valeur: 'En tête du journal d’audit du client, à votre nom' },
+            ]}
+          />
+        </div>
+      </Modal>
     </div>
   )
 }

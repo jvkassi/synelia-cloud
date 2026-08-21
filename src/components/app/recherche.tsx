@@ -63,21 +63,23 @@ function entreesClient(): Entree[] {
       id: s.id,
       label: s.nom,
       categorie: 'Services applicatifs',
-      href: `/app/projets/${s.projetId}/${s.id}`,
+      href: `/app/applications/projets/${s.projetId}/${s.id}`,
       meta: `${s.environnement} · ${s.emplacement.site}`,
     })),
+    // Les modèles n'ont plus de fiche propre : ils se choisissent à l'étape
+    // « Source » de la création de projet, là où ils servent réellement.
     ...MODELES.map((m) => ({
       id: m.slug,
       label: m.nom,
-      categorie: 'Modèles à déployer',
-      href: `/app/modeles/${m.slug}`,
+      categorie: 'Solutions à déployer',
+      href: '/app/applications/nouveau',
       meta: `${m.solution} ${m.version}`,
     })),
     ...HEBERGEMENTS.map((h) => ({
       id: h.id,
       label: nomServi(h),
       categorie: 'Hébergements web',
-      href: `/app/web/${h.id}`,
+      href: `/app/web/hebergement/${h.id}`,
       meta: `${h.serveur.nom} · ${h.palier}`,
     })),
     ...SERVICES_PARTAGES.map((sp) => ({
