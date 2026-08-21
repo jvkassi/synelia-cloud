@@ -10,10 +10,11 @@ import {
   ORG_COURANTE,
   USERS,
   UTILISATEUR_COURANT,
-  membresDeLOrg,
+  userById,
 } from '@/lib/mock'
 import { ROLES_CLIENT, MATRICE_RBAC, can, rolesRequis } from '@/lib/rbac'
-import { ROLE_LABEL, type Role } from '@/lib/types'
+import { ROLE_LABEL, type Membership, type Role } from '@/lib/types'
+import { MAINTENANT } from '@/lib/format'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Avatar, GatedAction, Tabs } from '@/components/ui/display'
@@ -24,6 +25,34 @@ import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { RoleMatrix } from '@/components/business/rbac-canvas'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+
+interface Invitation {
+  id: string
+  email: string
+  role: Role
+  envoyee: string
+  par: string
+}
+
+/** Invitations en attente — le jeu de données n'en a pas de table. */
+const INVITATIONS: Invitation[] = [
+  {
+    id: 'inv-1',
+    email: 'n.bamba@dba.africa',
+    role: 'project_owner',
+    envoyee: '2026-08-18T10:04:00Z',
+    par: 'Léa Konan',
+  },
+  {
+    id: 'inv-2',
+    email: 'consultant@partenaire-abj.ci',
+    role: 'read_only',
+    envoyee: '2026-08-16T14:22:00Z',
+    par: 'Léa Konan',
+  },
+]
 
 const ONGLETS = [
   { id: 'membres', label: 'Membres' },
@@ -45,14 +74,28 @@ interface LigneMembre {
 }
 
 export default function Membres() {
-  const { autorise, refus, pousser, role: roleCourant } = useApp()
+  const { autorise, refus, role: roleCourant } = useApp()
+  const executer = useOperation()
+  const adhesions = useCollection<Membership>('memberships', MEMBERSHIPS)
+  const invitations = useCollection<Invitation>('invitations', INVITATIONS)
   const [onglet, setOnglet] = useState('membres')
   const [invitation, setInvitation] = useState(false)
   const [detail, setDetail] = useState<string | null>(null)
   const [retrait, setRetrait] = useState<LigneMembre | null>(null)
   const [roleSurligne, setRoleSurligne] = useState<Role | undefined>(roleCourant)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState<Role>('read_only')
+  const [invitePortee, setInvitePortee] = useState('org')
+  const [inviteMfa, setInviteMfa] = useState(true)
+  const [inviteMessage, setInviteMessage] = useState(false)
+  const [attribMembre, setAttribMembre] = useState('')
+  const [attribRole, setAttribRole] = useState<Role>('project_owner')
+  const [attribPortee, setAttribPortee] = useState('org')
 
-  const membres = membresDeLOrg(ORG_COURANTE.id)
+  const membres = adhesions.items
+    .filter((m) => m.orgId === ORG_COURANTE.id)
+    .map((m) => ({ membership: m, user: userById(m.userId)! }))
+    .filter((x) => x.user)
   const lignes: LigneMembre[] = membres.map(({ membership: m, user: u }) => ({
     id: m.id,
     nom: u.nom,
@@ -280,12 +323,9 @@ export default function Membres() {
               sousTitre="Une invitation expire au bout de sept jours. Le lien est à usage unique."
             />
             <div className="space-y-2">
-              {[
-                { email: 'n.bamba@dba.africa', role: 'app_admin' as Role, envoyee: '2026-08-18T10:04:00Z', par: 'Léa Konan' },
-                { email: 'consultant@partenaire-abj.ci', role: 'read_only' as Role, envoyee: '2026-08-16T14:22:00Z', par: 'Léa Konan' },
-              ].map((i) => (
+              {invitations.items.map((i) => (
                 <div
-                  key={i.email}
+                  key={i.id}
                   className="flex flex-wrap items-start justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                 >
                   <span className="min-w-0">
@@ -301,12 +341,27 @@ export default function Membres() {
                     <Badge tone="info" size="sm">
                       En attente
                     </Badge>
-                    <Button size="sm" variant="ghost">
-                      Relancer
-                    </Button>
-                    <Button size="sm" variant="ghost">
-                      Annuler
-                    </Button>
+                    <BoutonAction
+                      libelle="Relancer"
+                      variant="ghost"
+                      operation={{
+                        action: 'member.invite',
+                        titre: `Invitation renvoyée à ${i.email}`,
+                        detail: 'Le lien précédent est invalidé : seul le dernier fonctionne.',
+                        effet: () => invitations.modifier(i.id, { envoyee: MAINTENANT }),
+                      }}
+                    />
+                    <BoutonAction
+                      libelle="Annuler"
+                      variant="ghost"
+                      operation={{
+                        action: 'member.invite',
+                        ton: 'warn',
+                        titre: `Invitation de ${i.email} annulée`,
+                        detail: 'Le lien devient inutilisable immédiatement.',
+                        effet: () => invitations.supprimer(i.id),
+                      }}
+                    />
                   </span>
                 </div>
               ))}
@@ -548,7 +603,10 @@ export default function Membres() {
               <CardHeader titre="Attribuer un rôle sur une portée" />
               <div className="space-y-4">
                 <Field label="Membre">
-                  <Select defaultValue={USERS[2]?.id}>
+                  <Select
+                    value={attribMembre || (lignes[0]?.id ?? '')}
+                    onChange={(e) => setAttribMembre(e.target.value)}
+                  >
                     {lignes.map((l) => (
                       <option key={l.id} value={l.id}>
                         {l.nom} — {l.email}
@@ -557,7 +615,7 @@ export default function Membres() {
                   </Select>
                 </Field>
                 <Field label="Rôle">
-                  <Select defaultValue="app_admin">
+                  <Select value={attribRole} onChange={(e) => setAttribRole(e.target.value as Role)}>
                     {ROLES_CLIENT.map((r) => (
                       <option key={r} value={r}>
                         {ROLE_LABEL[r]}
@@ -566,7 +624,7 @@ export default function Membres() {
                   </Select>
                 </Field>
                 <Field label="Portée" hint="restreindre le rôle à un périmètre précis">
-                  <Select defaultValue="org">
+                  <Select value={attribPortee} onChange={(e) => setAttribPortee(e.target.value)}>
                     <option value="org">Toute l’organisation</option>
                     {ESPACES.map((e) => (
                       <option key={e.id} value={e.id}>
@@ -579,13 +637,28 @@ export default function Membres() {
               <GatedAction autorise={autorise('member.invite')} message={refus('member.invite')}>
                 <Button
                   className="mt-4"
-                  onClick={() =>
-                    pousser({
-                      ton: 'ok',
+                  onClick={() => {
+                    const cible = lignes.find((l) => l.id === (attribMembre || lignes[0]?.id))
+                    const espace = ESPACES.find((e) => e.id === attribPortee)
+                    executer({
+                      action: 'member.invite',
                       titre: 'Attribution enregistrée',
-                      detail: 'Elle prend effet immédiatement, sans nouvelle connexion.',
+                      detail: `${cible?.nom ?? ''} · ${ROLE_LABEL[attribRole]} sur ${espace ? `l’espace ${espace.code}` : 'toute l’organisation'}. Effet immédiat, sans nouvelle connexion.`,
+                      effet: () =>
+                        cible
+                          ? adhesions.creer({
+                              id: adhesions.identifiant('mb'),
+                              userId:
+                                adhesions.items.find((m) => m.id === cible.id)?.userId ?? cible.id,
+                              orgId: ORG_COURANTE.id,
+                              role: attribRole,
+                              scopeType: espace ? 'espace' : 'org',
+                              scopeId: espace?.id,
+                              scopeLabel: espace ? `Espace ${espace.code}` : undefined,
+                            })
+                          : undefined,
                     })
-                  }
+                  }}
                 >
                   Attribuer
                 </Button>
@@ -606,12 +679,23 @@ export default function Membres() {
               Annuler
             </Button>
             <Button
+              disabled={!inviteEmail.trim()}
               onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: 'Invitation envoyée',
-                  detail: 'Le lien est valable sept jours et à usage unique. Aucun mot de passe n’est transmis par courriel.',
+                executer({
+                  action: 'member.invite',
+                  titre: `Invitation envoyée à ${inviteEmail}`,
+                  detail:
+                    'Le lien est valable sept jours et à usage unique. Aucun mot de passe n’est transmis par courriel.',
+                  effet: () =>
+                    invitations.creer({
+                      id: invitations.identifiant('inv'),
+                      email: inviteEmail,
+                      role: inviteRole,
+                      envoyee: MAINTENANT,
+                      par: UTILISATEUR_COURANT.nom,
+                    }),
                 })
+                setInviteEmail('')
                 setInvitation(false)
               }}
             >
@@ -622,10 +706,15 @@ export default function Membres() {
       >
         <div className="space-y-4">
           <Field label="Adresse électronique" hint="professionnelle de préférence — elle sert d’identifiant">
-            <Input type="email" placeholder="prenom.nom@dba.africa" />
+            <Input
+              type="email"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="prenom.nom@dba.africa"
+            />
           </Field>
           <Field label="Rôle" hint="vous pourrez le changer plus tard sans réinviter la personne">
-            <Select defaultValue="read_only">
+            <Select value={inviteRole} onChange={(e) => setInviteRole(e.target.value as Role)}>
               {ROLES_CLIENT.map((r) => (
                 <option key={r} value={r}>
                   {ROLE_LABEL[r]} — {MATRICE_RBAC.filter((a) => can(r, a.id) === 'full').length} actions
@@ -634,7 +723,7 @@ export default function Membres() {
             </Select>
           </Field>
           <Field label="Portée">
-            <Select defaultValue="org">
+            <Select value={invitePortee} onChange={(e) => setInvitePortee(e.target.value)}>
               <option value="org">Toute l’organisation</option>
               {ESPACES.map((e) => (
                 <option key={e.id} value={e.id}>
@@ -645,11 +734,16 @@ export default function Membres() {
           </Field>
           <div className="space-y-3">
             <Switch
-              checked
+              checked={inviteMfa}
+              onChange={setInviteMfa}
               label="Exiger le deuxième facteur à la première connexion"
               description="La personne devra enregistrer une application d’authentification avant d’accéder au portail."
             />
-            <Switch checked={false} label="Ajouter un message personnalisé à l’invitation" />
+            <Switch
+              checked={inviteMessage}
+              onChange={setInviteMessage}
+              label="Ajouter un message personnalisé à l’invitation"
+            />
           </div>
           <Callout ton="info" titre="Ce que la personne recevra">
             Un courriel avec un lien vers notre fournisseur d’identité, où elle choisira son mot de
@@ -725,19 +819,53 @@ export default function Membres() {
             </div>
 
             <div className="flex flex-wrap gap-1.5 border-t border-g-100 pt-4">
-              <GatedAction autorise={autorise('member.invite')} message={refus('member.invite')}>
-                <Button size="sm" variant="secondary" iconBefore={<ShieldCheck size={12} />}>
-                  Changer le rôle
-                </Button>
-              </GatedAction>
+              <BoutonFormulaire
+                libelle="Changer le rôle"
+                icone={<ShieldCheck size={12} />}
+                action="member.invite"
+                titre={`Changer le rôle de ${membreDetail.nom}`}
+                description="Le changement prend effet immédiatement, sans nouvelle connexion. Les actions interdites resteront visibles, désactivées, avec le rôle requis en infobulle."
+                champs={[
+                  {
+                    id: 'role',
+                    label: 'Rôle',
+                    type: 'select',
+                    options: ROLES_CLIENT.map((r) => ({
+                      value: r,
+                      label: `${ROLE_LABEL[r]} — ${MATRICE_RBAC.filter((a) => can(r, a.id) === 'full').length} actions`,
+                    })),
+                  },
+                ]}
+                valeursDepart={{ role: membreDetail.role }}
+                libelleValider="Changer le rôle"
+                operation={(v) => ({
+                  titre: `${membreDetail.nom} est désormais ${ROLE_LABEL[v.role as Role]}`,
+                  effet: () => adhesions.modifier(membreDetail.id, { role: v.role as Role }),
+                })}
+              />
               {!membreDetail.mfa && (
-                <Button size="sm" variant="ghost" iconBefore={<KeyRound size={12} />}>
-                  Exiger le deuxième facteur
-                </Button>
+                <BoutonAction
+                  libelle="Exiger le deuxième facteur"
+                  variant="ghost"
+                  icone={<KeyRound size={12} />}
+                  operation={{
+                    action: 'member.invite',
+                    titre: `Deuxième facteur exigé pour ${membreDetail.nom}`,
+                    detail:
+                      'À sa prochaine connexion, la personne devra enregistrer une application d’authentification avant d’accéder au portail.',
+                  }}
+                />
               )}
-              <Button size="sm" variant="ghost">
-                Fermer les sessions actives
-              </Button>
+              <BoutonAction
+                libelle="Fermer les sessions actives"
+                variant="ghost"
+                operation={{
+                  action: 'member.invite',
+                  ton: 'warn',
+                  titre: `Sessions de ${membreDetail.nom} fermées`,
+                  detail: 'La personne devra se reconnecter sur tous ses appareils.',
+                }}
+              />
             </div>
           </div>
         )}
@@ -755,11 +883,20 @@ export default function Membres() {
           'Ses sièges de services managés sont libérés et redeviennent attribuables',
         ]}
         onConfirm={() => {
-          pousser({
-            ton: 'info',
-            titre: `${retrait?.nom} a été retiré de l’organisation`,
-            detail: 'Son identité subsiste chez notre fournisseur d’identité, mais elle n’a plus accès à vos ressources.',
-          })
+          const cible = retrait
+          if (cible) {
+            executer({
+              action: 'member.invite',
+              ton: 'info',
+              titre: `${cible.nom} a été retiré de l’organisation`,
+              detail:
+                'Son identité subsiste chez notre fournisseur d’identité, mais elle n’a plus accès à vos ressources.',
+              effet: () => {
+                adhesions.supprimer(cible.id)
+                if (detail === cible.id) setDetail(null)
+              },
+            })
+          }
           setRetrait(null)
         }}
       />

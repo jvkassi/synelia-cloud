@@ -16,19 +16,96 @@ import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { Regle321 } from '@/components/business/infra'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, useOperation } from '@/components/app/actions'
 import type { AuditEvent } from '@/lib/types'
+
+interface SessionActive {
+  id: string
+  userId: string
+  nom: string
+  appareil: string
+  navigateur: string
+  ip: string
+  lieu: string
+  ouverte: string
+  derniereActivite: string
+  courante?: boolean
+}
+
+/**
+ * Sessions ouvertes sur l'organisation. Le cahier des charges les demandait :
+ * une politique de sécurité qui ne montre pas les sessions en cours ne permet
+ * pas de répondre à la seule question qui compte après un départ ou un vol de
+ * poste — qui est connecté, et depuis où.
+ */
+const SESSIONS: SessionActive[] = [
+  {
+    id: 'ses-1',
+    userId: 'usr-1',
+    nom: 'Léa Konan',
+    appareil: 'MacBook Pro',
+    navigateur: 'Safari 18',
+    ip: '102.176.9.44',
+    lieu: 'Abidjan, Côte d’Ivoire',
+    ouverte: '2026-08-19T08:12:00Z',
+    derniereActivite: '2026-08-19T15:18:00Z',
+    courante: true,
+  },
+  {
+    id: 'ses-2',
+    userId: 'usr-1',
+    nom: 'Léa Konan',
+    appareil: 'iPhone 15',
+    navigateur: 'Safari mobile',
+    ip: '41.207.180.12',
+    lieu: 'Abidjan, Côte d’Ivoire',
+    ouverte: '2026-08-18T19:40:00Z',
+    derniereActivite: '2026-08-19T12:02:00Z',
+  },
+  {
+    id: 'ses-3',
+    userId: 'usr-3',
+    nom: 'Ali Traoré',
+    appareil: 'ThinkPad T14',
+    navigateur: 'Firefox 130',
+    ip: '102.176.9.51',
+    lieu: 'Abidjan, Côte d’Ivoire',
+    ouverte: '2026-08-19T07:55:00Z',
+    derniereActivite: '2026-08-19T15:04:00Z',
+  },
+  {
+    id: 'ses-4',
+    userId: 'usr-5',
+    nom: 'Consultant partenaire',
+    appareil: 'Windows 11',
+    navigateur: 'Edge 128',
+    ip: '196.201.44.7',
+    lieu: 'Dakar, Sénégal',
+    ouverte: '2026-08-17T09:20:00Z',
+    derniereActivite: '2026-08-19T10:41:00Z',
+  },
+]
 
 const ONGLETS = [
   { id: 'audit', label: 'Journal d’audit' },
   { id: 'posture', label: 'Posture de sécurité' },
+  { id: 'sessions', label: 'Sessions actives' },
   { id: 'conformite', label: 'Conformité des sauvegardes' },
   { id: 'export', label: 'Export & rétention' },
 ]
 
 export default function Securite() {
   const { autorise, refus, perm, pousser } = useApp()
+  const executer = useOperation()
+  const sessions = useCollection<SessionActive>('sessions', SESSIONS)
   const [onglet, setOnglet] = useState('audit')
   const [detail, setDetail] = useState<string | null>(null)
+  /** Politique d'organisation — les réglages non désactivables restent fixes. */
+  const [mfaObligatoire, setMfaObligatoire] = useState(false)
+  const [approbationProd, setApprobationProd] = useState(true)
+  const [plagesIp, setPlagesIp] = useState(false)
+  const [expirationSession, setExpirationSession] = useState(true)
 
   const peutVoir = perm('audit.view') !== 'none'
   const refuses = AUDIT.filter((a) => a.result === 'refuse').length
@@ -45,11 +122,18 @@ export default function Securite() {
         titre="Sécurité et audit"
         sousTitre="Tout ce qui est fait sur votre organisation est enregistré : qui, quoi, quand, depuis quelle adresse, avec quel résultat. Les refus aussi — c’est souvent la ligne la plus utile du journal."
         actions={
-          <GatedAction autorise={autorise('compliance.export')} message={refus('compliance.export')}>
-            <Button variant="secondary" iconBefore={<Download size={14} />}>
-              Exporter le journal
-            </Button>
-          </GatedAction>
+          <BoutonAction
+            libelle="Exporter le journal"
+            size="md"
+            icone={<Download size={14} />}
+            operation={{
+              action: 'compliance.export',
+              titre: 'Export du journal en préparation',
+              detail:
+                'Le lien de téléchargement arrive par courriel et expire après 24 heures. L’empreinte de chaînage permet de vérifier que rien n’a été retouché.',
+              effet: () => setOnglet('export'),
+            }}
+          />
         }
         meta={
           <>
@@ -356,7 +440,8 @@ export default function Securite() {
                 />
                 <div className="space-y-3.5">
                   <Switch
-                    checked={false}
+                    checked={mfaObligatoire}
+                    onChange={setMfaObligatoire}
                     label="Rendre le deuxième facteur obligatoire"
                     description="Les membres qui ne l’ont pas activé devront le faire à leur prochaine connexion, avant d’accéder à quoi que ce soit."
                   />
@@ -371,25 +456,38 @@ export default function Securite() {
                     description="Non désactivable. Un refus non journalisé est une information perdue."
                   />
                   <Switch
-                    checked
+                    checked={approbationProd}
+                    onChange={setApprobationProd}
                     label="Exiger une approbation pour un déploiement en production"
                     description="Une personne différente de l’auteur doit approuver. C’est la séparation des tâches attendue par la plupart des référentiels."
                   />
                   <Switch
-                    checked={false}
+                    checked={plagesIp}
+                    onChange={setPlagesIp}
                     label="Restreindre l’accès au portail à une liste d’adresses"
                     description="Efficace, mais bloque aussi vos accès en déplacement. À réserver aux organisations dont tous les accès passent par un réseau maîtrisé."
                   />
                   <Switch
-                    checked
+                    checked={expirationSession}
+                    onChange={setExpirationSession}
                     label="Expirer les sessions inactives après 8 heures"
                   />
                 </div>
-                <GatedAction autorise={autorise('sso.configure')} message={refus('sso.configure')}>
-                  <Button className="mt-4" variant="secondary">
-                    Enregistrer la politique
-                  </Button>
-                </GatedAction>
+                <BoutonAction
+                  libelle="Enregistrer la politique"
+                  size="md"
+                  className="mt-4"
+                  operation={{
+                    action: 'sso.configure',
+                    titre: 'Politique d’organisation enregistrée',
+                    detail: [
+                      mfaObligatoire ? 'deuxième facteur obligatoire' : 'deuxième facteur au choix',
+                      approbationProd ? 'approbation exigée en production' : 'aucune approbation exigée',
+                      plagesIp ? 'accès restreint par adresse' : 'accès sans restriction d’adresse',
+                      expirationSession ? 'sessions expirées après 8 h' : 'sessions sans expiration',
+                    ].join(' · '),
+                  }}
+                />
               </Card>
 
               <Card>
@@ -412,6 +510,120 @@ export default function Securite() {
               </Card>
             </div>
           </div>
+        </div>
+      )}
+
+      {onglet === 'sessions' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatTile libelle="Sessions ouvertes" valeur={sessions.items.length} />
+            <StatTile
+              libelle="Personnes connectées"
+              valeur={new Set(sessions.items.map((x) => x.userId)).size}
+            />
+            <StatTile
+              libelle="Hors Côte d’Ivoire"
+              valeur={sessions.items.filter((x) => !x.lieu.includes('Côte d’Ivoire')).length}
+              ton={
+                sessions.items.some((x) => !x.lieu.includes('Côte d’Ivoire')) ? 'warn' : 'ok'
+              }
+              detail="À vérifier si personne n’est en déplacement"
+            />
+            <StatTile
+              libelle="Expiration d’inactivité"
+              valeur={expirationSession ? '8 h' : 'aucune'}
+              ton={expirationSession ? 'ok' : 'warn'}
+            />
+          </div>
+
+          <Card padding={false}>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-g-100 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold text-ink">Sessions actives</p>
+                <p className="mt-0.5 text-[12px] text-g-500">
+                  Une session révoquée est coupée immédiatement, sans attendre l’expiration du jeton.
+                </p>
+              </div>
+              <BoutonAction
+                libelle="Révoquer toutes les autres"
+                icone={<ShieldAlert size={13} />}
+                desactive={sessions.items.filter((x) => !x.courante).length === 0}
+                operation={{
+                  action: 'sso.configure',
+                  ton: 'warn',
+                  titre: `${sessions.items.filter((x) => !x.courante).length} session(s) révoquée(s)`,
+                  detail:
+                    'Toutes les personnes concernées devront se reconnecter. Votre session courante est conservée.',
+                  effet: () =>
+                    sessions.supprimer(
+                      sessions.items.filter((x) => !x.courante).map((x) => x.id),
+                    ),
+                }}
+                confirmation={{
+                  ressource: ORG_COURANTE.nom,
+                  titre: 'Révoquer toutes les autres sessions ?',
+                  pertes: [
+                    'Toutes les personnes connectées devront se reconnecter',
+                    'Les travaux non enregistrés dans leurs onglets seront perdus',
+                    'Votre session courante est conservée',
+                  ],
+                  libelleAction: 'Révoquer les autres sessions',
+                }}
+              />
+            </div>
+            <ul className="divide-y divide-g-100">
+              {sessions.items.map((x) => (
+                <li key={x.id} className="flex flex-wrap items-start gap-3 px-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[13px] font-semibold text-ink">{x.nom}</span>
+                      <Badge tone="neutral" size="sm">
+                        {x.appareil}
+                      </Badge>
+                      <Badge tone="neutral" size="sm">
+                        {x.navigateur}
+                      </Badge>
+                      {x.courante && (
+                        <Badge tone="ok" size="sm" dot>
+                          Session courante
+                        </Badge>
+                      )}
+                      {!x.lieu.includes('Côte d’Ivoire') && (
+                        <Badge tone="warn" size="sm">
+                          Connexion hors du pays
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="mt-1 text-[11.5px] text-g-500">
+                      <span className="font-mono">{x.ip}</span> · {x.lieu} · ouverte{' '}
+                      {relatif(x.ouverte)} · dernière activité {relatif(x.derniereActivite)}
+                    </p>
+                  </div>
+                  <BoutonAction
+                    libelle={x.courante ? 'Se déconnecter' : 'Révoquer'}
+                    variant="ghost"
+                    operation={{
+                      action: 'sso.configure',
+                      ton: 'warn',
+                      titre: x.courante
+                        ? 'Votre session sera fermée'
+                        : `Session de ${x.nom} révoquée`,
+                      detail: x.courante
+                        ? 'Vous serez redirigé vers l’écran de connexion.'
+                        : `${x.appareil} · ${x.ip} — la personne devra se reconnecter.`,
+                      effet: () => sessions.supprimer(x.id),
+                    }}
+                  />
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          <Callout ton="violet" titre="Ce que révoquer une session ne fait pas">
+            La révocation coupe l’accès au portail et aux services raccordés au SSO. Elle ne change
+            pas le mot de passe et ne désactive pas le compte : après une compromission, révoquez les
+            sessions <em>et</em> exigez la réinitialisation depuis la fiche du membre.
+          </Callout>
         </div>
       )}
 
