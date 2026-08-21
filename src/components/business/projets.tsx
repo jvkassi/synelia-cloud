@@ -9,6 +9,7 @@ import { SITE_COURT, type ServiceProjet, type TypeServiceProjet } from '@/lib/ty
 import { MOTEUR_LABEL, TYPE_SERVICE_LABEL, domainesDuService } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Card, PageHeader } from '@/components/composition/card'
+import { EmptyState } from '@/components/composition/states'
 import type { Projet } from '@/lib/types'
 
 /**
@@ -18,6 +19,38 @@ import type { Projet } from '@/lib/types'
  * le fil d'Ariane et le nom du projet doivent donc être identiques partout,
  * sinon on doute d'être resté sur le même projet en changeant d'onglet.
  */
+/**
+ * Ce qu'affiche une section quand le projet demandé n'existe pas.
+ *
+ * Le serveur ne répond plus 404 sur ces routes : un projet créé pendant la
+ * session n'existe pas dans le jeu figé, et une page d'erreur du serveur
+ * ferait croire à une panne. C'est donc la vue qui dit ce qu'elle ne trouve pas.
+ */
+export function ProjetIntrouvable({ section }: { section?: string }) {
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        fil={[
+          { label: 'Espace client', href: '/app' },
+          { label: 'Applications', href: '/app/applications' },
+          { label: 'Projet introuvable' },
+        ]}
+        titre="Ce projet n’existe plus"
+        sousTitre={
+          section
+            ? `La section ${section} porte sur un projet ; celui-ci a été supprimé, ou n’a jamais existé.`
+            : undefined
+        }
+      />
+      <EmptyState
+        titre="Ce projet n’existe plus"
+        phrase="Il a peut-être été supprimé depuis ses paramètres, ou la démonstration a été réinitialisée. Le panneau de gauche liste les projets existants."
+        action={{ libelle: 'Voir tous les projets', href: '/app/applications/projets' }}
+      />
+    </div>
+  )
+}
+
 export function EnteteProjet({
   projet,
   section,

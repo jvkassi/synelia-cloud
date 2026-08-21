@@ -3,9 +3,13 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { HardDrive, RotateCcw, ShieldAlert } from 'lucide-react'
-import { dateHeure, relatif } from '@/lib/format'
-import type { ServiceProjet } from '@/lib/types'
-import { pointsRestaurationDuService, projetById, servicesDuProjet } from '@/lib/mock'
+import { dateHeure, MAINTENANT, relatif } from '@/lib/format'
+import type { Projet, ServiceProjet } from '@/lib/types'
+import {
+  PROJETS,
+  SERVICES_PROJET,
+  pointsRestaurationDuService,
+} from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -13,8 +17,10 @@ import { Card, CardHeader, Callout, KeyValueList } from '@/components/compositio
 import { StatTile } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { ConfirmDialog } from '@/components/ui/overlay'
-import { EnteteProjet, ICONE_TYPE } from '@/components/business/projets'
+import { EnteteProjet, ICONE_TYPE, ProjetIntrouvable } from '@/components/business/projets'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 /**
  * Sauvegardes d'un projet — service par service.
@@ -25,10 +31,17 @@ import { useApp } from '@/components/app/contexte'
  * qu'est-ce que je récupère si je restaure maintenant ?
  */
 export function VueBackup({ id }: { id: string }) {
-  const projet = projetById(id)!
-  const services = servicesDuProjet(id)
-  const { autorise, refus, pousser } = useApp()
-  const [restauration, setRestauration] = useState<ServiceProjet | null>(null)
+  const lesProjets = useCollection<Projet>('projets', PROJETS)
+  const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+  const executer = useOperation()
+  const { autorise, refus } = useApp()
+  const [restaurationId, setRestaurationId] = useState<string | null>(null)
+
+  const projet = lesProjets.items.find((p) => p.id === id)
+  const services = lesServices.items.filter((x) => x.projetId === id)
+  const restauration = services.find((x) => x.id === restaurationId) ?? null
+
+  if (!projet) return <ProjetIntrouvable section="Backup" />
 
   const proteges = services.filter((s) => s.sauvegarde)
   const nus = services.filter((s) => !s.sauvegarde)
@@ -111,6 +124,74 @@ export function VueBackup({ id }: { id: string }) {
                     {s.environnement} · si la machine disparaît, ce service repart d’une page
                     blanche.
                   </span>
+                  <BoutonFormulaire
+                    libelle="Protéger ce service"
+                    variant="secondary"
+                    className="ml-2"
+                    action="backup.plan.write"
+                    titre={`Protéger ${s.nom}`}
+                    description="Un plan de sauvegarde s’applique à ce service seul. Les plans réutilisables, eux, couvrent plusieurs projets d’un coup et vivent dans Sauvegardes & PRA."
+                    libelleValider="Activer la sauvegarde"
+                    champs={[
+                      {
+                        id: 'frequence',
+                        label: 'Fréquence',
+                        type: 'select',
+                        demi: true,
+                        options: [
+                          { value: '0 2 * * *', label: 'Quotidienne — 02:00 GMT' },
+                          { value: '0 */6 * * *', label: 'Toutes les 6 heures' },
+                          { value: '0 3 * * 0', label: 'Hebdomadaire — dimanche 03:00' },
+                        ],
+                      },
+                      {
+                        id: 'retention',
+                        label: 'Rétention',
+                        type: 'nombre',
+                        demi: true,
+                        min: 7,
+                        max: 365,
+                        suffixe: 'jours',
+                      },
+                      {
+                        id: 'destination',
+                        label: 'Destination',
+                        type: 'select',
+                        options: [
+                          { value: 'Grand-Bassam — objet immuable', label: 'Grand-Bassam — objet immuable (hors site)' },
+                          { value: 'Abidjan — objet immuable', label: 'Abidjan — objet immuable (même site)' },
+                        ],
+                      },
+                    ]}
+                    valeursDepart={{
+                      frequence: '0 2 * * *',
+                      retention: 30,
+                      destination: 'Grand-Bassam — objet immuable',
+                    }}
+                    complement={(v) =>
+                      String(v.destination).startsWith('Abidjan') ? (
+                        <Callout ton="warn" titre="Même site que le service">
+                          Une sauvegarde qui vit sur le site du service ne protège pas d’un sinistre
+                          de site. La règle 3-2-1 demande une copie hors site : c’est Grand-Bassam.
+                        </Callout>
+                      ) : null
+                    }
+                    operation={(v) => ({
+                      titre: `${s.nom} est désormais sauvegardé`,
+                      detail: `Premier point dans l’heure, rétention de ${v.retention} jours, destination ${v.destination}.`,
+                      effet: () =>
+                        lesServices.modifier(s.id, {
+                          sauvegarde: {
+                            plan: 'Plan propre au service',
+                            cron: String(v.frequence),
+                            destination: String(v.destination),
+                            dernier: MAINTENANT,
+                            retentionJours: Number(v.retention),
+                            taille: '—',
+                          },
+                        }),
+                    })}
+                  />
                 </span>
               </li>
             ))}
@@ -160,7 +241,7 @@ export function VueBackup({ id }: { id: string }) {
                           size="sm"
                           variant="secondary"
                           iconBefore={<RotateCcw size={12} />}
-                          onClick={() => setRestauration(s)}
+                          onClick={() => setRestaurationId(s.id)}
                         >
                           Restaurer
                         </Button>
@@ -277,15 +358,32 @@ export function VueBackup({ id }: { id: string }) {
 
       <ConfirmDialog
         open={restauration !== null}
-        onClose={() => setRestauration(null)}
+        onClose={() => setRestaurationId(null)}
         onConfirm={() => {
-          pousser({
+          if (!restauration) return
+          const cible = restauration
+          executer({
+            action: 'backup.restore',
             ton: 'info',
-            titre: `Restauration de ${restauration?.nom} lancée`,
+            titre: `Restauration de ${cible.nom} lancée`,
             detail:
-              'Le service est arrêté, le volume remplacé par le point choisi, puis le service redémarre. Suivi dans le centre de tâches.',
+              'Le service est arrêté, le volume remplacé par le point choisi, puis le service redémarre.',
+            effet: () => lesServices.modifier(cible.id, { statut: 'stopped' }),
+            job: {
+              type: 'backup.restore',
+              label: `Restauration · ${cible.nom} (${cible.environnement})`,
+              etapes: [
+                'Arrêter le service',
+                'Détacher le volume courant',
+                'Restaurer le point choisi',
+                'Rattacher et vérifier l’intégrité',
+                'Redémarrer le service',
+              ],
+            },
+            effetFinal: () =>
+              lesServices.modifier(cible.id, { statut: 'running', derniereMaj: MAINTENANT }),
           })
-          setRestauration(null)
+          setRestaurationId(null)
         }}
         titre="Restaurer ce service"
         ressource={restauration?.nom ?? ''}

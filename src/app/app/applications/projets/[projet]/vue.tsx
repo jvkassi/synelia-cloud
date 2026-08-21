@@ -3,16 +3,16 @@
 import { useMemo, useState } from 'react'
 import { Plus, Rocket } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dateCourte, money, relatif } from '@/lib/format'
-import type { MoteurBase, TypeServiceProjet } from '@/lib/types'
+import { dateCourte, MAINTENANT, money, relatif } from '@/lib/format'
+import type { MoteurBase, Projet, ServiceProjet, TypeServiceProjet } from '@/lib/types'
 import {
   MOTEURS_DISPONIBLES,
   MOTEUR_LABEL,
+  PROJETS,
+  SERVICES_PROJET,
   TYPE_SERVICE_LABEL,
   ZONE_APPLICATIVE,
-  projetById,
-  servicesDuProjet,
-  syntheseProjet,
+  syntheseDeServices,
 } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
@@ -23,8 +23,15 @@ import { StatTile } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { Drawer, Popover } from '@/components/ui/overlay'
 import { CostPreview } from '@/components/composition/flow'
-import { CarteService, EnteteProjet, ICONE_TYPE } from '@/components/business/projets'
+import {
+  CarteService,
+  EnteteProjet,
+  ICONE_TYPE,
+  ProjetIntrouvable,
+} from '@/components/business/projets'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { useOperation } from '@/components/app/actions'
 
 /**
  * Fiche d'un projet — ses services, environnement par environnement.
@@ -35,18 +42,28 @@ import { useApp } from '@/components/app/contexte'
  * position ; la barre en tient un seul, et le panneau garde le projet.
  */
 export function VueProjet({ id }: { id: string }) {
-  const projet = projetById(id)!
-  const services = servicesDuProjet(id)
-  const synthese = syntheseProjet(id)
+  const lesProjets = useCollection<Projet>('projets', PROJETS)
+  const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
   const { autorise, refus } = useApp()
 
-  const [env, setEnv] = useState(projet.environnements[0])
+  // Relu dans la collection : un service créé ici doit apparaître sans quitter
+  // l'écran, et un projet né pendant la session n'existe pas dans le jeu figé.
+  const projet = lesProjets.items.find((p) => p.id === id)
+  const services = useMemo(
+    () => lesServices.items.filter((x) => x.projetId === id),
+    [lesServices.items, id],
+  )
+  const synthese = syntheseDeServices(services)
+
+  const [env, setEnv] = useState(projet?.environnements[0] ?? '')
   const [creation, setCreation] = useState<TypeServiceProjet | null>(null)
 
   const servicesEnv = useMemo(
     () => services.filter((s) => s.environnement === env),
     [services, env],
   )
+
+  if (!projet) return <ProjetIntrouvable />
 
   return (
     <div className="space-y-5">
@@ -160,6 +177,16 @@ export function VueProjet({ id }: { id: string }) {
   )
 }
 
+/** Port d'écoute d'usage de chaque moteur, pour l'URI interne affichée. */
+const PORT_MOTEUR: Record<MoteurBase, number> = {
+  postgresql: 5432,
+  mysql: 3306,
+  mariadb: 3306,
+  mongodb: 27017,
+  redis: 6379,
+  clickhouse: 9000,
+}
+
 // ─── Créer un service ─────────────────────────────────────────────────
 
 function NouveauService({
@@ -235,15 +262,118 @@ function TiroirCreation({
   onClose,
 }: {
   type: TypeServiceProjet | null
-  projet: NonNullable<ReturnType<typeof projetById>>
+  projet: Projet
   env: string
   onClose: () => void
 }) {
+  const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+  const executer = useOperation()
   const [nom, setNom] = useState('')
   const [moteur, setMoteur] = useState<MoteurBase>('postgresql')
+  const [version, setVersion] = useState('')
+  const [cron, setCron] = useState('0 2 * * *')
+  const [commande, setCommande] = useState('')
+  const [file, setFile] = useState('')
+  const [concurrence, setConcurrence] = useState(4)
   const choix = MOTEURS_DISPONIBLES.find((m) => m.moteur === moteur)!
 
   if (!type) return null
+
+  /** Un service naît en construction, puis passe en marche à la fin du job. */
+  const creerService = () => {
+    const idService = lesServices.identifiant('svc')
+    const ressources =
+      type === 'base'
+        ? { cpu: 2, ramMo: 4096, diskGo: 100 }
+        : type === 'cron'
+          ? { cpu: 1, ramMo: 1024, diskGo: 5 }
+          : type === 'worker'
+            ? { cpu: 2, ramMo: 4096, diskGo: 10 }
+            : { cpu: 1, ramMo: 2048, diskGo: 10 }
+    const cout =
+      type === 'base' ? 24800 : type === 'cron' ? 3600 : type === 'worker' ? 14200 : 9400
+
+    executer({
+      action: 'app.deploy',
+      titre: `${TYPE_SERVICE_LABEL[type]} « ${nom.trim()} » en création`,
+      detail:
+        type === 'base'
+          ? `${MOTEUR_LABEL[moteur]} ${version || choix.versions[0]}, joint au réseau privé du projet — aucun port ouvert sur Internet.`
+          : `Déployé dans ${env}, sur l’adresse offerte du projet.`,
+      effet: () =>
+        lesServices.creer({
+          id: idService,
+          projetId: projet.id,
+          nom: nom.trim(),
+          type,
+          environnement: env,
+          statut: 'building',
+          ressources,
+          emplacement: { site: 'ABJ', backend: 'os-abj-01', namespace: `${projet.id}-${env.toLowerCase()}` },
+          derniereMaj: MAINTENANT,
+          coutMensuel: cout,
+          ...(type === 'base'
+            ? {
+                moteur,
+                version: version || choix.versions[0],
+                base: {
+                  nom: nom.trim().replace(/-/g, '_'),
+                  utilisateur: `${nom.trim().replace(/-/g, '_')}_app`,
+                  // Le mot de passe n'est jamais affiché en clair ailleurs qu'au
+                  // premier écran : la maquette n'en fabrique pas un crédible.
+                  motDePasse: '••••••••••••',
+                  hoteInterne: `${nom.trim()}.${projet.id}.interne`,
+                  port: PORT_MOTEUR[moteur],
+                },
+              }
+            : {}),
+          ...(type === 'cron'
+            ? {
+                cron: {
+                  expression: cron,
+                  lisible: 'selon l’expression saisie',
+                  commande: commande.trim(),
+                  derniereExecution: MAINTENANT,
+                  dureeS: 0,
+                  statut: 'ok' as const,
+                  prochaine: MAINTENANT,
+                },
+              }
+            : {}),
+          ...(type === 'worker'
+            ? {
+                file: {
+                  nom: file.trim(),
+                  enAttente: 0,
+                  traitesJour: 0,
+                  echecsJour: 0,
+                  concurrence,
+                },
+              }
+            : {}),
+        }),
+      job: {
+        type: `service.${type}.create`,
+        label: `Création de ${nom.trim()} · ${projet.nom} · ${env}`,
+        etapes:
+          type === 'base'
+            ? [
+                'Réserver le volume',
+                `Installer ${MOTEUR_LABEL[moteur]}`,
+                'Joindre le réseau privé du projet',
+                'Appliquer le plan de sauvegarde',
+              ]
+            : [
+                'Provisionner les ressources',
+                'Injecter les variables du projet',
+                'Démarrer le service',
+                'Publier l’adresse offerte',
+              ],
+      },
+      effetFinal: () => lesServices.modifier(idService, { statut: 'running' }),
+    })
+    onClose()
+  }
 
   const sousDomaine = `${nom || '<service>'}-${env.toLowerCase().slice(0, 7)}.${ZONE_APPLICATIVE.zone}`
 
@@ -261,7 +391,9 @@ function TiroirCreation({
           {type === 'application' || type === 'statique' ? (
             <ButtonLink href="/app/applications/nouveau">Ouvrir l’assistant complet</ButtonLink>
           ) : (
-            <Button onClick={onClose}>Créer le service</Button>
+            <Button disabled={nom.trim().length === 0} onClick={creerService}>
+              Créer le service
+            </Button>
           )}
         </div>
       }
@@ -297,7 +429,10 @@ function TiroirCreation({
               </Select>
             </Field>
             <Field label="Version" hint="Les versions mineures sont appliquées en fenêtre annoncée.">
-              <Select defaultValue={choix.versions[0]}>
+              <Select
+                value={version || choix.versions[0]}
+                onChange={(e) => setVersion(e.target.value)}
+              >
                 {choix.versions.map((v) => (
                   <option key={v} value={v}>
                     {MOTEUR_LABEL[moteur]} {v}
@@ -319,10 +454,19 @@ function TiroirCreation({
               label="Expression cron"
               hint="Cinq champs, en UTC. Le portail affiche toujours la traduction en clair à côté."
             >
-              <Input defaultValue="0 2 * * *" className="font-mono" />
+              <Input
+                value={cron}
+                onChange={(e) => setCron(e.target.value)}
+                className="font-mono"
+              />
             </Field>
             <Field label="Commande" hint="Exécutée dans l’image du service, avec ses variables.">
-              <Input placeholder="node scripts/cloture.js" className="font-mono" />
+              <Input
+                placeholder="node scripts/cloture.js"
+                value={commande}
+                onChange={(e) => setCommande(e.target.value)}
+                className="font-mono"
+              />
             </Field>
           </>
         )}
@@ -330,13 +474,23 @@ function TiroirCreation({
         {type === 'worker' && (
           <>
             <Field label="Nom de la file" hint="La file que ce worker consomme.">
-              <Input placeholder="rapprochement" className="font-mono" />
+              <Input
+                placeholder="rapprochement"
+                value={file}
+                onChange={(e) => setFile(e.target.value)}
+                className="font-mono"
+              />
             </Field>
             <Field
               label="Concurrence"
               hint="Nombre de tâches traitées en parallèle par instance du worker."
             >
-              <Input type="number" defaultValue={4} />
+              <Input
+                type="number"
+                min={1}
+                value={concurrence}
+                onChange={(e) => setConcurrence(Number(e.target.value))}
+              />
             </Field>
           </>
         )}

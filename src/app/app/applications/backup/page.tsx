@@ -2,15 +2,19 @@
 
 import Link from 'next/link'
 import { relatif } from '@/lib/format'
-import { PROJETS, SERVICES_PROJET, pointsRestaurationDuService, servicesDuProjet } from '@/lib/mock'
+import { PROJETS, SERVICES_PROJET, pointsRestaurationDuService } from '@/lib/mock'
+import type { Projet, ServiceProjet } from '@/lib/types'
+import { useCollection } from '@/components/app/atelier'
 import { Badge } from '@/components/ui/badge'
 import { ButtonLink } from '@/components/ui/button'
 import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/card'
 import { StatTile, QuotaBar } from '@/components/composition/metrics'
 
 export default function BackupTousProjets() {
-  const proteges = SERVICES_PROJET.filter((s) => s.sauvegarde)
-  const nus = SERVICES_PROJET.filter(
+  const lesProjets = useCollection<Projet>('projets', PROJETS)
+  const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+  const proteges = lesServices.items.filter((s) => s.sauvegarde)
+  const nus = lesServices.items.filter(
     (s) => !s.sauvegarde && s.type !== 'statique' && s.type !== 'cron',
   )
   const volume = proteges.reduce(
@@ -39,7 +43,7 @@ export default function BackupTousProjets() {
         }
         meta={
           <Badge tone={nus.length > 0 ? 'warn' : 'ok'} dot>
-            {proteges.length} sur {SERVICES_PROJET.length} services protégés
+            {proteges.length} sur {lesServices.items.length} services protégés
           </Badge>
         }
       />
@@ -48,7 +52,7 @@ export default function BackupTousProjets() {
         <StatTile
           libelle="Services protégés"
           valeur={proteges.length}
-          detail={`sur ${SERVICES_PROJET.length}`}
+          detail={`sur ${lesServices.items.length}`}
           ton={nus.length > 0 ? 'warn' : 'ok'}
         />
         <StatTile
@@ -87,8 +91,8 @@ export default function BackupTousProjets() {
           sousTitre="Un projet dont tous les services à état sont protégés est prêt pour un audit ; les autres ne le sont pas."
         />
         <div className="space-y-3">
-          {PROJETS.map((p) => {
-            const services = servicesDuProjet(p.id)
+          {lesProjets.items.map((p) => {
+            const services = lesServices.items.filter((x) => x.projetId === p.id)
             const aEtat = services.filter((s) => s.type !== 'statique' && s.type !== 'cron')
             const couverts = aEtat.filter((s) => s.sauvegarde)
             const complet = aEtat.length > 0 && couverts.length === aEtat.length

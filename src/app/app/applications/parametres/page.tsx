@@ -2,16 +2,20 @@
 
 import Link from 'next/link'
 import { dateCourte, money } from '@/lib/format'
-import { PROJETS, servicesDuProjet, syntheseProjet } from '@/lib/mock'
+import { PROJETS, SERVICES_PROJET, syntheseDeServices } from '@/lib/mock'
+import type { Projet, ServiceProjet } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { ButtonLink } from '@/components/ui/button'
 import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
+import { useCollection } from '@/components/app/atelier'
 
 export default function ParametresTousProjets() {
-  const environnements = PROJETS.reduce((a, p) => a + p.environnements.length, 0)
-  const espaces = new Set(PROJETS.map((p) => p.espaceId))
-  const coutTotal = PROJETS.reduce((a, p) => a + syntheseProjet(p.id).coutMensuel, 0)
+  const lesProjets = useCollection<Projet>('projets', PROJETS)
+  const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+  const environnements = lesProjets.items.reduce((a, p) => a + p.environnements.length, 0)
+  const espaces = new Set(lesProjets.items.map((p) => p.espaceId))
+  const coutTotal = lesProjets.items.reduce((a, p) => a + syntheseDeServices(lesServices.items.filter((x) => x.projetId === p.id)).coutMensuel, 0)
 
   return (
     <div className="space-y-5">
@@ -31,7 +35,7 @@ export default function ParametresTousProjets() {
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile libelle="Projets" valeur={PROJETS.length} />
+        <StatTile libelle="Projets" valeur={lesProjets.items.length} />
         <StatTile
           libelle="Environnements déclarés"
           valeur={environnements}
@@ -70,8 +74,8 @@ export default function ParametresTousProjets() {
               </tr>
             </thead>
             <tbody>
-              {PROJETS.map((p) => {
-                const services = servicesDuProjet(p.id)
+              {lesProjets.items.map((p) => {
+                const services = lesServices.items.filter((x) => x.projetId === p.id)
                 return (
                   <tr key={p.id} className="border-b border-g-100 last:border-0">
                     <td className="px-3 py-2.5">
@@ -99,7 +103,7 @@ export default function ParametresTousProjets() {
                     <td className="tnum px-3 py-2.5 text-[12px] text-g-700">{services.length}</td>
                     <td className="px-3 py-2.5 text-[12px] text-g-700">{dateCourte(p.cree)}</td>
                     <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
-                      {money(syntheseProjet(p.id).coutMensuel)}
+                      {money(syntheseDeServices(lesServices.items.filter((x) => x.projetId === p.id)).coutMensuel)}
                     </td>
                   </tr>
                 )

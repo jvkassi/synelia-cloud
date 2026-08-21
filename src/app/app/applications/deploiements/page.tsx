@@ -15,6 +15,8 @@ import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { DeploymentPipeline, SecurityFindings } from '@/components/business/paas'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction } from '@/components/app/actions'
 import type { Deployment } from '@/lib/types'
 
 const LIBELLE_STATUT: Record<Deployment['statut'], string> = {
@@ -40,27 +42,28 @@ const TON_STATUT: Record<Deployment['statut'], 'ok' | 'err' | 'warn' | 'info'> =
 }
 
 export default function Deploiements() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const lesDeploiements = useCollection<Deployment>('deploiements', DEPLOIEMENTS)
   const [ouvert, setOuvert] = useState<string | null>(
-    DEPLOIEMENTS.find((d) => d.statut === 'failed')?.id ?? DEPLOIEMENTS[0]?.id ?? null,
+    lesDeploiements.items.find((d) => d.statut === 'failed')?.id ?? DEPLOIEMENTS[0]?.id ?? null,
   )
 
-  const enCours = DEPLOIEMENTS.filter(
+  const enCours = lesDeploiements.items.filter(
     (d) => !['live', 'failed', 'rolled_back'].includes(d.statut),
   ).length
-  const echecs = DEPLOIEMENTS.filter((d) => d.statut === 'failed').length
-  const reussis = DEPLOIEMENTS.filter((d) => d.statut === 'live').length
-  const bloquants = DEPLOIEMENTS.reduce(
+  const echecs = lesDeploiements.items.filter((d) => d.statut === 'failed').length
+  const reussis = lesDeploiements.items.filter((d) => d.statut === 'live').length
+  const bloquants = lesDeploiements.items.reduce(
     (a, d) => a + d.findings.filter((f) => f.severite === 'eleve').length,
     0,
   )
 
-  const chronometres = DEPLOIEMENTS.filter((d) => d.dureeS)
+  const chronometres = lesDeploiements.items.filter((d) => d.dureeS)
   const dureeMoy = Math.round(
     chronometres.reduce((a, d) => a + (d.dureeS ?? 0), 0) / Math.max(1, chronometres.length),
   )
 
-  const selection = ouvert ? DEPLOIEMENTS.find((d) => d.id === ouvert) : undefined
+  const selection = ouvert ? lesDeploiements.items.find((d) => d.id === ouvert) : undefined
 
   return (
     <div className="space-y-5">
@@ -122,7 +125,7 @@ export default function Deploiements() {
         </div>
         <div className="p-4">
           <DataTable<Deployment>
-            lignes={[...DEPLOIEMENTS].sort((a, b) => b.startedAt.localeCompare(a.startedAt))}
+            lignes={[...lesDeploiements.items].sort((a, b) => b.startedAt.localeCompare(a.startedAt))}
             parPage={10}
             exportable
             placeholderRecherche="Rechercher un commit, une version, une application…"
@@ -276,22 +279,33 @@ export default function Deploiements() {
                       {d.id === ouvert ? 'Replier' : 'Détail'}
                     </Button>
                     {d.statut === 'live' && (
-                      <GatedAction autorise={autorise('app.rollback')} message={refus('app.rollback')}>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          iconBefore={<RotateCcw size={12} />}
-                          onClick={() =>
-                            pousser({
-                              ton: 'ok',
-                              titre: 'Retour arrière déclenché',
-                              detail: `L’artefact précédent de ${appById(d.appId)?.nom} est repromu. Aucun rebuild : la bascule prend quelques secondes.`,
-                            })
-                          }
-                        >
-                          Retour arrière
-                        </Button>
-                      </GatedAction>
+                      <BoutonAction
+                        libelle="Retour arrière"
+                        icone={<RotateCcw size={12} />}
+                        operation={{
+                          action: 'app.rollback',
+                          titre: 'Retour arrière déclenché',
+                          detail: `L’artefact précédent de ${appById(d.appId)?.nom} est repromu. Aucun rebuild : la bascule prend quelques secondes.`,
+                          job: {
+                            type: 'app.rollback',
+                            label: `Retour arrière · ${appById(d.appId)?.nom ?? d.appId} ${d.version}`,
+                            etapes: [
+                              'Repromouvoir l’artefact précédent',
+                              'Basculer le trafic',
+                              'Vérifier les sondes de vivacité',
+                            ],
+                          },
+                          effetFinal: () => {
+                            lesDeploiements.modifier(d.id, { statut: 'rolled_back' })
+                            const precedent = lesDeploiements.items.find(
+                              (x) => x.appId === d.appId && x.id !== d.id && x.statut !== 'failed',
+                            )
+                            if (precedent) {
+                              lesDeploiements.modifier(precedent.id, { statut: 'live' })
+                            }
+                          },
+                        }}
+                      />
                     )}
                   </span>
                 ),

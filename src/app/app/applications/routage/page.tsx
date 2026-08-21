@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { Globe, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MAINTENANT, dateCourte, relatif } from '@/lib/format'
-import type { DomaineApplicatif } from '@/lib/types'
+import type { DomaineApplicatif, ServiceProjet } from '@/lib/types'
 import { SITE_LABEL } from '@/lib/types'
 import {
   DOMAINES_APPLICATIFS,
@@ -465,6 +465,7 @@ export default function Routage() {
 function TiroirBranchement({ open, onClose }: { open: boolean; onClose: () => void }) {
   const executer = useOperation()
   const domaines = useCollection<DomaineApplicatif>('domaines-applicatifs', DOMAINES_APPLICATIFS)
+  const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
   const [hote, setHote] = useState('')
   const [serviceId, setServiceId] = useState(SERVICES_PROJET[0].id)
   const [etape, setEtape] = useState<'saisie' | 'dns'>('saisie')
@@ -473,10 +474,10 @@ function TiroirBranchement({ open, onClose }: { open: boolean; onClose: () => vo
   const [certificat, setCertificat] = useState('acme')
   const [redirection, setRedirection] = useState(true)
 
-  const service = serviceProjetById(serviceId)!
-  const exposables = SERVICES_PROJET.filter(
+  const exposables = lesServices.items.filter(
     (s) => s.type === 'application' || s.type === 'statique',
   )
+  const service = exposables.find((s) => s.id === serviceId) ?? exposables[0]
   const apex = hote.split('.').filter(Boolean).length <= 2
 
   return (

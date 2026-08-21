@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
 import { projetById } from '@/lib/mock'
 import { VueProjet } from './vue'
 
@@ -18,6 +17,5 @@ export async function generateMetadata({
 
 export default async function PageProjet({ params }: { params: Promise<{ projet: string }> }) {
   const { projet } = await params
-  if (!projetById(projet)) notFound()
   return <VueProjet id={projet} />
 }

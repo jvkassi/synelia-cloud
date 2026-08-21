@@ -161,9 +161,12 @@ Deux règles de l'autre atelier restent vraies ici, et sont déjà appliquées :
 - **Identifiants et horodatages déterministes** : `collection.identifiant()`
   compte, les dates partent de `MAINTENANT`. Pas de `Math.random()`, pas
   d'horloge navigateur.
-- **Une route de détail ne fait plus `notFound()`.** Une organisation créée
-  pendant la session n'existe pas dans le jeu figé : un 404 du serveur ferait
-  croire à une panne. C'est la vue cliente qui dit ce qu'elle ne trouve pas.
+- **Une route de détail ne fait plus `notFound()`.** Une organisation ou un
+  projet créé pendant la session n'existe pas dans le jeu figé : un 404 du
+  serveur ferait croire à une panne. C'est la vue cliente qui dit ce qu'elle ne
+  trouve pas — `ProjetIntrouvable` pour l'univers Applications. Corollaire : la
+  vue relit l'entité dans la collection et tolère son absence, donc pas de `!`
+  sur un `find`, et la garde se place **après** tous les hooks.
 
 ### Les exports
 
@@ -337,12 +340,7 @@ lien, deux ancres imbriquées étant du HTML que React refuse d'hydrater.
    C'est le seul chantier de la liste qui se compte en jours.
 5. **Lanceur comme page d'accueil** — l'écran existe et l'explique, mais aucun
    réglage ne le fixe pour les membres au rôle purement utilisateur.
-6. **Univers Applications** — la restructuration autour du projet est arrivée
-   par une autre branche que le câblage des actions : les huit sections
-   `/app/applications/*` s'affichent bien mais leurs boutons de détail ne
-   touchent pas encore l'atelier (paramètres, variables, backup, déploiements).
-   C'est du câblage, les primitives sont là.
-7. **Journal d'audit des actions** — `useOperation()` mute et notifie, mais
+6. **Journal d'audit des actions** — `useOperation()` mute et notifie, mais
    n'écrit pas dans `AUDIT`. Voir « Deux ateliers, un seul retenu ».
 
 Fait depuis : l'assistant `/app/kubernetes/new` (cinq étapes), l'onglet
@@ -350,7 +348,9 @@ Fait depuis : l'assistant `/app/kubernetes/new` (cinq étapes), l'onglet
 de tâches `/app/taches`, le glisser-déposer de composition de serveurs qui livre
 réellement ses lots (`/app/vms/composer`), et le câblage complet de l'espace
 fournisseur sur l'atelier — organisations, catalogue, capacité, marketplace,
-tickets, équipe, conformité, recouvrement, revendeurs.
+tickets, équipe, conformité, recouvrement, revendeurs — puis celui de l'univers
+Applications restructuré : projets, services, variables, déploiements,
+sauvegardes, domaines et paramètres.
 
 ## Style d'écriture
 

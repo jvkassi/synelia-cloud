@@ -72,6 +72,7 @@ export function BoutonAction({
   fullWidth,
   className,
   desactive,
+  nomAccessible,
 }: {
   operation: SpecOperation
   libelle: ReactNode
@@ -82,6 +83,8 @@ export function BoutonAction({
   fullWidth?: boolean
   className?: string
   desactive?: boolean
+  /** Obligatoire quand `libelle` n'est qu'une icône : sinon le bouton est muet. */
+  nomAccessible?: string
 }) {
   const { autorise, refus } = useApp()
   const executer = useOperation()
@@ -98,6 +101,8 @@ export function BoutonAction({
           fullWidth={fullWidth}
           className={className}
           disabled={desactive}
+          aria-label={nomAccessible}
+          title={nomAccessible}
           onClick={() => (confirmation ? setOuvert(true) : executer(operation))}
         >
           {libelle}
