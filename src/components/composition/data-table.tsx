@@ -117,6 +117,33 @@ export function DataTable<T extends { id: string }>({
   const pagees = filtrees.slice((page - 1) * parPage, page * parPage)
   const cell = densite === 'compacte' ? 'px-3 py-1.5' : 'px-3 py-2.5'
 
+  /**
+   * Export réel des lignes filtrées et triées, telles qu'elles sont à l'écran.
+   * Seules les colonnes qui déclarent une `cle` en sortent : le `rendu` est du
+   * JSX, il n'a pas de représentation textuelle fiable.
+   */
+  const exporterCsv = () => {
+    const colonnesExportables = visibles.filter((c) => c.cle)
+    const echappe = (v: string | number) => {
+      const t = String(v)
+      return /[";\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t
+    }
+    const contenu = [
+      colonnesExportables.map((c) => echappe(c.entete)).join(';'),
+      ...filtrees.map((l) => colonnesExportables.map((c) => echappe(c.cle!(l))).join(';')),
+    ].join('\n')
+
+    // Point-virgule et BOM : c'est ce qu'attend un tableur configuré en français.
+    const url = URL.createObjectURL(
+      new Blob([`\ufeff${contenu}`], { type: 'text/csv;charset=utf-8' }),
+    )
+    const lien = document.createElement('a')
+    lien.href = url
+    lien.download = 'export.csv'
+    lien.click()
+    URL.revokeObjectURL(url)
+  }
+
   if (chargement) return <SkeletonTable colonnes={visibles.length} />
 
   const barreOutils =
@@ -199,7 +226,12 @@ export function DataTable<T extends { id: string }>({
             </Popover>
           )}
           {exportable && (
-            <IconButton label="Exporter en CSV" variant="secondary" size="sm">
+            <IconButton
+              label="Exporter en CSV"
+              variant="secondary"
+              size="sm"
+              onClick={exporterCsv}
+            >
               <Download size={13} />
             </IconButton>
           )}

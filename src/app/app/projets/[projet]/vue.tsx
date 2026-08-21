@@ -16,10 +16,11 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateCourte, money, relatif } from '@/lib/format'
-import type { MoteurBase, TypeServiceProjet } from '@/lib/types'
+import type { MoteurBase, Projet, TypeServiceProjet } from '@/lib/types'
 import {
   DOMAINES_APPLICATIFS,
   MOTEURS_DISPONIBLES,
+  PROJETS,
   MOTEUR_LABEL,
   TYPE_SERVICE_LABEL,
   ZONE_APPLICATIVE,
@@ -38,6 +39,8 @@ import { ConfirmDialog, Drawer, Popover } from '@/components/ui/overlay'
 import { CostPreview } from '@/components/composition/flow'
 import { CarteService, ICONE_TYPE } from '@/components/business/projets'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'services', label: 'Services' },
@@ -404,6 +407,7 @@ function TiroirCreation({
 
 function OngletVariables({ projet }: { projet: NonNullable<ReturnType<typeof projetById>> }) {
   const { autorise, refus } = useApp()
+  const projets = useCollection<Projet>('projets', PROJETS)
   const [reveles, setReveles] = useState<Record<string, boolean>>({})
 
   return (
@@ -418,11 +422,61 @@ function OngletVariables({ projet }: { projet: NonNullable<ReturnType<typeof pro
           titre="Variables et secrets du projet"
           sousTitre="Les valeurs secrètes ne sont jamais affichées par défaut, et leur révélation est journalisée."
           actions={
-            <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-              <Button size="sm" iconBefore={<Plus size={13} />}>
-                Ajouter une variable
-              </Button>
-            </GatedAction>
+            <BoutonFormulaire
+              libelle="Ajouter une variable"
+              variant="primary"
+              icone={<Plus size={13} />}
+              action="secrets.update"
+              titre="Ajouter une variable au projet"
+              description="Elle est injectée dans chaque service de l’environnement concerné. Un service peut la redéfinir pour lui seul : la valeur du service gagne toujours."
+              champs={[
+                { id: 'cle', label: 'Clé', placeholder: 'DATABASE_URL', obligatoire: true },
+                { id: 'valeur', label: 'Valeur', placeholder: 'postgres://…', obligatoire: true },
+                {
+                  id: 'portee',
+                  label: 'Portée',
+                  type: 'select',
+                  demi: true,
+                  options: [
+                    { value: 'runtime', label: 'Exécution' },
+                    { value: 'build', label: 'Construction' },
+                  ],
+                },
+                {
+                  id: 'environnement',
+                  label: 'Environnement',
+                  type: 'select',
+                  demi: true,
+                  options: [
+                    { value: 'tous', label: 'Tous les environnements' },
+                    ...projet.environnements.map((e) => ({ value: e, label: e })),
+                  ],
+                },
+                { id: 'secret', label: 'Valeur secrète', type: 'switch', placeholder: 'Jamais réaffichée' },
+              ]}
+              valeursDepart={{ portee: 'runtime', environnement: 'tous' }}
+              libelleValider="Ajouter"
+              operation={(v) => ({
+                titre: `Variable ${v.cle} ajoutée`,
+                detail: 'Prise en compte au prochain déploiement des services concernés.',
+                effet: () =>
+                  projets.modifier(projet.id, (p) => ({
+                    variables: [
+                      ...p.variables,
+                      {
+                        cle: String(v.cle),
+                        valeur: v.secret ? undefined : String(v.valeur),
+                        secret: Boolean(v.secret),
+                        portee: v.portee as 'build' | 'runtime',
+                        environnements:
+                          v.environnement === 'tous'
+                            ? p.environnements
+                            : [String(v.environnement)],
+                      },
+                    ],
+                  })),
+              })}
+            />
           }
         />
         <div className="no-scrollbar -mx-4 overflow-x-auto px-4">
@@ -625,8 +679,13 @@ function OngletDomaines({ projetId }: { projetId: string }) {
 
 function OngletParametres({ projet }: { projet: NonNullable<ReturnType<typeof projetById>> }) {
   const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const projets = useCollection<Projet>('projets', PROJETS)
   const services = servicesDuProjet(projet.id)
   const [suppression, setSuppression] = useState(false)
+  const [nom, setNom] = useState(projet.nom)
+  const [description, setDescription] = useState(projet.description)
+  const [approbations, setApprobations] = useState<string[]>([])
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -637,10 +696,14 @@ function OngletParametres({ projet }: { projet: NonNullable<ReturnType<typeof pr
         />
         <div className="space-y-3.5">
           <Field label="Nom">
-            <Input defaultValue={projet.nom} />
+            <Input value={nom} onChange={(e) => setNom(e.target.value)} />
           </Field>
           <Field label="Description">
-            <Textarea rows={3} defaultValue={projet.description} />
+            <Textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
           </Field>
           <Field
             label="Espace Cloud de rattachement"
@@ -651,11 +714,18 @@ function OngletParametres({ projet }: { projet: NonNullable<ReturnType<typeof pr
             </Select>
           </Field>
         </div>
-        <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-          <Button size="sm" className="mt-4">
-            Enregistrer
-          </Button>
-        </GatedAction>
+        <BoutonAction
+          libelle="Enregistrer"
+          variant="primary"
+          className="mt-4"
+          desactive={nom === projet.nom && description === projet.description}
+          operation={{
+            action: 'app.deploy',
+            titre: 'Projet enregistré',
+            detail: 'Le nom apparaît désormais ainsi dans les journaux, la facturation et le showback.',
+            effet: () => projets.modifier(projet.id, { nom, description }),
+          }}
+        />
       </Card>
 
       <div className="space-y-4">
@@ -688,19 +758,46 @@ function OngletParametres({ projet }: { projet: NonNullable<ReturnType<typeof pr
                   </Badge>
                 ) : (
                   <Switch
-                    checked={false}
-                    onChange={() => {}}
-                    label="Approbation requise"
+                    checked={approbations.includes(e)}
+                    onChange={(v) => {
+                      setApprobations((prev) => (v ? [...prev, e] : prev.filter((x) => x !== e)))
+                      executer({
+                        action: 'app.deploy',
+                        titre: v
+                          ? `Approbation requise sur ${e}`
+                          : `Approbation retirée sur ${e}`,
+                        detail: v
+                          ? 'Une personne différente de l’auteur devra approuver chaque déploiement.'
+                          : undefined,
+                      })
+                    }}
+                    label={`Approbation requise sur ${e}`}
                   />
                 )}
               </div>
             ))}
           </div>
-          <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-            <Button size="sm" variant="secondary" className="mt-3" iconBefore={<Plus size={13} />}>
-              Ajouter un environnement
-            </Button>
-          </GatedAction>
+          <BoutonFormulaire
+            libelle="Ajouter un environnement"
+            className="mt-3"
+            icone={<Plus size={13} />}
+            action="app.deploy"
+            titre="Ajouter un environnement"
+            description="Un environnement isole ses services, ses variables et ses domaines. Il ne duplique pas les services : vous les créez dedans."
+            champs={[
+              { id: 'nom', label: 'Nom', placeholder: 'Recette', obligatoire: true },
+              { id: 'approbation', label: 'Approbation requise avant déploiement', type: 'switch', placeholder: 'Recommandé en production' },
+            ]}
+            libelleValider="Ajouter"
+            operation={(v) => ({
+              titre: `Environnement ${v.nom} ajouté`,
+              detail: 'Aucun service ne s’y trouve encore.',
+              effet: () =>
+                projets.modifier(projet.id, (p) => ({
+                  environnements: [...p.environnements, String(v.nom)],
+                })),
+            })}
+          />
         </Card>
 
         <Card className="border-err/40">

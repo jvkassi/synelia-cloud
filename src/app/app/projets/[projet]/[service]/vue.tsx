@@ -15,10 +15,11 @@ import {
   Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dateHeure, duree, money, relatif } from '@/lib/format'
+import { MAINTENANT, dateHeure, duree, money, relatif } from '@/lib/format'
 import type { DomaineApplicatif, ServiceProjet } from '@/lib/types'
 import {
   DOMAINES_APPLICATIFS,
+  SERVICES_PROJET,
   EVENEMENTS_SUPERVISION,
   LOGS_EXECUTION,
   MOTEUR_LABEL,
@@ -44,6 +45,13 @@ import { ConfigurationServicePanel } from '@/components/business/configuration-s
 import { configurationDuService } from '@/lib/configurations'
 import { modeleBySlug } from '@/lib/mock/modeles'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+
+/** Raccourci : la collection des services d'un projet, partout dans ce fichier. */
+function useServices() {
+  return useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+}
 
 /**
  * Les onglets dépendent du type — une base n'a pas de domaine, un cron n'a pas
@@ -88,7 +96,8 @@ function ongletsDu(service: ServiceProjet) {
 }
 
 export function VueService({ id }: { id: string }) {
-  const service = serviceProjetById(id)!
+  const services = useServices()
+  const service = services.items.find((x) => x.id === id)!
   const projet = projetById(service.projetId)!
   const domaines = domainesDuService(id)
   const onglets = ongletsDu(service)
@@ -149,15 +158,57 @@ export function VueService({ id }: { id: string }) {
                 <ExternalLink size={13} />
               </ButtonLink>
             )}
-            <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-              {service.statut === 'stopped' ? (
-                <Button iconBefore={<Play size={14} />}>Démarrer</Button>
-              ) : (
-                <Button iconBefore={<RefreshCw size={14} />}>
-                  {service.type === 'base' ? 'Redémarrer' : 'Redéployer'}
-                </Button>
-              )}
-            </GatedAction>
+            {service.statut === 'stopped' ? (
+              <BoutonAction
+                libelle="Démarrer"
+                variant="primary"
+                size="md"
+                icone={<Play size={14} />}
+                operation={{
+                  action: 'app.deploy',
+                  ton: 'info',
+                  titre: `Démarrage de ${service.nom}`,
+                  effet: () => services.modifier(service.id, { statut: 'building' }),
+                  job: {
+                    type: 'service.start',
+                    label: `Démarrage · ${service.nom}`,
+                    etapes: ['Allouer les ressources', 'Démarrer le conteneur', 'Attendre la sonde de santé'],
+                    dureeEtapeMs: 900,
+                  },
+                  effetFinal: () => services.modifier(service.id, { statut: 'running' }),
+                }}
+              />
+            ) : (
+              <BoutonAction
+                libelle={service.type === 'base' ? 'Redémarrer' : 'Redéployer'}
+                variant="primary"
+                size="md"
+                icone={<RefreshCw size={14} />}
+                operation={{
+                  action: 'app.deploy',
+                  ton: 'info',
+                  titre:
+                    service.type === 'base'
+                      ? `Redémarrage de ${service.nom}`
+                      : `Redéploiement de ${service.nom}`,
+                  detail:
+                    service.type === 'base'
+                      ? 'Les connexions en cours sont fermées proprement.'
+                      : 'Déploiement sans coupure : l’ancienne version sert le trafic jusqu’à la bascule.',
+                  effet: () => services.modifier(service.id, { statut: 'building' }),
+                  job: {
+                    type: service.type === 'base' ? 'service.restart' : 'service.deploy',
+                    label: `${service.type === 'base' ? 'Redémarrage' : 'Redéploiement'} · ${service.nom}`,
+                    etapes:
+                      service.type === 'base'
+                        ? ['Fermer les connexions', 'Redémarrer le moteur', 'Vérifier la réplication']
+                        : ['Construire l’image', 'Démarrer la nouvelle version', 'Basculer le trafic'],
+                  },
+                  effetFinal: () =>
+                    services.modifier(service.id, { statut: 'running', derniereMaj: MAINTENANT }),
+                }}
+              />
+            )}
           </>
         }
       />
@@ -344,6 +395,7 @@ function Apercu({
 
 function Connexion({ service }: { service: ServiceProjet }) {
   const { autorise, refus } = useApp()
+  const services = useServices()
   const base = service.base!
   const uri = MOTEUR_URI[service.moteur!](base)
   const [expose, setExpose] = useState(service.exposeExterne?.actif ?? false)
@@ -425,11 +477,33 @@ function Connexion({ service }: { service: ServiceProjet }) {
                       <span className="font-mono">{s}</span>
                     </Badge>
                   ))}
-                  <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-                    <Button size="sm" variant="ghost" iconBefore={<Plus size={12} />}>
-                      Ajouter une plage
-                    </Button>
-                  </GatedAction>
+                  <BoutonFormulaire
+                    libelle="Ajouter une plage"
+                    variant="ghost"
+                    icone={<Plus size={12} />}
+                    action="app.deploy"
+                    titre="Autoriser une plage d’adresses"
+                    description="Chaque plage ouverte élargit la surface d’attaque. Une application du même projet n’en a pas besoin : elle passe par le réseau privé."
+                    champs={[
+                      { id: 'plage', label: 'Plage', placeholder: '102.176.9.0/24', obligatoire: true },
+                    ]}
+                    libelleValider="Autoriser"
+                    operation={(v) => ({
+                      ton: 'warn',
+                      titre: `${v.plage} autorisée`,
+                      detail: 'Retirez-la dès que l’opération qui l’exigeait est terminée.',
+                      effet: () =>
+                        services.modifier(service.id, (x) => ({
+                          exposeExterne: {
+                            ...(x.exposeExterne ?? { actif: true }),
+                            sourcesAutorisees: [
+                              ...(x.exposeExterne?.sourcesAutorisees ?? []),
+                              String(v.plage),
+                            ],
+                          },
+                        })),
+                    })}
+                  />
                 </div>
               </div>
             </div>
@@ -492,11 +566,21 @@ function Sauvegardes({ service }: { service: ServiceProjet }) {
             titre="Points de restauration"
             sousTitre="Restaurer crée toujours une nouvelle base. L’originale n’est jamais écrasée."
             actions={
-              <GatedAction autorise={autorise('backup.restore')} message={refus('backup.restore')}>
-                <Button size="sm" variant="secondary" iconBefore={<Download size={13} />}>
-                  Sauvegarder maintenant
-                </Button>
-              </GatedAction>
+              <BoutonAction
+                libelle="Sauvegarder maintenant"
+                icone={<Download size={13} />}
+                operation={{
+                  action: 'backup.plan.write',
+                  titre: `Sauvegarde de ${service.nom} lancée`,
+                  detail: `Destination : ${s.destination}`,
+                  job: {
+                    type: 'base.backup',
+                    label: `Sauvegarde · ${service.nom}`,
+                    etapes: ['Geler les écritures', 'Écrire la sauvegarde', 'Vérifier l’empreinte'],
+                    dureeEtapeMs: 900,
+                  },
+                }}
+              />
             }
           />
           <div className="space-y-2">
@@ -516,11 +600,22 @@ function Sauvegardes({ service }: { service: ServiceProjet }) {
                       .slice(0, 10)}
                   </span>
                 </span>
-                <GatedAction autorise={autorise('backup.restore')} message={refus('backup.restore')}>
-                  <Button size="sm" variant="ghost">
-                    Restaurer sur une nouvelle base
-                  </Button>
-                </GatedAction>
+                <BoutonAction
+                  libelle="Restaurer sur une nouvelle base"
+                  variant="ghost"
+                  operation={{
+                    action: 'backup.restore',
+                    ton: 'info',
+                    titre: `Restauration du ${dateHeure(p.date)}`,
+                    detail: 'Une nouvelle base est créée : l’originale n’est jamais écrasée.',
+                    job: {
+                      type: 'base.restore',
+                      label: `Restauration · ${service.nom}`,
+                      etapes: ['Créer la base cible', 'Charger la sauvegarde', 'Vérifier l’intégrité'],
+                      dureeEtapeMs: 1100,
+                    },
+                  }}
+                />
               </div>
             ))}
           </div>
@@ -540,11 +635,27 @@ function Sauvegardes({ service }: { service: ServiceProjet }) {
               <Input defaultValue={`${service.base?.nom}_restore`} className="font-mono" />
             </Field>
           </div>
-          <GatedAction autorise={autorise('backup.restore')} message={refus('backup.restore')}>
-            <Button size="sm" className="mt-3">
-              Lancer la restauration
-            </Button>
-          </GatedAction>
+          <BoutonAction
+            libelle="Lancer la restauration"
+            variant="primary"
+            className="mt-3"
+            operation={{
+              action: 'backup.restore',
+              ton: 'info',
+              titre: 'Restauration à un instant précis lancée',
+              detail: 'Les journaux de transaction sont rejoués jusqu’à la minute demandée.',
+              job: {
+                type: 'base.pitr',
+                label: `Restauration à un instant précis · ${service.nom}`,
+                etapes: [
+                  'Créer la base cible',
+                  'Charger la sauvegarde de base',
+                  'Rejouer les journaux',
+                  'Vérifier l’intégrité',
+                ],
+              },
+            }}
+          />
         </Card>
       </div>
 
@@ -660,6 +771,7 @@ function Executions({ service }: { service: ServiceProjet }) {
 function FileAttente({ service }: { service: ServiceProjet }) {
   const f = service.file!
   const { autorise, refus } = useApp()
+  const services = useServices()
   const [concurrence, setConcurrence] = useState(f.concurrence)
 
   return (
@@ -699,11 +811,24 @@ function FileAttente({ service }: { service: ServiceProjet }) {
           >
             <Slider min={1} max={16} value={concurrence} onChange={setConcurrence} unite="tâches" />
           </Field>
-          <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-            <Button size="sm" className="mt-3" disabled={concurrence === f.concurrence}>
-              Appliquer
-            </Button>
-          </GatedAction>
+          <BoutonAction
+            libelle="Appliquer"
+            variant="primary"
+            className="mt-3"
+            desactive={concurrence === f.concurrence}
+            operation={{
+              action: 'app.deploy',
+              titre: `Concurrence portée à ${concurrence} tâches`,
+              detail:
+                concurrence > f.concurrence
+                  ? 'Au-delà de la capacité de la base, cela déplace le goulot sans rien accélérer.'
+                  : undefined,
+              effet: () =>
+                services.modifier(service.id, (x) => ({
+                  file: x.file ? { ...x.file, concurrence } : undefined,
+                })),
+            }}
+          />
         </Card>
 
         <Card>
@@ -729,11 +854,19 @@ function FileAttente({ service }: { service: ServiceProjet }) {
                 </span>
                 <span className="flex shrink-0 items-center gap-2">
                   <span className="tnum text-[11px] text-g-500">{m.tentatives} tentatives</span>
-                  <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-                    <Button size="sm" variant="ghost">
-                      Rejouer
-                    </Button>
-                  </GatedAction>
+                  <BoutonAction
+                    libelle="Rejouer"
+                    variant="ghost"
+                    operation={{
+                      action: 'app.deploy',
+                      ton: 'info',
+                      titre: `Message ${m.id} rejoué`,
+                      detail:
+                        m.tentatives > 3
+                          ? 'Cinq tentatives ont déjà échoué : corrigez la cause avant de rejouer, sinon il repartira en échec.'
+                          : undefined,
+                    }}
+                  />
                 </span>
               </div>
             ))}
@@ -782,11 +915,15 @@ function Domaines({
           sousTitre="Chaque entrée route un hôte et un chemin vers un port du conteneur."
           actions={
             <span className="flex flex-wrap gap-2">
-              <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-                <Button size="sm" variant="secondary" iconBefore={<Globe size={13} />}>
-                  Générer une adresse offerte
-                </Button>
-              </GatedAction>
+              <BoutonAction
+                libelle="Générer une adresse offerte"
+                icone={<Globe size={13} />}
+                operation={{
+                  action: 'app.deploy',
+                  titre: 'Adresse offerte générée',
+                  detail: `${service.nom}-${service.projetId}.apps.synelia.cloud — certificat posé, prête à servir.`,
+                }}
+              />
               <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
                 <Button size="sm" iconBefore={<Plus size={13} />} onClick={() => setAjout(true)}>
                   Brancher mon domaine
@@ -905,9 +1042,22 @@ export function LigneDomaine({
             </div>
           </div>
           <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="secondary" iconBefore={<RefreshCw size={12} />}>
-              Vérifier maintenant
-            </Button>
+            <BoutonAction
+              libelle="Vérifier maintenant"
+              icone={<RefreshCw size={12} />}
+              operation={{
+                action: 'app.deploy',
+                ton: 'info',
+                titre: `Vérification DNS de ${d.hote}`,
+                detail: 'Nos résolveurs sont interrogés sans cache.',
+                job: {
+                  type: 'domaine.verify',
+                  label: `Vérification DNS · ${d.hote}`,
+                  etapes: ['Interroger les résolveurs', 'Émettre le certificat'],
+                  dureeEtapeMs: 900,
+                },
+              }}
+            />
             {d.verification.verifieLe && (
               <span className="text-[11px] text-g-500">
                 dernière vérification {relatif(d.verification.verifieLe)}
@@ -1163,11 +1313,24 @@ function Variables({ service }: { service: ServiceProjet }) {
           titre="Variables propres au service"
           sousTitre="Elles écrasent la valeur héritée du projet, pour ce service seulement."
           actions={
-            <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-              <Button size="sm" iconBefore={<Plus size={13} />}>
-                Ajouter
-              </Button>
-            </GatedAction>
+            <BoutonFormulaire
+              libelle="Ajouter"
+              variant="primary"
+              icone={<Plus size={13} />}
+              action="secrets.update"
+              titre="Ajouter une variable"
+              description="Une variable propre au service écrase celle héritée du projet. Une variable marquée secrète n’est plus jamais réaffichée."
+              champs={[
+                { id: 'cle', label: 'Clé', placeholder: 'FEATURE_FLAG_X', obligatoire: true },
+                { id: 'valeur', label: 'Valeur', placeholder: 'true', obligatoire: true },
+                { id: 'secret', label: 'Valeur secrète', type: 'switch', placeholder: 'Masquée après enregistrement' },
+              ]}
+              libelleValider="Ajouter"
+              operation={(v) => ({
+                titre: `Variable ${v.cle} ajoutée`,
+                detail: 'Prise en compte au prochain déploiement du service.',
+              })}
+            />
           }
         />
         <div className="space-y-2">
@@ -1308,6 +1471,8 @@ function Supervision({ service }: { service: ServiceProjet }) {
 
 function Avance({ service }: { service: ServiceProjet }) {
   const { autorise, refus } = useApp()
+  const services = useServices()
+  const executer = useOperation()
   const [cpu, setCpu] = useState(service.ressources.cpu)
   const [ram, setRam] = useState(service.ressources.ramMo / 1024)
   const [suppression, setSuppression] = useState(false)
@@ -1334,15 +1499,25 @@ function Avance({ service }: { service: ServiceProjet }) {
               <span className="tnum text-[13px] font-bold text-ink">{money(coutEstime)}</span>
             </div>
           </div>
-          <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-            <Button
-              size="sm"
-              className="mt-3"
-              disabled={cpu === service.ressources.cpu && ram === service.ressources.ramMo / 1024}
-            >
-              Appliquer
-            </Button>
-          </GatedAction>
+          <BoutonAction
+            libelle="Appliquer"
+            variant="primary"
+            className="mt-3"
+            desactive={cpu === service.ressources.cpu && ram === service.ressources.ramMo / 1024}
+            operation={{
+              action: 'app.deploy',
+              titre: `${service.nom} redimensionné`,
+              detail:
+                ram < service.ressources.ramMo / 1024
+                  ? 'La mémoire diminue : le service redémarre.'
+                  : 'Appliqué à chaud, sans redémarrage.',
+              effet: () =>
+                services.modifier(service.id, (x) => ({
+                  ressources: { ...x.ressources, cpu, ramMo: ram * 1024 },
+                  coutMensuel: coutEstime,
+                })),
+            }}
+          />
         </Card>
 
         <Card>
@@ -1386,11 +1561,18 @@ function Avance({ service }: { service: ServiceProjet }) {
                   Libère processeur et mémoire. Les volumes restent facturés.
                 </span>
               </span>
-              <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-                <Button size="sm" variant="secondary" iconBefore={<Square size={12} />}>
-                  Arrêter
-                </Button>
-              </GatedAction>
+              <BoutonAction
+                libelle="Arrêter"
+                icone={<Square size={12} />}
+                desactive={service.statut === 'stopped'}
+                operation={{
+                  action: 'app.deploy',
+                  ton: 'warn',
+                  titre: `${service.nom} arrêté`,
+                  detail: 'Processeur et mémoire libérés. Les volumes restent facturés.',
+                  effet: () => services.modifier(service.id, { statut: 'stopped' }),
+                }}
+              />
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-err/40 bg-err-bg px-3 py-2.5">
               <span className="min-w-0">
@@ -1433,7 +1615,18 @@ function Avance({ service }: { service: ServiceProjet }) {
       <ConfirmDialog
         open={suppression}
         onClose={() => setSuppression(false)}
-        onConfirm={() => setSuppression(false)}
+        onConfirm={() =>
+          executer({
+            action: 'app.deploy',
+            ton: 'err',
+            titre: `Service ${service.nom} supprimé`,
+            detail:
+              service.type === 'base'
+                ? 'La base, ses volumes et ses sauvegardes hors rétention légale sont détruits.'
+                : 'Le service et ses volumes sont détruits ; ses domaines cessent de répondre.',
+            effet: () => services.supprimer(service.id),
+          })
+        }
         titre={`Supprimer le service ${service.nom}`}
         ressource={service.nom}
         pertes={
@@ -1491,6 +1684,7 @@ function Configuration({ service }: { service: ServiceProjet }) {
 /** Sièges et licences — la vue « qui consomme quoi » du contrat d'intégration. */
 function Sieges({ service }: { service: ServiceProjet }) {
   const { autorise, refus } = useApp()
+  const services = useServices()
   const sieges = service.sieges
   if (!sieges) return null
 
@@ -1519,9 +1713,33 @@ function Sieges({ service }: { service: ServiceProjet }) {
           titre="Qui consomme quoi"
           sousTitre="Un siège attribué est facturé, qu’il soit utilisé ou non. Le retirer libère la facturation au prorata du jour."
           actions={
-            <GatedAction autorise={autorise('seat.assign')} message={refus('seat.assign')}>
-              <Button size="sm">Attribuer un siège</Button>
-            </GatedAction>
+            <BoutonFormulaire
+              libelle="Attribuer un siège"
+              variant="primary"
+              action="seat.assign"
+              titre="Attribuer un siège"
+              description="Un siège attribué est facturé, qu’il soit utilisé ou non. La personne accède au service en SSO."
+              champs={[
+                { id: 'membre', label: 'Adresse électronique', placeholder: 'prenom.nom@dba.africa', obligatoire: true },
+              ]}
+              libelleValider="Attribuer"
+              operation={(v) => ({
+                titre: `Siège attribué à ${v.membre}`,
+                detail:
+                  libres === 0
+                    ? 'Aucun siège libre : un siège supplémentaire est souscrit, facturé au prorata.'
+                    : `${libres - 1} siège(s) restant(s).`,
+                effet: () =>
+                  services.modifier(service.id, (x) => ({
+                    sieges: x.sieges
+                      ? {
+                          attribues: x.sieges.attribues + 1,
+                          souscrits: Math.max(x.sieges.souscrits, x.sieges.attribues + 1),
+                        }
+                      : undefined,
+                  })),
+              })}
+            />
           }
         />
         <ul className="divide-y divide-g-100">
@@ -1541,11 +1759,23 @@ function Sieges({ service }: { service: ServiceProjet }) {
                 <Badge tone={m.u.startsWith('inactif') ? 'warn' : 'ok'} size="sm" dot>
                   Actif
                 </Badge>
-                <GatedAction autorise={autorise('seat.assign')} message={refus('seat.assign')}>
-                  <Button variant="ghost" size="sm">
-                    Retirer
-                  </Button>
-                </GatedAction>
+                <BoutonAction
+                  libelle="Retirer"
+                  variant="ghost"
+                  operation={{
+                    action: 'seat.assign',
+                    ton: 'warn',
+                    titre: `Siège de ${m.n} retiré`,
+                    detail:
+                      'La personne est déconnectée, ses données restent, et le siège se réattribue immédiatement.',
+                    effet: () =>
+                      services.modifier(service.id, (x) => ({
+                        sieges: x.sieges
+                          ? { ...x.sieges, attribues: Math.max(0, x.sieges.attribues - 1) }
+                          : undefined,
+                      })),
+                  }}
+                />
               </span>
             </li>
           ))}
@@ -1562,6 +1792,7 @@ function Sieges({ service }: { service: ServiceProjet }) {
 /** Cycle de vie : versions qualifiées, fenêtre de mise à jour, retour arrière. */
 function Versions({ service }: { service: ServiceProjet }) {
   const { autorise, refus } = useApp()
+  const services = useServices()
   const modele = service.modeleSlug ? modeleBySlug(service.modeleSlug) : undefined
   if (!modele) return null
 
@@ -1572,9 +1803,48 @@ function Versions({ service }: { service: ServiceProjet }) {
           titre="Version déployée"
           sousTitre="Nous qualifions chaque version avant de la proposer : jamais de « latest », jamais de mise à jour non annoncée."
           actions={
-            <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-              <Button size="sm">Planifier la mise à jour</Button>
-            </GatedAction>
+            <BoutonFormulaire
+              libelle="Planifier la mise à jour"
+              variant="primary"
+              action="app.deploy"
+              titre={`Mettre à jour ${modele.solution}`}
+              description="Nous qualifions chaque version avant de la proposer. Un retour arrière reste possible pendant sept jours."
+              champs={[
+                {
+                  id: 'fenetre',
+                  label: 'Fenêtre',
+                  type: 'select',
+                  options: [
+                    { value: 'dimanche', label: 'Prochaine fenêtre · dimanche 22h00' },
+                    { value: 'maintenant', label: 'Maintenant · coupure de quelques minutes' },
+                  ],
+                },
+              ]}
+              valeursDepart={{ fenetre: 'dimanche' }}
+              libelleValider="Planifier"
+              operation={(v) =>
+                v.fenetre === 'maintenant'
+                  ? {
+                      ton: 'info',
+                      titre: `Mise à jour de ${modele.solution} lancée`,
+                      job: {
+                        type: 'modele.update',
+                        label: `Mise à jour ${modele.solution} · ${service.nom}`,
+                        etapes: [
+                          'Snapshot avant opération',
+                          'Appliquer le nouveau chart',
+                          'Vérifier le démarrage',
+                        ],
+                      },
+                      effetFinal: () =>
+                        services.modifier(service.id, { derniereMaj: MAINTENANT }),
+                    }
+                  : {
+                      titre: 'Mise à jour planifiée',
+                      detail: 'Annonce envoyée sept jours avant, rappel vingt-quatre heures avant.',
+                    }
+              }
+            />
           }
         />
         <KeyValueList
@@ -1613,9 +1883,31 @@ function Versions({ service }: { service: ServiceProjet }) {
                 <span className="mt-0.5 block text-[11.5px] leading-snug text-g-500">{h.n}</span>
               </span>
               {!h.a && (
-                <Button variant="ghost" size="sm">
-                  Revenir à cette version
-                </Button>
+                <BoutonAction
+                  libelle="Revenir à cette version"
+                  variant="ghost"
+                  operation={{
+                    action: 'app.rollback',
+                    ton: 'warn',
+                    titre: `Retour à la version ${h.v}`,
+                    detail: 'Les données créées depuis la mise à jour sont conservées ; le schéma revient en arrière.',
+                    job: {
+                      type: 'modele.rollback',
+                      label: `Retour arrière · ${service.nom} → ${h.v}`,
+                      etapes: ['Snapshot de l’état courant', 'Redéployer la version cible', 'Vérifier le démarrage'],
+                    },
+                  }}
+                  confirmation={{
+                    ressource: service.nom,
+                    titre: `Revenir à la version ${h.v} ?`,
+                    pertes: [
+                      'Le schéma de données revient à celui de cette version',
+                      'Les fonctionnalités introduites depuis disparaissent',
+                      'Un nouveau retour arrière ne sera possible que pendant sept jours',
+                    ],
+                    libelleAction: 'Revenir à cette version',
+                  }}
+                />
               )}
             </li>
           ))}
@@ -1638,9 +1930,25 @@ function Reversibilite({ service }: { service: ServiceProjet }) {
           titre="Sortir de ce service"
           sousTitre="L’export se fait dans le format natif de la solution, documenté, et nous testons sa réimportation comme nous testons nos restaurations."
           actions={
-            <GatedAction autorise={autorise('compliance.export')} message={refus('compliance.export')}>
-              <Button size="sm">Générer un export complet</Button>
-            </GatedAction>
+            <BoutonAction
+              libelle="Générer un export complet"
+              variant="primary"
+              operation={{
+                action: 'compliance.export',
+                titre: `Export de ${modele.solution} demandé`,
+                detail: `Format natif documenté · ${modele.sauvegardeParDefaut.inclut.join(' · ')}. Mise à disposition sous 24 h.`,
+                job: {
+                  type: 'service.export',
+                  label: `Export complet · ${service.nom}`,
+                  etapes: [
+                    'Geler une copie cohérente',
+                    'Exporter au format natif',
+                    'Vérifier la réimportation sur une instance vierge',
+                    'Publier le lien de téléchargement',
+                  ],
+                },
+              }}
+            />
           }
         />
         <KeyValueList
