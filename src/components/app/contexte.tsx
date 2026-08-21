@@ -12,6 +12,7 @@ import type { Role } from '@/lib/types'
 import { can, messageRefus, type Permission } from '@/lib/rbac'
 import { ESPACES, ESPACE_DEFAUT } from '@/lib/mock/iaas'
 import { ROLE_COURANT_DEFAUT } from '@/lib/mock/orgs'
+import { AtelierProvider } from './atelier'
 
 export interface Toast {
   id: string
@@ -74,7 +75,13 @@ export function AppProvider({
     [role, espaceId, toasts, pousser, retirer],
   )
 
-  return <Ctx.Provider value={valeur}>{children}</Ctx.Provider>
+  // L'atelier est monté ici plutôt que dans chaque layout : tout écran qui a
+  // accès au rôle et aux notifications a aussi besoin de l'état mutable.
+  return (
+    <Ctx.Provider value={valeur}>
+      <AtelierProvider>{children}</AtelierProvider>
+    </Ctx.Provider>
+  )
 }
 
 export function useApp(): CtxValeur {

@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { Download, Plus, ShieldAlert, Trash2 } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { dateCourte, num, pct } from '@/lib/format'
-import { LOAD_BALANCERS, LOGS_EXECUTION, espaceById } from '@/lib/mock'
+import { LOAD_BALANCERS, LOGS_EXECUTION, VMS, espaceById } from '@/lib/mock'
+import type { LoadBalancer, VM } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, IconButton } from '@/components/ui/button'
 import { CopyField, GatedAction, Tabs } from '@/components/ui/display'
@@ -13,6 +14,30 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { GrilleSparkCharts, LogPeek } from '@/components/business/observabilite'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+
+interface Exception {
+  id: string
+  chemin: string
+  regle: string
+  motif: string
+}
+
+const EXCEPTIONS_GRAINE: Exception[] = [
+  {
+    id: 'exc-acme',
+    chemin: '/.well-known/acme-challenge/*',
+    regle: 'Toutes les règles',
+    motif: 'Renouvellement automatique du certificat',
+  },
+  {
+    id: 'exc-upload',
+    chemin: '/v1/documents/upload',
+    regle: 'REQUEST-941 (XSS)',
+    motif: 'Faux positif sur les documents contenant du HTML',
+  },
+]
 
 const ONGLETS = [
   { id: 'apercu', label: 'Vue d’ensemble' },
@@ -24,12 +49,17 @@ const ONGLETS = [
 ]
 
 export function VueLb({ id }: { id: string }) {
-  const lb = LOAD_BALANCERS.find((l) => l.id === id)!
-  const espace = espaceById(lb.espaceId)
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const lbs = useCollection<LoadBalancer>('load-balancers', LOAD_BALANCERS)
+  const parc = useCollection<VM>('vms', VMS)
+  const exceptions = useCollection<Exception>(`waf-exceptions-${id}`, EXCEPTIONS_GRAINE)
   const [onglet, setOnglet] = useState('apercu')
-  const [drains, setDrains] = useState<string[]>(
-    lb.pool.filter((p) => p.sante === 'drain').map((p) => p.targetId),
+
+  const lb = lbs.items.find((l) => l.id === id)!
+  const espace = espaceById(lb.espaceId)
+  const candidats = parc.items.filter(
+    (v) => v.espaceId === lb.espaceId && !lb.pool.some((p) => p.targetId === v.id),
   )
 
   const onglets = lb.layer === 'l7' ? ONGLETS : ONGLETS.filter((o) => o.id !== 'regles' && o.id !== 'waf')
@@ -196,11 +226,60 @@ export function VueLb({ id }: { id: string }) {
               titre="Pool de backends"
               sousTitre="État de santé évalué en direct par le health check."
               actions={
-                <GatedAction autorise={autorise('lb.create')} message={refus('lb.create')}>
-                  <Button size="sm" iconBefore={<Plus size={13} />}>
-                    Ajouter une cible
-                  </Button>
-                </GatedAction>
+                <BoutonFormulaire
+                  libelle="Ajouter une cible"
+                  variant="primary"
+                  icone={<Plus size={13} />}
+                  action="lb.create"
+                  titre="Ajouter une cible au pool"
+                  description="La cible n’entre dans la répartition qu’après validation du health check."
+                  champs={[
+                    {
+                      id: 'cible',
+                      label: 'Machine',
+                      type: 'select',
+                      options: candidats.map((v) => ({ value: v.id, label: v.nom })),
+                    },
+                    { id: 'poids', label: 'Poids', type: 'nombre', demi: true, min: 1, max: 100 },
+                  ]}
+                  valeursDepart={{ poids: 10 }}
+                  libelleValider="Ajouter"
+                  operation={(v) => {
+                    const cible = candidats.find((c) => c.id === v.cible)
+                    return {
+                      titre: cible ? `${cible.nom} ajoutée au pool` : 'Cible ajoutée',
+                      detail: 'En attente de deux health checks consécutifs réussis.',
+                      effet: () =>
+                        cible
+                          ? lbs.modifier(lb.id, (l) => ({
+                              pool: [
+                                ...l.pool,
+                                {
+                                  targetId: cible.id,
+                                  targetLabel: cible.nom,
+                                  poids: Number(v.poids),
+                                  sante: 'drain' as const,
+                                },
+                              ],
+                            }))
+                          : undefined,
+                      job: {
+                        type: 'lb.pool.add',
+                        label: `Ajout au pool · ${lb.nom}`,
+                        etapes: ['Déclarer la cible', 'Attendre deux health checks réussis'],
+                        dureeEtapeMs: 1100,
+                      },
+                      effetFinal: () =>
+                        cible
+                          ? lbs.modifier(lb.id, (l) => ({
+                              pool: l.pool.map((p) =>
+                                p.targetId === cible.id ? { ...p, sante: 'ok' as const } : p,
+                              ),
+                            }))
+                          : undefined,
+                    }
+                  }}
+                />
               }
             />
             <div className="overflow-x-auto">
@@ -216,7 +295,7 @@ export function VueLb({ id }: { id: string }) {
                 </thead>
                 <tbody>
                   {lb.pool.map((p) => {
-                    const enDrain = drains.includes(p.targetId)
+                    const enDrain = p.sante === 'drain'
                     const poidsTotal = lb.pool.reduce((a, x) => a + x.poids, 0) || 1
                     return (
                       <tr
@@ -235,9 +314,18 @@ export function VueLb({ id }: { id: string }) {
                         <td className="px-3 py-2.5">
                           <Input
                             type="number"
-                            defaultValue={p.poids}
+                            value={p.poids}
                             className="w-20"
                             aria-label="Poids"
+                            onChange={(e) =>
+                              lbs.modifier(lb.id, (l) => ({
+                                pool: l.pool.map((x) =>
+                                  x.targetId === p.targetId
+                                    ? { ...x, poids: Number(e.target.value) }
+                                    : x,
+                                ),
+                              }))
+                            }
                           />
                         </td>
                         <td className="px-3 py-2.5">
@@ -259,11 +347,10 @@ export function VueLb({ id }: { id: string }) {
                         <td className="px-3 py-2.5">
                           <Switch
                             checked={enDrain}
-                            onChange={(v) => {
-                              setDrains((prev) =>
-                                v ? [...prev, p.targetId] : prev.filter((x) => x !== p.targetId),
-                              )
-                              pousser({
+                            label={`Mode drain de ${p.targetLabel}`}
+                            onChange={(v) =>
+                              executer({
+                                action: 'lb.create',
                                 ton: 'info',
                                 titre: v
                                   ? `${p.targetLabel} passe en drain`
@@ -271,13 +358,36 @@ export function VueLb({ id }: { id: string }) {
                                 detail: v
                                   ? 'Aucune nouvelle requête ne lui est envoyée ; les connexions en cours se terminent normalement.'
                                   : 'Réintégration après validation du health check.',
+                                effet: () =>
+                                  lbs.modifier(lb.id, (l) => ({
+                                    pool: l.pool.map((x) =>
+                                      x.targetId === p.targetId
+                                        ? { ...x, sante: v ? ('drain' as const) : ('ok' as const) }
+                                        : x,
+                                    ),
+                                  })),
                               })
-                            }}
-                            label=""
+                            }
                           />
                         </td>
                         <td className="px-3 py-2.5 text-right">
-                          <IconButton label="Retirer la cible du pool" size="sm">
+                          <IconButton
+                            label="Retirer la cible du pool"
+                            size="sm"
+                            onClick={() =>
+                              executer({
+                                action: 'lb.create',
+                                ton: 'warn',
+                                titre: `${p.targetLabel} retirée du pool`,
+                                detail:
+                                  'Les connexions en cours sont coupées. Le mode drain évite cela.',
+                                effet: () =>
+                                  lbs.modifier(lb.id, (l) => ({
+                                    pool: l.pool.filter((x) => x.targetId !== p.targetId),
+                                  })),
+                              })
+                            }
+                          >
                             <Trash2 size={13} className="text-err" />
                           </IconButton>
                         </td>
@@ -340,11 +450,57 @@ export function VueLb({ id }: { id: string }) {
             <CardHeader
               titre="Écouteurs"
               actions={
-                <GatedAction autorise={autorise('lb.create')} message={refus('lb.create')}>
-                  <Button size="sm" iconBefore={<Plus size={13} />}>
-                    Ajouter un écouteur
-                  </Button>
-                </GatedAction>
+                <BoutonFormulaire
+                  libelle="Ajouter un écouteur"
+                  variant="primary"
+                  icone={<Plus size={13} />}
+                  action="lb.create"
+                  titre="Ajouter un écouteur"
+                  champs={[
+                    {
+                      id: 'protocole',
+                      label: 'Protocole',
+                      type: 'select',
+                      demi: true,
+                      options: [
+                        { value: 'HTTPS', label: 'HTTPS' },
+                        { value: 'HTTP', label: 'HTTP' },
+                        { value: 'TCP', label: 'TCP' },
+                        { value: 'UDP', label: 'UDP' },
+                      ],
+                    },
+                    { id: 'port', label: 'Port', type: 'nombre', demi: true, min: 1, max: 65535 },
+                    {
+                      id: 'tls',
+                      label: 'TLS minimum',
+                      type: 'select',
+                      options: [
+                        { value: 'TLS 1.2', label: 'TLS 1.2' },
+                        { value: 'TLS 1.3', label: 'TLS 1.3' },
+                      ],
+                    },
+                  ]}
+                  valeursDepart={{ protocole: 'HTTPS', port: 443, tls: 'TLS 1.2' }}
+                  libelleValider="Ajouter"
+                  operation={(v) => ({
+                    titre: `Écouteur ${v.protocole}:${v.port} ajouté`,
+                    effet: () =>
+                      lbs.modifier(lb.id, (l) => ({
+                        listeners: [
+                          ...l.listeners,
+                          {
+                            protocole: String(v.protocole),
+                            port: Number(v.port),
+                            certId:
+                              String(v.protocole) === 'HTTPS'
+                                ? (l.listeners.find((x) => x.certId)?.certId ?? 'cert-auto')
+                                : undefined,
+                            tlsMin: String(v.protocole) === 'HTTPS' ? String(v.tls) : undefined,
+                          },
+                        ],
+                      })),
+                  })}
+                />
               }
             />
             <div className="overflow-x-auto">
@@ -394,12 +550,48 @@ export function VueLb({ id }: { id: string }) {
                 ]}
               />
               <div className="mt-3.5 flex flex-wrap gap-2 border-t border-g-100 pt-3.5">
-                <Button size="sm" variant="secondary">
-                  Renouveler maintenant
-                </Button>
-                <Button size="sm" variant="ghost">
-                  Téléverser mon certificat
-                </Button>
+                <BoutonAction
+                  libelle="Renouveler maintenant"
+                  operation={{
+                    action: 'lb.create',
+                    ton: 'info',
+                    titre: 'Renouvellement ACME lancé',
+                    job: {
+                      type: 'lb.tls.renew',
+                      label: `Renouvellement TLS · ${lb.nom}`,
+                      etapes: [
+                        'Demander un ordre ACME',
+                        'Répondre au challenge HTTP-01',
+                        'Installer le certificat sur les écouteurs',
+                      ],
+                      dureeEtapeMs: 1100,
+                    },
+                  }}
+                />
+                <BoutonFormulaire
+                  libelle="Téléverser mon certificat"
+                  variant="ghost"
+                  action="lb.create"
+                  titre="Téléverser un certificat"
+                  description="Le portail conserve la clé privée dans le coffre et ne l’affiche jamais. Le renouvellement automatique est désactivé pour un certificat fourni."
+                  taille="lg"
+                  champs={[
+                    { id: 'nom', label: 'Nom du certificat', placeholder: 'wildcard-dba-2026', obligatoire: true },
+                    { id: 'chaine', label: 'Chaîne de certification (PEM)', type: 'mono', placeholder: '-----BEGIN CERTIFICATE-----' },
+                    { id: 'cle', label: 'Clé privée (PEM)', type: 'mono', placeholder: '-----BEGIN PRIVATE KEY-----' },
+                  ]}
+                  libelleValider="Téléverser"
+                  operation={(v) => ({
+                    titre: `Certificat ${v.nom} installé`,
+                    detail: 'Renouvellement automatique désactivé sur les écouteurs concernés.',
+                    effet: () =>
+                      lbs.modifier(lb.id, (l) => ({
+                        listeners: l.listeners.map((x) =>
+                          x.certId ? { ...x, certId: String(v.nom) } : x,
+                        ),
+                      })),
+                  })}
+                />
               </div>
               <Callout ton="warn" className="mt-3.5" titre="Exception ACME requise">
                 Le renouvellement automatique exige que le chemin{' '}
@@ -421,11 +613,37 @@ export function VueLb({ id }: { id: string }) {
               titre="Règles de routage"
               sousTitre="Évaluées de haut en bas, la première correspondance gagne."
               actions={
-                <GatedAction autorise={autorise('lb.create')} message={refus('lb.create')}>
-                  <Button size="sm" iconBefore={<Plus size={13} />}>
-                    Ajouter une règle
-                  </Button>
-                </GatedAction>
+                <BoutonFormulaire
+                  libelle="Ajouter une règle"
+                  variant="primary"
+                  icone={<Plus size={13} />}
+                  action="lb.create"
+                  titre="Ajouter une règle de routage"
+                  description="Les règles sont évaluées de haut en bas : la première correspondance gagne."
+                  champs={[
+                    { id: 'hote', label: 'Hôte', placeholder: 'api.dba.africa', demi: true },
+                    { id: 'chemin', label: 'Chemin', placeholder: '/v1/*', demi: true },
+                    { id: 'entete', label: 'En-tête', placeholder: 'X-Canary: true' },
+                    { id: 'cible', label: 'Destination', placeholder: 'pool-api ou refus-403', obligatoire: true },
+                  ]}
+                  libelleValider="Ajouter la règle"
+                  operation={(v) => ({
+                    titre: 'Règle de routage ajoutée',
+                    detail: `${v.hote || '*'}${v.chemin || '/*'} → ${v.cible}`,
+                    effet: () =>
+                      lbs.modifier(lb.id, (l) => ({
+                        reglesL7: [
+                          ...(l.reglesL7 ?? []),
+                          {
+                            hote: String(v.hote) || undefined,
+                            chemin: String(v.chemin) || undefined,
+                            entete: String(v.entete) || undefined,
+                            cible: String(v.cible),
+                          },
+                        ],
+                      })),
+                  })}
+                />
               }
             />
             {(lb.reglesL7 ?? []).length === 0 ? (
@@ -466,7 +684,22 @@ export function VueLb({ id }: { id: string }) {
                           </Badge>
                         </td>
                         <td className="px-3 py-2.5 text-right">
-                          <IconButton label="Supprimer la règle" size="sm">
+                          <IconButton
+                            label="Supprimer la règle"
+                            size="sm"
+                            onClick={() =>
+                              executer({
+                                action: 'lb.create',
+                                ton: 'warn',
+                                titre: 'Règle de routage supprimée',
+                                detail: `${r.hote ?? '*'}${r.chemin ?? '/*'} → ${r.cible}`,
+                                effet: () =>
+                                  lbs.modifier(lb.id, (l) => ({
+                                    reglesL7: (l.reglesL7 ?? []).filter((_, j) => j !== i),
+                                  })),
+                              })
+                            }
+                          >
                             <Trash2 size={13} className="text-err" />
                           </IconButton>
                         </td>
@@ -543,6 +776,18 @@ export function VueLb({ id }: { id: string }) {
             <div className="space-y-3.5">
               <Switch
                 checked={lb.waf?.actif ?? false}
+                onChange={(v) =>
+                  executer({
+                    action: 'lb.create',
+                    ton: v ? 'ok' : 'warn',
+                    titre: v ? 'Pare-feu applicatif activé' : 'Pare-feu applicatif désactivé',
+                    detail: v
+                      ? 'Les règles OWASP s’appliquent dès la prochaine requête.'
+                      : 'Les injections et le cross-site scripting ne sont plus filtrés.',
+                    effet: () =>
+                      lbs.modifier(lb.id, { waf: { actif: v, ruleset: 'OWASP CRS 4.3' } }),
+                  })
+                }
                 label="Jeu de règles OWASP Core Rule Set"
                 description="Détection des injections SQL, du cross-site scripting, des inclusions de fichiers, des scanners automatisés et des anomalies de protocole."
               />
@@ -569,18 +814,37 @@ export function VueLb({ id }: { id: string }) {
               titre="Exceptions"
               sousTitre="Chemins ou règles exclus du contrôle. À documenter, chaque exception réduit la couverture."
               actions={
-                <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />}>
-                  Ajouter une exception
-                </Button>
+                <BoutonFormulaire
+                  libelle="Ajouter une exception"
+                  icone={<Plus size={13} />}
+                  action="lb.create"
+                  titre="Ajouter une exception WAF"
+                  description="Chaque exception réduit la couverture : le motif est obligatoire pour qu’un audit puisse la relire."
+                  champs={[
+                    { id: 'chemin', label: 'Chemin', placeholder: '/v1/documents/upload', obligatoire: true },
+                    { id: 'regle', label: 'Règle exclue', placeholder: 'REQUEST-941 (XSS) ou Toutes les règles', obligatoire: true },
+                    { id: 'motif', label: 'Motif', placeholder: 'Faux positif sur les documents contenant du HTML', obligatoire: true },
+                  ]}
+                  libelleValider="Ajouter l’exception"
+                  operation={(v) => ({
+                    ton: 'warn',
+                    titre: 'Exception WAF ajoutée',
+                    detail: `${v.chemin} · ${v.regle}`,
+                    effet: () =>
+                      exceptions.creer({
+                        id: exceptions.identifiant('exc'),
+                        chemin: String(v.chemin),
+                        regle: String(v.regle),
+                        motif: String(v.motif),
+                      }),
+                  })}
+                />
               }
             />
             <div className="space-y-2">
-              {[
-                ['/.well-known/acme-challenge/*', 'Toutes les règles', 'Renouvellement automatique du certificat'],
-                ['/v1/documents/upload', 'REQUEST-941 (XSS)', 'Faux positif sur les documents contenant du HTML'],
-              ].map(([chemin, regle, motif]) => (
+              {exceptions.items.map(({ id: excId, chemin, regle, motif }) => (
                 <div
-                  key={chemin}
+                  key={excId}
                   className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                 >
                   <span className="min-w-0">
@@ -591,7 +855,18 @@ export function VueLb({ id }: { id: string }) {
                       Règle exclue : {regle} · {motif}
                     </span>
                   </span>
-                  <IconButton label="Retirer l’exception" size="sm">
+                  <IconButton
+                    label="Retirer l’exception"
+                    size="sm"
+                    onClick={() =>
+                      executer({
+                        action: 'lb.create',
+                        titre: 'Exception WAF retirée',
+                        detail: `${chemin} · la règle ${regle} s’applique de nouveau`,
+                        effet: () => exceptions.supprimer(excId),
+                      })
+                    }
+                  >
                     <Trash2 size={13} className="text-err" />
                   </IconButton>
                 </div>
@@ -645,9 +920,15 @@ export function VueLb({ id }: { id: string }) {
               titre="Journaux d’accès"
               sousTitre="Aperçu limité à vingt lignes. Le portail n’embarque pas de constructeur de requêtes."
               actions={
-                <Button size="sm" variant="secondary" iconBefore={<Download size={13} />}>
-                  Exporter
-                </Button>
+                <BoutonAction
+                  libelle="Exporter"
+                  icone={<Download size={13} />}
+                  operation={{
+                    ton: 'info',
+                    titre: 'Export des journaux préparé',
+                    detail: 'Les 20 dernières lignes ne sont qu’un aperçu : l’export complet part vers VictoriaLogs.',
+                  }}
+                />
               }
             />
             <LogPeek lignes={LOGS_EXECUTION} max={20} titre="Requêtes récentes" />

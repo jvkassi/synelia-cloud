@@ -148,6 +148,7 @@ export interface Backend {
 }
 
 export interface Placement {
+  id: string
   espaceId: string
   backendId: string
   percent: number

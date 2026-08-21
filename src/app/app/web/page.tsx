@@ -131,213 +131,211 @@ export default function AccueilWebCloud() {
   ]
 
   return (
-    <div className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 sm:py-7">
-      <div className="space-y-5">
-        <PageHeader
-          fil={[{ label: 'Espace client', href: '/app' }, { label: 'Web Cloud' }]}
-          titre="Web Cloud"
-          sousTitre="Vos noms de domaine et ce qui tourne dessus : hébergement mutualisé, bases, messagerie, drive, applications, certificats et sauvegardes. Chaque section a sa liste dans le panneau de gauche."
-        />
+    <div className="space-y-5">
+      <PageHeader
+        fil={[{ label: 'Espace client', href: '/app' }, { label: 'Web Cloud' }]}
+        titre="Web Cloud"
+        sousTitre="Vos noms de domaine et ce qui tourne dessus : hébergement mutualisé, bases, messagerie, drive, applications, certificats et sauvegardes. Chaque section a sa liste dans le panneau de gauche."
+      />
 
-        {aSurveiller.length > 0 && (
-          <Callout
-            ton="warn"
-            titre={`${aSurveiller.length} point${aSurveiller.length > 1 ? 's' : ''} à surveiller`}
-          >
-            <ul className="mt-1 space-y-1.5">
-              {aSurveiller.map((a) => (
-                <li key={a.quoi} className="flex items-start gap-2">
-                  <AlertTriangle size={13} className="mt-0.5 shrink-0 text-warn" />
-                  <span>
-                    <Link href={a.href} className="font-semibold underline">
-                      {a.quoi}
-                    </Link>
-                    <span className="ml-1.5 text-g-700">{a.detail}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </Callout>
-        )}
-
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatTile
-            libelle="Domaines"
-            valeur={entrees.length}
-            detail={`${heberges.length} avec serveur`}
-          />
-          <StatTile
-            libelle="Sites en ligne"
-            valeur={sites.filter((s) => s.statut === 'en_ligne').length}
-            detail={`sur ${sites.length} installés`}
-            ton={majEnAttente > 0 ? 'warn' : 'neutral'}
-          />
-          <StatTile libelle="Boîtes aux lettres" valeur={boites} detail="toutes messageries" />
-          <StatTile
-            libelle="Espace sauvegardé"
-            valeur={`${plans.reduce((a, p) => a + p.espaceOccupeGo, 0).toFixed(0)} Go`}
-            detail="immuable, hors site"
-            ton="ok"
-          />
-        </div>
-
-        <div>
-          <p className="type-micro mb-2.5 text-g-500">Les sections de Web Cloud</p>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {sections.map((s) => (
-              <Link
-                key={s.nom}
-                href={s.href}
-                className="group rounded-[10px] border border-g-300 bg-white p-4 transition-all hover:border-p-400 hover:shadow-[0_4px_16px_rgba(43,27,77,.1)]"
-              >
-                <span className="flex items-center gap-2 text-p-700">
-                  {s.icone}
-                  <span className="text-[13px] font-bold text-ink group-hover:text-p-700">
-                    {s.nom}
-                  </span>
+      {aSurveiller.length > 0 && (
+        <Callout
+          ton="warn"
+          titre={`${aSurveiller.length} point${aSurveiller.length > 1 ? 's' : ''} à surveiller`}
+        >
+          <ul className="mt-1 space-y-1.5">
+            {aSurveiller.map((a) => (
+              <li key={a.quoi} className="flex items-start gap-2">
+                <AlertTriangle size={13} className="mt-0.5 shrink-0 text-warn" />
+                <span>
+                  <Link href={a.href} className="font-semibold underline">
+                    {a.quoi}
+                  </Link>
+                  <span className="ml-1.5 text-g-700">{a.detail}</span>
                 </span>
-                <p className="tnum mt-2 text-[24px] font-bold leading-none [font-family:var(--font-display)] text-ink">
-                  {num(s.valeur)}
-                </p>
-                <p className="mt-1 text-[11.5px] text-g-500">{s.detail}</p>
-              </Link>
+              </li>
             ))}
-          </div>
+          </ul>
+        </Callout>
+      )}
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile
+          libelle="Domaines"
+          valeur={entrees.length}
+          detail={`${heberges.length} avec serveur`}
+        />
+        <StatTile
+          libelle="Sites en ligne"
+          valeur={sites.filter((s) => s.statut === 'en_ligne').length}
+          detail={`sur ${sites.length} installés`}
+          ton={majEnAttente > 0 ? 'warn' : 'neutral'}
+        />
+        <StatTile libelle="Boîtes aux lettres" valeur={boites} detail="toutes messageries" />
+        <StatTile
+          libelle="Espace sauvegardé"
+          valeur={`${plans.reduce((a, p) => a + p.espaceOccupeGo, 0).toFixed(0)} Go`}
+          detail="immuable, hors site"
+          ton="ok"
+        />
+      </div>
+
+      <div>
+        <p className="type-micro mb-2.5 text-g-500">Les sections de Web Cloud</p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {sections.map((s) => (
+            <Link
+              key={s.nom}
+              href={s.href}
+              className="group rounded-[10px] border border-g-300 bg-white p-4 transition-all hover:border-p-400 hover:shadow-[0_4px_16px_rgba(43,27,77,.1)]"
+            >
+              <span className="flex items-center gap-2 text-p-700">
+                {s.icone}
+                <span className="text-[13px] font-bold text-ink group-hover:text-p-700">
+                  {s.nom}
+                </span>
+              </span>
+              <p className="tnum mt-2 text-[24px] font-bold leading-none [font-family:var(--font-display)] text-ink">
+                {num(s.valeur)}
+              </p>
+              <p className="mt-1 text-[11.5px] text-g-500">{s.detail}</p>
+            </Link>
+          ))}
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <Card className="xl:col-span-2">
-            <CardHeader
-              titre="Occupation de vos serveurs"
-              sousTitre="Un domaine est attaché à un serveur et à un seul. Tout ce qui est installé dessus partage son processeur, sa mémoire et son disque."
-            />
-            <div className="space-y-4">
-              {heberges.map((h) => {
-                const sitesDuServeur = sites.filter((s) => s.hebergementId === h.id)
-                return (
-                  <div key={h.id} className="rounded-[8px] border border-g-300 p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="min-w-0">
-                        <Link
-                          href={`/app/web/hebergement/${h.id}`}
-                          className="block truncate font-mono text-[13px] font-bold text-ink hover:text-p-700"
-                        >
-                          {h.domaine ?? h.domaineProvisoire}
-                        </Link>
-                        <span className="block text-[11.5px] text-g-500">
-                          {h.palier} · {h.serveur.nom} · {sitesDuServeur.length} site
-                          {sitesDuServeur.length > 1 ? 's' : ''}
-                        </span>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
+          <CardHeader
+            titre="Occupation de vos serveurs"
+            sousTitre="Un domaine est attaché à un serveur et à un seul. Tout ce qui est installé dessus partage son processeur, sa mémoire et son disque."
+          />
+          <div className="space-y-4">
+            {heberges.map((h) => {
+              const sitesDuServeur = sites.filter((s) => s.hebergementId === h.id)
+              return (
+                <div key={h.id} className="rounded-[8px] border border-g-300 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="min-w-0">
+                      <Link
+                        href={`/app/web/hebergement/${h.id}`}
+                        className="block truncate font-mono text-[13px] font-bold text-ink hover:text-p-700"
+                      >
+                        {h.domaine ?? h.domaineProvisoire}
+                      </Link>
+                      <span className="block text-[11.5px] text-g-500">
+                        {h.palier} · {h.serveur.nom} · {sitesDuServeur.length} site
+                        {sitesDuServeur.length > 1 ? 's' : ''}
                       </span>
-                      <Badge tone={h.statut === 'en_ligne' ? 'ok' : 'warn'} size="sm" dot>
-                        {h.statut === 'en_ligne' ? 'En ligne' : 'Maintenance'}
-                      </Badge>
-                    </div>
-                    <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                      <QuotaBar
-                        libelle="Processeur"
-                        utilise={h.serveur.chargeCpuPct}
-                        total={100}
-                        compact
-                        formateur={(v) => `${v} %`}
-                      />
-                      <QuotaBar
-                        libelle="Mémoire"
-                        utilise={h.serveur.ramUtiliseePct}
-                        total={100}
-                        compact
-                        formateur={(v) => `${v} %`}
-                      />
-                      <QuotaBar
-                        libelle="Disque"
-                        utilise={h.espaceUtiliseGo}
-                        total={h.espaceTotalGo}
-                        compact
-                        formateur={(v) => `${v.toFixed(0)} Go`}
-                      />
-                    </div>
+                    </span>
+                    <Badge tone={h.statut === 'en_ligne' ? 'ok' : 'warn'} size="sm" dot>
+                      {h.statut === 'en_ligne' ? 'En ligne' : 'Maintenance'}
+                    </Badge>
                   </div>
-                )
-              })}
-            </div>
-          </Card>
+                  <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <QuotaBar
+                      libelle="Processeur"
+                      utilise={h.serveur.chargeCpuPct}
+                      total={100}
+                      compact
+                      formateur={(v) => `${v} %`}
+                    />
+                    <QuotaBar
+                      libelle="Mémoire"
+                      utilise={h.serveur.ramUtiliseePct}
+                      total={100}
+                      compact
+                      formateur={(v) => `${v} %`}
+                    />
+                    <QuotaBar
+                      libelle="Disque"
+                      utilise={h.espaceUtiliseGo}
+                      total={h.espaceTotalGo}
+                      compact
+                      formateur={(v) => `${v.toFixed(0)} Go`}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
 
-          <Card>
-            <CardHeader
-              titre="Dernières sauvegardes"
-              sousTitre="Immuables : ni nous ni vous ne pouvons les altérer avant la fin de leur rétention."
-            />
-            <ul className="divide-y divide-g-100">
-              {plans.map((p) => {
-                const d = p.executions[0]
+        <Card>
+          <CardHeader
+            titre="Dernières sauvegardes"
+            sousTitre="Immuables : ni nous ni vous ne pouvons les altérer avant la fin de leur rétention."
+          />
+          <ul className="divide-y divide-g-100">
+            {plans.map((p) => {
+              const d = p.executions[0]
+              return (
+                <li key={p.id} className="py-2.5 first:pt-0">
+                  <Link
+                    href={`/app/web/backup/${p.id}`}
+                    className="flex items-start justify-between gap-2"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate font-mono text-[12px] font-semibold text-ink">
+                        {p.nomServi}
+                      </span>
+                      <span className="block text-[11px] text-g-500">
+                        {d ? `${relatif(d.ts)} · ${d.taille}` : 'Aucune exécution'}
+                      </span>
+                    </span>
+                    <Badge
+                      tone={
+                        d?.statut === 'ok' ? 'ok' : d?.statut === 'partielle' ? 'warn' : 'err'
+                      }
+                      size="sm"
+                    >
+                      {d?.statut === 'ok' ? 'OK' : d?.statut === 'partielle' ? 'Partielle' : '—'}
+                    </Badge>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+
+          <CardHeader
+            className="mt-4 border-t border-g-100 pt-4"
+            titre="Certificats les plus proches"
+            sousTitre="Échéance technique, tous hôtes confondus."
+          />
+          <ul className="divide-y divide-g-100">
+            {[...CERTIFICATS]
+              .sort((a, b) => joursAvant(a.expire) - joursAvant(b.expire))
+              .slice(0, 4)
+              .map((c) => {
+                const j = joursAvant(c.expire)
                 return (
-                  <li key={p.id} className="py-2.5 first:pt-0">
+                  <li key={c.id} className="py-2 first:pt-0">
                     <Link
-                      href={`/app/web/backup/${p.id}`}
-                      className="flex items-start justify-between gap-2"
+                      href={`/app/web/ssl/${c.id}`}
+                      className="flex items-center justify-between gap-2"
                     >
                       <span className="min-w-0">
                         <span className="block truncate font-mono text-[12px] font-semibold text-ink">
-                          {p.nomServi}
+                          {c.hote}
                         </span>
                         <span className="block text-[11px] text-g-500">
-                          {d ? `${relatif(d.ts)} · ${d.taille}` : 'Aucune exécution'}
+                          {dateCourte(c.expire)}
                         </span>
                       </span>
-                      <Badge
-                        tone={
-                          d?.statut === 'ok' ? 'ok' : d?.statut === 'partielle' ? 'warn' : 'err'
-                        }
-                        size="sm"
+                      <span
+                        className={cn(
+                          'tnum shrink-0 text-[12px] font-bold',
+                          j <= 14 ? 'text-err' : j <= 30 ? 'text-warn' : 'text-g-700',
+                        )}
                       >
-                        {d?.statut === 'ok' ? 'OK' : d?.statut === 'partielle' ? 'Partielle' : '—'}
-                      </Badge>
+                        {j} j
+                      </span>
                     </Link>
                   </li>
                 )
               })}
-            </ul>
-
-            <CardHeader
-              className="mt-4 border-t border-g-100 pt-4"
-              titre="Certificats les plus proches"
-              sousTitre="Échéance technique, tous hôtes confondus."
-            />
-            <ul className="divide-y divide-g-100">
-              {[...CERTIFICATS]
-                .sort((a, b) => joursAvant(a.expire) - joursAvant(b.expire))
-                .slice(0, 4)
-                .map((c) => {
-                  const j = joursAvant(c.expire)
-                  return (
-                    <li key={c.id} className="py-2 first:pt-0">
-                      <Link
-                        href={`/app/web/ssl/${c.id}`}
-                        className="flex items-center justify-between gap-2"
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate font-mono text-[12px] font-semibold text-ink">
-                            {c.hote}
-                          </span>
-                          <span className="block text-[11px] text-g-500">
-                            {dateCourte(c.expire)}
-                          </span>
-                        </span>
-                        <span
-                          className={cn(
-                            'tnum shrink-0 text-[12px] font-bold',
-                            j <= 14 ? 'text-err' : j <= 30 ? 'text-warn' : 'text-g-700',
-                          )}
-                        >
-                          {j} j
-                        </span>
-                      </Link>
-                    </li>
-                  )
-                })}
-            </ul>
-          </Card>
-        </div>
+          </ul>
+        </Card>
       </div>
     </div>
   )

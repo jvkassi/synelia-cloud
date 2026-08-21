@@ -20,6 +20,57 @@ import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { Stepper } from '@/components/composition/flow'
 import { Regle321 } from '@/components/business/infra'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+
+/** Valeurs du formulaire de plan — le tiroir doit être contrôlé pour
+ *  qu'« Enregistrer » ait quelque chose à enregistrer. */
+interface FormulairePlan {
+  nom: string
+  scopeType: BackupPlan['scope']['type']
+  scopeValeur: string
+  frequence: BackupPlan['frequence']
+  mode: BackupPlan['mode']
+  retentionJours: number
+  immutable: boolean
+  local: boolean
+  autreSite: boolean
+  immuableCopie: boolean
+  chiffrement: 'synelia' | 'byok'
+  kmsRef: string
+}
+
+const PLAN_VIDE: FormulairePlan = {
+  nom: '',
+  scopeType: 'tag',
+  scopeValeur: 'production',
+  frequence: 'quotidien',
+  mode: 'incrementale_complete_hebdo',
+  retentionJours: 35,
+  immutable: true,
+  local: true,
+  autreSite: true,
+  immuableCopie: true,
+  chiffrement: 'synelia',
+  kmsRef: '',
+}
+
+function formulaireDepuis(plan: BackupPlan): FormulairePlan {
+  return {
+    nom: plan.nom,
+    scopeType: plan.scope.type,
+    scopeValeur: plan.scope.valeur,
+    frequence: plan.frequence,
+    mode: plan.mode,
+    retentionJours: plan.retentionJours,
+    immutable: plan.immutable,
+    local: plan.destinations.some((d) => d.type === 'local'),
+    autreSite: plan.destinations.some((d) => d.type === 'autre_site'),
+    immuableCopie: plan.destinations.some((d) => d.type === 'immuable'),
+    chiffrement: plan.chiffrement.mode,
+    kmsRef: plan.chiffrement.kmsRef ?? '',
+  }
+}
 
 const ONGLETS = [
   { id: 'plans', label: 'Plans' },
@@ -85,7 +136,67 @@ export default function Sauvegarde() {
 
 function OngletPlans() {
   const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const plans = useCollection<BackupPlan>('plans-sauvegarde', BACKUP_PLANS)
   const [drawer, setDrawer] = useState<BackupPlan | 'nouveau' | null>(null)
+  const [f, setF] = useState<FormulairePlan>(PLAN_VIDE)
+
+  const ouvrir = (cible: BackupPlan | 'nouveau') => {
+    setF(cible === 'nouveau' ? PLAN_VIDE : formulaireDepuis(cible))
+    setDrawer(cible)
+  }
+
+  const poser = <K extends keyof FormulairePlan>(cle: K, valeur: FormulairePlan[K]) =>
+    setF((p) => ({ ...p, [cle]: valeur }))
+
+  const destinations = (): BackupPlan['destinations'] => [
+    ...(f.local ? [{ type: 'local' as const, bucketId: BUCKETS[0]?.id }] : []),
+    ...(f.autreSite ? [{ type: 'autre_site' as const, bucketId: BUCKETS[1]?.id }] : []),
+    ...(f.immuableCopie ? [{ type: 'immuable' as const }] : []),
+  ]
+
+  const enregistrer = () => {
+    const cible = drawer === 'nouveau' || drawer === null ? null : drawer
+    executer({
+      action: 'backup.plan.write',
+      titre: cible ? `Plan « ${f.nom} » enregistré` : `Plan « ${f.nom} » créé`,
+      detail: `Portée ${f.scopeType} · ${f.scopeValeur} · rétention ${f.retentionJours} jours${f.immutable ? ' · immuable' : ''}`,
+      effet: () =>
+        cible
+          ? plans.modifier(cible.id, {
+              nom: f.nom,
+              scope: { type: f.scopeType, valeur: f.scopeValeur },
+              frequence: f.frequence,
+              mode: f.mode,
+              retentionJours: f.retentionJours,
+              immutable: f.immutable,
+              destinations: destinations(),
+              chiffrement: {
+                mode: f.chiffrement,
+                kmsRef: f.chiffrement === 'byok' ? f.kmsRef || 'kms-byok-dba' : undefined,
+              },
+            })
+          : plans.creer({
+              id: plans.identifiant('bp'),
+              orgId: 'org-dba',
+              nom: f.nom,
+              scope: { type: f.scopeType, valeur: f.scopeValeur },
+              frequence: f.frequence,
+              mode: f.mode,
+              retentionJours: f.retentionJours,
+              immutable: f.immutable,
+              destinations: destinations(),
+              prochaineExecution: '2026-08-20T02:00:00Z',
+              chiffrement: {
+                mode: f.chiffrement,
+                kmsRef: f.chiffrement === 'byok' ? f.kmsRef || 'kms-byok-dba' : undefined,
+              },
+              ressourcesProtegees: 0,
+              dernierResultat: 'ok',
+            }),
+    })
+    setDrawer(null)
+  }
 
   const colonnes: Array<Colonne<BackupPlan>> = [
     {
@@ -175,7 +286,7 @@ function OngletPlans() {
       aligne: 'right',
       rendu: (p) => (
         <GatedAction autorise={autorise('backup.plan.write')} message={refus('backup.plan.write')}>
-          <Button size="sm" variant="ghost" onClick={() => setDrawer(p)}>
+          <Button size="sm" variant="ghost" onClick={() => ouvrir(p)}>
             Modifier
           </Button>
         </GatedAction>
@@ -197,7 +308,7 @@ function OngletPlans() {
                 autorise={autorise('backup.plan.write')}
                 message={refus('backup.plan.write')}
               >
-                <Button size="sm" iconBefore={<Plus size={13} />} onClick={() => setDrawer('nouveau')}>
+                <Button size="sm" iconBefore={<Plus size={13} />} onClick={() => ouvrir('nouveau')}>
                   Nouveau plan
                 </Button>
               </GatedAction>
@@ -206,7 +317,7 @@ function OngletPlans() {
         </div>
         <div className="px-4 pb-4">
           <DataTable
-            lignes={BACKUP_PLANS}
+            lignes={plans.items}
             colonnes={colonnes}
             parPage={10}
             placeholderRecherche="Rechercher un plan…"
@@ -238,7 +349,7 @@ function OngletPlans() {
             <Button variant="ghost" onClick={() => setDrawer(null)}>
               Annuler
             </Button>
-            <Button onClick={() => setDrawer(null)}>
+            <Button disabled={!f.nom.trim()} onClick={enregistrer}>
               {plan ? 'Enregistrer' : 'Créer le plan'}
             </Button>
           </>
@@ -246,7 +357,11 @@ function OngletPlans() {
       >
         <div className="space-y-5">
           <Field label="Nom du plan" required>
-            <Input defaultValue={plan?.nom ?? ''} placeholder="Production · quotidien immuable" />
+            <Input
+              value={f.nom}
+              onChange={(e) => poser('nom', e.target.value)}
+              placeholder="Production · quotidien immuable"
+            />
           </Field>
 
           <div>
@@ -263,7 +378,8 @@ function OngletPlans() {
                 <Radio
                   key={v}
                   name="portee"
-                  defaultChecked={(plan?.scope.type ?? 'tag') === v}
+                  checked={f.scopeType === v}
+                  onChange={() => poser('scopeType', v)}
                   label={l}
                   description={d}
                 />
@@ -271,14 +387,21 @@ function OngletPlans() {
             </div>
             <div className="mt-3">
               <Field label="Valeur de la portée">
-                <Input defaultValue={plan?.scope.valeur ?? 'production'} className="font-mono" />
+                <Input
+                  value={f.scopeValeur}
+                  onChange={(e) => poser('scopeValeur', e.target.value)}
+                  className="font-mono"
+                />
               </Field>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Fréquence">
-              <Select defaultValue={plan?.frequence ?? 'quotidien'}>
+              <Select
+                value={f.frequence}
+                onChange={(e) => poser('frequence', e.target.value as BackupPlan['frequence'])}
+              >
                 <option value="horaire">Horaire</option>
                 <option value="quotidien">Quotidienne</option>
                 <option value="hebdo">Hebdomadaire</option>
@@ -286,7 +409,10 @@ function OngletPlans() {
               </Select>
             </Field>
             <Field label="Mode">
-              <Select defaultValue={plan?.mode ?? 'incrementale_complete_hebdo'}>
+              <Select
+                value={f.mode}
+                onChange={(e) => poser('mode', e.target.value as BackupPlan['mode'])}
+              >
                 <option value="incrementale_complete_hebdo">
                   Incrémentale avec complète hebdomadaire
                 </option>
@@ -296,11 +422,18 @@ function OngletPlans() {
           </div>
 
           <Field label="Rétention" hint="en jours">
-            <Input type="number" defaultValue={plan?.retentionJours ?? 35} min={1} suffix="jours" />
+            <Input
+              type="number"
+              value={f.retentionJours}
+              onChange={(e) => poser('retentionJours', Number(e.target.value))}
+              min={1}
+              suffix="jours"
+            />
           </Field>
 
           <Switch
-            checked={plan?.immutable ?? true}
+            checked={f.immutable}
+            onChange={(v) => poser('immutable', v)}
             label="Immuabilité (WORM)"
             description="Interdit toute suppression d’un point de restauration pendant la durée de rétention. Fortement recommandé sur la production."
           />
@@ -308,14 +441,21 @@ function OngletPlans() {
           <div>
             <MicroLabel className="mb-2">Destinations</MicroLabel>
             <div className="space-y-2">
-              <Checkbox defaultChecked label="Bucket local" description={BUCKETS[0].nom} />
               <Checkbox
-                defaultChecked={plan?.destinations.some((d) => d.type === 'autre_site') ?? true}
+                checked={f.local}
+                onChange={(e) => poser('local', e.target.checked)}
+                label="Bucket local"
+                description={BUCKETS[0].nom}
+              />
+              <Checkbox
+                checked={f.autreSite}
+                onChange={(e) => poser('autreSite', e.target.checked)}
                 label="Bucket sur l’autre site"
                 description={`${BUCKETS[1].nom} · satisfait la règle « une copie hors site »`}
               />
               <Checkbox
-                defaultChecked={plan?.destinations.some((d) => d.type === 'immuable') ?? true}
+                checked={f.immuableCopie}
+                onChange={(e) => poser('immuableCopie', e.target.checked)}
                 label="Copie immuable"
                 description="Verrouillage WORM sur la durée de rétention"
               />
@@ -327,21 +467,28 @@ function OngletPlans() {
             <div className="space-y-2">
               <Radio
                 name="chiffrement"
-                defaultChecked={(plan?.chiffrement.mode ?? 'synelia') === 'synelia'}
+                checked={f.chiffrement === 'synelia'}
+                onChange={() => poser('chiffrement', 'synelia')}
                 label="Clés gérées par Synelia"
                 description="Rotation automatique, aucune action de votre part."
               />
               <Radio
                 name="chiffrement"
-                defaultChecked={plan?.chiffrement.mode === 'byok'}
+                checked={f.chiffrement === 'byok'}
+                onChange={() => poser('chiffrement', 'byok')}
                 label="Vos propres clés (BYOK)"
                 description="Vous conservez la maîtrise des clés. En cas de perte, la restauration devient impossible — y compris pour nous."
               />
             </div>
-            {plan?.chiffrement.kmsRef && (
+            {f.chiffrement === 'byok' && (
               <div className="mt-3">
                 <Field label="Référence KMS">
-                  <Input defaultValue={plan.chiffrement.kmsRef} className="font-mono" />
+                  <Input
+                    value={f.kmsRef}
+                    onChange={(e) => poser('kmsRef', e.target.value)}
+                    placeholder="kms-byok-dba"
+                    className="font-mono"
+                  />
                 </Field>
               </div>
             )}
@@ -356,6 +503,8 @@ function OngletPlans() {
 
 function OngletPoints() {
   const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const points = useCollection<RestorePoint>('points-restauration', RESTORE_POINTS)
 
   const colonnes: Array<Colonne<RestorePoint>> = [
     {
@@ -432,12 +581,39 @@ function OngletPoints() {
       aligne: 'right',
       rendu: (p) => (
         <span className="flex justify-end gap-1">
-          <GatedAction autorise={autorise('backup.restore')} message={refus('backup.restore')}>
-            <Button size="sm" variant="ghost" iconBefore={<RotateCcw size={12} />}>
-              Restaurer
-            </Button>
-          </GatedAction>
-          <IconButton label="Télécharger" size="sm">
+          <BoutonAction
+            libelle="Restaurer"
+            variant="ghost"
+            icone={<RotateCcw size={12} />}
+            operation={{
+              action: 'backup.restore',
+              ton: 'info',
+              titre: `Restauration de ${p.resourceNom}`,
+              detail: `Point du ${dateHeure(p.date)} · ${goHumain(p.tailleGo)}`,
+              job: {
+                type: 'backup.restore',
+                label: `Restauration ${p.resourceNom} · ${dateCourte(p.date)}`,
+                etapes: [
+                  'Monter le point de restauration',
+                  'Copier les données',
+                  'Vérifier l’intégrité',
+                  'Remettre le service en ligne',
+                ],
+              },
+            }}
+          />
+          <IconButton
+            label={`Télécharger le point du ${dateCourte(p.date)}`}
+            size="sm"
+            onClick={() =>
+              executer({
+                action: 'backup.restore',
+                ton: 'info',
+                titre: 'Téléchargement préparé',
+                detail: `${goHumain(p.tailleGo)} · lien signé valable une heure`,
+              })
+            }
+          >
             <Download size={13} />
           </IconButton>
           <IconButton
@@ -448,6 +624,15 @@ function OngletPoints() {
             }
             size="sm"
             disabled={Boolean(p.immuableJusquau)}
+            onClick={() =>
+              executer({
+                action: 'backup.plan.write',
+                ton: 'warn',
+                titre: `Point du ${dateCourte(p.date)} supprimé`,
+                detail: `${goHumain(p.tailleGo)} libérés sur ${p.destination}`,
+                effet: () => points.supprimer(p.id),
+              })
+            }
           >
             <Trash2 size={13} className={p.immuableJusquau ? 'text-g-300' : 'text-err'} />
           </IconButton>
@@ -459,7 +644,7 @@ function OngletPoints() {
   return (
     <div className="space-y-4">
       <DataTable
-        lignes={RESTORE_POINTS}
+        lignes={points.items}
         colonnes={colonnes}
         parPage={12}
         placeholderRecherche="Rechercher une ressource…"
@@ -530,7 +715,8 @@ const GRANULARITES = [
 ]
 
 function AssistantRestauration() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const executer = useOperation()
   const [etape, setEtape] = useState(1)
   const [granularite, setGranularite] = useState('fichiers')
   const [ressource, setRessource] = useState('vm-web-01')
@@ -782,10 +968,25 @@ function AssistantRestauration() {
                 <Button
                   disabled={!confirme}
                   onClick={() => {
-                    pousser({
+                    executer({
+                      action: 'backup.restore',
                       ton: 'info',
                       titre: 'Restauration lancée',
                       detail: `Durée estimée ${dureeMin(dureeEstimee)}. Suivi dans le centre de tâches.`,
+                      job: {
+                        type: 'backup.restore',
+                        label: `Restauration ${point.resourceNom} · ${gran.titre.toLowerCase()}`,
+                        etapes: [
+                          'Monter le point de restauration',
+                          granularite === 'fichiers'
+                            ? 'Parcourir l’arborescence et extraire la sélection'
+                            : 'Copier les données',
+                          destination === 'meme'
+                            ? 'Remplacer les données en place'
+                            : 'Écrire sur la destination choisie',
+                          'Vérifier l’intégrité du résultat',
+                        ],
+                      },
                     })
                     setEtape(1)
                     setConfirme(false)
@@ -951,14 +1152,23 @@ function OngletConformite() {
             titre="Tableau de conformité"
             sousTitre="C’est cet écran que l’on montre à un auditeur : état de protection, RPO constaté, règle trois copies / deux supports / une hors site, et résultat du dernier test de restauration."
             actions={
-              <GatedAction
-                autorise={autorise('compliance.export')}
-                message={refus('compliance.export')}
-              >
-                <Button size="sm" iconBefore={<FileDown size={13} />}>
-                  Exporter le rapport de conformité
-                </Button>
-              </GatedAction>
+              <BoutonAction
+                libelle="Exporter le rapport de conformité"
+                variant="primary"
+                icone={<FileDown size={13} />}
+                operation={{
+                  action: 'compliance.export',
+                  titre: 'Rapport de conformité exporté',
+                  detail:
+                    'PDF horodaté : état de protection, RPO constaté, règle 3-2-1 et dernier test de restauration par ressource.',
+                  job: {
+                    type: 'compliance.export',
+                    label: 'Export du rapport de conformité des sauvegardes',
+                    etapes: ['Collecter l’état par ressource', 'Composer le rapport', 'Horodater et signer'],
+                    dureeEtapeMs: 900,
+                  },
+                }}
+              />
             }
           />
         </div>

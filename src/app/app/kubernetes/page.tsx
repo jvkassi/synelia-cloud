@@ -6,18 +6,20 @@ import { num } from '@/lib/format'
 import { SITE_COURT, type K8sCluster } from '@/lib/types'
 import { K8S_CLUSTERS } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
 import { PageHeader, Callout } from '@/components/composition/card'
 import { HealthBadge, StatTile } from '@/components/composition/metrics'
 import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { useApp, useEspace } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
 
 export default function ListeClusters() {
   const espace = useEspace()
   const { autorise, refus } = useApp()
-  const clusters = K8S_CLUSTERS.filter((c) => c.espaceId === espace.id)
-  const tous = K8S_CLUSTERS
+  const grappes = useCollection<K8sCluster>('clusters', K8S_CLUSTERS)
+  const clusters = grappes.items.filter((c) => c.espaceId === espace.id)
+  const tous = grappes.items
 
   const colonnes: Array<Colonne<K8sCluster>> = [
     {
@@ -136,7 +138,9 @@ export default function ListeClusters() {
         sousTitre="Nous exploitons le control plane et pilotons les montées de version. Vous gardez l’accès complet à l’API Kubernetes, vos manifestes et vos charts Helm — nous ne dictons pas ce que vous déployez."
         actions={
           <GatedAction autorise={autorise('espace.create')} message={refus('espace.create')}>
-            <Button iconBefore={<Plus size={14} />}>Créer un cluster</Button>
+            <ButtonLink href="/app/kubernetes/new" iconBefore={<Plus size={14} />}>
+              Créer un cluster
+            </ButtonLink>
           </GatedAction>
         }
       />

@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils'
 import { RESSOURCES } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input, SearchInput } from '@/components/ui/field'
-import { Card, CardHeader } from '@/components/composition/card'
+import { Field, Input, SearchInput } from '@/components/ui/field'
+import { Modal } from '@/components/ui/overlay'
+import { Card, CardHeader, Callout } from '@/components/composition/card'
 import { EmptyState } from '@/components/composition/states'
 import { Container, HeroCourt, SiteSection } from '@/components/site/blocs'
 
@@ -23,6 +24,9 @@ export default function Ressources() {
   const [q, setQ] = useState('')
   const [type, setType] = useState<string>('tous')
   const [theme, setTheme] = useState<string>('tous')
+  const [demande, setDemande] = useState<(typeof RESSOURCES)[number] | null>(null)
+  const [courriel, setCourriel] = useState('')
+  const [envoye, setEnvoye] = useState(false)
 
   const types = useMemo(() => Array.from(new Set(RESSOURCES.map((r) => r.type))), [])
   const themes = useMemo(() => Array.from(new Set(RESSOURCES.map((r) => r.theme))), [])
@@ -122,6 +126,10 @@ export default function Ressources() {
                       iconBefore={
                         r.type === 'Webinaire' ? <PlayCircle size={13} /> : <Download size={13} />
                       }
+                      onClick={() => {
+                        setEnvoye(false)
+                        setDemande(r)
+                      }}
                     >
                       {r.type === 'Webinaire' ? 'Regarder' : 'Télécharger'}
                     </Button>
@@ -157,6 +165,74 @@ export default function Ressources() {
           </Card>
         </Container>
       </SiteSection>
+
+      <Modal
+        open={demande !== null}
+        onClose={() => setDemande(null)}
+        title={demande ? demande.titre : ''}
+        description={
+          demande?.type === 'Webinaire'
+            ? 'Le lien de visionnage vous est envoyé par courriel. Aucune inscription à une liste de diffusion : une seule adresse, un seul envoi.'
+            : 'Le document vous est envoyé par courriel, en PDF. Aucune inscription à une liste de diffusion : une seule adresse, un seul envoi.'
+        }
+        size="sm"
+        footer={
+          envoye ? (
+            <Button onClick={() => setDemande(null)}>Fermer</Button>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={() => setDemande(null)}>
+                Annuler
+              </Button>
+              <Button
+                disabled={!/.+@.+\..+/.test(courriel)}
+                onClick={() => setEnvoye(true)}
+                iconBefore={<Download size={13} />}
+              >
+                {demande?.type === 'Webinaire' ? 'Recevoir le lien' : 'Recevoir le document'}
+              </Button>
+            </>
+          )
+        }
+      >
+        {demande && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge tone="violet" size="sm">
+                {demande.type}
+              </Badge>
+              <Badge tone="neutral" size="sm">
+                {demande.theme}
+              </Badge>
+              <Badge tone="neutral" size="sm">
+                {demande.duree}
+              </Badge>
+            </div>
+            <p className="text-[12.5px] leading-relaxed text-g-700">{demande.extrait}</p>
+            {envoye ? (
+              <Callout ton="ok" titre="Demande enregistrée">
+                Le {demande.type === 'Webinaire' ? 'lien de visionnage' : 'document'} part vers{' '}
+                <span className="font-semibold">{courriel}</span>. Cette maquette n’envoie aucun
+                courriel : il n’y a pas de serveur derrière la démonstration, et rien ne quitte votre
+                navigateur.
+              </Callout>
+            ) : (
+              <Field
+                label="Adresse professionnelle"
+                hint="utilisée pour cet envoi seulement, transmise à aucun tiers"
+                required
+              >
+                <Input
+                  type="email"
+                  placeholder="prenom.nom@organisation.ci"
+                  value={courriel}
+                  onChange={(e) => setCourriel(e.target.value)}
+                />
+              </Field>
+            )}
+          </div>
+        )}
+      </Modal>
     </>
   )
 }

@@ -4,8 +4,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Building2, Plus, ShieldAlert, UserCog } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dateCourte, money, num, relatif } from '@/lib/format'
-import { IMPAYES, ORGANISATIONS, USERS } from '@/lib/mock'
+import { dateCourte, MAINTENANT, money, num, relatif } from '@/lib/format'
+import { ELEVATIONS, EQUIPE_SYNELIA, IMPAYES, ORGANISATIONS, USERS } from '@/lib/mock'
+import type { Elevation } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -16,15 +17,74 @@ import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { CostPreview } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
+import { useAtelier, useCollection } from '@/components/app/atelier'
+import { BoutonFormulaire, useOperation } from '@/components/app/actions'
 import type { Organisation } from '@/lib/types'
 
 export default function Organisations() {
   const { autorise, refus, pousser } = useApp()
-  const [creation, setCreation] = useState(false)
+  const orgs = useCollection<Organisation>('organisations', ORGANISATIONS)
+  const atelier = useAtelier()
+  const executer = useOperation()
 
-  const actives = ORGANISATIONS.filter((o) => o.statut === 'active')
-  const suspendues = ORGANISATIONS.filter((o) => o.statut === 'suspendue')
-  const caTotal = ORGANISATIONS.reduce((a, o) => a + (o.caMensuel ?? 0), 0)
+  // La collection d'élévations est propre à chaque organisation : la fiche de
+  // l'organisation lit exactement la même, sous le même nom.
+  const creerElevation = (orgId: string, e: Elevation) =>
+    atelier.creer(`elevations-${orgId}`, ELEVATIONS, e)
+  const [creation, setCreation] = useState(false)
+  const [nom, setNom] = useState('')
+  const [pays, setPays] = useState('Côte d’Ivoire')
+  const [secteur, setSecteur] = useState('')
+  const [plan, setPlan] = useState('standard')
+  const [tva, setTva] = useState('')
+  const [adminCourriel, setAdminCourriel] = useState('')
+  const [royaume, setRoyaume] = useState(true)
+  const [mfa, setMfa] = useState(true)
+  const [espaceEvaluation, setEspaceEvaluation] = useState(false)
+
+  const creer = () => {
+    executer({
+      action: 'org.manage',
+      titre: `${nom.trim()} créée`,
+      detail: `Le royaume d’identité est provisionné et l’invitation de ${
+        adminCourriel.trim() || 'l’administrateur'
+      } est envoyée.`,
+      job: {
+        type: 'org.create',
+        label: `Création · ${nom.trim()}`,
+        etapes: [
+          royaume ? 'Provisionnement du royaume d’identité' : 'Rattachement au royaume partagé',
+          'Création de l’organisation',
+          'Ouverture du compte de facturation',
+          ...(espaceEvaluation ? ['Création de l’Espace Cloud d’évaluation'] : []),
+          'Invitation de l’administrateur',
+        ],
+      },
+      effet: () =>
+        orgs.creer({
+          id: orgs.identifiant('org'),
+          nom: nom.trim(),
+          pays,
+          secteur: secteur.trim() || undefined,
+          tva: tva.trim() || undefined,
+          statut: 'active',
+          createdAt: MAINTENANT,
+          espaces: espaceEvaluation ? 1 : 0,
+          utilisateurs: 1,
+          caMensuel: 0,
+          tenantPlan: plan === 'standard' ? 'Standard' : plan === 'avance' ? 'Avancé' : 'Entreprise',
+        }),
+    })
+    setNom('')
+    setSecteur('')
+    setTva('')
+    setAdminCourriel('')
+    setCreation(false)
+  }
+
+  const actives = orgs.items.filter((o) => o.statut === 'active')
+  const suspendues = orgs.items.filter((o) => o.statut === 'suspendue')
+  const caTotal = orgs.items.reduce((a, o) => a + (o.caMensuel ?? 0), 0)
   const orgsImpayees = new Set(IMPAYES.map((i) => i.org))
 
   return (
@@ -42,7 +102,7 @@ export default function Organisations() {
         meta={
           <>
             <Badge tone="neutral" size="sm">
-              {ORGANISATIONS.length} organisations
+              {orgs.items.length} organisations
             </Badge>
             {suspendues.length > 0 && (
               <Badge tone="warn" dot size="sm">
@@ -67,7 +127,7 @@ export default function Organisations() {
           libelle="Secteurs représentés"
           valeur={new Set(ORGANISATIONS.map((o) => o.secteur ?? o.pays)).size}
           ton="accent"
-          detail={`sur ${ORGANISATIONS.length} organisations`}
+          detail={`sur ${orgs.items.length} organisations`}
         />
         <StatTile
           libelle="Suspendues"
@@ -82,7 +142,7 @@ export default function Organisations() {
         />
         <StatTile
           libelle="Utilisateurs"
-          valeur={num(ORGANISATIONS.reduce((a, o) => a + (o.utilisateurs ?? 0), 0))}
+          valeur={num(orgs.items.reduce((a, o) => a + (o.utilisateurs ?? 0), 0))}
           detail={`${USERS.length} identités connues`}
         />
       </div>
@@ -90,7 +150,7 @@ export default function Organisations() {
       <Card padding={false}>
         <div className="p-4">
           <DataTable<Organisation>
-            lignes={ORGANISATIONS}
+            lignes={orgs.items}
             exportable
             parPage={12}
             placeholderRecherche="Rechercher une organisation, un pays, un secteur…"
@@ -120,7 +180,7 @@ export default function Organisations() {
                 libelle: 'Pays',
                 options: [
                   { value: 'tous', label: 'Tous les pays' },
-                  ...[...new Set(ORGANISATIONS.map((o) => o.pays))].map((p) => ({
+                  ...[...new Set(orgs.items.map((o) => o.pays))].map((p) => ({
                     value: p,
                     label: p,
                   })),
@@ -261,25 +321,63 @@ export default function Organisations() {
                     <ButtonLink size="sm" variant="ghost" href={`/admin/organisations/${o.id}`}>
                       Ouvrir
                     </ButtonLink>
-                    <GatedAction
-                      autorise={autorise('org.manage')}
-                      message={refus('org.manage')}
-                    >
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        iconBefore={<UserCog size={12} />}
-                        onClick={() =>
-                          pousser({
-                            ton: 'warn',
-                            titre: `Demande d’élévation sur ${o.nom}`,
-                            detail: 'Un accès temporaire de 4 heures est demandé. Il apparaîtra dans le journal d’audit du client, avec votre nom.',
-                          })
-                        }
-                      >
-                        Élévation
-                      </Button>
-                    </GatedAction>
+                    <BoutonFormulaire
+                      libelle="Élévation"
+                      variant="ghost"
+                      icone={<UserCog size={12} />}
+                      action="org.manage"
+                      titre={`Demander une élévation sur ${o.nom}`}
+                      description="L’accès expire de lui-même. Le client voit la demande dans son propre journal d’audit — votre nom, le motif, la durée, le périmètre — et chaque action faite pendant l’élévation y est consignée individuellement."
+                      libelleValider="Demander l’accès"
+                      champs={[
+                        {
+                          id: 'motif',
+                          label: 'Motif',
+                          type: 'zone',
+                          obligatoire: true,
+                          placeholder:
+                            'Ticket SYN-8814 — diagnostic de la latence signalée sur app-metier, lecture des métriques et des journaux de production.',
+                        },
+                        {
+                          id: 'duree',
+                          label: 'Durée',
+                          type: 'select',
+                          demi: true,
+                          options: [
+                            { value: '1', label: '1 heure' },
+                            { value: '4', label: '4 heures' },
+                            { value: '8', label: '8 heures' },
+                          ],
+                        },
+                        {
+                          id: 'perimetre',
+                          label: 'Périmètre',
+                          type: 'select',
+                          demi: true,
+                          options: [
+                            { value: 'lecture', label: 'Lecture des métadonnées et métriques' },
+                            { value: 'logs', label: 'Lecture, journaux applicatifs inclus' },
+                            { value: 'intervention', label: 'Intervention sur les ressources' },
+                          ],
+                        },
+                      ]}
+                      valeursDepart={{ duree: '4', perimetre: 'lecture' }}
+                      operation={(v) => ({
+                        ton: 'warn',
+                        titre: `Élévation de ${v.duree} h demandée sur ${o.nom}`,
+                        detail:
+                          'Une entrée apparaît immédiatement dans le journal d’audit du client, avec votre nom et le motif.',
+                        effet: () =>
+                          creerElevation(o.id, {
+                            id: `elv-${o.id}-${v.duree}`,
+                            qui: EQUIPE_SYNELIA[0].nom,
+                            quand: MAINTENANT,
+                            duree: `${v.duree} h`,
+                            motif: String(v.motif),
+                            actif: true,
+                          }),
+                      })}
+                    />
                   </span>
                 ),
               },
@@ -317,28 +415,23 @@ export default function Organisations() {
             <Button variant="ghost" onClick={() => setCreation(false)}>
               Annuler
             </Button>
-            <Button
-              onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: 'Organisation créée',
-                  detail: 'Le royaume d’identité est provisionné et l’invitation de l’administrateur est envoyée.',
-                })
-                setCreation(false)
-              }}
-            >
+            <Button disabled={nom.trim().length === 0} onClick={creer}>
               Créer et inviter l’administrateur
             </Button>
           </>
         }
       >
         <div className="space-y-4">
-          <Field label="Raison sociale">
-            <Input placeholder="Nom de l’entreprise" />
+          <Field label="Raison sociale" required>
+            <Input
+              placeholder="Nom de l’entreprise"
+              value={nom}
+              onChange={(e) => setNom(e.target.value)}
+            />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Pays">
-              <Select defaultValue="Côte d’Ivoire">
+              <Select value={pays} onChange={(e) => setPays(e.target.value)}>
                 <option value="Côte d’Ivoire">Côte d’Ivoire</option>
                 <option value="Sénégal">Sénégal</option>
                 <option value="Bénin">Bénin</option>
@@ -349,52 +442,83 @@ export default function Organisations() {
               </Select>
             </Field>
             <Field label="Secteur">
-              <Input placeholder="Banque, industrie, administration…" />
+              <Input
+                placeholder="Banque, industrie, administration…"
+                value={secteur}
+                onChange={(e) => setSecteur(e.target.value)}
+              />
             </Field>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Plan de service">
-              <Select defaultValue="standard">
+              <Select value={plan} onChange={(e) => setPlan(e.target.value)}>
                 <option value="standard">Standard</option>
                 <option value="avance">Avancé — support prioritaire</option>
                 <option value="entreprise">Entreprise — interlocuteur dédié</option>
               </Select>
             </Field>
             <Field label="Numéro de contribuable" hint="détermine le régime de TVA">
-              <Input placeholder="CI-ABJ-2024-B-00000" />
+              <Input
+                placeholder="CI-ABJ-2024-B-00000"
+                value={tva}
+                onChange={(e) => setTva(e.target.value)}
+              />
             </Field>
           </div>
           <Field
             label="Adresse de l’administrateur"
             hint="recevra l’invitation — aucun mot de passe n’est transmis par courriel"
           >
-            <Input type="email" placeholder="admin@entreprise.ci" />
+            <Input
+              type="email"
+              placeholder="admin@entreprise.ci"
+              value={adminCourriel}
+              onChange={(e) => setAdminCourriel(e.target.value)}
+            />
           </Field>
           <div className="space-y-3">
             <Switch
-              checked
+              checked={royaume}
+              onChange={setRoyaume}
               label="Provisionner un royaume d’identité dédié"
               description="Cloisonnement complet des identités. La fédération avec l’annuaire du client se configure ensuite depuis son propre espace."
             />
             <Switch
-              checked
+              checked={mfa}
+              onChange={setMfa}
               label="Exiger le deuxième facteur d’authentification"
               description="Appliqué à tous les membres dès la première connexion."
             />
             <Switch
-              checked={false}
+              checked={espaceEvaluation}
+              onChange={setEspaceEvaluation}
               label="Créer un Espace Cloud d’évaluation"
               description="4 vCPU, 8 Go, 100 Go de disque, gratuit pendant 30 jours puis supprimé automatiquement après avertissement."
             />
           </div>
           <CostPreview
             lignes={[
-              { libelle: 'Plan de service Standard', detail: 'Inclus, sans surcoût', montant: 0 },
               {
-                libelle: 'Espace Cloud d’évaluation',
-                detail: '30 jours offerts, puis facturation ou suppression',
+                libelle: `Plan de service ${
+                  plan === 'standard' ? 'Standard' : plan === 'avance' ? 'Avancé' : 'Entreprise'
+                }`,
+                detail:
+                  plan === 'standard'
+                    ? 'Inclus, sans surcoût'
+                    : plan === 'avance'
+                      ? 'Support prioritaire, engagement de première réponse réduit'
+                      : 'Interlocuteur dédié et revue trimestrielle',
                 montant: 0,
               },
+              ...(espaceEvaluation
+                ? [
+                    {
+                      libelle: 'Espace Cloud d’évaluation',
+                      detail: '30 jours offerts, puis facturation ou suppression',
+                      montant: 0,
+                    },
+                  ]
+                : []),
             ]}
           />
           <Callout ton="info" titre="Ce que la création déclenche">

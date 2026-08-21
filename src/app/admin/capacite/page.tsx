@@ -12,7 +12,7 @@ import {
   SYNTHESE_PLATEFORME,
   VMS,
 } from '@/lib/mock'
-import { BACKEND_LABEL, SITE_COURT } from '@/lib/types'
+import { BACKEND_LABEL, SITE_COURT, type Backend, type Placement } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
@@ -22,6 +22,8 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { BackendGauge, PlacementSlider, AvertissementMigration } from '@/components/business/infra'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'socles', label: 'Socles et capacité' },
@@ -32,14 +34,33 @@ const ONGLETS = [
 
 export default function Capacite() {
   const { autorise, refus, pousser } = useApp()
+  const executer = useOperation()
+  const socles = useCollection<Backend>('backends', BACKENDS)
+  const placements = useCollection<Placement>('placements', PLACEMENTS)
   const [onglet, setOnglet] = useState('socles')
   const [espaceId, setEspaceId] = useState(ESPACES[0]?.id ?? '')
   const [rebalance, setRebalance] = useState(false)
+  const [repartition, setRepartition] = useState<Array<{ backendId: string; percent: number }>>([])
 
   const espace = ESPACES.find((e) => e.id === espaceId)
-  const placementsEspace = PLACEMENTS.filter((p) => p.espaceId === espaceId)
-  const satures = BACKENDS.filter((b) => (b.saturation?.j30 ?? 0) > 85)
-  const enSortie = BACKENDS.filter((b) => b.enSortie?.actif)
+  const placementsEspace = placements.items.filter((p) => p.espaceId === espaceId)
+
+  /** Remplace la répartition de l'espace courant par celle qui vient d'être réglée. */
+  const appliquerRepartition = (parts: Array<{ backendId: string; percent: number }>) => {
+    if (parts.length === 0) return
+    placements.supprimer(placementsEspace.map((p) => p.id))
+    placements.creer(
+      parts.map((part) => ({
+        id: placements.identifiant('pl'),
+        espaceId,
+        backendId: part.backendId,
+        percent: part.percent,
+      })),
+      'fin',
+    )
+  }
+  const satures = socles.items.filter((b) => (b.saturation?.j30 ?? 0) > 85)
+  const enSortie = socles.items.filter((b) => b.enSortie?.actif)
 
   const vcpuPct = Math.round(
     (SYNTHESE_PLATEFORME.vcpuUtilise / SYNTHESE_PLATEFORME.vcpuTotal) * 100,
@@ -55,9 +76,79 @@ export default function Capacite() {
         titre="Capacité et placement"
         sousTitre="Le placement multi-socle transparent est un objectif de produit, pas un détail d’exploitation : un Espace Cloud peut être réparti entre plusieurs hyperviseurs, et le client voit sur quel socle tourne chacune de ses machines."
         actions={
-          <GatedAction autorise={autorise('capacity.manage')} message={refus('capacity.manage')}>
-            <Button iconBefore={<Plus size={14} />}>Déclarer un socle</Button>
-          </GatedAction>
+          <BoutonFormulaire
+            libelle="Déclarer un socle"
+            size="md"
+            variant="primary"
+            icone={<Plus size={14} />}
+            action="capacity.manage"
+            titre="Déclarer un socle d’hypervision"
+            description="Un socle déclaré n’accueille rien tant qu’il n’est pas en ligne : les sondes tournent d’abord, le placement suit."
+            champs={[
+              { id: 'code', label: 'Code', placeholder: 'OS-ABJ-02', obligatoire: true },
+              {
+                id: 'type',
+                label: 'Type',
+                type: 'select',
+                options: [
+                  { value: 'openstack', label: 'OpenStack' },
+                  { value: 'proxmox', label: 'Proxmox VE' },
+                  { value: 'cloudstack', label: 'Apache CloudStack' },
+                  { value: 'vmware', label: 'VMware vSphere' },
+                  { value: 'hyperv', label: 'Microsoft Hyper-V' },
+                ],
+              },
+              {
+                id: 'site',
+                label: 'Site',
+                type: 'select',
+                demi: true,
+                options: [
+                  { value: 'ABJ', label: 'Abidjan' },
+                  { value: 'GBM', label: 'Grand-Bassam' },
+                ],
+              },
+              { id: 'vcpu', label: 'vCPU', type: 'nombre', demi: true, min: 8 },
+              { id: 'ram', label: 'Mémoire', type: 'nombre', demi: true, min: 32, suffixe: 'Go' },
+              { id: 'stockage', label: 'Stockage', type: 'nombre', demi: true, min: 1, suffixe: 'To' },
+            ]}
+            valeursDepart={{ type: 'openstack', site: 'ABJ', vcpu: 256, ram: 1024, stockage: 100 }}
+            libelleValider="Déclarer"
+            operation={(v) => {
+              const idSocle = socles.identifiant('bk')
+              return {
+                titre: `Socle ${v.code} déclaré`,
+                detail: 'Il reste hors placement jusqu’à sa mise en ligne.',
+                effet: () =>
+                  socles.creer({
+                    id: idSocle,
+                    code: String(v.code),
+                    type: v.type as Backend['type'],
+                    site: v.site as Backend['site'],
+                    statut: 'degrade',
+                    capacite: {
+                      vcpu: Number(v.vcpu),
+                      ramGo: Number(v.ram),
+                      stockageTo: Number(v.stockage),
+                    },
+                    usage: { vcpuPct: 0, ramPct: 0, stockagePct: 0 },
+                    hosts: 0,
+                    souverain: v.type !== 'vmware' && v.type !== 'hyperv',
+                  }),
+                job: {
+                  type: 'backend.declare',
+                  label: `Raccordement du socle ${v.code}`,
+                  etapes: [
+                    'Vérifier l’accès à l’API du socle',
+                    'Inventorier les hôtes',
+                    'Déclarer les sondes de supervision',
+                    'Ouvrir le socle au placement',
+                  ],
+                },
+                effetFinal: () => socles.modifier(idSocle, { statut: 'en_ligne' }),
+              }
+            }}
+          />
         }
         meta={
           <>
@@ -216,17 +307,52 @@ export default function Capacite() {
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         <span className="flex items-center justify-end gap-1.5">
-                          <Button size="sm" variant="ghost">
-                            Détail
-                          </Button>
-                          <GatedAction
-                            autorise={autorise('capacity.manage')}
-                            message={refus('capacity.manage')}
-                          >
-                            <Button size="sm" variant="ghost">
-                              {b.statut === 'maintenance' ? 'Remettre en ligne' : 'Drainer'}
-                            </Button>
-                          </GatedAction>
+                          <BoutonAction
+                            libelle="Détail"
+                            variant="ghost"
+                            operation={{
+                              ton: 'info',
+                              titre: `${b.code} · ${BACKEND_LABEL[b.type]}`,
+                              detail: `${b.hosts} hôtes · ${b.capacite.vcpu} vCPU · ${num(b.capacite.ramGo)} Go · saturation projetée à 30 jours ${b.saturation?.j30 ?? 0} %`,
+                            }}
+                          />
+                          <BoutonAction
+                            libelle={b.statut === 'maintenance' ? 'Remettre en ligne' : 'Drainer'}
+                            variant="ghost"
+                            operation={{
+                              action: 'capacity.manage',
+                              ton: b.statut === 'maintenance' ? 'ok' : 'warn',
+                              titre:
+                                b.statut === 'maintenance'
+                                  ? `${b.code} remis en ligne`
+                                  : `Drainage de ${b.code} lancé`,
+                              detail:
+                                b.statut === 'maintenance'
+                                  ? 'Le socle accueille de nouveau des placements.'
+                                  : 'Les machines du socle sont migrées à chaud vers les autres socles du site avant la maintenance.',
+                              job:
+                                b.statut === 'maintenance'
+                                  ? undefined
+                                  : {
+                                      type: 'backend.drain',
+                                      label: `Drainage du socle ${b.code}`,
+                                      etapes: [
+                                        'Fermer le socle au placement',
+                                        'Calculer le plan de migration',
+                                        'Migrer les machines à chaud',
+                                        'Vérifier qu’aucune charge ne reste',
+                                      ],
+                                    },
+                              effet:
+                                b.statut === 'maintenance'
+                                  ? () => socles.modifier(b.id, { statut: 'en_ligne' })
+                                  : undefined,
+                              effetFinal:
+                                b.statut === 'maintenance'
+                                  ? undefined
+                                  : () => socles.modifier(b.id, { statut: 'maintenance' }),
+                            }}
+                          />
                         </span>
                       </td>
                     </tr>
@@ -313,12 +439,15 @@ export default function Capacite() {
                 </div>
 
                 <PlacementSlider
-                  backends={BACKENDS.filter((b) => b.statut === 'en_ligne')}
+                  key={espaceId}
+                  backends={socles.items.filter((b) => b.statut === 'en_ligne')}
                   initial={
                     placementsEspace.length > 0
                       ? placementsEspace.map((p) => ({ backendId: p.backendId, percent: p.percent }))
                       : [{ backendId: BACKENDS[1].id, percent: 100 }]
                   }
+                  onChange={setRepartition}
+                  onAppliquer={appliquerRepartition}
                 />
 
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-g-100 pt-4">
@@ -333,7 +462,16 @@ export default function Capacite() {
                       Appliquer le rééquilibrage
                     </Button>
                   </GatedAction>
-                  <Button variant="ghost">Simuler l’impact</Button>
+                  <BoutonAction
+                    libelle="Simuler l’impact"
+                    variant="ghost"
+                    size="md"
+                    operation={{
+                      ton: 'info',
+                      titre: 'Simulation terminée',
+                      detail: `${placementsEspace.length} socle(s) concerné(s) : migration à chaud possible pour la majorité des machines, redémarrage nécessaire pour celles dont le socle cible change de famille d’hyperviseur. Rien n’a été déplacé.`,
+                    }}
+                  />
                   <span className="text-[11.5px] text-g-500">
                     La simulation liste les machines à déplacer et le mode de migration disponible pour
                     chacune.
@@ -364,7 +502,7 @@ export default function Capacite() {
                 </thead>
                 <tbody>
                   {ESPACES.map((e) => {
-                    const pls = PLACEMENTS.filter((p) => p.espaceId === e.id)
+                    const pls = placements.items.filter((p) => p.espaceId === e.id)
                     return (
                       <tr key={e.id} className="border-b border-g-100 last:border-0">
                         <td className="px-3 py-2.5 font-mono text-[12px] font-semibold text-ink">
@@ -760,10 +898,21 @@ export default function Capacite() {
           'Le client verra le changement de socle sur chacune de ses machines, et l’opération apparaîtra dans son journal d’audit',
         ]}
         onConfirm={() => {
-          pousser({
-            ton: 'ok',
+          executer({
+            action: 'capacity.manage',
             titre: 'Rééquilibrage appliqué',
             detail: `Le placement de ${espace?.code} est mis à jour. Les migrations à chaud démarrent maintenant ; les autres sont planifiées dans la fenêtre de maintenance du client.`,
+            job: {
+              type: 'capacite.rebalance',
+              label: `Rééquilibrage · ${espace?.code ?? 'espace'}`,
+              etapes: [
+                'Calculer le plan de migration',
+                'Migrer les machines à chaud',
+                'Planifier les redémarrages nécessaires',
+                'Vérifier l’équilibre atteint',
+              ],
+            },
+            effetFinal: () => appliquerRepartition(repartition),
           })
           setRebalance(false)
         }}

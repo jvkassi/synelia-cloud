@@ -4,9 +4,11 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Ban, KeyRound, Pause, Play, ShieldAlert, UserCog } from 'lucide-react'
 import { cn, trendSeries } from '@/lib/utils'
-import { dateCourte, dateHeure, goHumain, money, num, pct, relatif } from '@/lib/format'
+import { dateCourte, dateHeure, goHumain, MAINTENANT, money, num, pct, relatif } from '@/lib/format'
 import {
   AUDIT,
+  ELEVATIONS,
+  EQUIPE_SYNELIA,
   ESPACES,
   FACTURES,
   IMPAYES,
@@ -17,7 +19,15 @@ import {
   USERS,
   membresDeLOrg,
 } from '@/lib/mock'
-import { MOYEN_LABEL, ROLE_LABEL, SITE_COURT, type Role } from '@/lib/types'
+import {
+  MOYEN_LABEL,
+  ROLE_LABEL,
+  SITE_COURT,
+  type Invoice,
+  type Organisation,
+  type Role,
+} from '@/lib/types'
+import type { Elevation } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Avatar, GatedAction, Tabs } from '@/components/ui/display'
@@ -27,6 +37,8 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { Timeline } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'synthese', label: 'Synthèse' },
@@ -40,13 +52,29 @@ const ONGLETS = [
 
 export function VueOrganisation({ id }: { id: string }) {
   const { autorise, refus, pousser } = useApp()
+  const executer = useOperation()
+  const lesFactures = useCollection<Invoice>('factures', FACTURES)
+  const elevations = useCollection<Elevation>(`elevations-${id}`, ELEVATIONS)
+  const orgs = useCollection<Organisation>('organisations', ORGANISATIONS)
   const [onglet, setOnglet] = useState('synthese')
   const [elevation, setElevation] = useState(false)
   const [suspension, setSuspension] = useState(false)
+  const [motifElevation, setMotifElevation] = useState('')
+  const [dureeElevation, setDureeElevation] = useState('4')
+  const [perimetreElevation, setPerimetreElevation] = useState('lecture')
+  const [ticketElevation, setTicketElevation] = useState('')
+  const [libreService, setLibreService] = useState(true)
+  const [marketplaceOuverte, setMarketplaceOuverte] = useState(true)
+  const [soclesSouverains, setSoclesSouverains] = useState(false)
+  const [planService, setPlanService] = useState('')
+  const [plafond, setPlafond] = useState(0)
+  const [quotaEspaces, setQuotaEspaces] = useState(10)
 
-  const org = ORGANISATIONS.find((o) => o.id === id)!
+  // L'organisation vient de la collection : suspendre depuis cet écran doit se
+  // voir dans la liste, et une organisation créée dans la session doit s'ouvrir.
+  const org = orgs.items.find((o) => o.id === id)!
   const membres = membresDeLOrg(org.id)
-  const factures = FACTURES.filter((f) => f.orgId === org.id)
+  const factures = lesFactures.items.filter((f) => f.orgId === org.id)
   const impayees = factures.filter((f) => f.statut === 'impayee')
   const tickets = TICKETS_PLATEFORME.filter((t) => t.orgId === org.id)
   const audit = AUDIT.filter((a) => a.orgId === org.id)
@@ -553,17 +581,30 @@ export function VueOrganisation({ id }: { id: string }) {
                         </td>
                         <td className="px-3 py-2.5 text-right">
                           <span className="flex items-center justify-end gap-1.5">
-                            <Button size="sm" variant="ghost">
-                              PDF
-                            </Button>
+                            <BoutonAction
+                              libelle="PDF"
+                              variant="ghost"
+                              operation={{
+                                ton: 'info',
+                                titre: `Facture ${f.numero} téléchargée`,
+                                detail: `${money(f.total)} · exemplaire opposable`,
+                              }}
+                            />
                             {f.statut === 'impayee' && (
                               <GatedAction
                                 autorise={autorise('org.manage')}
                                 message={refus('org.manage')}
                               >
-                                <Button size="sm" variant="secondary">
-                                  Relancer
-                                </Button>
+                                <BoutonAction
+                                  libelle="Relancer"
+                                  operation={{
+                                    action: 'org.manage',
+                                    ton: 'warn',
+                                    titre: `Relance envoyée pour ${f.numero}`,
+                                    detail:
+                                      'Courriel au contact de facturation et à l’administrateur de l’organisation, avec la copie de la facture.',
+                                  }}
+                                />
                               </GatedAction>
                             )}
                           </span>
@@ -615,15 +656,76 @@ export function VueOrganisation({ id }: { id: string }) {
                 ]}
               />
               <div className="mt-4 flex flex-wrap gap-1.5 border-t border-g-100 pt-4">
-                <Button size="sm" variant="secondary">
-                  Enregistrer un appel
-                </Button>
-                <Button size="sm" variant="ghost">
-                  Proposer un échelonnement
-                </Button>
-                <Button size="sm" variant="ghost">
-                  Passer un avoir commercial
-                </Button>
+                <BoutonFormulaire
+                  libelle="Enregistrer un appel"
+                  action="org.manage"
+                  titre="Enregistrer un appel de recouvrement"
+                  description="Ce qui a été dit compte autant que le fait d’avoir appelé : la note suit le dossier et évite qu’un collègue répète la même demande."
+                  champs={[
+                    {
+                      id: 'issue',
+                      label: 'Issue de l’appel',
+                      type: 'select',
+                      options: [
+                        { value: 'promesse', label: 'Promesse de règlement' },
+                        { value: 'echelonnement', label: 'Demande d’échelonnement' },
+                        { value: 'contestation', label: 'Contestation de la facture' },
+                        { value: 'injoignable', label: 'Injoignable' },
+                      ],
+                    },
+                    { id: 'note', label: 'Note', type: 'zone', placeholder: 'Interlocuteur, engagement pris, date annoncée…' },
+                  ]}
+                  valeursDepart={{ issue: 'promesse' }}
+                  libelleValider="Enregistrer"
+                  operation={(v) => ({
+                    titre: 'Appel enregistré au dossier',
+                    detail: `${{ promesse: 'Promesse de règlement', echelonnement: 'Demande d’échelonnement', contestation: 'Contestation', injoignable: 'Injoignable' }[String(v.issue)]}`,
+                  })}
+                />
+                <BoutonFormulaire
+                  libelle="Proposer un échelonnement"
+                  variant="ghost"
+                  action="org.manage"
+                  titre="Proposer un échelonnement"
+                  description="Un échelonnement accepté rapporte plus qu’une suspension : il maintient le service et étale la créance."
+                  champs={[
+                    { id: 'mensualites', label: 'Nombre de mensualités', type: 'nombre', demi: true, min: 2, max: 12 },
+                    { id: 'premiere', label: 'Première échéance', type: 'select', demi: true, options: [
+                      { value: 'immediat', label: 'Immédiate' },
+                      { value: 'fin-mois', label: 'Fin du mois en cours' },
+                      { value: 'mois-suivant', label: 'Le mois suivant' },
+                    ] },
+                  ]}
+                  valeursDepart={{ mensualites: 3, premiere: 'fin-mois' }}
+                  libelleValider="Proposer"
+                  operation={(v) => ({
+                    titre: `Échelonnement sur ${v.mensualites} mensualités proposé`,
+                    detail: `${money(Math.round((impayeReleve?.montant ?? 0) / Number(v.mensualites)))} par mois. En attente de l’accord du client.`,
+                  })}
+                />
+                <BoutonFormulaire
+                  libelle="Passer un avoir commercial"
+                  variant="ghost"
+                  action="org.manage"
+                  titre="Passer un avoir commercial"
+                  description="Un avoir sort de la créance et entre dans la marge : il se justifie, il ne s’accorde pas pour clore une discussion."
+                  champs={[
+                    { id: 'montant', label: 'Montant', type: 'nombre', demi: true, min: 1, suffixe: 'FCFA' },
+                    { id: 'motif', label: 'Motif', type: 'select', demi: true, options: [
+                      { value: 'sla', label: 'Crédit de SLA' },
+                      { value: 'geste', label: 'Geste commercial' },
+                      { value: 'erreur', label: 'Erreur de facturation' },
+                    ] },
+                    { id: 'note', label: 'Justification', type: 'zone', obligatoire: true },
+                  ]}
+                  valeursDepart={{ montant: 50000, motif: 'geste' }}
+                  libelleValider="Passer l’avoir"
+                  operation={(v) => ({
+                    ton: 'warn',
+                    titre: `Avoir de ${money(Number(v.montant))} passé`,
+                    detail: 'Imputé sur la marge de l’organisation et visible dans le rapport de finance.',
+                  })}
+                />
               </div>
             </Card>
           )}
@@ -793,7 +895,10 @@ export function VueOrganisation({ id }: { id: string }) {
             />
             <div className="space-y-4">
               <Field label="Plan de service">
-                <Select defaultValue={org.tenantPlan ?? 'Standard'}>
+                <Select
+                  value={planService || (org.tenantPlan ?? 'Standard')}
+                  onChange={(e) => setPlanService(e.target.value)}
+                >
                   <option value="Standard">Standard</option>
                   <option value="Avancé">Avancé — support prioritaire</option>
                   <option value="Entreprise">Entreprise — interlocuteur dédié</option>
@@ -803,43 +908,66 @@ export function VueOrganisation({ id }: { id: string }) {
                 label="Plafond de dépense mensuelle"
                 hint="au-delà, la création de nouvelles ressources est bloquée et le client averti"
               >
-                <Input type="number" defaultValue={org.caMensuel ? org.caMensuel * 2 : 500000} />
+                <Input
+                  type="number"
+                  min={0}
+                  value={plafond || (org.caMensuel ? org.caMensuel * 2 : 500000)}
+                  onChange={(e) => setPlafond(Number(e.target.value))}
+                />
               </Field>
               <Field label="Quota maximal d’Espaces Cloud">
-                <Input type="number" defaultValue={10} />
+                <Input
+                  type="number"
+                  min={org.espaces ?? 0}
+                  value={quotaEspaces}
+                  onChange={(e) => setQuotaEspaces(Number(e.target.value))}
+                />
               </Field>
               <div className="space-y-3">
                 <Switch
-                  checked
+                  checked={libreService}
+                  onChange={setLibreService}
                   label="Autoriser le libre-service"
                   description="Le client peut créer et supprimer ses propres ressources sans passer par nous. Désactiver revient à imposer un ticket pour chaque création."
                 />
                 <Switch
-                  checked
+                  checked={marketplaceOuverte}
+                  onChange={setMarketplaceOuverte}
                   label="Autoriser la marketplace"
                   description="Souscription en autonomie aux services managés du catalogue."
                 />
                 <Switch
-                  checked={false}
+                  checked={soclesSouverains}
+                  onChange={setSoclesSouverains}
                   label="Restreindre aux socles souverains"
                   description="Les ressources de cette organisation ne seront placées que sur des socles libres et localisés en Côte d’Ivoire. À activer pour les organisations soumises à une contrainte réglementaire."
                 />
               </div>
+              {!libreService && (
+                <Callout ton="warn" titre="Sans libre-service, tout passe par un ticket">
+                  Le client ne pourra plus créer ni supprimer une ressource lui-même : chaque
+                  demande arrivera dans notre file de tickets, avec le délai que cela implique. À
+                  réserver aux organisations qui le demandent explicitement.
+                </Callout>
+              )}
             </div>
-            <GatedAction autorise={autorise('org.manage')} message={refus('org.manage')}>
-              <Button
-                className="mt-4"
-                onClick={() =>
-                  pousser({
-                    ton: 'ok',
-                    titre: 'Paramètres enregistrés',
-                    detail: 'La modification est journalisée dans l’audit du client, avec votre nom.',
-                  })
-                }
-              >
-                Enregistrer
-              </Button>
-            </GatedAction>
+            <BoutonAction
+              libelle="Enregistrer"
+              size="md"
+              className="mt-4"
+              variant="primary"
+              operation={{
+                action: 'org.manage',
+                titre: 'Paramètres enregistrés',
+                detail: `Plan ${planService || (org.tenantPlan ?? 'Standard')}, quota de ${quotaEspaces} espaces, libre-service ${
+                  libreService ? 'autorisé' : 'refusé'
+                }. La modification est journalisée dans l’audit du client, avec votre nom.`,
+                effet: () =>
+                  orgs.modifier(org.id, {
+                    tenantPlan: planService || (org.tenantPlan ?? 'Standard'),
+                  }),
+              }}
+            />
           </Card>
 
           <div className="space-y-4">
@@ -849,24 +977,9 @@ export function VueOrganisation({ id }: { id: string }) {
                 sousTitre="Chaque accès de nos équipes aux ressources de cette organisation."
               />
               <div className="space-y-2">
-                {[
-                  {
-                    qui: 'Jean-Vincent Kassi',
-                    quand: '2026-08-19T13:00:00Z',
-                    duree: '4 h',
-                    motif: 'Ticket SYN-8814 — diagnostic de latence sur app-metier',
-                    actif: true,
-                  },
-                  {
-                    qui: 'Aïcha Bamba',
-                    quand: '2026-08-12T09:20:00Z',
-                    duree: '2 h',
-                    motif: 'Ticket SYN-8702 — restauration accompagnée',
-                    actif: false,
-                  },
-                ].map((e) => (
+                {elevations.items.map((e) => (
                   <div
-                    key={e.quand}
+                    key={e.id}
                     className={cn(
                       'rounded-[6px] border px-3 py-2.5',
                       e.actif ? 'border-warn/40 bg-warn-bg' : 'border-g-300',
@@ -886,9 +999,19 @@ export function VueOrganisation({ id }: { id: string }) {
                       {dateHeure(e.quand)} · durée {e.duree}
                     </p>
                     {e.actif && (
-                      <Button size="sm" variant="ghost" className="mt-1.5">
-                        Révoquer maintenant
-                      </Button>
+                      <BoutonAction
+                        libelle="Révoquer maintenant"
+                        variant="ghost"
+                        className="mt-1.5"
+                        operation={{
+                          action: 'org.manage',
+                          ton: 'warn',
+                          titre: `Élévation de ${e.qui} révoquée`,
+                          detail:
+                            'L’accès est coupé immédiatement et la révocation apparaît dans l’audit de l’organisation, au même titre que l’élévation.',
+                          effet: () => elevations.modifier(e.id, { actif: false }),
+                        }}
+                      />
                     )}
                   </div>
                 ))}
@@ -939,9 +1062,38 @@ export function VueOrganisation({ id }: { id: string }) {
                     autorise={autorise('org.manage')}
                     message={refus('org.manage')}
                   >
-                    <Button size="sm" variant="danger" className="mt-2">
-                      Ouvrir la procédure de clôture
-                    </Button>
+                    <BoutonAction
+                      libelle="Ouvrir la procédure de clôture"
+                      variant="danger"
+                      className="mt-2"
+                      operation={{
+                        action: 'org.manage',
+                        ton: 'err',
+                        titre: `Procédure de clôture ouverte pour ${org.nom}`,
+                        detail:
+                          '30 jours de récupération, 30 jours de conservation en lecture, puis effacement avec attestation. Rien n’est supprimé aujourd’hui.',
+                        job: {
+                          type: 'org.closure',
+                          label: `Clôture de ${org.nom}`,
+                          etapes: [
+                            'Notifier le client',
+                            'Ouvrir la fenêtre de récupération des données',
+                            'Geler les souscriptions à la prochaine échéance',
+                          ],
+                          dureeEtapeMs: 1100,
+                        },
+                      }}
+                      confirmation={{
+                        ressource: org.nom,
+                        titre: 'Ouvrir la procédure de clôture ?',
+                        pertes: [
+                          'Le client est notifié et le calendrier de réversibilité démarre',
+                          'Les souscriptions cessent d’être renouvelées',
+                          'Au terme des 60 jours, les données sont effacées avec attestation',
+                        ],
+                        libelleAction: 'Ouvrir la procédure',
+                      }}
+                    />
                   </GatedAction>
                 </div>
               </div>
@@ -961,12 +1113,28 @@ export function VueOrganisation({ id }: { id: string }) {
               Annuler
             </Button>
             <Button
+              disabled={
+                motifElevation.trim().length === 0 ||
+                (perimetreElevation === 'intervention' && ticketElevation.trim().length === 0)
+              }
               onClick={() => {
-                pousser({
+                executer({
+                  action: 'org.manage',
                   ton: 'warn',
                   titre: 'Élévation demandée',
                   detail: `Une entrée apparaît immédiatement dans le journal d’audit de ${org.nom}, avec votre nom et le motif.`,
+                  effet: () =>
+                    elevations.creer({
+                      id: elevations.identifiant('elv'),
+                      qui: EQUIPE_SYNELIA[0].nom,
+                      quand: MAINTENANT,
+                      duree: `${dureeElevation} h`,
+                      motif: `${ticketElevation.trim() ? `${ticketElevation.trim()} — ` : ''}${motifElevation.trim()}`,
+                      actif: true,
+                    }),
                 })
+                setMotifElevation('')
+                setTicketElevation('')
                 setElevation(false)
               }}
             >
@@ -979,30 +1147,47 @@ export function VueOrganisation({ id }: { id: string }) {
           <Field label="Motif" hint="visible par le client dans son journal d’audit — soyez précis">
             <Textarea
               rows={3}
+              value={motifElevation}
+              onChange={(e) => setMotifElevation(e.target.value)}
               placeholder="Ticket SYN-8814 — diagnostic de la latence signalée sur app-metier, lecture des métriques et journaux de l’environnement de production."
             />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Durée" hint="l’accès expire automatiquement">
-              <Select defaultValue="4">
+              <Select
+                value={dureeElevation}
+                onChange={(e) => setDureeElevation(e.target.value)}
+              >
                 <option value="1">1 heure</option>
                 <option value="4">4 heures</option>
                 <option value="8">8 heures</option>
               </Select>
             </Field>
             <Field label="Périmètre">
-              <Select defaultValue="lecture">
+              <Select
+                value={perimetreElevation}
+                onChange={(e) => setPerimetreElevation(e.target.value)}
+              >
                 <option value="lecture">Lecture seule des métadonnées et métriques</option>
                 <option value="logs">Lecture, journaux applicatifs inclus</option>
                 <option value="intervention">Intervention — modification de ressources</option>
               </Select>
             </Field>
           </div>
-          <Field label="Ticket associé" hint="obligatoire pour une intervention">
-            <Input placeholder="SYN-8814" />
+          <Field
+            label="Ticket associé"
+            hint="obligatoire pour une intervention"
+            required={perimetreElevation === 'intervention'}
+          >
+            <Input
+              placeholder="SYN-8814"
+              value={ticketElevation}
+              onChange={(e) => setTicketElevation(e.target.value)}
+            />
           </Field>
           <Switch
             checked
+            disabled
             label="Notifier l’administrateur de l’organisation"
             description="Non désactivable pour une intervention. Un accès dont le client n’est pas averti n’est pas un accès légitime."
           />
@@ -1035,13 +1220,14 @@ export function VueOrganisation({ id }: { id: string }) {
               ]
         }
         onConfirm={() => {
-          pousser({
+          executer({
+            action: 'org.manage',
             ton: org.statut === 'active' ? 'err' : 'ok',
-            titre:
-              org.statut === 'active'
-                ? `${org.nom} suspendue`
-                : `${org.nom} réactivée`,
-            detail: 'L’opération est journalisée dans l’audit de l’organisation et dans celui de la plateforme.',
+            titre: org.statut === 'active' ? `${org.nom} suspendue` : `${org.nom} réactivée`,
+            detail:
+              'L’opération est journalisée dans l’audit de l’organisation et dans celui de la plateforme.',
+            effet: () =>
+              orgs.modifier(org.id, { statut: org.statut === 'active' ? 'suspendue' : 'active' }),
           })
           setSuspension(false)
         }}

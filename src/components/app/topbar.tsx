@@ -10,12 +10,13 @@ import {
   CloudCog,
   ListChecks,
   LogOut,
+  RotateCcw,
   Settings,
   ShieldCheck,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { relatif } from '@/lib/format'
-import { ROLE_LABEL, type Role } from '@/lib/types'
+import { ROLE_LABEL, type ProvisioningJob, type Role } from '@/lib/types'
 import { ROLES_CLIENT, ROLES_SUPER_ADMIN } from '@/lib/rbac'
 import { MES_ORGANISATIONS, ORG_COURANTE, UTILISATEUR_COURANT } from '@/lib/mock/orgs'
 import { ESPACES } from '@/lib/mock/iaas'
@@ -26,14 +27,17 @@ import {
   sectionActive,
   universActif,
   type Portee,
+  type SectionNav,
   type UniversNav,
 } from '@/lib/navigation'
+import { PROJETS } from '@/lib/mock/projets'
 import { Avatar } from '@/components/ui/display'
 import { Badge } from '@/components/ui/badge'
 import { Popover } from '@/components/ui/overlay'
 import { Logo, BadgeSuperAdmin } from '@/components/brand/logo'
 import { RechercheGlobale } from './recherche'
 import { useApp } from './contexte'
+import { useAtelier, useCollection } from './atelier'
 
 const NOTIFICATIONS = [
   {
@@ -174,7 +178,7 @@ function BarreUnivers({
         </Popover>
       </div>
 
-      {!superAdmin && <SelecteurContexte />}
+      {!superAdmin && <SelecteurContexte avecEspace={!courant.panneauEspace} />}
 
       <RechercheGlobale portee={portee} />
 
@@ -188,6 +192,20 @@ function BarreUnivers({
 }
 
 // ─── Barre 2 : les sections de l'univers courant ───────────────────────
+
+/**
+ * Les sections de l'univers Applications partagent un seul panneau — le projet.
+ * Changer d'onglet ne doit donc pas reperdre le projet ouvert : on le reporte
+ * dans l'adresse de la section visée. Ailleurs, chaque section a sa propre
+ * ressource et la question ne se pose pas.
+ */
+function hrefSection(section: SectionNav, chemin: string): string {
+  if (!section.href.startsWith('/app/applications/')) return section.href
+  const segment = chemin.split('/')[4]
+  return segment && PROJETS.some((p) => p.id === segment)
+    ? `${section.href}/${segment}`
+    : section.href
+}
 
 function BarreSections({
   portee,
@@ -212,11 +230,19 @@ function BarreSections({
         portee === 'super_admin' ? 'bg-p-050' : 'bg-white',
       )}
     >
-      <ul className="mx-auto flex min-w-max max-w-[1400px] items-stretch px-2 sm:px-4">
+      {/* Un univers en pleine largeur aligne ses onglets sur le bord gauche,
+          là où commence son panneau de sélection : une bande d'onglets centrée
+          au-dessus d'une colonne collée au bord se lit comme un décalage. */}
+      <ul
+        className={cn(
+          'flex min-w-max items-stretch px-2 sm:px-4',
+          !univers.pleineLargeur && 'mx-auto max-w-[1400px]',
+        )}
+      >
         {univers.sections.map((s) => (
           <li key={s.href} className="flex">
             <Link
-              href={s.href}
+              href={hrefSection(s, pathname)}
               className={cn(
                 'relative flex items-center whitespace-nowrap px-3 py-2.5 text-[12.5px] font-semibold transition-colors',
                 s.href === active?.href
@@ -239,27 +265,43 @@ function BarreSections({
  * Un seul contrôle pour les deux dimensions du contexte client. Deux
  * sélecteurs séparés tenaient trop de place dans la barre et posaient la même
  * question deux fois : « où suis-je ? ».
+ *
+ * Dans les univers qui portent leur propre sélecteur d'Espace dans le panneau
+ * de gauche, ce contrôle ne garde que l'organisation, pour la même raison : le
+ * panneau est alors le seul endroit où l'on choisit son Espace Cloud.
  */
-function SelecteurContexte() {
+function SelecteurContexte({ avecEspace }: { avecEspace: boolean }) {
   const { espaceId, setEspaceId } = useApp()
   const espace = ESPACES.find((e) => e.id === espaceId) ?? ESPACES[0]
 
   return (
     <Popover
       width="w-72"
-      label="Changer d’organisation ou d’Espace Cloud"
+      label={avecEspace ? 'Changer d’organisation ou d’Espace Cloud' : 'Changer d’organisation'}
       trigger={() => (
         <span
           className="flex shrink-0 items-center gap-1.5 rounded-[6px] border border-white/15 bg-white/10 px-2 py-1.5 text-[11.5px] font-semibold text-p-300 transition-colors hover:bg-white/15"
-          title={`${ORG_COURANTE.nom} · ${espace.code}`}
+          title={avecEspace ? `${ORG_COURANTE.nom} · ${espace.code}` : ORG_COURANTE.nom}
         >
           <Building2 size={12} className="shrink-0" />
-          {/* Le nom de l'organisation n'apparaît qu'au-delà de 1536 px : entre
-              1280 et 1536, la bande des univers a besoin de cette place et le
-              code de l'Espace Cloud est la moitié la plus utile du contexte. */}
-          <span className="hidden max-w-28 truncate 2xl:inline">{ORG_COURANTE.nom}</span>
-          <span className="hidden text-p-400 2xl:inline">·</span>
-          <span className="hidden font-mono xl:inline">{espace.code}</span>
+          {/* Le nom de l'organisation n'apparaît qu'au-delà de 1536 px quand le
+              code de l'Espace Cloud l'accompagne : entre 1280 et 1536, la bande
+              des univers a besoin de cette place et le code est la moitié la
+              plus utile du contexte. Sans lui, le nom peut rester. */}
+          <span
+            className={cn(
+              'max-w-28 truncate',
+              avecEspace ? 'hidden 2xl:inline' : 'hidden sm:inline',
+            )}
+          >
+            {ORG_COURANTE.nom}
+          </span>
+          {avecEspace && (
+            <>
+              <span className="hidden text-p-400 2xl:inline">·</span>
+              <span className="hidden font-mono xl:inline">{espace.code}</span>
+            </>
+          )}
           <ChevronDown size={12} className="shrink-0 text-p-400" />
         </span>
       )}
@@ -291,26 +333,30 @@ function SelecteurContexte() {
             </Link>
           ))}
 
-          <p className="type-micro mt-2 border-t border-g-100 px-2 pb-1 pt-2 text-g-500">
-            Espace Cloud
-          </p>
-          {ESPACES.map((e) => (
-            <button
-              key={e.id}
-              type="button"
-              onClick={() => {
-                setEspaceId(e.id)
-                close()
-              }}
-              className={cn(
-                'flex w-full items-center justify-between gap-2 rounded-[6px] px-2 py-1.5 text-left transition-colors hover:bg-p-050',
-                e.id === espace.id && 'bg-p-050',
-              )}
-            >
-              <span className="font-mono text-[12.5px] font-semibold text-ink">{e.code}</span>
-              <span className="text-[11.5px] text-g-500">{e.site}</span>
-            </button>
-          ))}
+          {avecEspace && (
+            <>
+              <p className="type-micro mt-2 border-t border-g-100 px-2 pb-1 pt-2 text-g-500">
+                Espace Cloud
+              </p>
+              {ESPACES.map((e) => (
+                <button
+                  key={e.id}
+                  type="button"
+                  onClick={() => {
+                    setEspaceId(e.id)
+                    close()
+                  }}
+                  className={cn(
+                    'flex w-full items-center justify-between gap-2 rounded-[6px] px-2 py-1.5 text-left transition-colors hover:bg-p-050',
+                    e.id === espace.id && 'bg-p-050',
+                  )}
+                >
+                  <span className="font-mono text-[12.5px] font-semibold text-ink">{e.code}</span>
+                  <span className="text-[11.5px] text-g-500">{e.site}</span>
+                </button>
+              ))}
+            </>
+          )}
 
           <Link
             href="/select-organisation"
@@ -328,7 +374,11 @@ function SelecteurContexte() {
 // ─── Contrôles de droite ───────────────────────────────────────────────
 
 function CentreDeTaches({ superAdmin }: { superAdmin: boolean }) {
-  const jobs = superAdmin ? JOBS_PLATEFORME : JOBS
+  // Lu depuis l'atelier : une création lancée dans la session doit apparaître
+  // ici, et sa barre d'avancement bouger, sans recharger la page.
+  const client = useCollection<ProvisioningJob>('jobs', JOBS)
+  const plateforme = useCollection<ProvisioningJob>('jobs-plateforme', JOBS_PLATEFORME)
+  const jobs = superAdmin ? plateforme.items : client.items
   const enCours = jobs.filter((j) => j.statut === 'running' || j.statut === 'queued')
   const echecs = jobs.filter((j) => j.statut === 'failed')
 
@@ -413,6 +463,15 @@ function CentreDeTaches({ superAdmin }: { superAdmin: boolean }) {
               )
             })}
           </div>
+          {!superAdmin && (
+            <Link
+              href="/app/taches"
+              onClick={close}
+              className="block border-t border-g-100 px-3 py-2 text-[12px] font-semibold text-p-700 hover:text-m-600"
+            >
+              Ouvrir le centre de tâches →
+            </Link>
+          )}
         </div>
       )}
     </Popover>
@@ -468,7 +527,8 @@ function NotificationsPopover() {
  * place d'un troisième contrôle de contexte.
  */
 function MenuCompte({ superAdmin }: { superAdmin: boolean }) {
-  const { role, setRole } = useApp()
+  const { role, setRole, pousser } = useApp()
+  const { collectionsModifiees, reinitialiser } = useAtelier()
   const roles = superAdmin ? ROLES_SUPER_ADMIN : ROLES_CLIENT
 
   return (
@@ -544,6 +604,26 @@ function MenuCompte({ superAdmin }: { superAdmin: boolean }) {
                   Sécurité & sessions
                 </MenuLien>
               </>
+            )}
+            {collectionsModifiees > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  reinitialiser()
+                  close()
+                  pousser({
+                    ton: 'info',
+                    titre: 'Démonstration réinitialisée',
+                    detail: 'Les ressources créées ou supprimées pendant la session sont revenues à leur état d’origine.',
+                  })
+                }}
+                className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[12.5px] text-ink transition-colors hover:bg-p-050"
+              >
+                <span className="text-g-500">
+                  <RotateCcw size={13} />
+                </span>
+                Réinitialiser la démonstration
+              </button>
             )}
             <MenuLien href="/login" onClick={close} icone={<LogOut size={13} />}>
               Se déconnecter

@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, Callout } from '@/components/composition/card'
 import { HealthBadge, QuotaBar } from '@/components/composition/metrics'
+import { BoutonAction } from '@/components/app/actions'
 
 /** Jauge d'un backend de la plateforme — visible côté super admin seulement. */
 export function BackendGauge({
@@ -91,18 +92,29 @@ export function BackendGauge({
 export function PlacementSlider({
   backends,
   initial,
+  onChange,
+  onAppliquer,
   className,
 }: {
   backends: Backend[]
   initial: Array<{ backendId: string; percent: number }>
+  /** Remonte la répartition en cours de saisie — l'écran l'applique ensuite. */
+  onChange?: (parts: Array<{ backendId: string; percent: number }>) => void
+  /** Appelé à la fin du job de rééquilibrage, pour persister la répartition. */
+  onAppliquer?: (parts: Array<{ backendId: string; percent: number }>) => void
   className?: string
 }) {
   const [parts, setParts] = useState(initial)
+
+  const poser = (suite: Array<{ backendId: string; percent: number }>) => {
+    setParts(suite)
+    onChange?.(suite)
+  }
   const somme = parts.reduce((a, p) => a + p.percent, 0)
   const modifie = JSON.stringify(parts) !== JSON.stringify(initial)
 
   const ajuster = (backendId: string, valeur: number) => {
-    setParts((prev) => {
+    const calculer = (prev: Array<{ backendId: string; percent: number }>) => {
       const cible = clamp(valeur, 0, 100)
       const autres = prev.filter((p) => p.backendId !== backendId)
       const resteACaser = 100 - cible
@@ -124,14 +136,15 @@ export function PlacementSlider({
           ? { ...p, percent: cible }
           : recalcules.find((r) => r.backendId === p.backendId)!,
       )
-    })
+    }
+    poser(calculer(parts))
   }
 
   const ajouter = () => {
     const dispo = backends.find((b) => !parts.some((p) => p.backendId === b.id))
     if (!dispo) return
-    setParts((prev) => [
-      ...prev.map((p) => ({ ...p, percent: Math.round((p.percent * (100 - 10)) / 100) })),
+    poser([
+      ...parts.map((p) => ({ ...p, percent: Math.round((p.percent * (100 - 10)) / 100) })),
       { backendId: dispo.id, percent: 10 },
     ])
   }
@@ -194,9 +207,29 @@ export function PlacementSlider({
         </Callout>
       )}
 
-      <Button disabled={somme !== 100 || !modifie} fullWidth>
-        Appliquer la répartition
-      </Button>
+      <BoutonAction
+        libelle="Appliquer la répartition"
+        variant="primary"
+        size="md"
+        fullWidth
+        desactive={somme !== 100 || !modifie}
+        operation={{
+          action: 'capacity.manage',
+          ton: 'info',
+          titre: 'Rééquilibrage de charge lancé',
+          detail: 'Migration à chaud des machines entre hyperviseurs, transparente pour le client.',
+          job: {
+            type: 'capacite.rebalance',
+            label: 'Rééquilibrage de la répartition entre backends',
+            etapes: [
+              'Calculer le plan de migration',
+              'Migrer les machines à chaud',
+              'Vérifier l’équilibre atteint',
+            ],
+          },
+          effetFinal: () => onAppliquer?.(parts),
+        }}
+      />
     </div>
   )
 }

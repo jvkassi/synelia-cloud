@@ -14,6 +14,8 @@ export const metadata: Metadata = {
 
 export default function EspaceSuperAdminLayout({ children }: { children: React.ReactNode }) {
   return (
+    // `AppProvider` monte déjà l'atelier : un second fournisseur ici créerait
+    // un état parallèle, invisible depuis les écrans montés au-dessus.
     <AppProvider roleInitial="super_admin">
       <div className="min-h-screen bg-white">
         <TopBar portee="super_admin" />

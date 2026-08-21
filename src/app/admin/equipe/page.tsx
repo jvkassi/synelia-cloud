@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { KeyRound, Plus, ShieldCheck, UserMinus } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dateHeure, relatif } from '@/lib/format'
+import { dateHeure, MAINTENANT, relatif } from '@/lib/format'
+import type { MembreEquipe } from '@/lib/mock'
 import { AUDIT, EQUIPE_SYNELIA, TICKETS_PLATEFORME } from '@/lib/mock'
 import { MATRICE_RBAC, ROLES_SUPER_ADMIN, can } from '@/lib/rbac'
 import { ROLE_LABEL, type Role } from '@/lib/types'
@@ -16,6 +17,8 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { RoleMatrix } from '@/components/business/rbac-canvas'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'membres', label: 'Membres de l’équipe' },
@@ -24,19 +27,129 @@ const ONGLETS = [
   { id: 'acces', label: 'Politique d’accès' },
 ]
 
-export default function Equipe() {
-  const { autorise, refus, pousser } = useApp()
-  const [onglet, setOnglet] = useState('membres')
-  const [detail, setDetail] = useState<(typeof EQUIPE_SYNELIA)[number] | null>(null)
-  const [ajout, setAjout] = useState(false)
-  const [retrait, setRetrait] = useState<(typeof EQUIPE_SYNELIA)[number] | null>(null)
+/** Les huit règles de la politique d'accès de l'équipe. */
+const POLITIQUE = [
+  {
+    id: 'mfa',
+    label: 'Deuxième facteur obligatoire',
+    description:
+      'Sans exception, y compris pour la direction. Un compte privilégié sans deuxième facteur est la porte d’entrée la plus rentable pour un attaquant.',
+    defaut: true,
+    fige: false,
+  },
+  {
+    id: 'aucun-acces',
+    label: 'Aucun accès permanent aux données des clients',
+    description:
+      'Non désactivable. L’accès au contenu exige une élévation nominative, motivée, bornée et notifiée au client.',
+    defaut: true,
+    fige: true,
+  },
+  {
+    id: 'duree',
+    label: 'Élévation limitée à huit heures',
+    description:
+      'Au-delà, il faut une nouvelle demande. Le système refuse une élévation sans date de fin.',
+    defaut: true,
+    fige: false,
+  },
+  {
+    id: 'journal',
+    label: 'Journalisation de chaque action pendant une élévation',
+    description:
+      'Individuellement, pas globalement. Le client voit ce qui a été fait, pas seulement qu’un accès a eu lieu.',
+    defaut: true,
+    fige: false,
+  },
+  {
+    id: 'notification',
+    label: 'Notification du client sur toute intervention',
+    description:
+      'Non désactivable pour une intervention. Un accès dont le client n’est pas averti n’est pas légitime.',
+    defaut: true,
+    fige: true,
+  },
+  {
+    id: 'revue',
+    label: 'Révision trimestrielle des comptes privilégiés',
+    description:
+      'Chaque compte privilégié est réexaminé : son détenteur en a-t-il encore besoin ? Le privilège qui s’accumule est le pire ennemi de la sécurité.',
+    defaut: true,
+    fige: false,
+  },
+  {
+    id: 'session',
+    label: 'Session expirée après 4 heures d’inactivité',
+    description: 'Plus court que pour les clients, parce que les droits sont plus étendus.',
+    defaut: true,
+    fige: false,
+  },
+  {
+    id: 'ip',
+    label: 'Restreindre l’accès aux adresses de l’entreprise',
+    description:
+      'Écarté : nos équipes doivent pouvoir intervenir depuis n’importe où en astreinte. La contrainte serait contre-productive et contournée.',
+    defaut: false,
+    fige: false,
+  },
+]
 
-  const privilegies = EQUIPE_SYNELIA.filter((m) => m.privilegie)
-  const elevationsActives = EQUIPE_SYNELIA.filter((m) => m.elevation?.active)
-  const equipes = [...new Set(EQUIPE_SYNELIA.map((m) => m.equipe))]
+export default function Equipe() {
+  const { autorise, refus } = useApp()
+  const equipe = useCollection<MembreEquipe>('equipe-synelia', EQUIPE_SYNELIA)
+  const executer = useOperation()
+  const [onglet, setOnglet] = useState('membres')
+  const [detailId, setDetailId] = useState<string | null>(null)
+  const [ajout, setAjout] = useState(false)
+  const [retraitId, setRetraitId] = useState<string | null>(null)
+  const [politique, setPolitique] = useState<Record<string, boolean>>(
+    Object.fromEntries(POLITIQUE.map((r) => [r.id, r.defaut])),
+  )
+  const [nom, setNom] = useState('')
+  const [courriel, setCourriel] = useState('')
+  const [equipeNouvelle, setEquipeNouvelle] = useState('')
+  const [roleNouveau, setRoleNouveau] = useState<Role>('platform_operator')
+  const [privilegieNouveau, setPrivilegieNouveau] = useState(false)
+  const [astreinteNouvelle, setAstreinteNouvelle] = useState(false)
+
+  // Le tiroir relit le membre dans la collection : capturé à l'ouverture, il
+  // afficherait le rôle d'avant le changement qu'on vient d'y faire.
+  const detail = equipe.items.find((m) => m.id === detailId) ?? null
+  const retrait = equipe.items.find((m) => m.id === retraitId) ?? null
+
+  const privilegies = equipe.items.filter((m) => m.privilegie)
+  const elevationsActives = equipe.items.filter((m) => m.elevation?.active)
+  const equipes = [...new Set(equipe.items.map((m) => m.equipe))]
 
   const ticketsDe = (nom: string) =>
     TICKETS_PLATEFORME.filter((t) => t.assigneA === nom && !['resolu', 'ferme'].includes(t.statut))
+
+  const ajouterMembre = () => {
+    const courrielFinal = courriel.trim() || `${nom.trim().toLowerCase().replace(/\s+/g, '.')}@synelia.tech`
+    executer({
+      action: 'org.manage',
+      titre: `${nom.trim()} ajouté à l’équipe`,
+      detail:
+        'L’invitation est envoyée. Le deuxième facteur devra être enregistré avant tout accès au portail.',
+      effet: () =>
+        equipe.creer({
+          id: equipe.identifiant('syn'),
+          nom: nom.trim(),
+          email: courrielFinal,
+          role: roleNouveau,
+          equipe: equipeNouvelle || (astreinteNouvelle ? 'NOC Abidjan · astreinte' : 'NOC Abidjan'),
+          dernierAcces: MAINTENANT,
+          privilegie: privilegieNouveau,
+        }),
+    })
+    setNom('')
+    setCourriel('')
+    setEquipeNouvelle('')
+    setRoleNouveau('platform_operator')
+    setPrivilegieNouveau(false)
+    setAstreinteNouvelle(false)
+    setAjout(false)
+  }
 
   return (
     <div className="space-y-5">
@@ -53,7 +166,7 @@ export default function Equipe() {
         meta={
           <>
             <Badge tone="neutral" size="sm">
-              {EQUIPE_SYNELIA.length} membres
+              {equipe.items.length} membres
             </Badge>
             <Badge tone="violet" size="sm">
               {privilegies.length} comptes privilégiés
@@ -81,7 +194,7 @@ export default function Equipe() {
       )}
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatTile libelle="Membres" valeur={EQUIPE_SYNELIA.length} />
+        <StatTile libelle="Membres" valeur={equipe.items.length} />
         <StatTile
           libelle="Comptes privilégiés"
           valeur={privilegies.length}
@@ -121,7 +234,7 @@ export default function Equipe() {
                   </tr>
                 </thead>
                 <tbody>
-                  {EQUIPE_SYNELIA.map((m) => {
+                  {equipe.items.map((m) => {
                     const siens = ticketsDe(m.nom)
                     return (
                       <tr key={m.id} className="border-b border-g-100 last:border-0">
@@ -173,7 +286,7 @@ export default function Equipe() {
                         </td>
                         <td className="px-3 py-2.5 text-right">
                           <span className="flex items-center justify-end gap-1.5">
-                            <Button size="sm" variant="ghost" onClick={() => setDetail(m)}>
+                            <Button size="sm" variant="ghost" onClick={() => setDetailId(m.id)}>
                               Détail
                             </Button>
                             <GatedAction
@@ -184,7 +297,7 @@ export default function Equipe() {
                                 size="sm"
                                 variant="ghost"
                                 iconBefore={<UserMinus size={12} />}
-                                onClick={() => setRetrait(m)}
+                                onClick={() => setRetraitId(m.id)}
                               >
                                 Retirer
                               </Button>
@@ -204,7 +317,7 @@ export default function Equipe() {
               <CardHeader titre="Répartition par équipe" />
               <div className="space-y-2">
                 {equipes.map((e) => {
-                  const membres = EQUIPE_SYNELIA.filter((m) => m.equipe === e)
+                  const membres = equipe.items.filter((m) => m.equipe === e)
                   return (
                     <div
                       key={e}
@@ -238,7 +351,7 @@ export default function Equipe() {
                 sousTitre="Sur les ressources des clients. Ces lignes figurent aussi dans le journal de chaque organisation."
               />
               <div className="space-y-1.5">
-                {AUDIT.filter((a) => EQUIPE_SYNELIA.some((m) => m.nom === a.actor.nom))
+                {AUDIT.filter((a) => equipe.items.some((m) => m.nom === a.actor.nom))
                   .slice(0, 6)
                   .map((a) => (
                     <div
@@ -292,7 +405,7 @@ export default function Equipe() {
                 {ROLES_SUPER_ADMIN.map((r) => {
                   const actions = MATRICE_RBAC.filter((a) => can(r, a.id) === 'full')
                   const lecture = MATRICE_RBAC.filter((a) => can(r, a.id) === 'read')
-                  const membres = EQUIPE_SYNELIA.filter((m) => m.role === r)
+                  const membres = equipe.items.filter((m) => m.role === r)
                   return (
                     <div key={r} className="rounded-[8px] border border-g-300 p-3.5">
                       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -544,52 +657,27 @@ export default function Equipe() {
               sousTitre="Ce que nous nous imposons, et qui vaut aussi pour la direction."
             />
             <div className="space-y-3.5">
-              <Switch
-                checked
-                label="Deuxième facteur obligatoire"
-                description="Sans exception, y compris pour la direction. Un compte privilégié sans deuxième facteur est la porte d’entrée la plus rentable pour un attaquant."
-              />
-              <Switch
-                checked
-                label="Aucun accès permanent aux données des clients"
-                description="Non désactivable. L’accès au contenu exige une élévation nominative, motivée, bornée et notifiée au client."
-              />
-              <Switch
-                checked
-                label="Élévation limitée à huit heures"
-                description="Au-delà, il faut une nouvelle demande. Le système refuse une élévation sans date de fin."
-              />
-              <Switch
-                checked
-                label="Journalisation de chaque action pendant une élévation"
-                description="Individuellement, pas globalement. Le client voit ce qui a été fait, pas seulement qu’un accès a eu lieu."
-              />
-              <Switch
-                checked
-                label="Notification du client sur toute intervention"
-                description="Non désactivable pour une intervention. Un accès dont le client n’est pas averti n’est pas légitime."
-              />
-              <Switch
-                checked
-                label="Révision trimestrielle des comptes privilégiés"
-                description="Chaque compte privilégié est réexaminé : son détenteur en a-t-il encore besoin ? Le privilège qui s’accumule est le pire ennemi de la sécurité."
-              />
-              <Switch
-                checked
-                label="Session expirée après 4 heures d’inactivité"
-                description="Plus court que pour les clients, parce que les droits sont plus étendus."
-              />
-              <Switch
-                checked={false}
-                label="Restreindre l’accès aux adresses de l’entreprise"
-                description="Écarté : nos équipes doivent pouvoir intervenir depuis n’importe où en astreinte. La contrainte serait contre-productive et contournée."
-              />
+              {POLITIQUE.map((r) => (
+                <Switch
+                  key={r.id}
+                  checked={politique[r.id]}
+                  onChange={(v) => setPolitique((p) => ({ ...p, [r.id]: v }))}
+                  disabled={r.fige}
+                  label={r.label}
+                  description={r.description}
+                />
+              ))}
             </div>
-            <GatedAction autorise={autorise('org.manage')} message={refus('org.manage')}>
-              <Button className="mt-4" variant="secondary">
-                Enregistrer la politique
-              </Button>
-            </GatedAction>
+            <BoutonAction
+              libelle="Enregistrer la politique"
+              size="md"
+              className="mt-4"
+              operation={{
+                action: 'org.manage',
+                titre: 'Politique d’accès de l’équipe enregistrée',
+                detail: `${POLITIQUE.filter((r) => politique[r.id]).length} règles actives sur ${POLITIQUE.length}. Les deux règles non désactivables le restent.`,
+              }}
+            />
           </Card>
 
           <div className="space-y-4">
@@ -614,12 +702,51 @@ export default function Equipe() {
                       </span>
                     </span>
                     <span className="flex shrink-0 items-center gap-1.5">
-                      <Badge tone="ok" size="sm">
-                        Confirmé en juin
+                      <Badge tone={m.revuLe ? 'ok' : 'neutral'} size="sm">
+                        {m.revuLe ? `Revu le ${dateHeure(m.revuLe).split(' à ')[0]}` : 'Confirmé en juin'}
                       </Badge>
-                      <Button size="sm" variant="ghost">
-                        Réexaminer
-                      </Button>
+                      <BoutonFormulaire
+                        libelle="Réexaminer"
+                        variant="ghost"
+                        action="org.manage"
+                        titre={`Réexaminer le privilège de ${m.nom}`}
+                        description="La question posée à chaque trimestre est la même : cette personne a-t-elle encore besoin d’un accès plateforme complet pour faire son travail ? Le privilège ne se retire jamais tout seul."
+                        libelleValider="Consigner la revue"
+                        champs={[
+                          {
+                            id: 'issue',
+                            label: 'Conclusion de la revue',
+                            type: 'select',
+                            options: [
+                              { value: 'maintenu', label: 'Privilège maintenu — toujours nécessaire' },
+                              { value: 'retire', label: 'Privilège retiré — plus nécessaire' },
+                            ],
+                          },
+                          {
+                            id: 'motif',
+                            label: 'Motif',
+                            type: 'zone',
+                            placeholder:
+                              'Pilote la capacité du socle OpenStack au quotidien : l’accès complet est la condition de l’astreinte de niveau 3.',
+                          },
+                        ]}
+                        operation={(v) => ({
+                          ton: v.issue === 'retire' ? 'warn' : 'ok',
+                          titre:
+                            v.issue === 'retire'
+                              ? `Privilège de ${m.nom} retiré`
+                              : `Privilège de ${m.nom} maintenu`,
+                          detail:
+                            v.issue === 'retire'
+                              ? 'Le compte garde son rôle mais perd l’accès plateforme complet. La revue est consignée au journal d’audit.'
+                              : 'La revue est consignée au journal d’audit, avec son motif et la date du prochain réexamen.',
+                          effet: () =>
+                            equipe.modifier(m.id, {
+                              privilegie: v.issue !== 'retire',
+                              revuLe: MAINTENANT,
+                            }),
+                        })}
+                      />
                     </span>
                   </div>
                 ))}
@@ -667,7 +794,7 @@ export default function Equipe() {
 
       <Drawer
         open={detail !== null}
-        onClose={() => setDetail(null)}
+        onClose={() => setDetailId(null)}
         title={detail?.nom ?? ''}
         size="md"
       >
@@ -752,29 +879,80 @@ export default function Equipe() {
             </div>
 
             <div className="flex flex-wrap gap-1.5 border-t border-g-100 pt-4">
-              <GatedAction autorise={autorise('org.manage')} message={refus('org.manage')}>
-                <Button size="sm" variant="secondary">
-                  Changer le rôle
-                </Button>
-              </GatedAction>
+              <BoutonFormulaire
+                libelle="Changer le rôle"
+                icone={<ShieldCheck size={12} />}
+                action="org.manage"
+                titre={`Changer le rôle de ${detail.nom}`}
+                description="Le changement prend effet immédiatement. Les actions désormais interdites resteront visibles, désactivées, avec le rôle requis en infobulle."
+                champs={[
+                  {
+                    id: 'role',
+                    label: 'Rôle super admin',
+                    type: 'select',
+                    options: ROLES_SUPER_ADMIN.map((r) => ({
+                      value: r,
+                      label: `${ROLE_LABEL[r]} — ${MATRICE_RBAC.filter((a) => can(r, a.id) === 'full').length} actions`,
+                    })),
+                  },
+                  {
+                    id: 'equipe',
+                    label: 'Équipe',
+                    type: 'select',
+                    options: equipes.map((e) => ({ value: e, label: e })),
+                  },
+                ]}
+                valeursDepart={{ role: detail.role, equipe: detail.equipe }}
+                libelleValider="Changer le rôle"
+                operation={(v) => ({
+                  titre: `${detail.nom} est désormais ${ROLE_LABEL[v.role as Role]}`,
+                  detail: 'Le changement est journalisé avec le nom de son auteur.',
+                  effet: () =>
+                    equipe.modifier(detail.id, {
+                      role: v.role as Role,
+                      equipe: String(v.equipe),
+                    }),
+                })}
+              />
               {detail.elevation?.active && (
-                <Button
-                  size="sm"
+                <BoutonAction
+                  libelle="Révoquer l’élévation"
                   variant="ghost"
-                  onClick={() =>
-                    pousser({
-                      ton: 'info',
-                      titre: `Élévation de ${detail.nom} révoquée`,
-                      detail: 'L’accès est coupé immédiatement et la révocation est journalisée.',
-                    })
-                  }
-                >
-                  Révoquer l’élévation
-                </Button>
+                  icone={<KeyRound size={12} />}
+                  operation={{
+                    action: 'org.manage',
+                    ton: 'info',
+                    titre: `Élévation de ${detail.nom} révoquée`,
+                    detail: 'L’accès est coupé immédiatement et la révocation est journalisée.',
+                    effet: () => equipe.modifier(detail.id, { elevation: { active: false } }),
+                  }}
+                />
               )}
-              <Button size="sm" variant="ghost">
-                Fermer les sessions actives
-              </Button>
+              <BoutonAction
+                libelle="Fermer les sessions actives"
+                variant="ghost"
+                operation={{
+                  action: 'org.manage',
+                  ton: 'warn',
+                  titre: `Sessions de ${detail.nom} fermées`,
+                  detail: 'La personne devra se reconnecter, deuxième facteur compris, sur tous ses appareils.',
+                  effet: () => equipe.modifier(detail.id, { dernierAcces: MAINTENANT }),
+                }}
+              />
+              {!detail.privilegie && (
+                <BoutonAction
+                  libelle="Élever en compte privilégié"
+                  variant="ghost"
+                  operation={{
+                    action: 'org.manage',
+                    ton: 'warn',
+                    titre: `${detail.nom} passe en compte privilégié`,
+                    detail:
+                      'Le compte entre dans la revue trimestrielle : sans réexamen, le privilège devient un angle mort.',
+                    effet: () => equipe.modifier(detail.id, { privilegie: true, revuLe: MAINTENANT }),
+                  }}
+                />
+              )}
             </div>
           </div>
         )}
@@ -790,31 +968,30 @@ export default function Equipe() {
             <Button variant="ghost" onClick={() => setAjout(false)}>
               Annuler
             </Button>
-            <Button
-              onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: 'Membre ajouté',
-                  detail: 'L’invitation est envoyée. Le deuxième facteur devra être activé avant tout accès.',
-                })
-                setAjout(false)
-              }}
-            >
+            <Button disabled={nom.trim().length === 0} onClick={ajouterMembre}>
               Ajouter et inviter
             </Button>
           </>
         }
       >
         <div className="space-y-4">
-          <Field label="Nom complet">
-            <Input placeholder="Prénom Nom" />
+          <Field label="Nom complet" required>
+            <Input placeholder="Prénom Nom" value={nom} onChange={(e) => setNom(e.target.value)} />
           </Field>
-          <Field label="Adresse professionnelle" hint="doit appartenir au domaine synelia.tech">
-            <Input type="email" placeholder="prenom.nom@synelia.tech" />
+          <Field
+            label="Adresse professionnelle"
+            hint="doit appartenir au domaine synelia.tech ; déduite du nom si laissée vide"
+          >
+            <Input
+              type="email"
+              placeholder="prenom.nom@synelia.tech"
+              value={courriel}
+              onChange={(e) => setCourriel(e.target.value)}
+            />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Équipe">
-              <Select defaultValue="">
+              <Select value={equipeNouvelle} onChange={(e) => setEquipeNouvelle(e.target.value)}>
                 <option value="">Sélectionner…</option>
                 {equipes.map((e) => (
                   <option key={e} value={e}>
@@ -824,7 +1001,10 @@ export default function Equipe() {
               </Select>
             </Field>
             <Field label="Rôle" hint="le droit minimum pour faire le travail">
-              <Select defaultValue="platform_operator">
+              <Select
+                value={roleNouveau}
+                onChange={(e) => setRoleNouveau(e.target.value as Role)}
+              >
                 {ROLES_SUPER_ADMIN.map((r) => (
                   <option key={r} value={r}>
                     {ROLE_LABEL[r]} — {MATRICE_RBAC.filter((a) => can(r, a.id) === 'full').length}{' '}
@@ -837,16 +1017,19 @@ export default function Equipe() {
           <div className="space-y-3">
             <Switch
               checked
+              disabled
               label="Exiger le deuxième facteur avant tout accès"
               description="Non désactivable. La personne devra l’enregistrer à sa première connexion."
             />
             <Switch
-              checked={false}
+              checked={privilegieNouveau}
+              onChange={setPrivilegieNouveau}
               label="Compte privilégié"
               description="Réservé aux quelques personnes qui pilotent réellement la plateforme. Chaque compte privilégié est réexaminé chaque trimestre."
             />
             <Switch
-              checked={false}
+              checked={astreinteNouvelle}
+              onChange={setAstreinteNouvelle}
               label="Inscrire dans la rotation d’astreinte"
               description="À activer après la période d’intégration et la formation aux procédures d’incident."
             />
@@ -861,7 +1044,7 @@ export default function Equipe() {
 
       <ConfirmDialog
         open={retrait !== null}
-        onClose={() => setRetrait(null)}
+        onClose={() => setRetraitId(null)}
         titre="Retirer un membre de l’équipe"
         ressource={retrait?.email ?? ''}
         libelleAction="Retirer et révoquer les accès"
@@ -873,12 +1056,17 @@ export default function Equipe() {
           'Les secrets partagés auxquels il avait accès devront être renouvelés — étape distincte, à ne pas oublier',
         ]}
         onConfirm={() => {
-          pousser({
+          if (!retrait) return
+          executer({
+            action: 'org.manage',
             ton: 'info',
-            titre: `${retrait?.nom} retiré de l’équipe`,
-            detail: 'Accès coupés et jetons révoqués. Pensez à faire tourner les secrets partagés : cette étape n’est pas automatique.',
+            titre: `${retrait.nom} retiré de l’équipe`,
+            detail:
+              'Accès coupés et jetons révoqués. Pensez à faire tourner les secrets partagés : cette étape n’est pas automatique.',
+            effet: () => equipe.supprimer(retrait.id),
           })
-          setRetrait(null)
+          setDetailId((id) => (id === retrait.id ? null : id))
+          setRetraitId(null)
         }}
       />
     </div>

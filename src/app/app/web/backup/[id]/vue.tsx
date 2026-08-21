@@ -14,6 +14,7 @@ import { PageHeader, Card, CardHeader, Callout, KeyValueList } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { Stepper } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
+import { BoutonAction } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'executions', label: 'Exécutions' },
@@ -29,9 +30,12 @@ const ETAPES = [
 ]
 
 export function VueSauvegarde({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
   const [onglet, setOnglet] = useState('executions')
   const [etape, setEtape] = useState(1)
+  const [perimetre, setPerimetre] = useState('Une application')
+  const [pointChoisi, setPointChoisi] = useState<string | null>(null)
+  const [destination, setDestination] = useState('À côté, sur le même serveur')
   const [immuable, setImmuable] = useState(true)
 
   const p = sauvegardeWebById(id)
@@ -67,21 +71,29 @@ export function VueSauvegarde({ id }: { id: string }) {
         }
         actions={
           <>
-            <GatedAction autorise={autorise('backup.manage')} message={refus('backup.manage')}>
-              <Button
-                variant="secondary"
-                iconBefore={<Play size={14} />}
-                onClick={() =>
-                  pousser({
-                    ton: 'ok',
-                    titre: 'Sauvegarde lancée',
-                    detail: `Exécution hors planning sur ${p.serveur}. Suivi dans le centre de tâches.`,
-                  })
-                }
-              >
-                Sauvegarder maintenant
-              </Button>
-            </GatedAction>
+            <BoutonAction
+              libelle="Sauvegarder maintenant"
+              size="md"
+              icone={<Play size={14} />}
+              operation={{
+                action: 'backup.plan.write',
+                ton: 'info',
+                titre: 'Sauvegarde lancée',
+                detail: `Exécution hors planning sur ${p.serveur}. Suivi dans le centre de tâches.`,
+                job: {
+                  type: 'sauvegarde.run',
+                  label: `Sauvegarde hors planning · ${p.serveur}`,
+                  etapes: [
+                    'Geler les écritures',
+                    'Copier les fichiers',
+                    'Copier les bases',
+                    ...(p.perimetre.messagerie ? ['Copier la messagerie'] : []),
+                    'Vérifier l’empreinte',
+                  ],
+                  dureeEtapeMs: 900,
+                },
+              }}
+            />
             {h && (
               <ButtonLink href={`/app/web/hebergement/${h.id}`} variant="ghost">
                 Le serveur
@@ -176,12 +188,51 @@ export function VueSauvegarde({ id }: { id: string }) {
                     </td>
                     <td className="px-3 py-2.5 text-right">
                       <span className="flex items-center justify-end gap-1.5">
-                        <Button size="sm" variant="ghost" iconBefore={<RotateCcw size={12} />}>
-                          Restaurer
-                        </Button>
-                        <Button size="sm" variant="ghost" iconBefore={<Download size={12} />}>
-                          Télécharger
-                        </Button>
+                        <BoutonAction
+                          libelle="Restaurer"
+                          variant="ghost"
+                          icone={<RotateCcw size={12} />}
+                          operation={{
+                            action: 'backup.restore',
+                            ton: 'info',
+                            titre: `Restauration du ${dateHeure(e.ts)}`,
+                            detail: e.contenu.join(' · '),
+                            job: {
+                              type: 'sauvegarde.restore',
+                              label: `Restauration · ${dateCourte(e.ts)}`,
+                              etapes: [
+                                'Monter la sauvegarde',
+                                'Restaurer les fichiers',
+                                'Restaurer la base',
+                                'Vider les caches',
+                              ],
+                            },
+                          }}
+                          confirmation={
+                            e.statut === 'ok'
+                              ? undefined
+                              : {
+                                  ressource: dateCourte(e.ts),
+                                  titre: 'Restaurer depuis une sauvegarde incomplète ?',
+                                  pertes: [
+                                    e.message ?? 'Cette exécution ne s’est pas terminée normalement',
+                                    'Le contenu restauré peut être partiel',
+                                  ],
+                                  libelleAction: 'Restaurer quand même',
+                                }
+                          }
+                        />
+                        <BoutonAction
+                          libelle="Télécharger"
+                          variant="ghost"
+                          icone={<Download size={12} />}
+                          operation={{
+                            action: 'backup.restore',
+                            ton: 'info',
+                            titre: `Archive du ${dateCourte(e.ts)} préparée`,
+                            detail: `${e.taille} · lien signé valable une heure`,
+                          }}
+                        />
                       </span>
                     </td>
                   </tr>
@@ -293,7 +344,16 @@ export function VueSauvegarde({ id }: { id: string }) {
                     <button
                       key={x.l}
                       type="button"
-                      className="flex w-full items-start gap-2.5 rounded-[6px] border border-g-300 px-3 py-2.5 text-left transition-colors hover:border-p-400 hover:bg-p-050"
+                      onClick={() => {
+                        setPerimetre(x.l)
+                        setEtape(2)
+                      }}
+                      className={cn(
+                        'flex w-full items-start gap-2.5 rounded-[6px] border px-3 py-2.5 text-left transition-colors',
+                        perimetre === x.l
+                          ? 'border-p-600 bg-p-050'
+                          : 'border-g-300 hover:border-p-400 hover:bg-p-050',
+                      )}
                     >
                       <ShieldCheck size={14} className="mt-0.5 shrink-0 text-p-700" />
                       <span>
@@ -317,7 +377,16 @@ export function VueSauvegarde({ id }: { id: string }) {
                     <button
                       key={e.id}
                       type="button"
-                      className="flex w-full items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2.5 text-left transition-colors hover:border-p-400 hover:bg-p-050"
+                      onClick={() => {
+                        setPointChoisi(e.id)
+                        setEtape(3)
+                      }}
+                      className={cn(
+                        'flex w-full items-center justify-between gap-2 rounded-[6px] border px-3 py-2.5 text-left transition-colors',
+                        pointChoisi === e.id
+                          ? 'border-p-600 bg-p-050'
+                          : 'border-g-300 hover:border-p-400 hover:bg-p-050',
+                      )}
                     >
                       <span>
                         <span className="block text-[12.5px] font-semibold text-ink">
@@ -368,11 +437,17 @@ export function VueSauvegarde({ id }: { id: string }) {
                     <button
                       key={x.l}
                       type="button"
+                      onClick={() => {
+                        setDestination(x.l)
+                        setEtape(4)
+                      }}
                       className={cn(
                         'flex w-full items-start justify-between gap-2 rounded-[6px] border px-3 py-2.5 text-left transition-colors',
-                        x.ton === 'err'
-                          ? 'border-err/40 hover:bg-err-bg'
-                          : 'border-g-300 hover:border-p-400 hover:bg-p-050',
+                        destination === x.l
+                          ? 'border-p-600 bg-p-050'
+                          : x.ton === 'err'
+                            ? 'border-err/40 hover:bg-err-bg'
+                            : 'border-g-300 hover:border-p-400 hover:bg-p-050',
                       )}
                     >
                       <span>
@@ -408,20 +483,45 @@ export function VueSauvegarde({ id }: { id: string }) {
                     { cle: 'Impact sur la production', valeur: 'Aucun' },
                   ]}
                 />
-                <GatedAction autorise={autorise('backup.restore')} message={refus('backup.restore')}>
-                  <Button
-                    className="mt-4"
-                    onClick={() =>
-                      pousser({
-                        ton: 'ok',
-                        titre: 'Restauration lancée',
-                        detail: 'Suivi dans le centre de tâches. Vous serez notifié à la fin.',
-                      })
-                    }
-                  >
-                    Lancer la restauration
-                  </Button>
-                </GatedAction>
+                <BoutonAction
+                  libelle="Lancer la restauration"
+                  variant="primary"
+                  size="md"
+                  className="mt-4"
+                  operation={{
+                    action: 'backup.restore',
+                    ton: 'info',
+                    titre: 'Restauration lancée',
+                    detail: 'Suivi dans le centre de tâches. Vous serez notifié à la fin.',
+                    job: {
+                      type: 'sauvegarde.restore',
+                      label: `Restauration · ${perimetre.toLowerCase()}`,
+                      etapes: [
+                        'Monter le point de restauration',
+                        `Restaurer ${perimetre.toLowerCase()}`,
+                        destination.startsWith('Par-dessus')
+                          ? 'Remplacer les données de production'
+                          : 'Écrire la copie à côté',
+                        'Vérifier le résultat',
+                      ],
+                    },
+                    effetFinal: () => setEtape(1),
+                  }}
+                  confirmation={
+                    destination.startsWith('Par-dessus')
+                      ? {
+                          ressource: p.serveur,
+                          titre: 'Restaurer par-dessus la production ?',
+                          pertes: [
+                            'Les données actuelles du périmètre choisi seront écrasées',
+                            'Le travail postérieur au point de restauration sera perdu',
+                            'Le service sera indisponible pendant l’opération',
+                          ],
+                          libelleAction: 'Écraser et restaurer',
+                        }
+                      : undefined
+                  }
+                />
               </>
             )}
 

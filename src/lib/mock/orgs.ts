@@ -329,6 +329,8 @@ export interface MembreEquipe {
   dernierAcces: string
   privilegie: boolean
   elevation?: { active: boolean; jusqua?: string; justification?: string }
+  /** Dernière revue trimestrielle du privilège — vide tant qu'elle n'a pas eu lieu. */
+  revuLe?: string
 }
 
 export const EQUIPE_SYNELIA: MembreEquipe[] = [
@@ -416,3 +418,32 @@ export function membresDeLOrg(orgId: string) {
     user: userById(m.userId)!,
   }))
 }
+
+/** Élévations de privilège sur une organisation — espace super admin (§11.4). */
+export interface Elevation {
+  id: string
+  qui: string
+  quand: string
+  duree: string
+  motif: string
+  actif: boolean
+}
+
+export const ELEVATIONS: Elevation[] = [
+  {
+    id: 'elv-1',
+    qui: 'Jean-Vincent Kassi',
+    quand: '2026-08-19T13:00:00Z',
+    duree: '4 h',
+    motif: 'Ticket SYN-8814 — diagnostic de latence sur app-metier',
+    actif: true,
+  },
+  {
+    id: 'elv-2',
+    qui: 'Aïcha Bamba',
+    quand: '2026-08-12T09:20:00Z',
+    duree: '2 h',
+    motif: 'Ticket SYN-8702 — restauration accompagnée',
+    actif: false,
+  },
+]

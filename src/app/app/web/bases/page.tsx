@@ -4,7 +4,13 @@ import Link from 'next/link'
 import { Database, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { num, relatif } from '@/lib/format'
-import { MOTEUR_WEB_LABEL, MOTEUR_WEB_TEINTE, serveursBasesDeLOrg } from '@/lib/mock'
+import {
+  MOTEUR_WEB_LABEL,
+  MOTEUR_WEB_TEINTE,
+  SERVEURS_BASES,
+  serveursBasesDeLOrg,
+  type ServeurBases,
+} from '@/lib/mock'
 import { surfaceMarque } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,10 +18,16 @@ import { GatedAction } from '@/components/ui/display'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction } from '@/components/app/actions'
 
 export default function ListeBases() {
   const { autorise, refus } = useApp()
-  const moteurs = serveursBasesDeLOrg()
+  const serveurs = useCollection<ServeurBases>('serveurs-bases', SERVEURS_BASES)
+  // Le périmètre de l'organisation vient du jeu de données ; l'état vient de
+  // l'atelier, pour qu'une activation se voie tout de suite.
+  const perimetre = new Set(serveursBasesDeLOrg().map((m) => m.id))
+  const moteurs = serveurs.items.filter((m) => perimetre.has(m.id))
   const actifs = moteurs.filter((m) => m.actif)
   const bases = actifs.reduce((a, m) => a + m.bases.length, 0)
 
@@ -112,11 +124,27 @@ export default function ListeBases() {
                     Le moteur est disponible sur ce serveur mais n’est pas installé. L’activer crée
                     le service, ouvre son port local et l’ajoute au plan de sauvegarde.
                   </p>
-                  <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-                    <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />} className="mt-3">
-                      Activer {MOTEUR_WEB_LABEL[m.moteur]}
-                    </Button>
-                  </GatedAction>
+                  <BoutonAction
+                    libelle={`Activer ${MOTEUR_WEB_LABEL[m.moteur]}`}
+                    className="mt-3"
+                    icone={<Plus size={13} />}
+                    operation={{
+                      action: 'service.admin',
+                      titre: `${MOTEUR_WEB_LABEL[m.moteur]} en cours d’activation`,
+                      detail: `Sur ${m.serveur}. Aucun redémarrage du serveur web n’est nécessaire.`,
+                      job: {
+                        type: 'base.activate',
+                        label: `Activation de ${MOTEUR_WEB_LABEL[m.moteur]} · ${m.serveur}`,
+                        etapes: [
+                          'Installer le moteur',
+                          'Ouvrir le port sur la boucle locale',
+                          'Ajouter au plan de sauvegarde',
+                        ],
+                        dureeEtapeMs: 1100,
+                      },
+                      effetFinal: () => serveurs.modifier(m.id, { actif: true }),
+                    }}
+                  />
                 </>
               )}
             </Card>

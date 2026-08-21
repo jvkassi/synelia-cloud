@@ -30,12 +30,16 @@ import { Card, CardHeader, Callout, NavCard, PageHeader } from '@/components/com
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { EventList } from '@/components/business/observabilite'
 import { BackendGauge } from '@/components/business/infra'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction } from '@/components/app/actions'
+import type { ProvisioningJob } from '@/lib/types'
 
 export default function VuePlateforme() {
+  const jobs = useCollection<ProvisioningJob>('jobs-plateforme', JOBS_PLATEFORME)
   const enSortie = BACKENDS.filter((b) => b.enSortie?.actif)
   const satures = BACKENDS.filter((b) => (b.saturation?.j30 ?? 0) > 85)
   const incidentsOuverts = INCIDENTS.filter((i) => i.statut !== 'resolu')
-  const jobsEchec = JOBS_PLATEFORME.filter((j) => j.statut === 'failed')
+  const jobsEchec = jobs.items.filter((j) => j.statut === 'failed')
   const slaRisque = TICKETS_PLATEFORME.filter(
     (t) => (t.slaRestantMin ?? 9999) < 120 && !['resolu', 'ferme'].includes(t.statut),
   )
@@ -373,12 +377,50 @@ export default function VuePlateforme() {
                       </p>
                     )}
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      <Button size="sm" variant="secondary">
-                        Reprendre
-                      </Button>
-                      <Button size="sm" variant="ghost">
-                        Voir le journal
-                      </Button>
+                      <BoutonAction
+                        libelle="Reprendre"
+                        operation={{
+                          action: 'capacity.manage',
+                          ton: 'info',
+                          titre: `Reprise de « ${j.label} »`,
+                          detail: 'La séquence repart à l’étape qui a échoué, pas depuis le début.',
+                          effet: () =>
+                            jobs.modifier(j.id, (x) => ({
+                              statut: 'running',
+                              erreur: undefined,
+                              taches: x.taches.map((t) =>
+                                t.statut === 'failed'
+                                  ? { ...t, statut: 'running', message: undefined }
+                                  : t,
+                              ),
+                            })),
+                          job: {
+                            type: j.type,
+                            label: `Reprise · ${j.label}`,
+                            etapes: j.taches
+                              .filter((t) => t.statut !== 'ok')
+                              .map((t) => t.nom),
+                            dureeEtapeMs: 1100,
+                          },
+                          effetFinal: () =>
+                            jobs.modifier(j.id, (x) => ({
+                              statut: 'done',
+                              taches: x.taches.map((t) => ({ ...t, statut: 'ok' })),
+                            })),
+                        }}
+                      />
+                      <BoutonAction
+                        libelle="Voir le journal"
+                        variant="ghost"
+                        operation={{
+                          ton: 'info',
+                          titre: 'Journal du job',
+                          detail:
+                            j.erreur?.correlationId
+                              ? `Identifiant de corrélation ${j.erreur.correlationId} — la trace complète est dans VictoriaLogs.`
+                              : 'La trace complète est dans VictoriaLogs.',
+                        }}
+                      />
                     </div>
                   </div>
                 ))}

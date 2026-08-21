@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { CalendarClock, Download, FileCheck2, ShieldAlert, TestTubeDiagonal } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dateCourte, dureeMin, num, pct } from '@/lib/format'
-import { CONFORMITE_PLATEFORME, ORGANISATIONS } from '@/lib/mock'
+import { dateCourte, dureeMin, MAINTENANT, num, pct } from '@/lib/format'
+import { telechargerCsv } from '@/lib/export'
+import { CONFORMITE_PLATEFORME, EQUIPE_SYNELIA, ORGANISATIONS } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
@@ -13,6 +14,8 @@ import { Modal } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'restauration', label: 'Tests de restauration' },
@@ -22,10 +25,173 @@ const ONGLETS = [
   { id: 'attestations', label: 'Attestations' },
 ]
 
+/** Attestation produite à la demande — journalisée, avec son destinataire. */
+interface AttestationGeneree {
+  id: string
+  date: string
+  attestation: string
+  org: string
+  qui: string
+  motif: string
+}
+
+const ATTESTATIONS_GENEREES: AttestationGeneree[] = [
+  {
+    id: 'gen-4',
+    date: '2026-08-14',
+    attestation: 'Résidence des données',
+    org: 'ONECI',
+    qui: 'Jean-Vincent Kassi',
+    motif: 'Demande du régulateur — dossier de conformité',
+  },
+  {
+    id: 'gen-3',
+    date: '2026-08-02',
+    attestation: 'Politique de sauvegarde',
+    org: 'Cofina Digital',
+    qui: 'Aïcha Bamba',
+    motif: 'Commissaire aux comptes du client',
+  },
+  {
+    id: 'gen-2',
+    date: '2026-07-18',
+    attestation: 'Résidence des données',
+    org: 'Digital Business Africa',
+    qui: 'Jean-Vincent Kassi',
+    motif: 'Appel d’offres public',
+  },
+  {
+    id: 'gen-1',
+    date: '2026-07-04',
+    attestation: 'Tests de restauration',
+    org: 'AMUGA',
+    qui: 'Marina Gbagbo',
+    motif: 'Suite à l’échec de restauration de juin, à la demande du client',
+  },
+]
+
+/** Ce que chaque attestation affirme, mot pour mot. Le « modèle » le montre. */
+const MODELES_ATTESTATION: Record<string, { affirme: string[]; naffirme: string[] }> = {
+  'Résidence des données': {
+    affirme: [
+      'Les données de l’organisation sont stockées sur les sites d’Abidjan et de Grand-Bassam, en Côte d’Ivoire.',
+      'Aucune réplication n’est effectuée vers un site hors du territoire national.',
+      'Les sauvegardes hors site restent sur le second site national.',
+    ],
+    naffirme: [
+      'Aucune certification de souveraineté délivrée par un tiers — nous n’en avons pas.',
+      'Aucun engagement sur la localisation des équipes d’un éditeur tiers dont la solution est exploitée.',
+    ],
+  },
+  'Politique de sauvegarde': {
+    affirme: [
+      'La fréquence, la rétention, l’immuabilité et les destinations réellement appliquées à chaque ressource.',
+      'La date et le résultat du dernier test de restauration exécuté sur un échantillon de ces ressources.',
+    ],
+    naffirme: [
+      'Aucune garantie de restaurabilité des ressources non testées : l’attestation nomme celles qui l’ont été.',
+    ],
+  },
+  'Disponibilité constatée': {
+    affirme: [
+      'La disponibilité mensuelle mesurée par composant, comparée à l’engagement contractuel.',
+      'Les incidents ayant entraîné une indisponibilité, avec leur durée constatée.',
+    ],
+    naffirme: [
+      'Aucune projection sur les mois à venir.',
+      'Aucune exclusion des fenêtres de maintenance planifiée : elles sont comptées et affichées comme telles.',
+    ],
+  },
+  'Conformité 3-2-1': {
+    affirme: [
+      'L’état de la règle trois copies, deux supports, une hors site, ressource par ressource.',
+      'La liste nominative des ressources qui ne la respectent pas, et pourquoi.',
+    ],
+    naffirme: [
+      'Aucune conformité globale déclarée quand une seule ressource est en écart : le tableau montre les écarts.',
+    ],
+  },
+}
+
+const PLANIFICATION = [
+  {
+    id: 'tirage',
+    label: 'Tirage au sort de l’échantillon',
+    description:
+      'Non désactivable. Choisir les ressources à tester revient à ne tester que celles dont on est sûr.',
+    defaut: true,
+    fige: true,
+  },
+  {
+    id: 'chaque-client',
+    label: 'Inclure au moins une ressource de chaque client',
+    description:
+      'Sur un cycle de trois mois. Un client dont rien n’a jamais été testé n’a aucune garantie.',
+    defaut: true,
+    fige: false,
+  },
+  {
+    id: 'notifier',
+    label: 'Notifier le client du résultat',
+    description:
+      'Y compris en cas d’échec. Un client a le droit de savoir que sa sauvegarde n’était pas restaurable, même si nous l’avons corrigé depuis.',
+    defaut: true,
+    fige: false,
+  },
+  {
+    id: 'ticket',
+    label: 'Ouvrir un ticket interne sur chaque échec',
+    description:
+      'Avec analyse de cause et correction documentée. Un échec non analysé se reproduira.',
+    defaut: true,
+    fige: false,
+  },
+]
+
 export default function Conformite() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const generees = useCollection<AttestationGeneree>('attestations-generees', ATTESTATIONS_GENEREES)
+  const executer = useOperation()
   const [onglet, setOnglet] = useState('restauration')
   const [attestation, setAttestation] = useState<string | null>(null)
+  const [modele, setModele] = useState<string | null>(null)
+  const [partParc, setPartParc] = useState(10)
+  const [profondeur, setProfondeur] = useState('complet')
+  const [reglages, setReglages] = useState<Record<string, boolean>>(
+    Object.fromEntries(PLANIFICATION.map((r) => [r.id, r.defaut])),
+  )
+  const [orgAttestation, setOrgAttestation] = useState('')
+  const [duAttestation, setDuAttestation] = useState('2026-01-01')
+  const [auAttestation, setAuAttestation] = useState('2026-08-19')
+  const [destinataire, setDestinataire] = useState('')
+  const [motif, setMotif] = useState('')
+  const [signature, setSignature] = useState(true)
+  const [notifierOrg, setNotifierOrg] = useState(true)
+
+  const genererAttestation = () => {
+    if (!attestation) return
+    executer({
+      action: 'compliance.export',
+      titre: `Attestation « ${attestation} » générée`,
+      detail: signature
+        ? 'Le document signé est disponible au téléchargement. La génération est journalisée dans l’audit.'
+        : 'Document produit sans signature électronique : le destinataire devra nous contacter pour en vérifier l’authenticité.',
+      effet: () =>
+        generees.creer({
+          id: generees.identifiant('gen'),
+          date: MAINTENANT.slice(0, 10),
+          attestation,
+          org: orgAttestation
+            ? (ORGANISATIONS.find((o) => o.id === orgAttestation)?.nom ?? orgAttestation)
+            : 'Toute la plateforme',
+          qui: EQUIPE_SYNELIA[0].nom,
+          motif: motif.trim() || destinataire.trim() || 'Motif non renseigné',
+        }),
+    })
+    setDestinataire('')
+    setMotif('')
+    setAttestation(null)
+  }
 
   const c = CONFORMITE_PLATEFORME
   const testsCourants = c.testsRestauration[0]
@@ -41,11 +207,48 @@ export default function Conformite() {
         titre="Conformité"
         sousTitre="Tests de restauration réellement exécutés, exercices de reprise avec leurs échecs, vulnérabilités ouvertes, constats d’audit non clos. Un tableau de conformité qui n’affiche que du vert n’a aucune valeur : celui-ci montre aussi ce qui ne va pas."
         actions={
-          <GatedAction autorise={autorise('compliance.export')} message={refus('compliance.export')}>
-            <Button variant="secondary" iconBefore={<Download size={14} />}>
-              Rapport de conformité
-            </Button>
-          </GatedAction>
+          <BoutonAction
+            libelle="Rapport de conformité"
+            size="md"
+            icone={<Download size={14} />}
+            operation={{
+              action: 'compliance.export',
+              titre: 'Rapport de conformité téléchargé',
+              detail:
+                'Les écarts y figurent au même titre que les indicateurs verts : un rapport qui ne montre que le vert ne vaut rien devant un auditeur.',
+              effet: () =>
+                telechargerCsv(
+                  'conformite-plateforme-2026-08',
+                  ['Domaine', 'Indicateur', 'Valeur', 'Écart'],
+                  [
+                    ...c.testsRestauration.map((t) => [
+                      'Tests de restauration',
+                      t.periode,
+                      `${t.succes}/${t.executes} réussis`,
+                      String(t.executes - t.succes),
+                    ]),
+                    ...c.exercicesPra.map((e) => [
+                      'Exercices de reprise',
+                      `${e.plan} — ${e.org}`,
+                      `${dureeMin(e.rtoConstate)} constatées pour ${dureeMin(e.rtoCible)} visées`,
+                      e.succes ? '0' : '1',
+                    ]),
+                    ...c.cve.map((v) => [
+                      'Vulnérabilités',
+                      v.gravite,
+                      `${v.ouvertes} ouvertes`,
+                      String(v.ouvertes),
+                    ]),
+                    ...c.audits.map((a) => [
+                      'Audits',
+                      `${a.type} — ${a.perimetre}`,
+                      `${a.constats} constats`,
+                      String(a.ouverts),
+                    ]),
+                  ],
+                ),
+            }}
+          />
         }
         meta={
           <>
@@ -245,10 +448,17 @@ export default function Conformite() {
               />
               <div className="space-y-4">
                 <Field label="Part du parc testée par mois" hint="tirage au sort, pas de sélection manuelle">
-                  <Input type="number" defaultValue={10} suffix="%" />
+                  <Input
+                    type="number"
+                    value={partParc}
+                    min={1}
+                    max={100}
+                    suffix="%"
+                    onChange={(e) => setPartParc(Number(e.target.value))}
+                  />
                 </Field>
                 <Field label="Profondeur du test">
-                  <Select defaultValue="complet">
+                  <Select value={profondeur} onChange={(e) => setProfondeur(e.target.value)}>
                     <option value="integrite">Vérification d’intégrité de l’archive seulement</option>
                     <option value="restauration">Restauration dans un environnement isolé</option>
                     <option value="complet">
@@ -257,33 +467,41 @@ export default function Conformite() {
                   </Select>
                 </Field>
                 <div className="space-y-3">
-                  <Switch
-                    checked
-                    label="Tirage au sort de l’échantillon"
-                    description="Non désactivable. Choisir les ressources à tester revient à ne tester que celles dont on est sûr."
-                  />
-                  <Switch
-                    checked
-                    label="Inclure au moins une ressource de chaque client"
-                    description="Sur un cycle de trois mois. Un client dont rien n’a jamais été testé n’a aucune garantie."
-                  />
-                  <Switch
-                    checked
-                    label="Notifier le client du résultat"
-                    description="Y compris en cas d’échec. Un client a le droit de savoir que sa sauvegarde n’était pas restaurable, même si nous l’avons corrigé depuis."
-                  />
-                  <Switch
-                    checked
-                    label="Ouvrir un ticket interne sur chaque échec"
-                    description="Avec analyse de cause et correction documentée. Un échec non analysé se reproduira."
-                  />
+                  {PLANIFICATION.map((r) => (
+                    <Switch
+                      key={r.id}
+                      checked={reglages[r.id]}
+                      onChange={(v) => setReglages((prev) => ({ ...prev, [r.id]: v }))}
+                      disabled={r.fige}
+                      label={r.label}
+                      description={r.description}
+                    />
+                  ))}
                 </div>
+                {profondeur === 'integrite' && (
+                  <Callout ton="warn" titre="Vérifier l’intégrité n’est pas restaurer">
+                    Une archive dont la somme de contrôle est bonne peut très bien ne pas redémarrer :
+                    les deux échecs de ce mois-ci sont exactement de ce type. Ce niveau de test ne les
+                    aurait pas trouvés.
+                  </Callout>
+                )}
               </div>
-              <GatedAction autorise={autorise('compliance.export')} message={refus('compliance.export')}>
-                <Button className="mt-4" variant="secondary">
-                  Enregistrer
-                </Button>
-              </GatedAction>
+              <BoutonAction
+                libelle="Enregistrer"
+                size="md"
+                className="mt-4"
+                operation={{
+                  action: 'compliance.export',
+                  titre: 'Planification des tests enregistrée',
+                  detail: `${partParc} % du parc tiré au sort chaque mois, ${
+                    profondeur === 'complet'
+                      ? 'en restauration complète avec vérification des données'
+                      : profondeur === 'restauration'
+                        ? 'en restauration isolée'
+                        : 'en vérification d’intégrité seule'
+                  }.`,
+                }}
+              />
             </Card>
           </div>
         </div>
@@ -856,7 +1074,7 @@ export default function Conformite() {
                       Générer
                     </Button>
                   </GatedAction>
-                  <Button size="sm" variant="ghost">
+                  <Button size="sm" variant="ghost" onClick={() => setModele(a.nom)}>
                     Modèle
                   </Button>
                 </div>
@@ -870,47 +1088,18 @@ export default function Conformite() {
               sousTitre="Chaque génération est journalisée dans l’audit, avec le demandeur et le périmètre."
             />
             <div className="space-y-1.5">
-              {[
-                {
-                  q: '2026-08-14',
-                  a: 'Résidence des données',
-                  org: 'ONECI',
-                  qui: 'Jean-Vincent Kassi',
-                  m: 'Demande du régulateur — dossier de conformité',
-                },
-                {
-                  q: '2026-08-02',
-                  a: 'Politique de sauvegarde',
-                  org: 'Cofina Digital',
-                  qui: 'Aïcha Bamba',
-                  m: 'Commissaire aux comptes du client',
-                },
-                {
-                  q: '2026-07-18',
-                  a: 'Résidence des données',
-                  org: 'Digital Business Africa',
-                  qui: 'Jean-Vincent Kassi',
-                  m: 'Appel d’offres public',
-                },
-                {
-                  q: '2026-07-04',
-                  a: 'Tests de restauration',
-                  org: 'AMUGA',
-                  qui: 'Marina Gbagbo',
-                  m: 'Suite à l’échec de restauration de juin, à la demande du client',
-                },
-              ].map((x) => (
+              {generees.items.map((x) => (
                 <div
-                  key={`${x.q}-${x.org}`}
+                  key={x.id}
                   className="flex flex-wrap items-baseline justify-between gap-2 border-b border-g-100 pb-1.5 last:border-0"
                 >
                   <span className="min-w-0">
-                    <span className="text-[12px] font-semibold text-ink">{x.a}</span>
+                    <span className="text-[12px] font-semibold text-ink">{x.attestation}</span>
                     <span className="ml-2 text-[11px] text-g-700">— {x.org}</span>
-                    <span className="block text-[10.5px] text-g-500">{x.m}</span>
+                    <span className="block text-[10.5px] text-g-500">{x.motif}</span>
                   </span>
                   <span className="shrink-0 text-[10.5px] text-g-500">
-                    {x.qui} · {dateCourte(x.q)}
+                    {x.qui} · {dateCourte(x.date)}
                   </span>
                 </div>
               ))}
@@ -931,14 +1120,8 @@ export default function Conformite() {
             </Button>
             <Button
               iconBefore={<FileCheck2 size={13} />}
-              onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: 'Attestation générée',
-                  detail: 'Le document signé est disponible au téléchargement. La génération est journalisée dans l’audit.',
-                })
-                setAttestation(null)
-              }}
+              disabled={duAttestation > auAttestation}
+              onClick={genererAttestation}
             >
               Générer et signer
             </Button>
@@ -947,7 +1130,7 @@ export default function Conformite() {
       >
         <div className="space-y-4">
           <Field label="Organisation concernée">
-            <Select defaultValue="">
+            <Select value={orgAttestation} onChange={(e) => setOrgAttestation(e.target.value)}>
               <option value="">Toute la plateforme</option>
               {ORGANISATIONS.map((o) => (
                 <option key={o.id} value={o.id}>
@@ -958,35 +1141,61 @@ export default function Conformite() {
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Période couverte — du">
-              <Input type="date" defaultValue="2026-01-01" />
+              <Input
+                type="date"
+                value={duAttestation}
+                onChange={(e) => setDuAttestation(e.target.value)}
+              />
             </Field>
             <Field label="au">
-              <Input type="date" defaultValue="2026-08-19" />
+              <Input
+                type="date"
+                value={auAttestation}
+                onChange={(e) => setAuAttestation(e.target.value)}
+              />
             </Field>
           </div>
           <Field label="Destinataire déclaré" hint="figure sur l’attestation">
-            <Input placeholder="Commissaire aux comptes, régulateur, direction du client…" />
+            <Input
+              placeholder="Commissaire aux comptes, régulateur, direction du client…"
+              value={destinataire}
+              onChange={(e) => setDestinataire(e.target.value)}
+            />
           </Field>
           <Field label="Motif" hint="journalisé dans l’audit, visible du client">
-            <Input placeholder="Dossier de conformité réglementaire" />
+            <Input
+              placeholder="Dossier de conformité réglementaire"
+              value={motif}
+              onChange={(e) => setMotif(e.target.value)}
+            />
           </Field>
           <div className="space-y-3">
             <Switch
               checked
+              disabled
               label="Générer à partir de l’état réel de la plateforme"
               description="Non désactivable. Les chiffres sont extraits au moment de la génération, pas repris d’un modèle."
             />
             <Switch
-              checked
+              checked={signature}
+              onChange={setSignature}
               label="Signature électronique"
               description="Permet au destinataire de vérifier l’authenticité du document sans nous contacter."
             />
             <Switch
-              checked
+              checked={notifierOrg}
+              onChange={setNotifierOrg}
               label="Notifier l’organisation concernée"
               description="Le client est informé qu’une attestation le concernant a été produite, et pour qui."
             />
           </div>
+          {!notifierOrg && (
+            <Callout ton="warn" titre="Une attestation produite dans le dos du client">
+              Le client ne saura pas qu’un document le concernant a été remis à un tiers. La
+              génération reste journalisée dans son propre journal d’audit — il le découvrira là, plus
+              tard, et la question sera plus difficile à expliquer.
+            </Callout>
+          )}
           <Callout ton="info" titre="Ce que l’attestation contient et ne contient pas">
             Elle atteste de faits vérifiables : localisation des données, politique de sauvegarde
             appliquée, tests réellement exécutés, résultats obtenus. Elle n’atteste pas d’une
@@ -994,6 +1203,67 @@ export default function Conformite() {
             contrat prévoit.
           </Callout>
         </div>
+      </Modal>
+
+      <Modal
+        open={modele !== null}
+        onClose={() => setModele(null)}
+        title={`Modèle d’attestation — ${modele ?? ''}`}
+        description="Le texte que le document affirme, et ce qu’il se refuse à affirmer. Les valeurs sont extraites de l’état réel de la plateforme au moment de la génération."
+        size="md"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setModele(null)}>
+              Fermer
+            </Button>
+            <Button
+              iconBefore={<FileCheck2 size={13} />}
+              onClick={() => {
+                const nom = modele
+                setModele(null)
+                setAttestation(nom)
+              }}
+            >
+              Générer à partir de ce modèle
+            </Button>
+          </>
+        }
+      >
+        {modele && (
+          <div className="space-y-4">
+            <div>
+              <MicroLabel className="mb-2">Ce que le document affirme</MicroLabel>
+              <ul className="space-y-1.5">
+                {(MODELES_ATTESTATION[modele]?.affirme ?? []).map((x) => (
+                  <li
+                    key={x}
+                    className="rounded-[6px] border border-ok/40 bg-ok-bg px-3 py-2 text-[12px] leading-relaxed text-ink"
+                  >
+                    {x}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <MicroLabel className="mb-2">Ce qu’il n’affirme pas</MicroLabel>
+              <ul className="space-y-1.5">
+                {(MODELES_ATTESTATION[modele]?.naffirme ?? []).map((x) => (
+                  <li
+                    key={x}
+                    className="rounded-[6px] border border-g-300 px-3 py-2 text-[12px] leading-relaxed text-g-700"
+                  >
+                    {x}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <Callout ton="violet" titre="Le modèle ne se modifie pas depuis le portail">
+              Le texte d’une attestation engage l’entreprise : il est révisé par la conformité, pas
+              par l’opérateur qui la génère. Ce qui change d’une génération à l’autre, ce sont les
+              faits mesurés, jamais les affirmations.
+            </Callout>
+          </div>
+        )}
       </Modal>
     </div>
   )

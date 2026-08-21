@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Building2, Globe, Palette, Terminal, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dateCourte, money } from '@/lib/format'
+import { MAINTENANT, dateCourte, money } from '@/lib/format'
 import { ESPACES, MES_ORGANISATIONS, ORG_COURANTE } from '@/lib/mock'
 import { ROLE_LABEL, SITE_LABEL } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -14,6 +14,23 @@ import { ConfirmDialog } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+
+interface Jeton {
+  id: string
+  nom: string
+  role: string
+  portee: string
+  cree: string
+  dernier: string
+}
+
+const JETONS: Jeton[] = [
+  { id: 'tok-1', nom: 'terraform-production', role: 'Administrateur d’infrastructure', portee: 'EC-DBA-01', cree: '2025-09-14', dernier: 'il y a 2 h' },
+  { id: 'tok-2', nom: 'ci-deploiement', role: 'Administrateur d’application', portee: 'Organisation', cree: '2026-02-08', dernier: 'il y a 28 min' },
+  { id: 'tok-3', nom: 'export-facturation', role: 'Responsable facturation', portee: 'Organisation', cree: '2026-06-01', dernier: 'il y a 3 j' },
+]
 
 const ONGLETS = [
   { id: 'organisation', label: 'Organisation' },
@@ -25,8 +42,24 @@ const ONGLETS = [
 
 export default function Parametres() {
   const { autorise, refus, pousser } = useApp()
+  const executer = useOperation()
+  const jetons = useCollection<Jeton>('jetons-api', JETONS)
   const [onglet, setOnglet] = useState('organisation')
   const [fermeture, setFermeture] = useState(false)
+
+  const [devise, setDevise] = useState('XOF')
+  const [langue, setLangue] = useState('fr')
+  const [fuseau, setFuseau] = useState('Africa/Abidjan')
+  const [siteDefaut, setSiteDefaut] = useState('ABJ')
+  const [horsTaxes, setHorsTaxes] = useState(true)
+  const [densiteCompacte, setDensiteCompacte] = useState(false)
+
+  const [mailTechnique, setMailTechnique] = useState('ops@dba.africa')
+  const [mailFacturation, setMailFacturation] = useState('compta@dba.africa')
+  const [smsCritique, setSmsCritique] = useState('+225 07 00 00 00 00')
+  const [webhook, setWebhook] = useState('')
+  /** Notifications désactivées par le client — les figées restent actives. */
+  const [notifsCoupees, setNotifsCoupees] = useState<string[]>([])
 
   return (
     <div className="space-y-5">
@@ -154,9 +187,9 @@ export default function Parametres() {
                         Organisation active
                       </Badge>
                     ) : (
-                      <Button size="sm" variant="ghost">
+                      <ButtonLink size="sm" variant="ghost" href="/select-organisation">
                         Basculer
-                      </Button>
+                      </ButtonLink>
                     )}
                   </div>
                 ))}
@@ -178,20 +211,20 @@ export default function Parametres() {
             />
             <div className="space-y-4">
               <Field label="Devise d’affichage" hint="la facturation reste dans la devise contractuelle">
-                <Select defaultValue="XOF">
+                <Select value={devise} onChange={(e) => setDevise(e.target.value)}>
                   <option value="XOF">Franc CFA (FCFA) — devise contractuelle</option>
                   <option value="EUR">Euro (€) — conversion indicative</option>
                   <option value="USD">Dollar américain ($) — conversion indicative</option>
                 </Select>
               </Field>
               <Field label="Langue">
-                <Select defaultValue="fr">
+                <Select value={langue} onChange={(e) => setLangue(e.target.value)}>
                   <option value="fr">Français</option>
                   <option value="en">English</option>
                 </Select>
               </Field>
               <Field label="Fuseau horaire" hint="tous les horodatages du portail y sont convertis">
-                <Select defaultValue="Africa/Abidjan">
+                <Select value={fuseau} onChange={(e) => setFuseau(e.target.value)}>
                   <option value="Africa/Abidjan">Abidjan (GMT)</option>
                   <option value="Africa/Dakar">Dakar (GMT)</option>
                   <option value="Africa/Lagos">Lagos (GMT+1)</option>
@@ -200,7 +233,7 @@ export default function Parametres() {
                 </Select>
               </Field>
               <Field label="Site physique par défaut" hint="proposé en premier à la création d’une ressource">
-                <Select defaultValue="ABJ">
+                <Select value={siteDefaut} onChange={(e) => setSiteDefaut(e.target.value)}>
                   <option value="ABJ">{SITE_LABEL['ABJ']}</option>
                   <option value="GBM">{SITE_LABEL['GBM']}</option>
                 </Select>
@@ -208,20 +241,32 @@ export default function Parametres() {
               <div className="space-y-3">
                 <Switch
                   checked
+                  disabled
                   label="Afficher le site physique sur chaque ressource"
                   description="Non désactivable. Savoir où tourne une ressource fait partie de ce que nous vous devons."
                 />
                 <Switch
-                  checked
+                  checked={horsTaxes}
+                  onChange={setHorsTaxes}
                   label="Afficher les montants hors taxes"
                   description="La TVA de 18 % est détaillée séparément dans chaque aperçu de coût."
                 />
-                <Switch checked={false} label="Densité compacte des tableaux par défaut" />
+                <Switch
+                  checked={densiteCompacte}
+                  onChange={setDensiteCompacte}
+                  label="Densité compacte des tableaux par défaut"
+                />
               </div>
             </div>
-            <Button className="mt-4" variant="secondary">
-              Enregistrer les préférences
-            </Button>
+            <BoutonAction
+              libelle="Enregistrer les préférences"
+              size="md"
+              className="mt-4"
+              operation={{
+                titre: 'Préférences enregistrées',
+                detail: `${devise} · ${langue === 'fr' ? 'français' : 'anglais'} · ${fuseau} · site ${siteDefaut} par défaut`,
+              }}
+            />
           </Card>
 
           <div className="space-y-4">
@@ -246,9 +291,25 @@ export default function Parametres() {
                             Obligatoire
                           </Badge>
                         )}
-                        <Button size="sm" variant="ghost">
-                          Modifier
-                        </Button>
+                        <BoutonFormulaire
+                          libelle="Modifier"
+                          variant="ghost"
+                          titre={`Modifier l’étiquette ${t.cle}`}
+                          description="Une étiquette obligatoire doit être renseignée à la création d’une ressource : c’est ce qui garantit que la refacturation interne reste possible."
+                          champs={[
+                            {
+                              id: 'valeurs',
+                              label: 'Valeurs autorisées',
+                              placeholder: 'séparées par des virgules',
+                            },
+                            { id: 'obligatoire', label: 'Obligatoire', type: 'switch', placeholder: 'À la création' },
+                          ]}
+                          valeursDepart={{ valeurs: t.valeurs.join(', '), obligatoire: t.obligatoire }}
+                          operation={(v) => ({
+                            titre: `Étiquette ${t.cle} modifiée`,
+                            detail: `${String(v.valeurs).split(',').filter((x) => x.trim()).length} valeurs${v.obligatoire ? ' · obligatoire' : ''}`,
+                          })}
+                        />
                       </span>
                     </div>
                     <div className="mt-1.5 flex flex-wrap gap-1">
@@ -305,12 +366,8 @@ export default function Parametres() {
                 sousTitre="Pour l’automatisation, l’infrastructure déclarative, l’intégration continue. Un jeton porte un rôle et une portée, comme un membre."
               />
               <div className="space-y-2">
-                {[
-                  { nom: 'terraform-production', role: 'Administrateur d’infrastructure', portee: 'EC-DBA-01', cree: '2025-09-14', dernier: 'il y a 2 h' },
-                  { nom: 'ci-deploiement', role: 'Administrateur d’application', portee: 'Organisation', cree: '2026-02-08', dernier: 'il y a 28 min' },
-                  { nom: 'export-facturation', role: 'Responsable facturation', portee: 'Organisation', cree: '2026-06-01', dernier: 'il y a 3 j' },
-                ].map((j) => (
-                  <div key={j.nom} className="rounded-[6px] border border-g-300 px-3 py-2.5">
+                {jetons.items.map((j) => (
+                  <div key={j.id} className="rounded-[6px] border border-g-300 px-3 py-2.5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <span className="min-w-0">
                         <span className="block font-mono text-[12.5px] font-semibold text-ink">
@@ -324,19 +381,78 @@ export default function Parametres() {
                         <Badge tone="neutral" size="sm">
                           {j.dernier}
                         </Badge>
-                        <Button size="sm" variant="ghost">
-                          Révoquer
-                        </Button>
+                        <BoutonAction
+                          libelle="Révoquer"
+                          variant="ghost"
+                          operation={{
+                            action: 'secrets.update',
+                            ton: 'warn',
+                            titre: `Jeton ${j.nom} révoqué`,
+                            detail: 'Toute automatisation qui l’utilise cessera de fonctionner immédiatement.',
+                            effet: () => jetons.supprimer(j.id),
+                          }}
+                          confirmation={{
+                            ressource: j.nom,
+                            titre: `Révoquer ${j.nom} ?`,
+                            pertes: [
+                              'Les appels qui utilisent ce jeton recevront un 401 dès la révocation',
+                              `Portée concernée : ${j.portee}`,
+                              'Le jeton ne peut pas être réactivé : il faudra en créer un autre',
+                            ],
+                            libelleAction: 'Révoquer le jeton',
+                          }}
+                        />
                       </span>
                     </div>
                   </div>
                 ))}
               </div>
-              <GatedAction autorise={autorise('secrets.update')} message={refus('secrets.update')}>
-                <Button size="sm" className="mt-3" variant="secondary">
-                  Créer un jeton
-                </Button>
-              </GatedAction>
+              <BoutonFormulaire
+                libelle="Créer un jeton"
+                className="mt-3"
+                action="secrets.update"
+                titre="Créer un jeton d’accès programmatique"
+                description="Un jeton porte un rôle et une portée, comme un membre — mais sans deuxième facteur. Donnez-lui le rôle le plus étroit possible."
+                champs={[
+                  { id: 'nom', label: 'Nom', placeholder: 'terraform-preproduction', obligatoire: true },
+                  {
+                    id: 'role',
+                    label: 'Rôle',
+                    type: 'select',
+                    options: [
+                      { value: 'Lecture seule', label: 'Lecture seule' },
+                      { value: 'Administrateur d’application', label: 'Administrateur d’application' },
+                      { value: 'Administrateur d’infrastructure', label: 'Administrateur d’infrastructure' },
+                      { value: 'Responsable facturation', label: 'Responsable facturation' },
+                    ],
+                  },
+                  {
+                    id: 'portee',
+                    label: 'Portée',
+                    type: 'select',
+                    options: [
+                      { value: 'Organisation', label: 'Toute l’organisation' },
+                      ...ESPACES.map((e) => ({ value: e.code, label: `Espace ${e.code}` })),
+                    ],
+                  },
+                  { id: 'expiration', label: 'Expire dans', type: 'nombre', demi: true, min: 1, max: 730, suffixe: 'jours' },
+                ]}
+                valeursDepart={{ role: 'Lecture seule', portee: 'Organisation', expiration: 90 }}
+                libelleValider="Créer le jeton"
+                operation={(v) => ({
+                  titre: `Jeton ${v.nom} créé`,
+                  detail: 'La valeur du jeton est affichée une seule fois : copiez-la maintenant.',
+                  effet: () =>
+                    jetons.creer({
+                      id: jetons.identifiant('tok'),
+                      nom: String(v.nom),
+                      role: String(v.role),
+                      portee: String(v.portee),
+                      cree: MAINTENANT.slice(0, 10),
+                      dernier: 'jamais utilisé',
+                    }),
+                })}
+              />
               <Callout ton="warn" className="mt-4" titre="Un jeton n’a pas de deuxième facteur">
                 C’est un secret unique : quiconque le détient agit avec les droits qu’il porte. Donnez
                 à chaque jeton le rôle le plus étroit possible, restreignez sa portée à un seul espace
@@ -459,7 +575,13 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
               ].map((n) => (
                 <Switch
                   key={n.t}
-                  checked={n.actif}
+                  checked={n.fige || (n.actif && !notifsCoupees.includes(n.t))}
+                  disabled={n.fige}
+                  onChange={(v) =>
+                    setNotifsCoupees((prev) =>
+                      v ? prev.filter((x) => x !== n.t) : [...prev, n.t],
+                    )
+                  }
                   label={n.t + (n.fige ? ' (non désactivable)' : '')}
                   description={n.d}
                 />
@@ -472,21 +594,39 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
               <CardHeader titre="Canaux" sousTitre="Où les notifications arrivent." />
               <div className="space-y-4">
                 <Field label="Adresse de contact technique" hint="reçoit les alertes et les incidents">
-                  <Input type="email" defaultValue="ops@dba.africa" />
+                  <Input
+                    type="email"
+                    value={mailTechnique}
+                    onChange={(e) => setMailTechnique(e.target.value)}
+                  />
                 </Field>
                 <Field label="Adresse de contact facturation" hint="reçoit les factures et les échéances">
-                  <Input type="email" defaultValue="compta@dba.africa" />
+                  <Input
+                    type="email"
+                    value={mailFacturation}
+                    onChange={(e) => setMailFacturation(e.target.value)}
+                  />
                 </Field>
                 <Field label="Numéro pour les SMS critiques" hint="réservé aux incidents majeurs, jamais utilisé pour le reste">
-                  <Input defaultValue="+225 07 00 00 00 00" />
+                  <Input value={smsCritique} onChange={(e) => setSmsCritique(e.target.value)} />
                 </Field>
                 <Field label="Webhook d’équipe" hint="Slack, Teams, Mattermost, ou n’importe quel point d’entrée HTTP">
-                  <Input placeholder="https://hooks.exemple.ci/synelia" />
+                  <Input
+                    value={webhook}
+                    onChange={(e) => setWebhook(e.target.value)}
+                    placeholder="https://hooks.exemple.ci/synelia"
+                  />
                 </Field>
               </div>
-              <Button className="mt-4" variant="secondary">
-                Enregistrer les canaux
-              </Button>
+              <BoutonAction
+                libelle="Enregistrer les canaux"
+                size="md"
+                className="mt-4"
+                operation={{
+                  titre: 'Canaux de notification enregistrés',
+                  detail: `${mailTechnique} · ${mailFacturation}${webhook ? ' · webhook d’équipe actif' : ''}${notifsCoupees.length ? ` · ${notifsCoupees.length} notification(s) coupée(s)` : ''}`,
+                }}
+              />
             </Card>
 
             <Card>
@@ -591,11 +731,28 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
                   </Select>
                 </Field>
               </div>
-              <GatedAction autorise={autorise('compliance.export')} message={refus('compliance.export')}>
-                <Button className="mt-4" variant="secondary" iconBefore={<Globe size={14} />}>
-                  Demander un export complet
-                </Button>
-              </GatedAction>
+              <BoutonAction
+                libelle="Demander un export complet"
+                size="md"
+                className="mt-4"
+                icone={<Globe size={14} />}
+                operation={{
+                  action: 'compliance.export',
+                  titre: 'Export complet demandé',
+                  detail:
+                    'Gratuit une fois par an et à la clôture. Vous recevrez un lien dès que l’archive est prête.',
+                  job: {
+                    type: 'org.export',
+                    label: 'Export complet des données de l’organisation',
+                    etapes: [
+                      'Inventorier les ressources',
+                      'Exporter les configurations',
+                      'Exporter les données et les sauvegardes',
+                      'Composer l’archive et publier le lien',
+                    ],
+                  },
+                }}
+              />
               <p className="mt-3 text-[11.5px] leading-relaxed text-g-500">
                 Un export complet est gratuit une fois par an, et à la clôture du contrat. Au-delà,
                 seul le coût du transfert sortant est facturé, au tarif du catalogue.

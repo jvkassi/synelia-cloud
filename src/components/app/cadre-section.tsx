@@ -8,17 +8,20 @@ import {
 } from '@/components/composition/selecteur-ressource'
 
 /**
- * Coquille maître-détail d'une section : un panneau de sélection à gauche, la
- * fiche de la ressource choisie à droite.
+ * Coquille maître-détail d'une section, commune à Infrastructure, Applications
+ * et Web Cloud.
  *
- * Web Cloud l'emploie pour chacune de ses sections — domaines, hébergements,
- * bases, messageries, drives, applications, certificats, sauvegardes — et
- * l'espace super admin pour ses organisations clientes. Le point commun : un
- * écran qui porte sur une ressource parmi beaucoup, qu'on veut pouvoir changer
- * sans repasser par une liste. Un tableau de bord, lui, n'en a pas besoin.
+ * Une section qui porte sur une ressource — un Espace Cloud, une machine, un
+ * cluster, un projet, un domaine — liste les siennes dans le panneau et ouvre
+ * la fiche correspondante à droite. Sélectionner et agir deviennent deux gestes
+ * distincts : passer d'une ressource à l'autre ne repasse plus par une liste.
+ * Les écrans transverses (tableaux de bord, journaux, réseau d'un Espace) n'en
+ * ont pas : il n'y a rien à choisir avant d'entrer.
  *
  * Le panneau vit dans le `layout` de la section, pas dans ses pages : changer de
  * ressource ou d'onglet ne le reconstruit pas, et la sélection reste visible.
+ * Les routes concernées sont déclarées par `panneau` dans `lib/navigation.ts` —
+ * c'est ce qui dit au conteneur de page de ne pas ajouter sa propre marge.
  */
 export function CadreSection({
   titre,
@@ -49,21 +52,51 @@ export function CadreSection({
     : undefined
   const actif = entrees.find((e) => e.id === segment)
 
-  const panneau = (
-    <SelecteurRessource
+  return (
+    <CoquillePanneau
       titre={titre}
-      actionPrincipale={actionPrincipale}
-      entrees={entrees}
-      actifId={actif?.id}
-      placeholderRecherche={placeholderRecherche ?? `Rechercher…`}
-      compteur={compteur}
-      lienBas={lienBas}
-    />
+      nomActif={actif?.nom}
+      panneau={
+        <SelecteurRessource
+          titre={titre}
+          actionPrincipale={actionPrincipale}
+          entrees={entrees}
+          actifId={actif?.id}
+          placeholderRecherche={placeholderRecherche ?? `Rechercher…`}
+          compteur={compteur}
+          lienBas={lienBas}
+        />
+      }
+    >
+      {children}
+    </CoquillePanneau>
   )
+}
 
+/**
+ * Les deux colonnes : le panneau collé au bord gauche, le contenu à droite.
+ *
+ * Le panneau est rendu deux fois — en colonne au-delà de 1024 px, en bandeau
+ * dépliant en dessous. C'est le même arbre React : dupliquer le balisage coûte
+ * moins qu'un panneau qui change de nature selon la largeur.
+ *
+ * Le contenu porte ici sa marge, et non dans un conteneur de page : c'est ce qui
+ * permet au panneau de toucher le bord de l'écran.
+ */
+export function CoquillePanneau({
+  titre,
+  nomActif,
+  panneau,
+  children,
+}: {
+  titre: string
+  nomActif?: string
+  panneau: React.ReactNode
+  children: React.ReactNode
+}) {
   return (
     <>
-      <SelecteurRepliable titre={titre} nomActif={actif?.nom}>
+      <SelecteurRepliable titre={titre} nomActif={nomActif}>
         {panneau}
       </SelecteurRepliable>
 

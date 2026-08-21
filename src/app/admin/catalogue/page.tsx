@@ -14,6 +14,8 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, useOperation } from '@/components/app/actions'
 import type { Offer } from '@/lib/types'
 
 const ONGLETS = [
@@ -30,17 +32,105 @@ const LIBELLE_CATEGORIE: Record<Offer['categorie'], string> = {
   web: 'Hébergement web',
 }
 
-export default function Catalogue() {
-  const { autorise, refus, pousser } = useApp()
-  const [onglet, setOnglet] = useState('offres')
-  const [edition, setEdition] = useState<Offer | null>(null)
-  const [creation, setCreation] = useState(false)
-  const [depreciation, setDepreciation] = useState<Offer | null>(null)
+/** Brouillon de saisie du tiroir — l'offre telle qu'elle est en train d'être écrite. */
+interface Brouillon {
+  nom: string
+  code: string
+  categorie: Offer['categorie']
+  specs: string
+  caracteristiques: string
+  prix: number
+  sla: string
+  populaire: boolean
+  surDevis: boolean
+}
 
-  const publiees = OFFRES.filter((o) => o.statut === 'publiee')
-  const brouillons = OFFRES.filter((o) => o.statut === 'brouillon')
-  const depreciees = OFFRES.filter((o) => o.statut === 'depreciee')
-  const souscriptionsTotal = OFFRES.reduce((a, o) => a + o.souscriptionsActives, 0)
+const BROUILLON_VIDE: Brouillon = {
+  nom: '',
+  code: '',
+  categorie: 'espace_cloud',
+  specs: '',
+  caracteristiques: '',
+  prix: 0,
+  sla: '99,9 %',
+  populaire: false,
+  surDevis: false,
+}
+
+export default function Catalogue() {
+  const { autorise, refus } = useApp()
+  const offres = useCollection<Offer>('offres', OFFRES)
+  const executer = useOperation()
+  const [onglet, setOnglet] = useState('offres')
+  const [editionId, setEditionId] = useState<string | null>(null)
+  const [creation, setCreation] = useState(false)
+  const [depreciationId, setDepreciationId] = useState<string | null>(null)
+  const [brouillon, setBrouillon] = useState<Brouillon>(BROUILLON_VIDE)
+
+  const edition = offres.items.find((o) => o.id === editionId) ?? null
+  const depreciation = offres.items.find((o) => o.id === depreciationId) ?? null
+
+  const poser = (patch: Partial<Brouillon>) => setBrouillon((b) => ({ ...b, ...patch }))
+
+  const ouvrirEdition = (o: Offer) => {
+    setBrouillon({
+      nom: o.nom,
+      code: o.code,
+      categorie: o.categorie,
+      specs: o.specs,
+      caracteristiques: o.caracteristiques.join('\n'),
+      prix: o.prix,
+      sla: o.sla ?? '',
+      populaire: Boolean(o.populaire),
+      surDevis: Boolean(o.surDevis),
+    })
+    setEditionId(o.id)
+  }
+
+  const ouvrirCreation = () => {
+    setBrouillon(BROUILLON_VIDE)
+    setCreation(true)
+  }
+
+  const enregistrer = () => {
+    const champs = {
+      nom: brouillon.nom.trim(),
+      code: brouillon.code.trim().toUpperCase(),
+      categorie: brouillon.categorie,
+      specs: brouillon.specs.trim(),
+      caracteristiques: brouillon.caracteristiques
+        .split('\n')
+        .map((x) => x.trim())
+        .filter(Boolean),
+      prix: brouillon.prix,
+      sla: brouillon.sla || undefined,
+      populaire: brouillon.populaire,
+      surDevis: brouillon.surDevis,
+    }
+    executer({
+      action: 'catalog.edit',
+      titre: edition ? `${champs.nom} modifiée` : `${champs.nom} créée en brouillon`,
+      detail: edition
+        ? 'Les souscriptions en cours conservent leur prix. La modification ne concerne que les nouvelles.'
+        : 'Elle n’apparaîtra sur la vitrine qu’après publication explicite.',
+      effet: () =>
+        edition
+          ? offres.modifier(edition.id, champs)
+          : offres.creer({
+              id: offres.identifiant('off'),
+              ...champs,
+              statut: 'brouillon',
+              souscriptionsActives: 0,
+            }),
+    })
+    setEditionId(null)
+    setCreation(false)
+  }
+
+  const publiees = offres.items.filter((o) => o.statut === 'publiee')
+  const brouillons = offres.items.filter((o) => o.statut === 'brouillon')
+  const depreciees = offres.items.filter((o) => o.statut === 'depreciee')
+  const souscriptionsTotal = offres.items.reduce((a, o) => a + o.souscriptionsActives, 0)
 
   return (
     <div className="space-y-5">
@@ -49,7 +139,7 @@ export default function Catalogue() {
         sousTitre="Ce que nous vendons et à quel prix. Une offre publiée engage un prix : la modifier à la hausse ne s’applique jamais à une souscription en cours, seulement aux nouvelles."
         actions={
           <GatedAction autorise={autorise('catalog.edit')} message={refus('catalog.edit')}>
-            <Button iconBefore={<Plus size={14} />} onClick={() => setCreation(true)}>
+            <Button iconBefore={<Plus size={14} />} onClick={ouvrirCreation}>
               Créer une offre
             </Button>
           </GatedAction>
@@ -74,7 +164,7 @@ export default function Catalogue() {
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatTile libelle="Offres au catalogue" valeur={OFFRES.length} />
+        <StatTile libelle="Offres au catalogue" valeur={offres.items.length} />
         <StatTile libelle="Publiées" valeur={publiees.length} ton="ok" />
         <StatTile
           libelle="Souscriptions actives"
@@ -83,7 +173,7 @@ export default function Catalogue() {
         />
         <StatTile
           libelle="Offres sur devis"
-          valeur={OFFRES.filter((o) => o.surDevis).length}
+          valeur={offres.items.filter((o) => o.surDevis).length}
           detail="Périmètre à qualifier"
         />
         <StatTile
@@ -102,7 +192,7 @@ export default function Catalogue() {
         <Card padding={false}>
           <div className="p-4">
             <DataTable<Offer>
-              lignes={OFFRES}
+              lignes={offres.items}
               exportable
               parPage={12}
               placeholderRecherche="Rechercher une offre, un code…"
@@ -230,7 +320,7 @@ export default function Catalogue() {
                   aligne: 'right',
                   rendu: (o) => (
                     <span className="flex items-center justify-end gap-1.5">
-                      <Button size="sm" variant="ghost" onClick={() => setEdition(o)}>
+                      <Button size="sm" variant="ghost" onClick={() => ouvrirEdition(o)}>
                         Modifier
                       </Button>
                       {o.statut === 'publiee' && (
@@ -242,7 +332,7 @@ export default function Catalogue() {
                             size="sm"
                             variant="ghost"
                             iconBefore={<Archive size={12} />}
-                            onClick={() => setDepreciation(o)}
+                            onClick={() => setDepreciationId(o.id)}
                           >
                             Déprécier
                           </Button>
@@ -257,10 +347,12 @@ export default function Catalogue() {
                             size="sm"
                             variant="secondary"
                             onClick={() =>
-                              pousser({
-                                ton: 'ok',
+                              executer({
+                                action: 'catalog.edit',
                                 titre: `${o.nom} publiée`,
-                                detail: 'L’offre apparaît immédiatement sur la vitrine publique et dans le simulateur de coût.',
+                                detail:
+                                  'L’offre apparaît immédiatement sur la vitrine publique et dans le simulateur de coût. Son prix est désormais garanti à chaque souscripteur.',
+                                effet: () => offres.modifier(o.id, { statut: 'publiee' }),
                               })
                             }
                           >
@@ -311,23 +403,27 @@ export default function Catalogue() {
                   </tr>
                 </thead>
                 <tbody>
-                  {OFFRES.filter((o) => !o.surDevis && o.statut === 'publiee').map((o) => (
-                    <tr key={o.id} className="border-b border-g-100 last:border-0">
-                      <td className="px-3 py-2.5">
-                        <span className="block text-[12.5px] font-semibold text-ink">{o.nom}</span>
-                        <span className="block font-mono text-[10.5px] text-g-500">{o.code}</span>
-                      </td>
-                      <td className="tnum px-3 py-2.5 text-[12.5px] font-bold text-ink">
-                        {moneyPerMonth(o.prix)}
-                      </td>
-                      <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
-                        {num(o.souscriptionsActives)}
-                      </td>
-                      <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
-                        {moneyPerMonth(o.prix * o.souscriptionsActives)}
-                      </td>
-                    </tr>
-                  ))}
+                  {offres.items
+                    .filter((o) => !o.surDevis && o.statut === 'publiee')
+                    .map((o) => (
+                      <tr key={o.id} className="border-b border-g-100 last:border-0">
+                        <td className="px-3 py-2.5">
+                          <span className="block text-[12.5px] font-semibold text-ink">
+                            {o.nom}
+                          </span>
+                          <span className="block font-mono text-[10.5px] text-g-500">{o.code}</span>
+                        </td>
+                        <td className="tnum px-3 py-2.5 text-[12.5px] font-bold text-ink">
+                          {moneyPerMonth(o.prix)}
+                        </td>
+                        <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
+                          {num(o.souscriptionsActives)}
+                        </td>
+                        <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
+                          {moneyPerMonth(o.prix * o.souscriptionsActives)}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -376,12 +472,12 @@ export default function Catalogue() {
                 sousTitre="Ce que les clients achètent réellement, indépendamment de ce que nous mettons en avant."
               />
               <div className="space-y-2.5">
-                {[...OFFRES]
+                {[...offres.items]
                   .filter((o) => o.souscriptionsActives > 0)
                   .sort((a, b) => b.souscriptionsActives - a.souscriptionsActives)
                   .slice(0, 8)
                   .map((o) => {
-                    const max = Math.max(...OFFRES.map((x) => x.souscriptionsActives))
+                    const max = Math.max(...offres.items.map((x) => x.souscriptionsActives))
                     return (
                       <div key={o.id}>
                         <div className="flex items-baseline justify-between gap-3">
@@ -492,7 +588,7 @@ export default function Catalogue() {
       <Drawer
         open={edition !== null || creation}
         onClose={() => {
-          setEdition(null)
+          setEditionId(null)
           setCreation(false)
         }}
         title={edition ? `Modifier ${edition.nom}` : 'Créer une offre'}
@@ -502,7 +598,7 @@ export default function Catalogue() {
             <Button
               variant="ghost"
               onClick={() => {
-                setEdition(null)
+                setEditionId(null)
                 setCreation(false)
               }}
             >
@@ -510,17 +606,8 @@ export default function Catalogue() {
             </Button>
             <GatedAction autorise={autorise('catalog.edit')} message={refus('catalog.edit')}>
               <Button
-                onClick={() => {
-                  pousser({
-                    ton: 'ok',
-                    titre: edition ? 'Offre modifiée' : 'Offre créée en brouillon',
-                    detail: edition
-                      ? 'Les souscriptions en cours conservent leur prix. La modification ne concerne que les nouvelles.'
-                      : 'Elle n’apparaîtra sur la vitrine qu’après publication explicite.',
-                  })
-                  setEdition(null)
-                  setCreation(false)
-                }}
+                disabled={brouillon.nom.trim().length === 0 || brouillon.code.trim().length === 0}
+                onClick={enregistrer}
               >
                 {edition ? 'Enregistrer' : 'Créer en brouillon'}
               </Button>
@@ -530,15 +617,31 @@ export default function Catalogue() {
       >
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Nom commercial">
-              <Input defaultValue={edition?.nom ?? ''} placeholder="Cloud Pro" />
+            <Field label="Nom commercial" required>
+              <Input
+                value={brouillon.nom}
+                placeholder="Cloud Pro"
+                onChange={(e) => poser({ nom: e.target.value })}
+              />
             </Field>
-            <Field label="Code" hint="apparaît sur les factures — immuable après publication">
-              <Input defaultValue={edition?.code ?? ''} placeholder="CLOUD-PRO" />
+            <Field
+              label="Code"
+              hint="apparaît sur les factures — immuable après publication"
+              required
+            >
+              <Input
+                value={brouillon.code}
+                placeholder="CLOUD-PRO"
+                disabled={edition?.statut === 'publiee'}
+                onChange={(e) => poser({ code: e.target.value })}
+              />
             </Field>
           </div>
           <Field label="Catégorie">
-            <Select defaultValue={edition?.categorie ?? 'espace_cloud'}>
+            <Select
+              value={brouillon.categorie}
+              onChange={(e) => poser({ categorie: e.target.value as Offer['categorie'] })}
+            >
               {Object.entries(LIBELLE_CATEGORIE).map(([v, l]) => (
                 <option key={v} value={v}>
                   {l}
@@ -547,21 +650,33 @@ export default function Catalogue() {
             </Select>
           </Field>
           <Field label="Caractéristiques" hint="phrase affichée sur la vitrine et le comparateur">
-            <Input defaultValue={edition?.specs ?? ''} placeholder="16 vCPU · 64 Go · 2 To SSD" />
+            <Input
+              value={brouillon.specs}
+              placeholder="16 vCPU · 64 Go · 2 To SSD"
+              onChange={(e) => poser({ specs: e.target.value })}
+            />
           </Field>
           <Field label="Ce qui est inclus" hint="une ligne par élément">
             <Textarea
               rows={5}
-              defaultValue={edition?.caracteristiques.join('\n') ?? ''}
+              value={brouillon.caracteristiques}
               placeholder={'Sauvegarde quotidienne incluse\nIP publique\nSupport en heures ouvrées'}
+              onChange={(e) => poser({ caracteristiques: e.target.value })}
             />
           </Field>
           <MicroLabel className="pt-2">Tarification</MicroLabel>
           <Field label="Prix public" hint="publié sur la vitrine — c’est le seul prix de l’offre">
-            <Input type="number" defaultValue={edition?.prix ?? 0} suffix="FCFA" />
+            <Input
+              type="number"
+              min={0}
+              value={brouillon.prix}
+              suffix="FCFA"
+              disabled={brouillon.surDevis}
+              onChange={(e) => poser({ prix: Number(e.target.value) })}
+            />
           </Field>
           <Field label="Engagement de disponibilité">
-            <Select defaultValue={edition?.sla ?? '99,9 %'}>
+            <Select value={brouillon.sla} onChange={(e) => poser({ sla: e.target.value })}>
               <option value="">Aucun engagement chiffré</option>
               <option value="99,9 %">99,9 %</option>
               <option value="99,95 %">99,95 %</option>
@@ -570,16 +685,25 @@ export default function Catalogue() {
           </Field>
           <div className="space-y-3">
             <Switch
-              checked={edition?.populaire ?? false}
+              checked={brouillon.populaire}
+              onChange={(v) => poser({ populaire: v })}
               label="Marquer comme populaire"
               description="Met l’offre en avant sur la vitrine. À utiliser sur l’offre que vous recommandez réellement, pas sur celle qui rapporte le plus."
             />
             <Switch
-              checked={edition?.surDevis ?? false}
+              checked={brouillon.surDevis}
+              onChange={(v) => poser({ surDevis: v })}
               label="Sur devis uniquement"
               description="L’offre apparaît sans prix, avec un bouton de prise de contact. Pour les périmètres qui exigent une qualification."
             />
           </div>
+          {brouillon.surDevis && (
+            <Callout ton="info" titre="Une offre sur devis n’affiche pas de prix">
+              Les trois prix restent saisissables une fois la case décochée, mais ils ne sont ni
+              publiés sur la vitrine, ni utilisés par le simulateur : le client passe par une prise de
+              contact.
+            </Callout>
+          )}
           <Callout ton="warn" titre="Publier engage un prix">
             Une fois publiée, l’offre est souscriptible en autonomie et son prix est garanti pour la
             durée de l’engagement de chaque souscripteur. Une hausse ultérieure ne s’applique qu’aux
@@ -590,7 +714,7 @@ export default function Catalogue() {
 
       <ConfirmDialog
         open={depreciation !== null}
-        onClose={() => setDepreciation(null)}
+        onClose={() => setDepreciationId(null)}
         titre="Déprécier une offre"
         ressource={depreciation?.code ?? ''}
         libelleAction="Déprécier l’offre"
@@ -601,12 +725,16 @@ export default function Catalogue() {
           'Les clients concernés reçoivent une comparaison avec l’offre de remplacement, sans obligation de migrer',
         ]}
         onConfirm={() => {
-          pousser({
+          if (!depreciation) return
+          executer({
+            action: 'catalog.edit',
             ton: 'info',
-            titre: `${depreciation?.nom} dépréciée`,
-            detail: 'Elle n’est plus souscriptible. Les clients existants continuent d’être servis au prix garanti.',
+            titre: `${depreciation.nom} dépréciée`,
+            detail:
+              'Elle n’est plus souscriptible. Les clients existants continuent d’être servis au prix garanti.',
+            effet: () => offres.modifier(depreciation.id, { statut: 'depreciee' }),
           })
-          setDepreciation(null)
+          setDepreciationId(null)
         }}
       />
     </div>

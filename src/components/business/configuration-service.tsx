@@ -11,6 +11,7 @@ import { GatedAction } from '@/components/ui/display'
 import { Input, Select, Switch } from '@/components/ui/field'
 import { Card, CardHeader, Callout } from '@/components/composition/card'
 import { Tooltip } from '@/components/ui/overlay'
+import { BoutonAction } from '@/components/app/actions'
 
 const LIBELLE_EFFET: Record<EffetChamp, string> = {
   immediat: 'Effet immédiat',
@@ -394,9 +395,16 @@ function ChampEtat({ champ }: { champ: Extract<ChampConfig, { type: 'etat' }> })
       </div>
       <p className="mt-1.5 text-[11.5px] leading-relaxed text-g-700">{champ.detail}</p>
       {champ.action && (
-        <Button size="sm" variant="secondary" className="mt-2" iconBefore={<RefreshCw size={12} />}>
-          {champ.action}
-        </Button>
+        <BoutonAction
+          libelle={champ.action}
+          className="mt-2"
+          icone={<RefreshCw size={12} />}
+          operation={{
+            ton: 'info',
+            titre: champ.action,
+            detail: champ.detail,
+          }}
+        />
       )}
     </div>
   )

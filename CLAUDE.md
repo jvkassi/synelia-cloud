@@ -15,11 +15,22 @@ décisions déjà prises.
 |---|---|
 | Paquets | `bun install` — **bun 1.4.0**, `bun.lock` fait foi, pas de npm |
 | Développement | `bun run dev` — Next avec Turbopack |
-| Construction | `bun run build` — Turbopack, ~30 s pour 124 routes |
+| Construction | `bun run build` — Turbopack, ~20 s pour 106 routes |
 | Comparaison | `bun run build:webpack` — ~50 s, gardé pour lever un doute |
 | Types | `bun run typecheck` |
 | Lint | `bun run lint` |
 | Audit du rendu | `bun run build && bun run start` puis `node outils/audit.mjs` |
+
+**Tout passe par bun** — `bun install`, `bun run`, `bunx`. Jamais npm, yarn ni
+pnpm, pas même pour un essai : chacun écrit son propre fichier de verrouillage et
+résout les versions à sa façon, et deux résolutions concurrentes dans le même
+dépôt finissent toujours par diverger.
+
+Il faut **bun 1.4.0 au moins** : `bun.lock` est en version 2, et un bun 1.3.x
+refuse de le lire (« Unknown lockfile version ») puis, avec
+`--frozen-lockfile`, échoue. Installer la bonne version plutôt que régénérer le
+verrou :
+`curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0"`.
 
 Les versions des dépendances sont **épinglées à l'exact** : le bun de Vercel ne
 sait pas lire un `bun.lock` en version 2 et résout à neuf, ce qui ferait diverger
@@ -27,7 +38,7 @@ l'installation locale de la distante. Ne remettez pas de caret.
 
 ### L'audit
 
-`outils/audit.mjs` ouvre les 124 routes de `outils/routes.json` dans Chromium et
+`outils/audit.mjs` ouvre les 160 routes de `outils/routes.json` dans Chromium et
 relève : erreurs console et HTTP, débordement horizontal, contraste sous le seuil
 WCAG AA, boutons sans nom accessible, titres d'onglet laissés par défaut.
 
@@ -48,6 +59,14 @@ Deux pièges déjà rencontrés :
   (`dba.africa`, `heb-dba`, `db-dba-maria`…). Ajoutez-y les nouvelles routes.
 
 ## Règles qui ne se négocient pas
+
+**Passer par le skill `ponytail` avant d'écrire du code.** Écrire, ajouter,
+corriger, refactorer, choisir une dépendance : à chaque fois. Il impose la
+solution la plus paresseuse qui marche — se demander d'abord si le besoin
+existe, réutiliser ce qui est déjà là, une ligne plutôt que cinquante, aucune
+dépendance nouvelle sans raison. Cette maquette a 106 routes et un seul jeu de
+composants : ce qu'on n'ajoute pas est ce qu'on n'aura pas à maintenir en
+cohérence partout.
 
 **Ne jamais reconstruire l'écran principal d'un produit existant.** Pas
 d'explorateur de fichiers, pas de webmail, pas d'écran métier d'ERP, pas
@@ -81,6 +100,85 @@ Utilisez `seededSeries`, `trendSeries` et la date figée `MAINTENANT`
 partout, `CostPreview` avant toute action facturable, saisie du nom exact avant
 toute action destructive.
 
+**Aucun bouton inerte.** Un bouton, un interrupteur ou un champ visible fait ce
+qu'il annonce, ou il est désactivé avec la raison. Un interrupteur dont le
+libellé dit « non désactivable » porte `disabled`, il n'est pas simplement muet.
+
+## L'atelier — l'état mutable de la démonstration
+
+`src/components/app/atelier.tsx` garde, le temps de la session, les collections
+qui ont été modifiées. Une collection jamais touchée n'existe pas dans l'état :
+la lecture retombe sur la graine importée de `src/lib/mock/`, si bien que le
+rendu serveur et le premier rendu client restent identiques. Un rechargement
+complet remet la démonstration à zéro, et le menu du compte propose
+« Réinitialiser la démonstration » dès qu'une collection a bougé.
+
+```tsx
+const parc = useCollection<VM>('vms', VMS)     // items, creer, modifier, supprimer
+parc.modifier(id, { statut: 'running' })       // ou une fonction (vm) => patch
+const { lancerJob } = useAtelier()             // job suivi dans /app/taches
+```
+
+Trois primitives dans `src/components/app/actions.tsx` évitent que chaque écran
+réinvente la séquence « RBAC → mutation → notification → job » :
+
+| Composant | Pour quoi |
+|---|---|
+| `BoutonAction` | une action directe, avec confirmation par saisie du nom si besoin |
+| `BoutonFormulaire` | un bouton qui ouvre un formulaire puis exécute l'action |
+| `ModaleFormulaire` | le formulaire seul, quand il doit vivre hors d'un popover |
+| `useOperation()` | la séquence complète, à appeler depuis un `onClick` existant |
+
+Deux pièges :
+
+- **Une modale ne vit pas dans un popover.** Un clic dans la modale est un clic
+  « hors popover » : le popover se ferme et démonte la modale. Montez-la à la
+  racine de la vue et ouvrez-la depuis le popover par un état.
+- **Une entité affichée dans un tiroir doit être relue depuis la collection**
+  (par identifiant), pas capturée à l'ouverture : sinon le tiroir montre l'état
+  d'avant la modification.
+
+Les lectures des sélecteurs de `src/lib/mock/` (`vmsDeLEspace`, `messageriesDeLOrg`…)
+donnent le **périmètre** ; l'état vient de l'atelier. Le motif est :
+`const perimetre = new Set(selecteur().map((x) => x.id))` puis filtrer les items.
+
+### Deux ateliers, un seul retenu
+
+Deux branches ont écrit un atelier en parallèle : un registre typé par
+collection avec `useActe()` (back-office seul, 14 fichiers) et le
+`useCollection(nom, graine)` générique décrit plus haut (les deux espaces, 65
+fichiers). **Le générique a été retenu à la fusion** : le même mécanisme sert la
+vitrine, l'espace client et l'espace fournisseur, et une collection ne se
+déclare pas au préalable.
+
+Ce que l'autre faisait de mieux, et qui reste à reprendre : `useActe()` écrivait
+**la trace au journal d'audit** en même temps que la mutation et la
+notification. `useOperation()` ne journalise pas encore. Séparer les trois, c'est
+se garantir qu'un jour l'une des trois manquera — en pratique, la trace.
+
+Deux règles de l'autre atelier restent vraies ici, et sont déjà appliquées :
+
+- **Identifiants et horodatages déterministes** : `collection.identifiant()`
+  compte, les dates partent de `MAINTENANT`. Pas de `Math.random()`, pas
+  d'horloge navigateur.
+- **Une route de détail ne fait plus `notFound()`.** Une organisation créée
+  pendant la session n'existe pas dans le jeu figé : un 404 du serveur ferait
+  croire à une panne. C'est la vue cliente qui dit ce qu'elle ne trouve pas.
+
+### Les exports
+
+`src/lib/export.ts` produit un fichier réel : `telechargerCsv` (point-virgule et
+BOM, ce qu'attend un tableur en français) et `telechargerTexte`. `DataTable`
+l'utilise pour son icône d'export ; le simulateur de la vitrine, le journal
+d'audit et la facturation fournisseur en descendent leurs jeux de données. Ce que
+le navigateur ne sait pas fabriquer — un PDF signé, un flux syslog — reste une
+notification qui dit ce qui se passerait, sans prétendre le faire.
+
+Les formulaires de la vitrine passent par `FormulaireSite`
+(`src/components/site/formulaire.tsx`) : champs obligatoires réellement exigés,
+accusé de réception avec référence, et la phrase qui dit qu'aucun courriel ne
+part d'une maquette.
+
 ## Architecture de la navigation
 
 Deux barres, pas de barre latérale de navigation. `src/lib/navigation.ts` porte le
@@ -91,30 +189,109 @@ modèle ; `topbar.tsx` le rend.
   Infrastructure · Produit · Finance · Exploitation`.
 - **Barre 2** : les sections de l'univers courant.
 
-L'univers **Clients** du super admin fait exception à « pas de barre latérale » :
-il monte le panneau de sélection des organisations dans
-`app/admin/organisations/layout.tsx`, par le même `CadreSection` que Web Cloud, et
-`ConteneurAdmin` retire la borne de 1400 px pour ce segment. Un exploitant saute
-d'un client à l'autre toute la journée ; sans panneau persistant, chaque saut
-repasse par la liste.
+Côté super admin, l'univers **Clients** porte lui aussi un panneau — voir plus
+bas. C'est le seul de cet espace.
 
 `sectionActive()` résout au **préfixe le plus long** : `/app/reseau/lb` désigne
 les load balancers, pas le réseau. Le champ `aussi` rattache les routes sans
 onglet propre (`/app/dns` → Domaines, `/app/taches` → Tableau de bord).
 
-### Web Cloud, en maître-détail
+### Quatre façons d'occuper toute la largeur
 
-Neuf sections : `Accueil · Domaines · Hébergement Web · Databases · Emails ·
+Trois univers clients portent des ressources et occupent tout l'écran :
+Infrastructure, Applications, Web Cloud. Côté super admin, l'univers Clients s'y
+ajoute. Mais leur panneau de gauche ne dit pas la même chose, et c'est la
+distinction à ne pas perdre.
+
+**Infrastructure : un contexte.** `panneauEspace: true` sur l'univers. Le panneau
+est un **sélecteur d'Espace Cloud unique**, rigoureusement identique sur toutes
+les sections — machines, clusters, réseau, volumes, bases. On choisit une fois où
+l'on travaille, et cela vaut pour tous les onglets. Choisir ne navigue pas : les
+entrées sont des boutons, pas des liens, et l'on reste sur l'onglet courant, relu
+dans le nouvel Espace.
+
+Le panneau est monté par `Conteneur`, donc par le `layout.tsx` de l'espace
+client, et non par les sections : c'est ce qui garantit qu'il ne se reconstruit
+jamais d'un onglet à l'autre — un contexte doit survivre à la navigation. La
+barre supérieure masque alors son propre sélecteur d'Espace (`avecEspace`), pour
+ne pas poser la même question à deux endroits de l'écran ; elle le garde
+ailleurs, notamment pour la Supervision de l'univers Global, filtrée par Espace
+elle aussi.
+
+`sansPanneau: true` fait l'exception : l'accueil d'Infrastructure
+(`/app/infrastructure`) est la seule section sans panneau. Elle regarde tous les
+Espaces à la fois, et sert précisément à choisir lequel ouvrir — un sélecteur y
+serait redondant. C'est aussi elle qui rassemble ce qui demande une décision :
+quota près du plafond, machine sans plan de sauvegarde, plan de reprise jamais
+testé.
+
+**Applications : une sélection, mais une seule pour tout l'univers.**
+`panneau: ['/prefixe']` sur chacune des sept sections qui suivent l'accueil, et
+`CadreProjet` (`src/components/app/cadre-projet.tsx`) monte partout la *même*
+liste : les projets. Volontairement pas un sélecteur d'Espace — un projet est une
+unité de travail indépendante de son hébergement, et deux projets du même Espace
+n'ont rien à se dire. La question à poser une fois pour toutes est « de quel
+projet parle-t-on ? ».
+
+Comme la sélection est partagée, changer d'onglet ne doit pas la reperdre :
+`hrefSection()` dans `topbar.tsx` reporte le projet courant dans l'adresse de la
+section visée.
+
+**Web Cloud : une navigation.** `panneau: ['/prefixe']` sur chaque section, mais
+le panneau liste les *ressources de la section* — domaines, hébergements,
+certificats — et change donc de contenu d'un onglet à l'autre. Ses entrées sont
+des liens vers une fiche.
+
+**Clients, côté super admin : une navigation, elle aussi.** Même forme que Web
+Cloud — `pleineLargeur` sur l'univers, `panneau: ['/admin/organisations']` sur son
+unique section, et `app/admin/organisations/layout.tsx` monte la liste des
+organisations clientes. Un exploitant saute d'un client à l'autre toute la
+journée : sans panneau persistant, chaque saut repasse par la liste. C'est
+`ConteneurAdmin` qui applique `gabarit()` de ce côté, comme `Conteneur` le fait
+côté client.
+
+**Les quatre cas partagent la coquille** `CoquillePanneau`
+(`src/components/app/cadre-section.tsx`) : panneau collé au bord gauche en
+colonne au-delà de 1024 px, bandeau dépliant en dessous, et c'est le panneau qui
+porte la marge du contenu — d'où l'absence de conteneur de page sur ces routes.
+
+`gabarit()` rend `plein` (sous un panneau, quel qu'il soit), `large` (univers en
+pleine largeur, écran sans panneau : les trois accueils clients, le relais SMTP —
+borné à 1600 px) ou `borne` (1400 px, le reste). `topbar.tsx` s'en sert aussi : les
+onglets d'un univers en pleine largeur s'alignent sur le bord gauche, là où
+commence le panneau.
+
+**Le sélecteur doit dire vrai.** Un panneau qui annonce un Espace au-dessus d'une
+liste qui l'ignore est un mensonge d'interface. Les écrans d'Infrastructure
+filtraient déjà par `useEspace()`. Dans Applications, le panneau désigne un
+projet et chaque section ne montre que ce projet ; les racines de section, elles,
+assument de traverser tous les projets et le disent dans leur sous-titre.
+
+Reste à trancher : `/app/espaces` liste encore les trois Espaces alors que le
+panneau en désigne un. Chez OVH, l'onglet « Projet » montre le projet
+sélectionné. Le transformer en fiche de l'Espace courant est un chantier à part.
+
+### Infrastructure
+
+Dix sections : `Accueil · Espaces Cloud · Machines virtuelles · Kubernetes ·
+Load balancers · Réseau & IP · Stockage bloc · Stockage objet S3 ·
+Bases managées · Sauvegardes & PRA`.
+
+### Applications
+
+Huit sections : `Accueil · Projets · Déploiements · Observabilité · Backup ·
+Domaines & routage · Variables & secrets · Paramètres`, toutes sous
+`/app/applications/`. Accueil n'a pas de panneau — c'est un tableau de bord, il
+ne porte sur aucun projet en particulier.
+
+La fiche d'un projet n'a pas d'onglets : variables, domaines et paramètres en ont
+été sortis pour devenir des sections. Un onglet dans un onglet oblige à retenir
+deux niveaux de position ; la barre en tient un seul.
+
+### Web Cloud
+
+Dix sections : `Accueil · Domaines · Hébergement Web · Databases · Emails ·
 Drive · Applications · SSL · Backup · Relais SMTP`.
-
-Chaque section sauf Accueil a un **panneau de sélection persistant**, monté dans
-son `layout.tsx` via `CadreSection` — jamais dans une page, sinon il se
-reconstruit à chaque changement d'onglet. Accueil n'en a pas : c'est un tableau de
-bord, il ne parle d'aucune ressource.
-
-Web Cloud est **en pleine largeur** : `Conteneur` (dans `app/layout.tsx`) retire
-la borne de 1400 px pour `/app/web`. Le reste de l'espace client la garde — un
-paragraphe de 1900 px ne se lit pas.
 
 **Un domaine est attaché à un serveur et à un seul.** C'est la règle du produit.
 Elle évite le défaut des portails qui vendent le nom, l'hébergement et la
@@ -130,10 +307,14 @@ aucune page ne dit tout ce qui le concerne.
 | Sauvegardes | Un onglet par ressource **et** une section transverse `Sauvegardes & PRA` dans Infrastructure, qui porte les plans réutilisables, la restauration granulaire et le tableau de conformité 3-2-1 qu'on montre à un auditeur. |
 | Revendeurs | **Il n'y en a pas.** Deux acteurs seulement : l'organisation cliente et le super admin qui exploite la plateforme. Ni rôle `reseller_admin`, ni type d'organisation indirect, ni grille d'achat partenaire, ni revshare, ni page `/partenaires`. Une offre porte **un** prix, celui de la vitrine. |
 | Marketplace | Supprimé en tant qu'univers. Le partagé (messagerie, drive, CMS) est passé dans Web Cloud, attaché au domaine ; le dédié est devenu des modèles déployables dans un projet. |
+| Bibliothèque de modèles | Plus de section ni de fiche : les modèles se choisissent à l'étape « Source » de `/app/applications/nouveau`, à côté de Git, image Docker et canvas. Une fiche de modèle qu'on ne peut pas déployer depuis elle-même était un détour. Le jeu de données `mock/modeles.ts` reste : les services en portent le `modeleSlug` et leur configuration en dépend. |
+| Registre d'images | Supprimé. Un explorateur de dépôts et d'étiquettes est l'écran principal d'un registre — donc hors périmètre. Ce qui compte (image, étiquette, signature, résultat de l'analyse) est déjà sur la fiche du déploiement. |
 | Applications web | Section à part de `Hébergement Web` : « installer WordPress » et « régler PHP » ne sont pas la même intention. |
 | Bases mutualisées | Aucun accès distant, présenté comme une propriété de l'offre et non un réglage. Une base mutualisée n'a pas à être joignable depuis Internet. |
 | Sortie du propriétaire | Les socles VMware et Hyper-V restent dans le jeu de données avec `enSortie`, et `/souverainete` publie la trajectoire de sortie datée. Assumer la transition plutôt que la cacher. |
 | Configurations de service | Un fichier par service dans `src/lib/configurations/`. Configurer une messagerie n'a presque rien de commun avec configurer un Drive ou un ERP. |
+| Membres d'une organisation cliente | Le fournisseur ne les crée pas, ne change pas leurs rôles et ne les révoque pas : l'organisation le fait depuis son propre espace. Seule exception, écrite dans l'écran : la récupération du dernier administrateur perdu. |
+| Suppression d'une offre | Une offre publiée ne se supprime pas, elle se déprécie — elle a été vendue. Seul un brouillon jamais souscrit se supprime. |
 
 ## Pièges techniques rencontrés
 
@@ -159,24 +340,29 @@ lien, deux ancres imbriquées étant du HTML que React refuse d'hydrater.
 
 Écart mesuré face au cahier des charges, vérifié fichier par fichier :
 
-1. **Assistant de création Kubernetes** — `/app/kubernetes/new` n'existe pas.
-   Quatre étapes attendues : version et région, control plane mono ou HA, pools
-   de workers, modules. C'est le seul assistant du cahier qui manque.
-2. **`/app/securite`** — il manque *Politiques* (MFA, durée de session,
-   restriction par plage IP) et *Sessions* (sessions actives, révocation). Les
-   clés d'API existent, sous `/app/parametres`.
-3. **`/app/docs`** — pas de parcours de formation, ni de suivi de complétion, ni
+1. **`/app/docs`** — pas de parcours de formation, ni de suivi de complétion, ni
    d'accès au bac à sable.
-4. **`/admin/catalogue`** — le cahier demande un découpage par famille (Espace
+2. **`/admin/catalogue`** — le cahier demande un découpage par famille (Espace
    Cloud, images VM, clusters, stacks, web) ; on a un tableau unique.
-5. **IaaS** — déploiement de plusieurs serveurs d'un coup en glisser-déposer,
-   avec ce qu'on installe, le processeur, la mémoire, le disque et la carte
-   réseau. Demandé, pas commencé.
-6. **Anglais** — aucun mécanisme d'internationalisation ; tous les libellés sont
+3. **Anglais** — aucun mécanisme d'internationalisation ; tous les libellés sont
    en français en dur. Le cahier ne demande que la structure, pas la traduction.
    C'est le seul chantier de la liste qui se compte en jours.
-7. **Lanceur comme page d'accueil** — l'écran existe et l'explique, mais aucun
+4. **Lanceur comme page d'accueil** — l'écran existe et l'explique, mais aucun
    réglage ne le fixe pour les membres au rôle purement utilisateur.
+5. **Univers Applications** — la restructuration autour du projet est arrivée
+   par une autre branche que le câblage des actions : les huit sections
+   `/app/applications/*` s'affichent bien mais leurs boutons de détail ne
+   touchent pas encore l'atelier (paramètres, variables, backup, déploiements).
+   C'est du câblage, les primitives sont là.
+6. **Journal d'audit des actions** — `useOperation()` mute et notifie, mais
+   n'écrit pas dans `AUDIT`. Voir « Deux ateliers, un seul retenu ».
+
+Fait depuis : l'assistant `/app/kubernetes/new` (cinq étapes), l'onglet
+*Sessions actives* de `/app/securite` et sa politique d'organisation, le centre
+de tâches `/app/taches`, le glisser-déposer de composition de serveurs qui livre
+réellement ses lots (`/app/vms/composer`), et le câblage complet de l'espace
+fournisseur sur l'atelier — organisations, catalogue, capacité, marketplace,
+tickets, équipe, conformité, recouvrement, revendeurs.
 
 ## Style d'écriture
 
@@ -186,9 +372,40 @@ seulement quand le choix n'est pas évident. Les textes d'interface disent ce qu
 le produit fait **et ce qu'il ne fait pas** : c'est souvent l'information la plus
 utile avant de s'engager.
 
-## Branche
+## Branches et intégration
 
-Le travail va sur `claude/marketplace-admin-vercel-x4f2mh`, poussé directement,
-sans pull request. Déploiement :
-`npx vercel@latest --prod --yes --archive=tgz --token "$VERCEL_TOKEN"` — un
-`fetch failed` au premier essai est fréquent, le second passe.
+`main` est la branche d'intégration : **tout travail y est fusionné dès qu'il
+est terminé**, sans pull request. Le travail lui-même se fait sur une branche
+`claude/<sujet>`, poussée elle aussi.
+
+La séquence, à la fin de chaque changement :
+
+```
+bun run typecheck && bun run lint && bun run build   # avant tout
+git push -u origin claude/<sujet>
+git checkout main && git pull && git merge claude/<sujet>
+```
+
+**Résolvez les conflits, ne les reportez pas.** Cinq branches parallèles ont
+déjà divergé assez pour qu'une fusion tardive coûte une demi-journée. Deux
+règles apprises à cette occasion :
+
+- **Un conflit fusionné automatiquement n'est pas un conflit résolu.** Git a
+  accepté sans broncher `panneauEspace: true` (branche A) au-dessus des huit
+  sections d'Applications (branche B) : le fichier compilait, l'univers portait
+  deux panneaux et aucune ligne n'était marquée en conflit. Après toute fusion
+  qui touche `navigation.ts`, `conteneur.tsx` ou `topbar.tsx`, relisez le
+  résultat — le compilateur ne voit pas ce genre de contradiction.
+- **Quand deux branches répondent différemment à la même question de
+  conception, tranchez et écrivez pourquoi** dans le message de fusion et dans
+  ce fichier. Ne gardez pas les deux réponses « en attendant ».
+
+Après la fusion, rejouez `typecheck`, `lint`, `build` **et** l'audit du rendu :
+c'est la fusion, pas la branche, qui casse.
+
+Déploiement, depuis `main` :
+`bunx vercel@latest --prod --yes --archive=tgz --token "$VERCEL_TOKEN"` — un
+`fetch failed` est fréquent et ne dit rien de la construction : le déploiement
+est créé côté Vercel et continue. Vérifiez avec
+`bunx vercel@latest inspect <url> --token "$VERCEL_TOKEN"` plutôt que de
+relancer, sinon vous empilez les déploiements.

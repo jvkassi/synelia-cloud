@@ -3,13 +3,14 @@
 import { useState } from 'react'
 import { Download, RotateCcw, ShieldCheck, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dateCourte, money } from '@/lib/format'
+import { MAINTENANT, dateCourte, money } from '@/lib/format'
 import {
+  CERTIFICATS,
   TYPE_CERTIFICAT_LABEL,
-  certificatById,
   hebergementById,
   joursAvant,
   nomServi,
+  type Certificat,
 } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
@@ -19,6 +20,8 @@ import { PageHeader, Card, CardHeader, Callout, KeyValueList } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { CarteAbonnement } from '@/components/business/abonnement'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'apercu', label: 'Vue d’ensemble' },
@@ -27,14 +30,16 @@ const ONGLETS = [
 ]
 
 export function VueCertificat({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus } = useApp()
+  const executer = useOperation()
+  const certificats = useCollection<Certificat>('certificats', CERTIFICATS)
   const [onglet, setOnglet] = useState('apercu')
 
-  const c = certificatById(id)
+  const c = certificats.items.find((x) => x.id === id)
   // Le hook est appelé avant tout retour anticipé : un `useState` conditionnel
   // décale l'ordre des hooks entre deux rendus et React perd son état.
-  const [auto, setAuto] = useState(c?.renouvellementAuto ?? true)
   if (!c) return null
+  const auto = c.renouvellementAuto
   const jours = joursAvant(c.expire)
   const h = c.hebergementId ? hebergementById(c.hebergementId) : undefined
   const couverts = [c.hote, ...(c.hotesSupplementaires ?? [])]
@@ -66,24 +71,45 @@ export function VueCertificat({ id }: { id: string }) {
         }
         actions={
           <>
-            <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-              <Button
-                variant="secondary"
-                iconBefore={<RotateCcw size={14} />}
-                onClick={() =>
-                  pousser({
-                    ton: 'ok',
-                    titre: 'Renouvellement lancé',
-                    detail: `Nouveau certificat en émission pour ${c.hote}.`,
-                  })
-                }
-              >
-                Renouveler maintenant
-              </Button>
-            </GatedAction>
-            <Button variant="ghost" iconBefore={<Download size={14} />}>
-              Télécharger
-            </Button>
+            <BoutonAction
+              libelle="Renouveler maintenant"
+              size="md"
+              icone={<RotateCcw size={14} />}
+              operation={{
+                action: 'service.admin',
+                ton: 'info',
+                titre: 'Renouvellement lancé',
+                detail: `Nouveau certificat en émission pour ${c.hote}.`,
+                effet: () => certificats.modifier(c.id, { etat: 'en_emission' }),
+                job: {
+                  type: 'certificat.renew',
+                  label: `Renouvellement · ${c.hote}`,
+                  etapes: [
+                    `Répondre au challenge ${c.validationDomaine.toUpperCase()}`,
+                    'Récupérer le certificat',
+                    'Installer sur les hôtes couverts',
+                  ],
+                  dureeEtapeMs: 1100,
+                },
+                effetFinal: () =>
+                  certificats.modifier(c.id, {
+                    etat: 'actif',
+                    emisLe: MAINTENANT.slice(0, 10),
+                    expire: '2026-11-17',
+                  }),
+              }}
+            />
+            <BoutonAction
+              libelle="Télécharger"
+              variant="ghost"
+              size="md"
+              icone={<Download size={14} />}
+              operation={{
+                ton: 'info',
+                titre: `Certificat de ${c.hote} téléchargé`,
+                detail: 'Chaîne complète au format PEM. La clé privée reste dans le coffre.',
+              }}
+            />
           </>
         }
       />
@@ -160,7 +186,17 @@ export function VueCertificat({ id }: { id: string }) {
                     : 'Réémission et refacturation 30 jours avant l’échéance.'
                 }
                 checked={auto}
-                onChange={setAuto}
+                onChange={(v) =>
+                  executer({
+                    action: 'service.admin',
+                    ton: v ? 'ok' : 'warn',
+                    titre: v ? 'Renouvellement automatique activé' : 'Renouvellement automatique désactivé',
+                    detail: v
+                      ? 'Réémission 30 jours avant l’échéance.'
+                      : 'À l’échéance, les navigateurs afficheront un avertissement de sécurité.',
+                    effet: () => certificats.modifier(c.id, { renouvellementAuto: v }),
+                  })
+                }
               />
               <KeyValueList
                 className="mt-3 border-t border-g-100 pt-3"
@@ -195,17 +231,59 @@ export function VueCertificat({ id }: { id: string }) {
             <Card>
               <CardHeader titre="Actions" />
               <div className="space-y-2">
-                <Button variant="secondary" size="sm" fullWidth iconBefore={<RotateCcw size={13} />}>
-                  Réémettre
-                </Button>
-                <Button variant="ghost" size="sm" fullWidth iconBefore={<Download size={13} />}>
-                  Télécharger la chaîne
-                </Button>
-                <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-                  <Button variant="danger" size="sm" fullWidth iconBefore={<Trash2 size={13} />}>
-                    Révoquer
-                  </Button>
-                </GatedAction>
+                <BoutonAction
+                  libelle="Réémettre"
+                  fullWidth
+                  icone={<RotateCcw size={13} />}
+                  operation={{
+                    action: 'service.admin',
+                    ton: 'info',
+                    titre: `Réémission de ${c.hote}`,
+                    detail: 'Une nouvelle clé est générée : l’ancienne cesse d’être utilisée.',
+                    effet: () => certificats.modifier(c.id, { etat: 'en_emission' }),
+                    job: {
+                      type: 'certificat.reissue',
+                      label: `Réémission · ${c.hote}`,
+                      etapes: ['Générer une nouvelle clé', 'Valider le domaine', 'Installer le certificat'],
+                      dureeEtapeMs: 1100,
+                    },
+                    effetFinal: () => certificats.modifier(c.id, { etat: 'actif' }),
+                  }}
+                />
+                <BoutonAction
+                  libelle="Télécharger la chaîne"
+                  variant="ghost"
+                  fullWidth
+                  icone={<Download size={13} />}
+                  operation={{
+                    ton: 'info',
+                    titre: 'Chaîne de certification téléchargée',
+                    detail: 'Certificat, intermédiaires et racine, dans l’ordre attendu par un serveur.',
+                  }}
+                />
+                <BoutonAction
+                  libelle="Révoquer"
+                  variant="danger"
+                  fullWidth
+                  icone={<Trash2 size={13} />}
+                  operation={{
+                    action: 'service.admin',
+                    ton: 'err',
+                    titre: `Certificat de ${c.hote} révoqué`,
+                    detail: 'Le HTTPS est coupé sur les hôtes couverts jusqu’à l’émission d’un nouveau certificat.',
+                    effet: () => certificats.modifier(c.id, { etat: 'revoque' }),
+                  }}
+                  confirmation={{
+                    ressource: c.hote,
+                    titre: 'Révoquer ce certificat ?',
+                    pertes: [
+                      `Le HTTPS sera coupé immédiatement sur ${couverts.length} hôte(s)`,
+                      'Les navigateurs afficheront un avertissement de sécurité',
+                      'La révocation est définitive : il faudra émettre un nouveau certificat',
+                    ],
+                    libelleAction: 'Révoquer le certificat',
+                  }}
+                />
               </div>
               <p className="mt-2 text-[11px] leading-snug text-g-500">
                 Révoquer coupe immédiatement le HTTPS sur les hôtes couverts. À ne faire qu’en cas de
