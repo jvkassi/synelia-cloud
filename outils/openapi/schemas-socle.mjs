@@ -235,8 +235,6 @@ const identite = {
       pays: chaine(),
       secteur: chaine(),
       tva: chaine(),
-      type: liste(['direct', 'revendeur', 'client_revendeur']),
-      resellerId: chaine(),
       statut: liste(['active', 'suspendue', 'fermee']),
       logoUrl: chaine(),
       createdAt: horodatage(),
@@ -247,7 +245,7 @@ const identite = {
       tenantPlan: chaine(),
       domaine: chaine(),
     },
-    ['id', 'nom', 'pays', 'type', 'statut', 'createdAt'],
+    ['id', 'nom', 'pays', 'statut', 'createdAt'],
   ),
 
   OrganisationCreation: objet(
@@ -256,12 +254,10 @@ const identite = {
       pays: chaine(),
       secteur: chaine(),
       tva: chaine(),
-      type: liste(['direct', 'revendeur', 'client_revendeur']),
-      resellerId: chaine('Obligatoire quand `type` vaut `client_revendeur`.'),
       tenantPlan: chaine(),
       administrateur: objet({ email: chaine(), nom: chaine() }, ['email', 'nom']),
     },
-    ['nom', 'pays', 'type'],
+    ['nom', 'pays'],
   ),
 
   OrganisationModification: objet({
@@ -272,69 +268,6 @@ const identite = {
     logoUrl: chaine(),
     tenantPlan: chaine(),
   }),
-
-  Revendeur: objet(
-    {
-      id: chaine(),
-      orgId: chaine(),
-      nom: chaine(),
-      theme: objet(
-        { logoUrl: chaine(), primary: chaine(), accent: chaine(), domaine: chaine() },
-        ['logoUrl', 'primary', 'accent', 'domaine'],
-      ),
-      grille: tableau(
-        objet({ offerId: chaine(), prixAchat: montant(), prixVente: montant() }, [
-          'offerId',
-          'prixAchat',
-          'prixVente',
-        ]),
-      ),
-      catalogue: tableau(chaine(), 'Périmètre de catalogue : identifiants d’offres revendables.'),
-      revsharePct: nombre(),
-      clientsFinaux: tableau(chaine()),
-      caGenere: montant(),
-      marge: montant(),
-      statut: liste(['actif', 'suspendu', 'onboarding']),
-    },
-    ['id', 'orgId', 'nom', 'theme', 'grille', 'catalogue', 'revsharePct', 'statut'],
-  ),
-
-  RevendeurCreation: objet(
-    {
-      orgId: chaine(),
-      nom: chaine(),
-      theme: objet({ logoUrl: chaine(), primary: chaine(), accent: chaine(), domaine: chaine() }),
-      revsharePct: nombre(),
-      catalogue: tableau(chaine()),
-    },
-    ['orgId', 'nom', 'revsharePct'],
-  ),
-
-  RevendeurIntegration: objet(
-    {
-      cleApiId: chaine(),
-      webhooks: tableau(
-        objet(
-          {
-            id: chaine(),
-            url: chaine(),
-            evenements: tableau(chaine(), '`org.created`, `subscription.updated`, `invoice.issued`…'),
-            actif: booleen(),
-            secretDefini: booleen(),
-            dernierEnvoi: horodatage(),
-            dernierCode: entier(),
-          },
-          ['id', 'url', 'evenements', 'actif'],
-        ),
-      ),
-      quotaRequetesParMin: entier(),
-      environnementBacASable: booleen(),
-      documentationUrl: chaine(),
-    },
-    ['webhooks', 'quotaRequetesParMin'],
-    "Volet « API & intégration » de la fiche revendeur : ce dont un revendeur a besoin pour " +
-      'brancher son propre portail sans passer par l’interface.',
-  ),
 
   Utilisateur: objet(
     {
@@ -416,7 +349,7 @@ const identite = {
     {
       orgId: chaine(),
       nom: chaine(),
-      type: liste(['direct', 'revendeur', 'client_revendeur']),
+      secteur: chaine(),
       role: liste(ROLES),
       logoUrl: chaine(),
       defaut: booleen(),

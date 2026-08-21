@@ -1,7 +1,7 @@
 # API Synelia Cloud — contrat backend
 
-`openapi.json` décrit **tout ce que le portail attend du backend** : 527 opérations
-sur 373 chemins, 222 schémas. Document OpenAPI 3.0.3 valide, directement
+`openapi.json` décrit **tout ce que le portail attend du backend** : 514 opérations
+sur 364 chemins, 218 schémas. Document OpenAPI 3.0.3 valide, directement
 exploitable par Swagger UI, Redoc ou un générateur de client.
 
 Le backend est à construire séparément : cette spécification ne présume rien de
@@ -65,13 +65,14 @@ c'est casser un écran.
 - **`/**`** — espace client. Le jeton porte l'organisation active ; toute
   collection est implicitement filtrée sur elle. `GET /vms` ne retourne jamais
   les machines d'un autre tenant.
-- **`/admin/**`** — espace fournisseur, réservé aux rôles `provider_admin`,
-  `provider_operator` et `reseller_admin`. Voit toutes les organisations.
+- **`/admin/**`** — espace super admin, réservé aux rôles `super_admin` et
+  `platform_operator`. Voit toutes les organisations. Il n'y a pas de troisième
+  famille de rôles : la plateforme ne connaît que le client et le super admin.
 - **`/public/**`** — vitrine, sans authentification.
 
 ## Autorisations
 
-365 opérations portent l'extension `x-rbac` avec l'identifiant d'action de
+352 opérations portent l'extension `x-rbac` avec l'identifiant d'action de
 `src/lib/rbac.ts` (`vm.create_delete`, `dr.failover.real`…). Un refus retourne
 `403` avec `rolesRequis` : le portail **désactive** l'action et nomme le rôle
 attendu, il ne masque pas le bouton. Tout refus est journalisé dans l'audit.
@@ -96,10 +97,10 @@ effectives de la session.
 | Services managés | 24 |
 | Web Cloud — domaines, hébergement, applications, bases, emails, drive, SSL, sauvegarde, SMTP | 104 |
 | Facturation, support, documentation | 37 |
-| Espace fournisseur | 70 |
+| Espace super admin | 57 |
 | Vitrine publique | 18 |
 
-Verbes : 218 `GET`, 172 `POST`, 55 `DELETE`, 52 `PATCH`, 30 `PUT`.
+Verbes : 212 `GET`, 169 `POST`, 55 `DELETE`, 51 `PATCH`, 27 `PUT`.
 
 ## Ce que l'API ne fait pas
 

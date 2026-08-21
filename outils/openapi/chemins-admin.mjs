@@ -1,5 +1,5 @@
 /**
- * Chemins — espace fournisseur : pilotage, clients, infrastructure, produit,
+ * Chemins — espace super admin : pilotage, clients, infrastructure, produit,
  * finance, exploitation.
  */
 
@@ -26,16 +26,15 @@ import {
   tableau,
 } from './socle.mjs'
 
-const T_PILOTAGE = 'Fournisseur — pilotage'
-const T_CLIENTS = 'Fournisseur — clients & revendeurs'
-const T_INFRA = 'Fournisseur — infrastructure'
-const T_PRODUIT = 'Fournisseur — produit'
-const T_FINANCE = 'Fournisseur — finance'
-const T_EXPLOIT = 'Fournisseur — exploitation'
+const T_PILOTAGE = 'Super admin — pilotage'
+const T_CLIENTS = 'Super admin — clients'
+const T_INFRA = 'Super admin — infrastructure'
+const T_PRODUIT = 'Super admin — produit'
+const T_FINANCE = 'Super admin — finance'
+const T_EXPLOIT = 'Super admin — exploitation'
 
 const A = 'admin'
 const idBackend = chemin('backendId', 'Identifiant du socle.')
-const idRevendeur = chemin('revendeurId', 'Identifiant du revendeur.', 'res-oc2s')
 
 // ─── Pilotage ─────────────────────────────────────────────────────────
 
@@ -128,155 +127,6 @@ const pilotage = {
     }),
   },
 }
-
-// ─── Clients et revendeurs ────────────────────────────────────────────
-
-const clients = fusion(
-  crud({
-    tag: T_CLIENTS,
-    base: '/admin/revendeurs',
-    idParam: idRevendeur,
-    nomSingulier: 'Revendeur',
-    nomPluriel: 'Revendeurs',
-    libelle: 'un revendeur',
-    libellePluriel: 'les revendeurs',
-    schema: 'Revendeur',
-    creation: 'RevendeurCreation',
-    modification: 'RevendeurCreation',
-    portee: A,
-    rbacLecture: 'reseller.manage',
-    rbacEcriture: 'reseller.manage',
-    filtres: [filtre('statut', liste(['actif', 'suspendu', 'onboarding']))],
-    sansSuppression: true,
-  }),
-  {
-    '/admin/revendeurs/{revendeurId}/grille': {
-      put: op({
-        tag: T_CLIENTS,
-        portee: A,
-        id: 'modifierGrilleRevendeur',
-        resume: 'Modifier la grille tarifaire d’un revendeur',
-        params: [idRevendeur],
-        corps: objet(
-          {
-            grille: tableau(
-              objet({ offerId: chaine(), prixAchat: entier(), prixVente: entier() }, [
-                'offerId',
-                'prixAchat',
-              ]),
-            ),
-            revsharePct: nombre(),
-          },
-          ['grille'],
-        ),
-        ok: ref('Revendeur'),
-        rbac: 'reseller.manage',
-      }),
-    },
-    '/admin/revendeurs/{revendeurId}/catalogue': {
-      get: op({
-        tag: T_CLIENTS,
-        portee: A,
-        id: 'obtenirCatalogueRevendeur',
-        resume: 'Obtenir le périmètre de catalogue d’un revendeur',
-        detail: 'Ce qu’il peut revendre, offre par offre, avec le prix d’achat qui s’y applique.',
-        params: [idRevendeur],
-        ok: objet(
-          {
-            offres: tableau(
-              objet(
-                {
-                  offre: ref('Offre'),
-                  autorisee: booleen(),
-                  prixAchat: entier(),
-                  prixVenteConseille: entier(),
-                  motifExclusion: chaine(),
-                },
-                ['offre', 'autorisee'],
-              ),
-            ),
-            servicesManages: tableau(
-              objet({ slug: chaine(), autorise: booleen(), modes: tableau(chaine()) }, ['slug', 'autorise']),
-            ),
-          },
-          ['offres'],
-        ),
-        rbac: 'reseller.manage',
-      }),
-      put: op({
-        tag: T_CLIENTS,
-        portee: A,
-        id: 'modifierCatalogueRevendeur',
-        resume: 'Modifier le périmètre de catalogue d’un revendeur',
-        params: [idRevendeur],
-        corps: objet(
-          { offres: tableau(chaine()), servicesManages: tableau(chaine()) },
-          ['offres'],
-        ),
-        ok: ref('Revendeur'),
-        rbac: 'reseller.manage',
-      }),
-    },
-    '/admin/revendeurs/{revendeurId}/integration': {
-      get: op({
-        tag: T_CLIENTS,
-        portee: A,
-        id: 'obtenirIntegrationRevendeur',
-        resume: 'Obtenir la configuration API et webhooks d’un revendeur',
-        params: [idRevendeur],
-        ok: ref('RevendeurIntegration'),
-        rbac: 'reseller.manage',
-      }),
-      put: op({
-        tag: T_CLIENTS,
-        portee: A,
-        id: 'modifierIntegrationRevendeur',
-        resume: 'Modifier la configuration API et webhooks d’un revendeur',
-        params: [idRevendeur],
-        corps: objet(
-          {
-            webhooks: tableau(
-              objet(
-                { id: chaine(), url: chaine(), evenements: tableau(chaine()), actif: booleen(), secret: chaine() },
-                ['url', 'evenements'],
-              ),
-            ),
-            quotaRequetesParMin: entier(),
-            environnementBacASable: booleen(),
-          },
-          [],
-        ),
-        ok: ref('RevendeurIntegration'),
-        rbac: 'reseller.manage',
-      }),
-    },
-    '/admin/revendeurs/{revendeurId}/clients': {
-      get: op({
-        tag: T_CLIENTS,
-        portee: A,
-        id: 'listerClientsRevendeur',
-        resume: 'Lister les clients finaux d’un revendeur',
-        paginee: true,
-        params: [idRevendeur],
-        ok: page(ref('Organisation')),
-        rbac: 'reseller.manage',
-      }),
-    },
-  },
-  action({
-    tag: T_CLIENTS,
-    portee: A,
-    chemin: '/admin/revendeurs/{revendeurId}/webhooks/test',
-    id: 'testerWebhookRevendeur',
-    resume: 'Envoyer un événement de test à un webhook',
-    params: [idRevendeur],
-    corps: objet({ webhookId: chaine(), evenement: chaine() }, ['webhookId']),
-    corpsRequis: true,
-    ok: objet({ code: entier(), latenceMs: nombre(), corps: chaine() }, ['code']),
-    code: 200,
-    rbac: 'reseller.manage',
-  }),
-)
 
 // ─── Infrastructure ───────────────────────────────────────────────────
 
@@ -669,18 +519,6 @@ const finance = fusion(
         rbac: 'invoice.view',
       }),
     },
-    '/admin/revshare': {
-      get: op({
-        tag: T_FINANCE,
-        portee: A,
-        id: 'listerRelevesRevshare',
-        resume: 'Lister les relevés de revshare',
-        paginee: true,
-        params: [filtre('resellerId', chaine()), filtre('periode', chaine())],
-        ok: page(ref('ReleveRevshare')),
-        rbac: 'reseller.manage',
-      }),
-    },
   },
   action({
     tag: T_FINANCE,
@@ -708,18 +546,6 @@ const finance = fusion(
     ok: objet({ envoyees: entier(), echecs: entier() }, ['envoyees']),
     code: 200,
     rbac: 'invoice.view',
-  }),
-  action({
-    tag: T_FINANCE,
-    portee: A,
-    chemin: '/admin/revshare/releves',
-    id: 'genererReleveRevshare',
-    resume: 'Générer un relevé de revshare',
-    corps: objet({ resellerId: chaine(), periode: chaine() }, ['resellerId', 'periode']),
-    corpsRequis: true,
-    ok: ref('ReleveRevshare'),
-    code: 201,
-    rbac: 'reseller.manage',
   }),
 )
 
@@ -851,7 +677,7 @@ const exploitation = fusion(
         ),
         ok: ref('MembreEquipe'),
         code: 201,
-        rbac: 'reseller.manage',
+        rbac: 'org.manage',
       }),
     },
     '/admin/equipe/{membreId}': {
@@ -863,7 +689,7 @@ const exploitation = fusion(
         params: [chemin('membreId', 'Identifiant du membre.')],
         corps: objet({ role: liste(ROLES), equipe: chaine(), privilegie: booleen(), revuLe: horodatage() }),
         ok: ref('MembreEquipe'),
-        rbac: 'reseller.manage',
+        rbac: 'org.manage',
       }),
       delete: op({
         tag: T_EXPLOIT,
@@ -872,7 +698,7 @@ const exploitation = fusion(
         resume: 'Retirer un membre de l’équipe',
         params: [chemin('membreId', 'Identifiant du membre.')],
         code: 204,
-        rbac: 'reseller.manage',
+        rbac: 'org.manage',
       }),
     },
   },
@@ -1018,7 +844,7 @@ const ajouts = {
         ),
         ok: ref('Elevation'),
         code: 201,
-        rbac: 'reseller.manage',
+        rbac: 'org.manage',
         erreurs: [409],
       }),
       delete: op({
@@ -1028,14 +854,13 @@ const ajouts = {
         resume: 'Révoquer une élévation avant son terme',
         params: [chemin('membreId', 'Identifiant du membre.')],
         code: 204,
-        rbac: 'reseller.manage',
+        rbac: 'org.manage',
       }),
     },
 }
 
 export const cheminsAdmin = fusion(
   pilotage,
-  clients,
   infrastructure,
   produit,
   finance,

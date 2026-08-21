@@ -169,7 +169,7 @@ export const schemasTransverses = {
     {
       id: chaine(),
       recuLe: horodatage(),
-      origine: liste(['contact', 'devis', 'simulateur', 'partenaires', 'entreprises', 'statut']),
+      origine: liste(['contact', 'devis', 'simulateur', 'entreprises', 'statut']),
       nom: chaine(),
       email: chaine(),
       telephone: chaine(),

@@ -299,11 +299,10 @@ const organisations = fusion(
     modification: 'OrganisationModification',
     portee: 'admin',
     rbacLecture: 'org.dashboard.view',
-    rbacEcriture: 'reseller.manage',
+    rbacEcriture: 'org.manage',
     filtres: [
-      filtre('type', liste(['direct', 'revendeur', 'client_revendeur'])),
       filtre('statut', liste(['active', 'suspendue', 'fermee'])),
-      filtre('resellerId', chaine(), 'Clients finaux d’un revendeur donné.'),
+      filtre('secteur', chaine()),
       filtre('site', liste(['ABJ', 'GBM'])),
     ],
     sansSuppression: true,
@@ -315,7 +314,7 @@ const organisations = fusion(
         portee: 'admin',
         id: 'obtenirSyntheseOrganisation',
         resume: 'Obtenir la fiche de synthèse d’une organisation',
-        detail: 'Vue fournisseur : consommation, espaces, factures, tickets, contacts.',
+        detail: 'Vue super admin : consommation, espaces, factures, tickets, contacts.',
         params: [idOrg],
         ok: objet(
           {
@@ -341,7 +340,7 @@ const organisations = fusion(
         destructif: true,
         ok: ref('Organisation'),
         code: 200,
-        rbac: 'reseller.manage',
+        rbac: 'org.manage',
       }),
       delete: op({
         tag: T_ORG,
@@ -350,7 +349,7 @@ const organisations = fusion(
         resume: 'Lever la suspension d’une organisation',
         params: [idOrg],
         ok: ref('Organisation'),
-        rbac: 'reseller.manage',
+        rbac: 'org.manage',
       }),
     },
     '/organisations/{orgId}/emprunt-identite': {
@@ -370,7 +369,7 @@ const organisations = fusion(
         corpsRequis: true,
         ok: ref('Session'),
         code: 201,
-        rbac: 'reseller.manage',
+        rbac: 'org.manage',
       }),
     },
   },

@@ -42,7 +42,7 @@ Trois espaces, une seule API :
 - **espace client** : Espaces Cloud, machines, Kubernetes, réseau, stockage,
   sauvegarde et PRA, plateforme applicative, projets, Web Cloud, services
   managés, facturation, support ;
-- **espace fournisseur** (préfixe \`/admin\`) : pilotage, clients et revendeurs,
+- **espace super admin** (préfixe \`/admin\`) : pilotage, clients,
   capacité, catalogue, finance, exploitation ;
 - **vitrine publique** (préfixe \`/public\`) : offres, tarifs, simulateur,
   statut, souveraineté, demandes de contact.
@@ -122,12 +122,12 @@ const TAGS = [
   ['Facturation', 'Factures, consommation, ventilation, moyens de paiement, SLA.'],
   ['Support', 'Tickets, pièces jointes, base de connaissances.'],
   ['Documentation & formation', 'Parcours, progression, bac à sable.'],
-  ['Fournisseur — pilotage', 'Synthèse, santé, audit et conformité de la plateforme.'],
-  ['Fournisseur — clients & revendeurs', 'Revendeurs, grille, périmètre de catalogue, intégration.'],
-  ['Fournisseur — infrastructure', 'Capacité, socles, placement, campagnes de migration.'],
-  ['Fournisseur — produit', 'Catalogue par famille, parc de services, campagnes de mise à jour.'],
-  ['Fournisseur — finance', 'Facturation, impayés, marges, revshare.'],
-  ['Fournisseur — exploitation', 'Tickets, statut public, incidents, équipe.'],
+  ['Super admin — pilotage', 'Synthèse, santé, audit et conformité de la plateforme.'],
+  ['Super admin — clients', 'Organisations clientes et demandes entrantes de la vitrine.'],
+  ['Super admin — infrastructure', 'Capacité, socles, placement, campagnes de migration.'],
+  ['Super admin — produit', 'Catalogue par famille, parc de services, campagnes de mise à jour.'],
+  ['Super admin — finance', 'Facturation, impayés, marges.'],
+  ['Super admin — exploitation', 'Tickets, statut public, incidents, équipe.'],
   ['Vitrine publique', 'Offres, tarifs, simulateur, statut, souveraineté, demandes.'],
 ].map(([name, description]) => ({ name, description }))
 

@@ -1407,10 +1407,7 @@ const commerce = {
       categorie: liste(['espace_cloud', 'image_vm', 'k8s', 'stack', 'web']),
       specs: chaine(),
       caracteristiques: tableau(chaine()),
-      prix: objet(
-        { direct: montant(), revendeur: montant(), operateur: montant() },
-        ['direct', 'revendeur', 'operateur'],
-      ),
+      prix: montant('Prix public mensuel — le seul prix de l’offre, celui de la vitrine.'),
       populaire: booleen(),
       statut: liste(['brouillon', 'publiee', 'depreciee']),
       souscriptionsActives: entier(),
@@ -1427,7 +1424,7 @@ const commerce = {
       categorie: liste(['espace_cloud', 'image_vm', 'k8s', 'stack', 'web']),
       specs: chaine(),
       caracteristiques: tableau(chaine()),
-      prix: objet({ direct: montant(), revendeur: montant(), operateur: montant() }, ['direct', 'revendeur', 'operateur']),
+      prix: montant('Prix public mensuel.'),
       statut: liste(['brouillon', 'publiee', 'depreciee']),
       sla: chaine(),
       surDevis: booleen(),
@@ -1955,19 +1952,6 @@ const ops = {
       prochaineAction: chaine(),
     },
     ['org', 'facture', 'montant', 'echeance', 'retardJours', 'relances'],
-  ),
-
-  ReleveRevshare: objet(
-    {
-      periode: chaine(),
-      resellerId: chaine(),
-      reseller: chaine(),
-      caGenere: montant(),
-      revsharePct: nombre(),
-      montant: montant(),
-      statut: chaine(),
-    },
-    ['periode', 'reseller', 'caGenere', 'revsharePct', 'montant', 'statut'],
   ),
 
   MargeBackend: objet(

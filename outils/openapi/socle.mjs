@@ -87,9 +87,8 @@ export const page = (items, description) =>
 export const SITES = ['ABJ', 'GBM']
 
 export const ROLES = [
-  'provider_admin',
-  'provider_operator',
-  'reseller_admin',
+  'super_admin',
+  'platform_operator',
   'org_admin',
   'espace_admin',
   'project_owner',

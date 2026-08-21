@@ -3,7 +3,7 @@
   "info": {
     "title": "Synelia Cloud — API",
     "version": "1.0.0",
-    "description": "API de Synelia Cloud — plateforme de gestion de cloud multi-tenant opérée à\nAbidjan (Synertech Vallon) et Grand-Bassam (VITIB).\n\n## Ce que cette API couvre\n\nTrois espaces, une seule API :\n\n- **espace client** : Espaces Cloud, machines, Kubernetes, réseau, stockage,\n  sauvegarde et PRA, plateforme applicative, projets, Web Cloud, services\n  managés, facturation, support ;\n- **espace fournisseur** (préfixe `/admin`) : pilotage, clients et revendeurs,\n  capacité, catalogue, finance, exploitation ;\n- **vitrine publique** (préfixe `/public`) : offres, tarifs, simulateur,\n  statut, souveraineté, demandes de contact.\n\n## Ce qu'elle ne couvre pas, volontairement\n\nLe portail **ne réimplémente jamais l'écran principal d'un produit amont** :\npas d'explorateur de fichiers, pas de webmail, pas d'écran métier d'ERP, pas\nd'éditeur de contenu de CMS, pas de constructeur de requêtes de journaux.\nL'API provisionne, dimensionne, sauvegarde, supervise et **ouvre la porte**\n(`POST /services/{id}/ouverture` renvoie un rebond SSO). Aucun point d'entrée\nne lit un courriel, ne liste un objet de bucket ni ne modifie une écriture\ncomptable.\n\nL'observabilité est bornée à quatre formats : tuile (`Tuile`), série\n(`Serie`, fenêtres `24h` / `7j` / `30j` seulement), liste d'événements\n(huit lignes), extrait de journal (vingt lignes). Au-delà, les réponses\nportent des liens de sortie vers Centreon, Grafana et VictoriaLogs.\n\n## Conventions\n\n- **Langue** : les noms de champs reprennent le modèle de données du produit,\n  en français. `Accept-Language` gouverne les libellés, jamais les clés.\n- **Multi-tenant** : l'organisation vient du jeton ; `X-Organisation-Id` la\n  remplace quand l'utilisateur appartient à plusieurs organisations.\n- **Pagination** : `page`, `parPage`, `tri`, `ordre` et `q` en requête,\n  `{ donnees, pagination }` en réponse. Une ressource seule n'est pas enveloppée.\n- **Asynchrone** : toute opération de provisioning répond `202` avec un\n  `TravailProvisioning` dont les étapes se suivent une par une.\n- **Actions destructives** : paramètre `confirmation` obligatoire, valant le\n  nom exact de la ressource. Un écart renvoie `422` sans rien détruire.\n- **Actions facturables** : `POST /facturation/estimation` renvoie l'aperçu de\n  coût attendu avant l'engagement.\n- **Droits** : chaque opération porte `x-rbac`, l'identifiant de son action\n  dans la matrice RBAC. Un refus renvoie `403` avec `rolesRequis` : le client\n  désactive l'action et nomme le rôle requis, il ne la masque pas.\n- **Erreurs** : enveloppe `{ erreur: { code, message, correlationId } }`. Le\n  `correlationId` est toujours présent, affiché et copiable côté interface.\n- **Secrets** : mots de passe, clés privées et jetons ne sont renvoyés qu'à leur\n  création ou à leur rotation, jamais en lecture.\n- **Intégration amont en défaut** : `424` avec la fraîcheur des dernières\n  données connues, pour un affichage dégradé plutôt qu'une page vide.\n- **Montants** : entiers en FCFA (XOF) sauf mention contraire.",
+    "description": "API de Synelia Cloud — plateforme de gestion de cloud multi-tenant opérée à\nAbidjan (Synertech Vallon) et Grand-Bassam (VITIB).\n\n## Ce que cette API couvre\n\nTrois espaces, une seule API :\n\n- **espace client** : Espaces Cloud, machines, Kubernetes, réseau, stockage,\n  sauvegarde et PRA, plateforme applicative, projets, Web Cloud, services\n  managés, facturation, support ;\n- **espace super admin** (préfixe `/admin`) : pilotage, clients,\n  capacité, catalogue, finance, exploitation ;\n- **vitrine publique** (préfixe `/public`) : offres, tarifs, simulateur,\n  statut, souveraineté, demandes de contact.\n\n## Ce qu'elle ne couvre pas, volontairement\n\nLe portail **ne réimplémente jamais l'écran principal d'un produit amont** :\npas d'explorateur de fichiers, pas de webmail, pas d'écran métier d'ERP, pas\nd'éditeur de contenu de CMS, pas de constructeur de requêtes de journaux.\nL'API provisionne, dimensionne, sauvegarde, supervise et **ouvre la porte**\n(`POST /services/{id}/ouverture` renvoie un rebond SSO). Aucun point d'entrée\nne lit un courriel, ne liste un objet de bucket ni ne modifie une écriture\ncomptable.\n\nL'observabilité est bornée à quatre formats : tuile (`Tuile`), série\n(`Serie`, fenêtres `24h` / `7j` / `30j` seulement), liste d'événements\n(huit lignes), extrait de journal (vingt lignes). Au-delà, les réponses\nportent des liens de sortie vers Centreon, Grafana et VictoriaLogs.\n\n## Conventions\n\n- **Langue** : les noms de champs reprennent le modèle de données du produit,\n  en français. `Accept-Language` gouverne les libellés, jamais les clés.\n- **Multi-tenant** : l'organisation vient du jeton ; `X-Organisation-Id` la\n  remplace quand l'utilisateur appartient à plusieurs organisations.\n- **Pagination** : `page`, `parPage`, `tri`, `ordre` et `q` en requête,\n  `{ donnees, pagination }` en réponse. Une ressource seule n'est pas enveloppée.\n- **Asynchrone** : toute opération de provisioning répond `202` avec un\n  `TravailProvisioning` dont les étapes se suivent une par une.\n- **Actions destructives** : paramètre `confirmation` obligatoire, valant le\n  nom exact de la ressource. Un écart renvoie `422` sans rien détruire.\n- **Actions facturables** : `POST /facturation/estimation` renvoie l'aperçu de\n  coût attendu avant l'engagement.\n- **Droits** : chaque opération porte `x-rbac`, l'identifiant de son action\n  dans la matrice RBAC. Un refus renvoie `403` avec `rolesRequis` : le client\n  désactive l'action et nomme le rôle requis, il ne la masque pas.\n- **Erreurs** : enveloppe `{ erreur: { code, message, correlationId } }`. Le\n  `correlationId` est toujours présent, affiché et copiable côté interface.\n- **Secrets** : mots de passe, clés privées et jetons ne sont renvoyés qu'à leur\n  création ou à leur rotation, jamais en lecture.\n- **Intégration amont en défaut** : `424` avec la fraîcheur des dernières\n  données connues, pour un affichage dégradé plutôt qu'une page vide.\n- **Montants** : entiers en FCFA (XOF) sauf mention contraire.",
     "contact": {
       "name": "Synelia",
       "url": "https://synelia.tech",
@@ -162,27 +162,27 @@
       "description": "Parcours, progression, bac à sable."
     },
     {
-      "name": "Fournisseur — pilotage",
+      "name": "Super admin — pilotage",
       "description": "Synthèse, santé, audit et conformité de la plateforme."
     },
     {
-      "name": "Fournisseur — clients & revendeurs",
-      "description": "Revendeurs, grille, périmètre de catalogue, intégration."
+      "name": "Super admin — clients",
+      "description": "Organisations clientes et demandes entrantes de la vitrine."
     },
     {
-      "name": "Fournisseur — infrastructure",
+      "name": "Super admin — infrastructure",
       "description": "Capacité, socles, placement, campagnes de migration."
     },
     {
-      "name": "Fournisseur — produit",
+      "name": "Super admin — produit",
       "description": "Catalogue par famille, parc de services, campagnes de mise à jour."
     },
     {
-      "name": "Fournisseur — finance",
-      "description": "Facturation, impayés, marges, revshare."
+      "name": "Super admin — finance",
+      "description": "Facturation, impayés, marges."
     },
     {
-      "name": "Fournisseur — exploitation",
+      "name": "Super admin — exploitation",
       "description": "Tickets, statut public, incidents, équipe."
     },
     {
@@ -202,7 +202,7 @@
     "/admin/audit": {
       "get": {
         "tags": [
-          "Fournisseur — pilotage"
+          "Super admin — pilotage"
         ],
         "operationId": "listerAuditPlateforme",
         "summary": "Lister le journal d’audit de la plateforme",
@@ -329,7 +329,7 @@
     "/admin/backends": {
       "get": {
         "tags": [
-          "Fournisseur — infrastructure"
+          "Super admin — infrastructure"
         ],
         "operationId": "listerBackends",
         "summary": "Lister les socles de virtualisation",
@@ -450,7 +450,7 @@
     "/admin/backends/{backendId}": {
       "get": {
         "tags": [
-          "Fournisseur — infrastructure"
+          "Super admin — infrastructure"
         ],
         "operationId": "obtenirBackend",
         "summary": "Obtenir un socle",
@@ -502,7 +502,7 @@
       },
       "patch": {
         "tags": [
-          "Fournisseur — infrastructure"
+          "Super admin — infrastructure"
         ],
         "operationId": "modifierBackend",
         "summary": "Modifier un socle",
@@ -598,7 +598,7 @@
     "/admin/capacite": {
       "get": {
         "tags": [
-          "Fournisseur — infrastructure"
+          "Super admin — infrastructure"
         ],
         "operationId": "obtenirCapacite",
         "summary": "Obtenir la capacité et sa projection",
@@ -653,7 +653,7 @@
     "/admin/catalogue/familles": {
       "get": {
         "tags": [
-          "Fournisseur — produit"
+          "Super admin — produit"
         ],
         "operationId": "listerFamillesCatalogue",
         "summary": "Lister les familles du catalogue",
@@ -731,7 +731,7 @@
     "/admin/catalogue/offres": {
       "get": {
         "tags": [
-          "Fournisseur — produit"
+          "Super admin — produit"
         ],
         "operationId": "listerOffres",
         "summary": "Lister les offres",
@@ -830,7 +830,7 @@
       },
       "post": {
         "tags": [
-          "Fournisseur — produit"
+          "Super admin — produit"
         ],
         "operationId": "creerOffre",
         "summary": "Créer une offre",
@@ -888,7 +888,7 @@
     "/admin/catalogue/offres/{offreId}": {
       "get": {
         "tags": [
-          "Fournisseur — produit"
+          "Super admin — produit"
         ],
         "operationId": "obtenirOffre",
         "summary": "Obtenir une offre",
@@ -940,7 +940,7 @@
       },
       "patch": {
         "tags": [
-          "Fournisseur — produit"
+          "Super admin — produit"
         ],
         "operationId": "modifierOffre",
         "summary": "Modifier une offre",
@@ -1008,7 +1008,7 @@
       },
       "delete": {
         "tags": [
-          "Fournisseur — produit"
+          "Super admin — produit"
         ],
         "operationId": "supprimerOffre",
         "summary": "Supprimer une offre",
@@ -1065,7 +1065,7 @@
     "/admin/catalogue/offres/{offreId}/publication": {
       "post": {
         "tags": [
-          "Fournisseur — produit"
+          "Super admin — produit"
         ],
         "operationId": "publierOffre",
         "summary": "Publier ou déprécier une offre",
@@ -1145,7 +1145,7 @@
     "/admin/catalogue/services/{slug}": {
       "put": {
         "tags": [
-          "Fournisseur — produit"
+          "Super admin — produit"
         ],
         "operationId": "modifierFicheCatalogueService",
         "summary": "Modifier une fiche du catalogue de services managés",
@@ -1214,7 +1214,7 @@
     "/admin/catalogue/services/{slug}/versions": {
       "post": {
         "tags": [
-          "Fournisseur — produit"
+          "Super admin — produit"
         ],
         "operationId": "qualifierVersionService",
         "summary": "Qualifier une version d’un service managé",
@@ -1318,7 +1318,7 @@
     "/admin/conformite": {
       "get": {
         "tags": [
-          "Fournisseur — pilotage"
+          "Super admin — pilotage"
         ],
         "operationId": "obtenirConformitePlateforme",
         "summary": "Obtenir l’état de conformité de la plateforme",
@@ -1414,7 +1414,7 @@
     "/admin/conformite/fenetres-patching": {
       "get": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "listerFenetresPatching",
         "summary": "Lister les fenêtres de patching",
@@ -1501,7 +1501,7 @@
       },
       "post": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "planifierFenetrePatching",
         "summary": "Planifier une fenêtre de patching",
@@ -1591,7 +1591,7 @@
     "/admin/conformite/tests-restauration": {
       "post": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "lancerCampagneTestsRestauration",
         "summary": "Lancer une campagne de tests de restauration",
@@ -1670,7 +1670,7 @@
     "/admin/equipe": {
       "get": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "listerEquipe",
         "summary": "Lister l’équipe Synelia",
@@ -1763,11 +1763,11 @@
       },
       "post": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "ajouterMembreEquipe",
         "summary": "Ajouter un membre de l’équipe",
-        "x-rbac": "reseller.manage",
+        "x-rbac": "org.manage",
         "parameters": [
           {
             "$ref": "#/components/parameters/Langue"
@@ -1789,9 +1789,8 @@
                   "role": {
                     "type": "string",
                     "enum": [
-                      "provider_admin",
-                      "provider_operator",
-                      "reseller_admin",
+                      "super_admin",
+                      "platform_operator",
                       "org_admin",
                       "espace_admin",
                       "project_owner",
@@ -1854,11 +1853,11 @@
     "/admin/equipe/{membreId}": {
       "patch": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "modifierMembreEquipe",
         "summary": "Modifier un membre de l’équipe",
-        "x-rbac": "reseller.manage",
+        "x-rbac": "org.manage",
         "parameters": [
           {
             "$ref": "#/components/parameters/Langue"
@@ -1883,9 +1882,8 @@
                   "role": {
                     "type": "string",
                     "enum": [
-                      "provider_admin",
-                      "provider_operator",
-                      "reseller_admin",
+                      "super_admin",
+                      "platform_operator",
                       "org_admin",
                       "espace_admin",
                       "project_owner",
@@ -1947,11 +1945,11 @@
       },
       "delete": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "retirerMembreEquipe",
         "summary": "Retirer un membre de l’équipe",
-        "x-rbac": "reseller.manage",
+        "x-rbac": "org.manage",
         "parameters": [
           {
             "$ref": "#/components/parameters/Langue"
@@ -1994,7 +1992,7 @@
     "/admin/equipe/{membreId}/elevation": {
       "get": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "listerElevations",
         "summary": "Lister les élévations d’un membre de l’équipe",
@@ -2049,12 +2047,12 @@
       },
       "post": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "eleverPrivileges",
         "summary": "Élever temporairement les privilèges d’un membre",
         "description": "Bornée dans le temps, motivée, rattachée à un ticket, et intégralement journalisée. Aucun rôle permanent ne remplace cette trace.",
-        "x-rbac": "reseller.manage",
+        "x-rbac": "org.manage",
         "parameters": [
           {
             "$ref": "#/components/parameters/Langue"
@@ -2079,9 +2077,8 @@
                   "role": {
                     "type": "string",
                     "enum": [
-                      "provider_admin",
-                      "provider_operator",
-                      "reseller_admin",
+                      "super_admin",
+                      "platform_operator",
                       "org_admin",
                       "espace_admin",
                       "project_owner",
@@ -2151,11 +2148,11 @@
       },
       "delete": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "revoquerElevation",
         "summary": "Révoquer une élévation avant son terme",
-        "x-rbac": "reseller.manage",
+        "x-rbac": "org.manage",
         "parameters": [
           {
             "$ref": "#/components/parameters/Langue"
@@ -2198,7 +2195,7 @@
     "/admin/facturation/cycle": {
       "post": {
         "tags": [
-          "Fournisseur — finance"
+          "Super admin — finance"
         ],
         "operationId": "lancerCycleFacturation",
         "summary": "Lancer le cycle de facturation d’une période",
@@ -2274,7 +2271,7 @@
     "/admin/facturation/cycles": {
       "get": {
         "tags": [
-          "Fournisseur — finance"
+          "Super admin — finance"
         ],
         "operationId": "listerCyclesFacturation",
         "summary": "Lister les cycles de facturation",
@@ -2363,7 +2360,7 @@
     "/admin/facturation/factures": {
       "get": {
         "tags": [
-          "Fournisseur — finance"
+          "Super admin — finance"
         ],
         "operationId": "listerFacturesPlateforme",
         "summary": "Lister les factures de toutes les organisations",
@@ -2466,7 +2463,7 @@
     "/admin/facturation/impayes": {
       "get": {
         "tags": [
-          "Fournisseur — finance"
+          "Super admin — finance"
         ],
         "operationId": "listerImpayes",
         "summary": "Lister les impayés et les relances",
@@ -2555,7 +2552,7 @@
     "/admin/facturation/impayes/relances": {
       "post": {
         "tags": [
-          "Fournisseur — finance"
+          "Super admin — finance"
         ],
         "operationId": "lancerRelances",
         "summary": "Envoyer une vague de relances",
@@ -2643,7 +2640,7 @@
     "/admin/facturation/marges": {
       "get": {
         "tags": [
-          "Fournisseur — finance"
+          "Super admin — finance"
         ],
         "operationId": "listerMargesBackends",
         "summary": "Obtenir la marge par socle",
@@ -2689,7 +2686,7 @@
     "/admin/leads": {
       "get": {
         "tags": [
-          "Fournisseur — clients & revendeurs"
+          "Super admin — clients"
         ],
         "operationId": "listerLeads",
         "summary": "Lister les demandes entrantes de la vitrine",
@@ -2802,7 +2799,7 @@
     "/admin/leads/{leadId}": {
       "patch": {
         "tags": [
-          "Fournisseur — clients & revendeurs"
+          "Super admin — clients"
         ],
         "operationId": "modifierLead",
         "summary": "Qualifier une demande entrante",
@@ -2887,7 +2884,7 @@
     "/admin/marketplace/campagnes": {
       "get": {
         "tags": [
-          "Fournisseur — produit"
+          "Super admin — produit"
         ],
         "operationId": "listerCampagnesMaj",
         "summary": "Lister les campagnes de mise à jour",
@@ -2973,7 +2970,7 @@
       },
       "post": {
         "tags": [
-          "Fournisseur — produit"
+          "Super admin — produit"
         ],
         "operationId": "creerCampagneMaj",
         "summary": "Créer une campagne de mise à jour",
@@ -3065,7 +3062,7 @@
     "/admin/marketplace/campagnes/{campagneId}/lancement": {
       "post": {
         "tags": [
-          "Fournisseur — produit"
+          "Super admin — produit"
         ],
         "operationId": "lancerCampagneMaj",
         "summary": "Lancer une campagne de mise à jour",
@@ -3122,7 +3119,7 @@
     "/admin/marketplace/campagnes/{campagneId}/suspension": {
       "post": {
         "tags": [
-          "Fournisseur — produit"
+          "Super admin — produit"
         ],
         "operationId": "suspendreCampagneMaj",
         "summary": "Suspendre une campagne de mise à jour",
@@ -3179,7 +3176,7 @@
     "/admin/marketplace/instances": {
       "get": {
         "tags": [
-          "Fournisseur — produit"
+          "Super admin — produit"
         ],
         "operationId": "listerParcInstances",
         "summary": "Lister le parc des services managés",
@@ -3301,7 +3298,7 @@
     "/admin/migration/campagnes": {
       "get": {
         "tags": [
-          "Fournisseur — infrastructure"
+          "Super admin — infrastructure"
         ],
         "operationId": "listerCampagnesMigration",
         "summary": "Lister les campagnes de migration",
@@ -3388,7 +3385,7 @@
       },
       "post": {
         "tags": [
-          "Fournisseur — infrastructure"
+          "Super admin — infrastructure"
         ],
         "operationId": "creerCampagneMigration",
         "summary": "Créer une campagne de migration",
@@ -3472,7 +3469,7 @@
     "/admin/migration/campagnes/{campagneId}/lancement": {
       "post": {
         "tags": [
-          "Fournisseur — infrastructure"
+          "Super admin — infrastructure"
         ],
         "operationId": "lancerCampagneMigration",
         "summary": "Lancer une campagne de migration",
@@ -3529,7 +3526,7 @@
     "/admin/migration/campagnes/{campagneId}/rollback": {
       "post": {
         "tags": [
-          "Fournisseur — infrastructure"
+          "Super admin — infrastructure"
         ],
         "operationId": "annulerCampagneMigration",
         "summary": "Revenir en arrière sur une campagne de migration",
@@ -3592,7 +3589,7 @@
     "/admin/migration/campagnes/{campagneId}/suspension": {
       "post": {
         "tags": [
-          "Fournisseur — infrastructure"
+          "Super admin — infrastructure"
         ],
         "operationId": "suspendreCampagneMigration",
         "summary": "Suspendre une campagne de migration",
@@ -3649,7 +3646,7 @@
     "/admin/modeles/{slug}": {
       "put": {
         "tags": [
-          "Fournisseur — produit"
+          "Super admin — produit"
         ],
         "operationId": "modifierModeleApplicatif",
         "summary": "Modifier un modèle de la bibliothèque",
@@ -3718,7 +3715,7 @@
     "/admin/organisations/{orgId}/notification": {
       "post": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "notifierOrganisation",
         "summary": "Notifier une organisation",
@@ -3826,7 +3823,7 @@
     "/admin/placements": {
       "put": {
         "tags": [
-          "Fournisseur — infrastructure"
+          "Super admin — infrastructure"
         ],
         "operationId": "modifierPlacements",
         "summary": "Modifier la règle de placement d’un espace",
@@ -3896,1065 +3893,10 @@
         }
       }
     },
-    "/admin/revendeurs": {
-      "get": {
-        "tags": [
-          "Fournisseur — clients & revendeurs"
-        ],
-        "operationId": "listerRevendeurs",
-        "summary": "Lister les revendeurs",
-        "x-rbac": "reseller.manage",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "$ref": "#/components/parameters/Page"
-          },
-          {
-            "$ref": "#/components/parameters/ParPage"
-          },
-          {
-            "$ref": "#/components/parameters/Tri"
-          },
-          {
-            "$ref": "#/components/parameters/Ordre"
-          },
-          {
-            "$ref": "#/components/parameters/Recherche"
-          },
-          {
-            "name": "statut",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "actif",
-                "suspendu",
-                "onboarding"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "donnees": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Revendeur"
-                      }
-                    },
-                    "pagination": {
-                      "$ref": "#/components/schemas/Pagination"
-                    }
-                  },
-                  "required": [
-                    "donnees",
-                    "pagination"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Fournisseur — clients & revendeurs"
-        ],
-        "operationId": "creerRevendeur",
-        "summary": "Créer un revendeur",
-        "x-rbac": "reseller.manage",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Langue"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RevendeurCreation"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Revendeur"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflit"
-          },
-          "422": {
-            "$ref": "#/components/responses/Invalidee"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      }
-    },
-    "/admin/revendeurs/{revendeurId}": {
-      "get": {
-        "tags": [
-          "Fournisseur — clients & revendeurs"
-        ],
-        "operationId": "obtenirRevendeur",
-        "summary": "Obtenir un revendeur",
-        "x-rbac": "reseller.manage",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "name": "revendeurId",
-            "in": "path",
-            "required": true,
-            "description": "Identifiant du revendeur.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "res-oc2s"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Revendeur"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "404": {
-            "$ref": "#/components/responses/Introuvable"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Fournisseur — clients & revendeurs"
-        ],
-        "operationId": "modifierRevendeur",
-        "summary": "Modifier un revendeur",
-        "x-rbac": "reseller.manage",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "name": "revendeurId",
-            "in": "path",
-            "required": true,
-            "description": "Identifiant du revendeur.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "res-oc2s"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RevendeurCreation"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Revendeur"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "404": {
-            "$ref": "#/components/responses/Introuvable"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflit"
-          },
-          "422": {
-            "$ref": "#/components/responses/Invalidee"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      }
-    },
-    "/admin/revendeurs/{revendeurId}/catalogue": {
-      "get": {
-        "tags": [
-          "Fournisseur — clients & revendeurs"
-        ],
-        "operationId": "obtenirCatalogueRevendeur",
-        "summary": "Obtenir le périmètre de catalogue d’un revendeur",
-        "description": "Ce qu’il peut revendre, offre par offre, avec le prix d’achat qui s’y applique.",
-        "x-rbac": "reseller.manage",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "name": "revendeurId",
-            "in": "path",
-            "required": true,
-            "description": "Identifiant du revendeur.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "res-oc2s"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "offres": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "offre": {
-                            "$ref": "#/components/schemas/Offre"
-                          },
-                          "autorisee": {
-                            "type": "boolean"
-                          },
-                          "prixAchat": {
-                            "type": "integer",
-                            "format": "int32"
-                          },
-                          "prixVenteConseille": {
-                            "type": "integer",
-                            "format": "int32"
-                          },
-                          "motifExclusion": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "offre",
-                          "autorisee"
-                        ]
-                      }
-                    },
-                    "servicesManages": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "slug": {
-                            "type": "string"
-                          },
-                          "autorise": {
-                            "type": "boolean"
-                          },
-                          "modes": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          }
-                        },
-                        "required": [
-                          "slug",
-                          "autorise"
-                        ]
-                      }
-                    }
-                  },
-                  "required": [
-                    "offres"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "404": {
-            "$ref": "#/components/responses/Introuvable"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Fournisseur — clients & revendeurs"
-        ],
-        "operationId": "modifierCatalogueRevendeur",
-        "summary": "Modifier le périmètre de catalogue d’un revendeur",
-        "x-rbac": "reseller.manage",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "name": "revendeurId",
-            "in": "path",
-            "required": true,
-            "description": "Identifiant du revendeur.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "res-oc2s"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "offres": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "servicesManages": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "required": [
-                  "offres"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Revendeur"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "404": {
-            "$ref": "#/components/responses/Introuvable"
-          },
-          "422": {
-            "$ref": "#/components/responses/Invalidee"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      }
-    },
-    "/admin/revendeurs/{revendeurId}/clients": {
-      "get": {
-        "tags": [
-          "Fournisseur — clients & revendeurs"
-        ],
-        "operationId": "listerClientsRevendeur",
-        "summary": "Lister les clients finaux d’un revendeur",
-        "x-rbac": "reseller.manage",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "$ref": "#/components/parameters/Page"
-          },
-          {
-            "$ref": "#/components/parameters/ParPage"
-          },
-          {
-            "$ref": "#/components/parameters/Tri"
-          },
-          {
-            "$ref": "#/components/parameters/Ordre"
-          },
-          {
-            "$ref": "#/components/parameters/Recherche"
-          },
-          {
-            "name": "revendeurId",
-            "in": "path",
-            "required": true,
-            "description": "Identifiant du revendeur.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "res-oc2s"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "donnees": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/Organisation"
-                      }
-                    },
-                    "pagination": {
-                      "$ref": "#/components/schemas/Pagination"
-                    }
-                  },
-                  "required": [
-                    "donnees",
-                    "pagination"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "404": {
-            "$ref": "#/components/responses/Introuvable"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      }
-    },
-    "/admin/revendeurs/{revendeurId}/grille": {
-      "put": {
-        "tags": [
-          "Fournisseur — clients & revendeurs"
-        ],
-        "operationId": "modifierGrilleRevendeur",
-        "summary": "Modifier la grille tarifaire d’un revendeur",
-        "x-rbac": "reseller.manage",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "name": "revendeurId",
-            "in": "path",
-            "required": true,
-            "description": "Identifiant du revendeur.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "res-oc2s"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "grille": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "offerId": {
-                          "type": "string"
-                        },
-                        "prixAchat": {
-                          "type": "integer",
-                          "format": "int32"
-                        },
-                        "prixVente": {
-                          "type": "integer",
-                          "format": "int32"
-                        }
-                      },
-                      "required": [
-                        "offerId",
-                        "prixAchat"
-                      ]
-                    }
-                  },
-                  "revsharePct": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "grille"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Revendeur"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "404": {
-            "$ref": "#/components/responses/Introuvable"
-          },
-          "422": {
-            "$ref": "#/components/responses/Invalidee"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      }
-    },
-    "/admin/revendeurs/{revendeurId}/integration": {
-      "get": {
-        "tags": [
-          "Fournisseur — clients & revendeurs"
-        ],
-        "operationId": "obtenirIntegrationRevendeur",
-        "summary": "Obtenir la configuration API et webhooks d’un revendeur",
-        "x-rbac": "reseller.manage",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "name": "revendeurId",
-            "in": "path",
-            "required": true,
-            "description": "Identifiant du revendeur.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "res-oc2s"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RevendeurIntegration"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "404": {
-            "$ref": "#/components/responses/Introuvable"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Fournisseur — clients & revendeurs"
-        ],
-        "operationId": "modifierIntegrationRevendeur",
-        "summary": "Modifier la configuration API et webhooks d’un revendeur",
-        "x-rbac": "reseller.manage",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "name": "revendeurId",
-            "in": "path",
-            "required": true,
-            "description": "Identifiant du revendeur.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "res-oc2s"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "webhooks": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string"
-                        },
-                        "url": {
-                          "type": "string"
-                        },
-                        "evenements": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
-                        },
-                        "actif": {
-                          "type": "boolean"
-                        },
-                        "secret": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "url",
-                        "evenements"
-                      ]
-                    }
-                  },
-                  "quotaRequetesParMin": {
-                    "type": "integer",
-                    "format": "int32"
-                  },
-                  "environnementBacASable": {
-                    "type": "boolean"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RevendeurIntegration"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "404": {
-            "$ref": "#/components/responses/Introuvable"
-          },
-          "422": {
-            "$ref": "#/components/responses/Invalidee"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      }
-    },
-    "/admin/revendeurs/{revendeurId}/webhooks/test": {
-      "post": {
-        "tags": [
-          "Fournisseur — clients & revendeurs"
-        ],
-        "operationId": "testerWebhookRevendeur",
-        "summary": "Envoyer un événement de test à un webhook",
-        "x-rbac": "reseller.manage",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "name": "revendeurId",
-            "in": "path",
-            "required": true,
-            "description": "Identifiant du revendeur.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "res-oc2s"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "webhookId": {
-                    "type": "string"
-                  },
-                  "evenement": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "webhookId"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "code": {
-                      "type": "integer",
-                      "format": "int32"
-                    },
-                    "latenceMs": {
-                      "type": "number"
-                    },
-                    "corps": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "code"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "404": {
-            "$ref": "#/components/responses/Introuvable"
-          },
-          "422": {
-            "$ref": "#/components/responses/Invalidee"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      }
-    },
-    "/admin/revshare": {
-      "get": {
-        "tags": [
-          "Fournisseur — finance"
-        ],
-        "operationId": "listerRelevesRevshare",
-        "summary": "Lister les relevés de revshare",
-        "x-rbac": "reseller.manage",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "$ref": "#/components/parameters/Page"
-          },
-          {
-            "$ref": "#/components/parameters/ParPage"
-          },
-          {
-            "$ref": "#/components/parameters/Tri"
-          },
-          {
-            "$ref": "#/components/parameters/Ordre"
-          },
-          {
-            "$ref": "#/components/parameters/Recherche"
-          },
-          {
-            "name": "resellerId",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "periode",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "donnees": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/ReleveRevshare"
-                      }
-                    },
-                    "pagination": {
-                      "$ref": "#/components/schemas/Pagination"
-                    }
-                  },
-                  "required": [
-                    "donnees",
-                    "pagination"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      }
-    },
-    "/admin/revshare/releves": {
-      "post": {
-        "tags": [
-          "Fournisseur — finance"
-        ],
-        "operationId": "genererReleveRevshare",
-        "summary": "Générer un relevé de revshare",
-        "x-rbac": "reseller.manage",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Langue"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "resellerId": {
-                    "type": "string"
-                  },
-                  "periode": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "resellerId",
-                  "periode"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReleveRevshare"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "422": {
-            "$ref": "#/components/responses/Invalidee"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      }
-    },
     "/admin/sante": {
       "get": {
         "tags": [
-          "Fournisseur — pilotage"
+          "Super admin — pilotage"
         ],
         "operationId": "obtenirSantePlateforme",
         "summary": "Obtenir la santé de la plateforme",
@@ -5000,7 +3942,7 @@
     "/admin/sites": {
       "get": {
         "tags": [
-          "Fournisseur — infrastructure"
+          "Super admin — infrastructure"
         ],
         "operationId": "listerSitesPhysiques",
         "summary": "Lister les sites physiques",
@@ -5045,7 +3987,7 @@
     "/admin/statut/incidents": {
       "get": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "listerIncidentsPlateforme",
         "summary": "Lister les incidents",
@@ -5127,7 +4069,7 @@
       },
       "post": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "ouvrirIncident",
         "summary": "Ouvrir un incident public",
@@ -5224,7 +4166,7 @@
     "/admin/statut/incidents/{incidentId}": {
       "post": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "mettreAJourIncident",
         "summary": "Publier une mise à jour d’incident",
@@ -5310,7 +4252,7 @@
     "/admin/statut/services": {
       "put": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "modifierStatutServices",
         "summary": "Modifier l’état publié des services",
@@ -5380,7 +4322,7 @@
     "/admin/tableau-de-bord": {
       "get": {
         "tags": [
-          "Fournisseur — pilotage"
+          "Super admin — pilotage"
         ],
         "operationId": "obtenirTableauDeBordPlateforme",
         "summary": "Obtenir la synthèse de la plateforme",
@@ -5425,7 +4367,7 @@
     "/admin/tickets": {
       "get": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "listerTicketsPlateforme",
         "summary": "Lister les tickets de toutes les organisations",
@@ -5543,7 +4485,7 @@
     "/admin/tickets/{ticketId}": {
       "patch": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "traiterTicket",
         "summary": "Assigner ou faire évoluer un ticket",
@@ -5634,7 +4576,7 @@
     "/admin/tickets/{ticketId}/messages": {
       "post": {
         "tags": [
-          "Fournisseur — exploitation"
+          "Super admin — exploitation"
         ],
         "operationId": "repondreTicketPlateforme",
         "summary": "Répondre à un ticket au nom de Synelia",
@@ -5718,7 +4660,7 @@
     "/admin/travaux": {
       "get": {
         "tags": [
-          "Fournisseur — pilotage"
+          "Super admin — pilotage"
         ],
         "operationId": "listerTravauxPlateforme",
         "summary": "Lister les travaux de toutes les organisations",
@@ -17429,9 +16371,8 @@
             "schema": {
               "type": "string",
               "enum": [
-                "provider_admin",
-                "provider_operator",
-                "reseller_admin",
+                "super_admin",
+                "platform_operator",
                 "org_admin",
                 "espace_admin",
                 "project_owner",
@@ -17551,9 +16492,8 @@
                   "role": {
                     "type": "string",
                     "enum": [
-                      "provider_admin",
-                      "provider_operator",
-                      "reseller_admin",
+                      "super_admin",
+                      "platform_operator",
                       "org_admin",
                       "espace_admin",
                       "project_owner",
@@ -17710,9 +16650,8 @@
                   "role": {
                     "type": "string",
                     "enum": [
-                      "provider_admin",
-                      "provider_operator",
-                      "reseller_admin",
+                      "super_admin",
+                      "platform_operator",
                       "org_admin",
                       "espace_admin",
                       "project_owner",
@@ -18120,9 +17059,8 @@
                     "roleActif": {
                       "type": "string",
                       "enum": [
-                        "provider_admin",
-                        "provider_operator",
-                        "reseller_admin",
+                        "super_admin",
+                        "platform_operator",
                         "org_admin",
                         "espace_admin",
                         "project_owner",
@@ -19610,19 +18548,6 @@
             "$ref": "#/components/parameters/Recherche"
           },
           {
-            "name": "type",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "direct",
-                "revendeur",
-                "client_revendeur"
-              ]
-            }
-          },
-          {
             "name": "statut",
             "in": "query",
             "required": false,
@@ -19636,10 +18561,9 @@
             }
           },
           {
-            "name": "resellerId",
+            "name": "secteur",
             "in": "query",
             "required": false,
-            "description": "Clients finaux d’un revendeur donné.",
             "schema": {
               "type": "string"
             }
@@ -19706,7 +18630,7 @@
         ],
         "operationId": "creerOrganisation",
         "summary": "Créer un organisation",
-        "x-rbac": "reseller.manage",
+        "x-rbac": "org.manage",
         "parameters": [
           {
             "$ref": "#/components/parameters/Langue"
@@ -19817,7 +18741,7 @@
         ],
         "operationId": "modifierOrganisation",
         "summary": "Modifier un organisation",
-        "x-rbac": "reseller.manage",
+        "x-rbac": "org.manage",
         "parameters": [
           {
             "$ref": "#/components/parameters/Langue"
@@ -19889,7 +18813,7 @@
         "operationId": "emprunterIdentiteOrganisation",
         "summary": "Ouvrir une session de support dans le contexte d’une organisation",
         "description": "Session en lecture seule par défaut, bornée dans le temps et intégralement journalisée : chaque écran consulté apparaît dans l’audit de l’organisation.",
-        "x-rbac": "reseller.manage",
+        "x-rbac": "org.manage",
         "parameters": [
           {
             "$ref": "#/components/parameters/Langue"
@@ -19976,7 +18900,7 @@
         "operationId": "suspendreOrganisation",
         "summary": "Suspendre une organisation",
         "description": "Les ressources restent en place ; les accès et le provisioning sont bloqués.",
-        "x-rbac": "reseller.manage",
+        "x-rbac": "org.manage",
         "parameters": [
           {
             "$ref": "#/components/parameters/Langue"
@@ -20056,7 +18980,7 @@
         ],
         "operationId": "reactiverOrganisation",
         "summary": "Lever la suspension d’une organisation",
-        "x-rbac": "reseller.manage",
+        "x-rbac": "org.manage",
         "parameters": [
           {
             "$ref": "#/components/parameters/Langue"
@@ -20111,7 +19035,7 @@
         ],
         "operationId": "obtenirSyntheseOrganisation",
         "summary": "Obtenir la fiche de synthèse d’une organisation",
-        "description": "Vue fournisseur : consommation, espaces, factures, tickets, contacts.",
+        "description": "Vue super admin : consommation, espaces, factures, tickets, contacts.",
         "x-rbac": "org.dashboard.view",
         "parameters": [
           {
@@ -39449,20 +38373,14 @@
           "nom": {
             "type": "string"
           },
-          "type": {
-            "type": "string",
-            "enum": [
-              "direct",
-              "revendeur",
-              "client_revendeur"
-            ]
+          "secteur": {
+            "type": "string"
           },
           "role": {
             "type": "string",
             "enum": [
-              "provider_admin",
-              "provider_operator",
-              "reseller_admin",
+              "super_admin",
+              "platform_operator",
               "org_admin",
               "espace_admin",
               "project_owner",
@@ -41970,9 +40888,8 @@
                 "role": {
                   "type": "string",
                   "enum": [
-                    "provider_admin",
-                    "provider_operator",
-                    "reseller_admin",
+                    "super_admin",
+                    "platform_operator",
                     "org_admin",
                     "espace_admin",
                     "project_owner",
@@ -43288,9 +42205,8 @@
           "role": {
             "type": "string",
             "enum": [
-              "provider_admin",
-              "provider_operator",
-              "reseller_admin",
+              "super_admin",
+              "platform_operator",
               "org_admin",
               "espace_admin",
               "project_owner",
@@ -43721,9 +42637,8 @@
             "items": {
               "type": "string",
               "enum": [
-                "provider_admin",
-                "provider_operator",
-                "reseller_admin",
+                "super_admin",
+                "platform_operator",
                 "org_admin",
                 "espace_admin",
                 "project_owner",
@@ -43739,9 +42654,8 @@
           "roleCourant": {
             "type": "string",
             "enum": [
-              "provider_admin",
-              "provider_operator",
-              "reseller_admin",
+              "super_admin",
+              "platform_operator",
               "org_admin",
               "espace_admin",
               "project_owner",
@@ -44121,9 +43035,8 @@
           "role": {
             "type": "string",
             "enum": [
-              "provider_admin",
-              "provider_operator",
-              "reseller_admin",
+              "super_admin",
+              "platform_operator",
               "org_admin",
               "espace_admin",
               "project_owner",
@@ -45663,9 +44576,8 @@
           "role": {
             "type": "string",
             "enum": [
-              "provider_admin",
-              "provider_operator",
-              "reseller_admin",
+              "super_admin",
+              "platform_operator",
               "org_admin",
               "espace_admin",
               "project_owner",
@@ -45725,9 +44637,8 @@
           "role": {
             "type": "string",
             "enum": [
-              "provider_admin",
-              "provider_operator",
-              "reseller_admin",
+              "super_admin",
+              "platform_operator",
               "org_admin",
               "espace_admin",
               "project_owner",
@@ -45853,7 +44764,6 @@
               "contact",
               "devis",
               "simulateur",
-              "partenaires",
               "entreprises",
               "statut"
             ]
@@ -46502,9 +45412,8 @@
           "role": {
             "type": "string",
             "enum": [
-              "provider_admin",
-              "provider_operator",
-              "reseller_admin",
+              "super_admin",
+              "platform_operator",
               "org_admin",
               "espace_admin",
               "project_owner",
@@ -46557,9 +45466,8 @@
           "role": {
             "type": "string",
             "enum": [
-              "provider_admin",
-              "provider_operator",
-              "reseller_admin",
+              "super_admin",
+              "platform_operator",
               "org_admin",
               "espace_admin",
               "project_owner",
@@ -47276,29 +46184,9 @@
             }
           },
           "prix": {
-            "type": "object",
-            "properties": {
-              "direct": {
-                "type": "integer",
-                "format": "int64",
-                "description": "Montant en FCFA."
-              },
-              "revendeur": {
-                "type": "integer",
-                "format": "int64",
-                "description": "Montant en FCFA."
-              },
-              "operateur": {
-                "type": "integer",
-                "format": "int64",
-                "description": "Montant en FCFA."
-              }
-            },
-            "required": [
-              "direct",
-              "revendeur",
-              "operateur"
-            ]
+            "type": "integer",
+            "format": "int64",
+            "description": "Prix public mensuel — le seul prix de l’offre, celui de la vitrine."
           },
           "populaire": {
             "type": "boolean"
@@ -47363,29 +46251,9 @@
             }
           },
           "prix": {
-            "type": "object",
-            "properties": {
-              "direct": {
-                "type": "integer",
-                "format": "int64",
-                "description": "Montant en FCFA."
-              },
-              "revendeur": {
-                "type": "integer",
-                "format": "int64",
-                "description": "Montant en FCFA."
-              },
-              "operateur": {
-                "type": "integer",
-                "format": "int64",
-                "description": "Montant en FCFA."
-              }
-            },
-            "required": [
-              "direct",
-              "revendeur",
-              "operateur"
-            ]
+            "type": "integer",
+            "format": "int64",
+            "description": "Prix public mensuel."
           },
           "statut": {
             "type": "string",
@@ -47488,17 +46356,6 @@
           "tva": {
             "type": "string"
           },
-          "type": {
-            "type": "string",
-            "enum": [
-              "direct",
-              "revendeur",
-              "client_revendeur"
-            ]
-          },
-          "resellerId": {
-            "type": "string"
-          },
           "statut": {
             "type": "string",
             "enum": [
@@ -47542,7 +46399,6 @@
           "id",
           "nom",
           "pays",
-          "type",
           "statut",
           "createdAt"
         ]
@@ -47561,18 +46417,6 @@
           },
           "tva": {
             "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "direct",
-              "revendeur",
-              "client_revendeur"
-            ]
-          },
-          "resellerId": {
-            "type": "string",
-            "description": "Obligatoire quand `type` vaut `client_revendeur`."
           },
           "tenantPlan": {
             "type": "string"
@@ -47595,8 +46439,7 @@
         },
         "required": [
           "nom",
-          "pays",
-          "type"
+          "pays"
         ]
       },
       "OrganisationModification": {
@@ -47733,9 +46576,8 @@
             "items": {
               "type": "string",
               "enum": [
-                "provider_admin",
-                "provider_operator",
-                "reseller_admin",
+                "super_admin",
+                "platform_operator",
                 "org_admin",
                 "espace_admin",
                 "project_owner",
@@ -48908,9 +47750,8 @@
                 "code": {
                   "type": "string",
                   "enum": [
-                    "provider_admin",
-                    "provider_operator",
-                    "reseller_admin",
+                    "super_admin",
+                    "platform_operator",
                     "org_admin",
                     "espace_admin",
                     "project_owner",
@@ -49321,44 +48162,6 @@
           "actif"
         ]
       },
-      "ReleveRevshare": {
-        "type": "object",
-        "properties": {
-          "periode": {
-            "type": "string"
-          },
-          "resellerId": {
-            "type": "string"
-          },
-          "reseller": {
-            "type": "string"
-          },
-          "caGenere": {
-            "type": "integer",
-            "format": "int64",
-            "description": "Montant en FCFA."
-          },
-          "revsharePct": {
-            "type": "number"
-          },
-          "montant": {
-            "type": "integer",
-            "format": "int64",
-            "description": "Montant en FCFA."
-          },
-          "statut": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "periode",
-          "reseller",
-          "caGenere",
-          "revsharePct",
-          "montant",
-          "statut"
-        ]
-      },
       "ReponseCopilote": {
         "type": "object",
         "properties": {
@@ -49634,219 +48437,6 @@
           "id",
           "libelle",
           "href"
-        ]
-      },
-      "Revendeur": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "orgId": {
-            "type": "string"
-          },
-          "nom": {
-            "type": "string"
-          },
-          "theme": {
-            "type": "object",
-            "properties": {
-              "logoUrl": {
-                "type": "string"
-              },
-              "primary": {
-                "type": "string"
-              },
-              "accent": {
-                "type": "string"
-              },
-              "domaine": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "logoUrl",
-              "primary",
-              "accent",
-              "domaine"
-            ]
-          },
-          "grille": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "offerId": {
-                  "type": "string"
-                },
-                "prixAchat": {
-                  "type": "integer",
-                  "format": "int64",
-                  "description": "Montant en FCFA."
-                },
-                "prixVente": {
-                  "type": "integer",
-                  "format": "int64",
-                  "description": "Montant en FCFA."
-                }
-              },
-              "required": [
-                "offerId",
-                "prixAchat",
-                "prixVente"
-              ]
-            }
-          },
-          "catalogue": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Périmètre de catalogue : identifiants d’offres revendables."
-          },
-          "revsharePct": {
-            "type": "number"
-          },
-          "clientsFinaux": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "caGenere": {
-            "type": "integer",
-            "format": "int64",
-            "description": "Montant en FCFA."
-          },
-          "marge": {
-            "type": "integer",
-            "format": "int64",
-            "description": "Montant en FCFA."
-          },
-          "statut": {
-            "type": "string",
-            "enum": [
-              "actif",
-              "suspendu",
-              "onboarding"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "orgId",
-          "nom",
-          "theme",
-          "grille",
-          "catalogue",
-          "revsharePct",
-          "statut"
-        ]
-      },
-      "RevendeurCreation": {
-        "type": "object",
-        "properties": {
-          "orgId": {
-            "type": "string"
-          },
-          "nom": {
-            "type": "string"
-          },
-          "theme": {
-            "type": "object",
-            "properties": {
-              "logoUrl": {
-                "type": "string"
-              },
-              "primary": {
-                "type": "string"
-              },
-              "accent": {
-                "type": "string"
-              },
-              "domaine": {
-                "type": "string"
-              }
-            }
-          },
-          "revsharePct": {
-            "type": "number"
-          },
-          "catalogue": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "orgId",
-          "nom",
-          "revsharePct"
-        ]
-      },
-      "RevendeurIntegration": {
-        "type": "object",
-        "description": "Volet « API & intégration » de la fiche revendeur : ce dont un revendeur a besoin pour brancher son propre portail sans passer par l’interface.",
-        "properties": {
-          "cleApiId": {
-            "type": "string"
-          },
-          "webhooks": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "url": {
-                  "type": "string"
-                },
-                "evenements": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "description": "`org.created`, `subscription.updated`, `invoice.issued`…"
-                },
-                "actif": {
-                  "type": "boolean"
-                },
-                "secretDefini": {
-                  "type": "boolean"
-                },
-                "dernierEnvoi": {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                "dernierCode": {
-                  "type": "integer",
-                  "format": "int32"
-                }
-              },
-              "required": [
-                "id",
-                "url",
-                "evenements",
-                "actif"
-              ]
-            }
-          },
-          "quotaRequetesParMin": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "environnementBacASable": {
-            "type": "boolean"
-          },
-          "documentationUrl": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "webhooks",
-          "quotaRequetesParMin"
         ]
       },
       "SanteePlateforme": {
@@ -50950,9 +49540,8 @@
           "roleActif": {
             "type": "string",
             "enum": [
-              "provider_admin",
-              "provider_operator",
-              "reseller_admin",
+              "super_admin",
+              "platform_operator",
               "org_admin",
               "espace_admin",
               "project_owner",
