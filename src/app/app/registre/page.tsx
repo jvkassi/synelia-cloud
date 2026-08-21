@@ -14,6 +14,22 @@ import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { EmptyState } from '@/components/composition/states'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+
+interface Jeton {
+  id: string
+  nom: string
+  cree: string
+  dernier: string
+  portee: string
+}
+
+const JETONS: Jeton[] = [
+  { id: 'jt-1', nom: 'ci-bot · intégration continue', cree: '2025-11-04', dernier: '2026-08-19T14:52:00Z', portee: 'push + pull' },
+  { id: 'jt-2', nom: 'poste l.konan', cree: '2026-03-18', dernier: '2026-08-14T09:20:00Z', portee: 'pull' },
+  { id: 'jt-3', nom: 'runner-forge-01', cree: '2026-06-02', dernier: '2026-08-19T11:03:00Z', portee: 'push + pull' },
+]
 
 interface Depot {
   id: string
@@ -139,14 +155,22 @@ const QUOTA_GO = 200
 
 export default function Registre() {
   const { autorise, refus, pousser } = useApp()
+  const executer = useOperation()
+  const depots = useCollection<Depot>('depots-registre', DEPOTS)
+  const jetons = useCollection<Jeton>('jetons-registre', JETONS)
   const [onglet, setOnglet] = useState('depots')
   const [ouvert, setOuvert] = useState<string | null>('dep-1')
   const [aSupprimer, setASupprimer] = useState<Depot | null>(null)
+  const [quota, setQuota] = useState(QUOTA_GO)
+  const [derniersTags, setDerniersTags] = useState(20)
+  const [purgeJours, setPurgeJours] = useState(90)
+  const [protegeSemver, setProtegeSemver] = useState(true)
+  const [purgeDev, setPurgeDev] = useState(false)
 
-  const utiliseGo = DEPOTS.reduce((a, d) => a + d.tailleMo * d.tags, 0) / 1024
-  const critiques = DEPOTS.reduce((a, d) => a + d.vulnerabilites.critique, 0)
-  const nonSignees = DEPOTS.filter((d) => !d.signee).length
-  const depot = ouvert ? DEPOTS.find((d) => d.id === ouvert) : undefined
+  const utiliseGo = depots.items.reduce((a, d) => a + d.tailleMo * d.tags, 0) / 1024
+  const critiques = depots.items.reduce((a, d) => a + d.vulnerabilites.critique, 0)
+  const nonSignees = depots.items.filter((d) => !d.signee).length
+  const depot = ouvert ? depots.items.find((d) => d.id === ouvert) : undefined
 
   return (
     <div className="space-y-5">
@@ -155,21 +179,33 @@ export default function Registre() {
         titre="Registre d’images"
         sousTitre="Vos images de conteneurs, hébergées à Abidjan, à côté de vos environnements d’exécution. Un artefact ne sort jamais de la plateforme entre le build et le déploiement : c’est la même image, au même condensat, que celle analysée."
         actions={
-          <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-            <Button variant="secondary" iconBefore={<Upload size={14} />}>
-              Instructions de poussée
-            </Button>
-          </GatedAction>
+          <BoutonAction
+            libelle="Instructions de poussée"
+            size="md"
+            icone={<Upload size={14} />}
+            operation={{
+              action: 'app.deploy',
+              ton: 'info',
+              titre: 'Instructions copiées',
+              detail:
+                'docker login registry.abj.synelia.cloud puis docker push — la commande complète est dans l’onglet Accès.',
+              effet: () => setOnglet('acces'),
+            }}
+          />
         }
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile libelle="Dépôts" valeur={DEPOTS.length} detail={`${DEPOTS.reduce((a, d) => a + d.tags, 0)} étiquettes au total`} />
+        <StatTile
+          libelle="Dépôts"
+          valeur={depots.items.length}
+          detail={`${depots.items.reduce((a, d) => a + d.tags, 0)} étiquettes au total`}
+        />
         <StatTile
           libelle="Espace occupé"
           valeur={`${utiliseGo.toFixed(1)} Go`}
-          detail={`sur ${QUOTA_GO} Go inclus`}
-          ton={utiliseGo / QUOTA_GO > 0.8 ? 'warn' : 'violet'}
+          detail={`sur ${quota} Go inclus`}
+          ton={utiliseGo / quota > 0.8 ? 'warn' : 'violet'}
         />
         <StatTile
           libelle="Vulnérabilités critiques"
@@ -191,14 +227,28 @@ export default function Registre() {
             <QuotaBar
               libelle="Quota de stockage du registre"
               utilise={Math.round(utiliseGo * 10) / 10}
-              total={QUOTA_GO}
+              total={quota}
               unite="Go"
               seuil={80}
             />
           </div>
-          <Button size="sm" variant="ghost">
-            Augmenter le quota
-          </Button>
+          <BoutonFormulaire
+            libelle="Augmenter le quota"
+            variant="ghost"
+            action="app.deploy"
+            titre="Augmenter le quota du registre"
+            description="Le stockage du registre est facturé par tranche de 50 Go au-delà des 200 Go inclus."
+            champs={[
+              { id: 'quota', label: 'Quota', type: 'nombre', min: 200, max: 2000, suffixe: 'Go' },
+            ]}
+            valeursDepart={{ quota: quota }}
+            libelleValider="Augmenter"
+            operation={(v) => ({
+              titre: `Quota du registre porté à ${v.quota} Go`,
+              detail: 'Facturation au prorata du mois en cours.',
+              effet: () => setQuota(Number(v.quota)),
+            })}
+          />
         </div>
       </Card>
 
@@ -209,7 +259,7 @@ export default function Registre() {
           <Card padding={false}>
             <div className="p-4">
               <DataTable<Depot>
-                lignes={DEPOTS}
+                lignes={depots.items}
                 parPage={10}
                 exportable
                 placeholderRecherche="Rechercher un dépôt…"
@@ -495,13 +545,9 @@ docker push registry.abj.synelia.cloud/org-dba/mon-app:v1.0.0`}
           <Card>
             <CardHeader titre="Jetons actifs" sousTitre="Révoquer un jeton coupe immédiatement les poussées qui l’utilisent." />
             <div className="space-y-2">
-              {[
-                { nom: 'ci-bot · intégration continue', cree: '2025-11-04', dernier: '2026-08-19T14:52:00Z', portee: 'push + pull' },
-                { nom: 'poste l.konan', cree: '2026-03-18', dernier: '2026-08-14T09:20:00Z', portee: 'pull' },
-                { nom: 'runner-forge-01', cree: '2026-06-02', dernier: '2026-08-19T11:03:00Z', portee: 'push + pull' },
-              ].map((j) => (
+              {jetons.items.map((j) => (
                 <div
-                  key={j.nom}
+                  key={j.id}
                   className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                 >
                   <span className="min-w-0">
@@ -514,9 +560,17 @@ docker push registry.abj.synelia.cloud/org-dba/mon-app:v1.0.0`}
                     <Badge tone="neutral" size="sm">
                       {j.portee}
                     </Badge>
-                    <Button size="sm" variant="ghost">
-                      Révoquer
-                    </Button>
+                    <BoutonAction
+                      libelle="Révoquer"
+                      variant="ghost"
+                      operation={{
+                        action: 'app.deploy',
+                        ton: 'warn',
+                        titre: `Jeton « ${j.nom} » révoqué`,
+                        detail: 'Les poussées qui l’utilisent échouent immédiatement.',
+                        effet: () => jetons.supprimer(j.id),
+                      }}
+                    />
                   </span>
                 </div>
               ))}
@@ -543,15 +597,24 @@ docker push registry.abj.synelia.cloud/org-dba/mon-app:v1.0.0`}
           />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Conserver les N dernières étiquettes par dépôt" hint="au-delà, les plus anciennes sont purgées">
-              <Input type="number" defaultValue={20} />
+              <Input
+                type="number"
+                value={derniersTags}
+                onChange={(e) => setDerniersTags(Number(e.target.value))}
+              />
             </Field>
             <Field label="Purger les étiquettes non référencées après" hint="jours depuis la poussée">
-              <Input type="number" defaultValue={90} />
+              <Input
+                type="number"
+                value={purgeJours}
+                onChange={(e) => setPurgeJours(Number(e.target.value))}
+              />
             </Field>
           </div>
           <div className="mt-4 space-y-3.5 border-t border-g-100 pt-4">
             <Switch
-              checked
+              checked={protegeSemver}
+              onChange={setProtegeSemver}
               label="Protéger les étiquettes de version sémantique"
               description="Les étiquettes de la forme vX.Y.Z ne sont jamais purgées automatiquement — elles constituent votre historique de livraison."
             />
@@ -561,7 +624,8 @@ docker push registry.abj.synelia.cloud/org-dba/mon-app:v1.0.0`}
               description="Non désactivable. Purger l’image d’un environnement en marche rendrait tout redémarrage impossible."
             />
             <Switch
-              checked={false}
+              checked={purgeDev}
+              onChange={setPurgeDev}
               label="Purger les images de développement quotidiennement"
               description="Les étiquettes de la forme branche-commit produites par l’intégration continue sont supprimées après 7 jours."
             />
@@ -573,14 +637,23 @@ docker push registry.abj.synelia.cloud/org-dba/mon-app:v1.0.0`}
                   pousser({
                     ton: 'ok',
                     titre: 'Règles de rétention enregistrées',
-                    detail: 'La prochaine passe de purge est prévue cette nuit à 02 h 00 GMT.',
+                    detail: `Conserver ${derniersTags} étiquettes · purge après ${purgeJours} jours. Prochaine passe cette nuit à 02 h 00 GMT.`,
                   })
                 }
               >
                 Enregistrer
               </Button>
             </GatedAction>
-            <Button variant="ghost">Simuler la purge</Button>
+            <BoutonAction
+              libelle="Simuler la purge"
+              variant="ghost"
+              size="md"
+              operation={{
+                ton: 'info',
+                titre: 'Simulation terminée',
+                detail: `${Math.max(0, depots.items.reduce((a, d) => a + Math.max(0, d.tags - derniersTags), 0))} étiquettes seraient supprimées, ${(utiliseGo * 0.18).toFixed(1)} Go libérés. Rien n’a été supprimé.`,
+              }}
+            />
             <span className="text-[11.5px] text-g-500">
               La simulation liste ce qui serait supprimé, sans rien supprimer.
             </span>
@@ -619,9 +692,33 @@ docker push registry.abj.synelia.cloud/org-dba/mon-app:v1.0.0`}
                     <Badge tone={r.ton} size="sm">
                       {r.statut}
                     </Badge>
-                    <Button size="sm" variant="ghost">
-                      Modifier
-                    </Button>
+                    <BoutonFormulaire
+                      libelle="Modifier"
+                      variant="ghost"
+                      action="app.deploy"
+                      titre="Modifier la règle d’admission"
+                      description={r.regle}
+                      champs={[
+                        {
+                          id: 'portee',
+                          label: 'Environnements concernés',
+                          type: 'select',
+                          options: [
+                            { value: 'aucun', label: 'Aucun — règle inactive' },
+                            { value: 'prod', label: 'Production' },
+                            { value: 'prod-preprod', label: 'Production et pré-production' },
+                            { value: 'tous', label: 'Tous les environnements' },
+                          ],
+                        },
+                      ]}
+                      valeursDepart={{
+                        portee: r.appliquee === 'Aucun' ? 'aucun' : 'prod-preprod',
+                      }}
+                      operation={(f) => ({
+                        titre: 'Règle d’admission modifiée',
+                        detail: `${r.regle} · ${f.portee === 'aucun' ? 'désactivée' : 'appliquée'}`,
+                      })}
+                    />
                   </span>
                 </div>
               ))}
@@ -656,11 +753,18 @@ docker push registry.abj.synelia.cloud/org-dba/mon-app:v1.0.0`}
                 de la période concernée.
               </span>
             </Callout>
-            <GatedAction autorise={autorise('secrets.update')} message={refus('secrets.update')}>
-              <Button className="mt-3.5" variant="secondary">
-                Demander la dérogation
-              </Button>
-            </GatedAction>
+            <BoutonAction
+              libelle="Demander la dérogation"
+              size="md"
+              className="mt-3.5"
+              operation={{
+                action: 'secrets.update',
+                ton: 'warn',
+                titre: 'Dérogation demandée',
+                detail:
+                  'Elle est nominative, bornée dans le temps, visible des administrateurs et reportée dans le rapport de conformité.',
+              }}
+            />
           </Card>
         </div>
       )}
@@ -676,11 +780,18 @@ docker push registry.abj.synelia.cloud/org-dba/mon-app:v1.0.0`}
           'Toute possibilité de retour arrière vers une version antérieure',
         ]}
         onConfirm={() => {
-          pousser({
-            ton: 'err',
-            titre: `Dépôt ${aSupprimer?.nom} supprimé`,
-            detail: 'Les environnements qui référençaient ces images ne pourront plus redémarrer.',
-          })
+          if (aSupprimer) {
+            executer({
+              action: 'app.deploy',
+              ton: 'err',
+              titre: `Dépôt ${aSupprimer.nom} supprimé`,
+              detail: 'Les environnements qui référençaient ces images ne pourront plus redémarrer.',
+              effet: () => {
+                depots.supprimer(aSupprimer.id)
+                if (ouvert === aSupprimer.id) setOuvert(null)
+              },
+            })
+          }
           setASupprimer(null)
         }}
       />
