@@ -3,8 +3,9 @@
 import Link from 'next/link'
 import { KeyRound, Plus, RotateCw, Trash2 } from 'lucide-react'
 import { goHumain, money, num } from '@/lib/format'
-import type { Bucket } from '@/lib/types'
+import type { Bucket, Site } from '@/lib/types'
 import { BUCKETS, CLES_S3 } from '@/lib/mock'
+import { MAINTENANT } from '@/lib/format'
 import { Badge } from '@/components/ui/badge'
 import { Button, IconButton } from '@/components/ui/button'
 import { CodeBlock, GatedAction } from '@/components/ui/display'
@@ -12,14 +13,20 @@ import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { CHAMPS_CLE, type CleS3 } from './cles'
 
 const PRIX_GO = { chaud: 1.5, froid: 0.62 }
 
 export default function StockageObjet() {
   const { autorise, refus } = useApp()
-  const total = BUCKETS.reduce((a, b) => a + b.tailleGo, 0)
-  const objets = BUCKETS.reduce((a, b) => a + b.objets, 0)
-  const cout = BUCKETS.reduce((a, b) => a + Math.round(b.tailleGo * PRIX_GO[b.classe]), 0)
+  const executer = useOperation()
+  const seaux = useCollection<Bucket>('buckets', BUCKETS)
+  const cles = useCollection<CleS3>('cles-s3', CLES_S3)
+  const total = seaux.items.reduce((a, b) => a + b.tailleGo, 0)
+  const objets = seaux.items.reduce((a, b) => a + b.objets, 0)
+  const cout = seaux.items.reduce((a, b) => a + Math.round(b.tailleGo * PRIX_GO[b.classe]), 0)
 
   const colonnes: Array<Colonne<Bucket>> = [
     {
@@ -143,9 +150,59 @@ export default function StockageObjet() {
         titre="Stockage objet"
         sousTitre="Compatible avec l’API S3 : vos outils existants fonctionnent en changeant simplement l’endpoint. Le verrouillage d’objet WORM est la seule protection qui résiste à une compromission de compte administrateur."
         actions={
-          <GatedAction autorise={autorise('network.manage')} message={refus('network.manage')}>
-            <Button iconBefore={<Plus size={14} />}>Créer un bucket</Button>
-          </GatedAction>
+          <BoutonFormulaire
+            libelle="Créer un bucket"
+            size="md"
+            variant="primary"
+            icone={<Plus size={14} />}
+            action="network.manage"
+            titre="Créer un bucket"
+            description="Le nom d’un bucket est global et définitif : il entre dans l’URL. La région détermine où les objets résident physiquement."
+            champs={[
+              { id: 'nom', label: 'Nom du bucket', placeholder: 'dba-archives-abj', obligatoire: true },
+              {
+                id: 'region',
+                label: 'Région',
+                type: 'select',
+                demi: true,
+                options: [
+                  { value: 'ABJ', label: 'Abidjan' },
+                  { value: 'GBM', label: 'Grand-Bassam' },
+                ],
+              },
+              {
+                id: 'classe',
+                label: 'Classe',
+                type: 'select',
+                demi: true,
+                options: [
+                  { value: 'chaud', label: 'Chaud · accès fréquent' },
+                  { value: 'froid', label: 'Froid · accès rare, moins cher' },
+                ],
+              },
+              { id: 'versioning', label: 'Versioning', type: 'switch', placeholder: 'Activé' },
+              { id: 'journaux', label: 'Journaux d’accès', type: 'switch', placeholder: 'Activés' },
+            ]}
+            valeursDepart={{ region: 'ABJ', classe: 'chaud', versioning: true, journaux: true }}
+            libelleValider="Créer le bucket"
+            operation={(v) => ({
+              titre: `Bucket ${v.nom} créé`,
+              detail: `${v.region === 'ABJ' ? 'Abidjan' : 'Grand-Bassam'} · classe ${v.classe}`,
+              effet: () =>
+                seaux.creer({
+                  id: seaux.identifiant('bkt'),
+                  orgId: 'org-dba',
+                  nom: String(v.nom),
+                  region: v.region as Site,
+                  classe: v.classe as Bucket['classe'],
+                  tailleGo: 0,
+                  objets: 0,
+                  versioning: Boolean(v.versioning),
+                  accessLogs: Boolean(v.journaux),
+                  policy: 'prive',
+                }),
+            })}
+          />
         }
       />
 
@@ -163,7 +220,7 @@ export default function StockageObjet() {
       </div>
 
       <DataTable
-        lignes={BUCKETS}
+        lignes={seaux.items}
         colonnes={colonnes}
         placeholderRecherche="Rechercher un bucket…"
         filtres={[
@@ -201,15 +258,47 @@ export default function StockageObjet() {
             titre="Clés d’accès"
             sousTitre="La valeur secrète n’est affichée qu’une seule fois, à la création."
             actions={
-              <GatedAction autorise={autorise('network.manage')} message={refus('network.manage')}>
-                <Button size="sm" iconBefore={<KeyRound size={13} />}>
-                  Créer une clé
-                </Button>
-              </GatedAction>
+              <BoutonFormulaire
+                libelle="Créer une clé"
+                variant="primary"
+                icone={<KeyRound size={13} />}
+                action="network.manage"
+                titre="Créer une clé d’accès S3"
+                description="Donnez à chaque usage sa propre clé, avec la portée la plus étroite possible. La valeur secrète n’est affichée qu’une seule fois."
+                champs={[
+                  ...CHAMPS_CLE,
+                  {
+                    id: 'bucket',
+                    label: 'Bucket',
+                    type: 'select',
+                    options: [
+                      { value: 'tous', label: 'Tous les buckets' },
+                      ...seaux.items.map((b) => ({ value: b.nom, label: b.nom })),
+                    ],
+                  },
+                ]}
+                valeursDepart={{ portee: 'lecture', bucket: 'tous' }}
+                libelleValider="Créer la clé"
+                operation={(v) => ({
+                  titre: `Clé ${v.nom} créée`,
+                  detail: 'La valeur secrète est affichée une seule fois : conservez-la maintenant.',
+                  effet: () =>
+                    cles.creer({
+                      id: cles.identifiant('ak'),
+                      nom: String(v.nom),
+                      portee:
+                        v.bucket === 'tous'
+                          ? `tous les buckets (${v.portee})`
+                          : `${v.bucket} (${v.portee})`,
+                      creee: MAINTENANT.slice(0, 10),
+                      derniereUtilisation: MAINTENANT,
+                    }),
+                })}
+              />
             }
           />
           <div className="space-y-2">
-            {CLES_S3.map((c) => (
+            {cles.items.map((c) => (
               <div
                 key={c.id}
                 className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
@@ -226,10 +315,34 @@ export default function StockageObjet() {
                   </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1.5">
-                  <IconButton label="Faire tourner la clé" size="sm">
+                  <IconButton
+                    label={`Faire tourner la clé ${c.nom}`}
+                    size="sm"
+                    onClick={() =>
+                      executer({
+                        action: 'network.manage',
+                        titre: `Clé ${c.nom} renouvelée`,
+                        detail:
+                          'L’ancienne valeur reste valable une heure, le temps de mettre à jour vos applications.',
+                        effet: () => cles.modifier(c.id, { creee: MAINTENANT.slice(0, 10) }),
+                      })
+                    }
+                  >
                     <RotateCw size={13} />
                   </IconButton>
-                  <IconButton label="Révoquer la clé" size="sm">
+                  <IconButton
+                    label={`Révoquer la clé ${c.nom}`}
+                    size="sm"
+                    onClick={() =>
+                      executer({
+                        action: 'network.manage',
+                        ton: 'warn',
+                        titre: `Clé ${c.nom} révoquée`,
+                        detail: 'La révocation est immédiate : toute application qui l’utilise recevra un 403.',
+                        effet: () => cles.supprimer(c.id),
+                      })
+                    }
+                  >
                     <Trash2 size={13} className="text-err" />
                   </IconButton>
                 </span>

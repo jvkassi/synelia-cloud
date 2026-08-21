@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { Download, File, Folder, KeyRound, Lock, Plus, RotateCw, Trash2 } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
-import { dateCourte, dateHeure, goHumain, money, num } from '@/lib/format'
+import { MAINTENANT, dateCourte, dateHeure, goHumain, money, num } from '@/lib/format'
 import { BUCKETS, CLES_S3, LOGS_EXECUTION } from '@/lib/mock'
+import type { Bucket } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, IconButton } from '@/components/ui/button'
 import { CodeBlock, CopyField, GatedAction, Tabs } from '@/components/ui/display'
@@ -13,6 +14,25 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { LogPeek } from '@/components/business/observabilite'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { CHAMPS_CLE, type CleS3 } from '../cles'
+
+interface Entree {
+  id: string
+  type: 'dossier' | 'fichier'
+  nom: string
+  taille: number
+  objets: number
+}
+
+interface RegleCycle {
+  id: string
+  nom: string
+  prefixe: string
+  action: string
+  apres: string
+}
 
 const ONGLETS = [
   { id: 'objets', label: 'Objets' },
@@ -25,18 +45,48 @@ const ONGLETS = [
   { id: 'journaux', label: 'Journaux d’accès' },
 ]
 
-const ARBORESCENCE = [
-  { type: 'dossier' as const, nom: '2026-08/', taille: 412_000, objets: 12_840 },
-  { type: 'dossier' as const, nom: '2026-07/', taille: 398_000, objets: 12_412 },
-  { type: 'dossier' as const, nom: '2026-06/', taille: 386_000, objets: 11_988 },
-  { type: 'fichier' as const, nom: 'manifest.json', taille: 0.8, objets: 1 },
-  { type: 'fichier' as const, nom: 'checksums.sha256', taille: 2.4, objets: 1 },
+const ARBORESCENCE: Entree[] = [
+  { id: 'e1', type: 'dossier', nom: '2026-08/', taille: 412_000, objets: 12_840 },
+  { id: 'e2', type: 'dossier', nom: '2026-07/', taille: 398_000, objets: 12_412 },
+  { id: 'e3', type: 'dossier', nom: '2026-06/', taille: 386_000, objets: 11_988 },
+  { id: 'e4', type: 'fichier', nom: 'manifest.json', taille: 0.8, objets: 1 },
+  { id: 'e5', type: 'fichier', nom: 'checksums.sha256', taille: 2.4, objets: 1 },
+]
+
+const REGLES_CYCLE: RegleCycle[] = [
+  {
+    id: 'rc1',
+    nom: 'Transition vers la classe froide',
+    prefixe: '2026-*/',
+    action: 'Passer en classe froide',
+    apres: '30 jours après création',
+  },
+  {
+    id: 'rc2',
+    nom: 'Expiration des versions non courantes',
+    prefixe: '*',
+    action: 'Supprimer les versions antérieures',
+    apres: '90 jours',
+  },
+  {
+    id: 'rc3',
+    nom: 'Purge des téléversements incomplets',
+    prefixe: '*',
+    action: 'Abandonner les multipart incomplets',
+    apres: '7 jours',
+  },
 ]
 
 export function VueBucket({ id }: { id: string }) {
-  const bucket = BUCKETS.find((b) => b.id === id)!
   const { autorise, refus, pousser } = useApp()
+  const executer = useOperation()
+  const seaux = useCollection<Bucket>('buckets', BUCKETS)
+  const cles = useCollection<CleS3>('cles-s3', CLES_S3)
+  const entrees = useCollection<Entree>(`objets-${id}`, ARBORESCENCE)
+  const regles = useCollection<RegleCycle>(`cycle-${id}`, REGLES_CYCLE)
   const [onglet, setOnglet] = useState('objets')
+
+  const bucket = seaux.items.find((b) => b.id === id)!
   const prixGo = bucket.classe === 'chaud' ? 1.5 : 0.62
 
   return (
@@ -99,9 +149,35 @@ export function VueBucket({ id }: { id: string }) {
               titre="Navigateur d’objets"
               sousTitre="Navigation simple pour vérifier un contenu. Le portail n’est pas un explorateur de fichiers : utilisez aws-cli ou rclone pour les opérations de masse."
               actions={
-                <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />}>
-                  Téléverser
-                </Button>
+                <BoutonFormulaire
+                  libelle="Téléverser"
+                  icone={<Plus size={13} />}
+                  action="network.manage"
+                  titre="Téléverser un objet"
+                  description="Le portail dépose un fichier isolé pour vérifier une configuration ; il ne remplace pas un client S3. Pour un envoi de masse, aws-cli et rclone restent la bonne réponse."
+                  champs={[
+                    { id: 'cle', label: 'Clé de l’objet', placeholder: '2026-08/rapport.pdf', obligatoire: true },
+                    { id: 'taille', label: 'Taille', type: 'nombre', demi: true, min: 1, suffixe: 'Mo' },
+                  ]}
+                  valeursDepart={{ taille: 4 }}
+                  libelleValider="Téléverser"
+                  operation={(v) => ({
+                    titre: `${v.cle} téléversé`,
+                    effet: () => {
+                      entrees.creer({
+                        id: entrees.identifiant('obj'),
+                        type: 'fichier',
+                        nom: String(v.cle),
+                        taille: Number(v.taille) / 1024,
+                        objets: 1,
+                      })
+                      seaux.modifier(bucket.id, (b) => ({
+                        objets: b.objets + 1,
+                        tailleGo: Math.round((b.tailleGo + Number(v.taille) / 1024) * 10) / 10,
+                      }))
+                    },
+                  })}
+                />
               }
             />
             <div className="mb-3 flex items-center gap-1.5 font-mono text-[12px] text-g-500">
@@ -120,8 +196,8 @@ export function VueBucket({ id }: { id: string }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {ARBORESCENCE.map((e) => (
-                    <tr key={e.nom} className="border-b border-g-100 last:border-0 hover:bg-p-050/60">
+                  {entrees.items.map((e) => (
+                    <tr key={e.id} className="border-b border-g-100 last:border-0 hover:bg-p-050/60">
                       <td className="px-3 py-2.5">
                         <span className="flex items-center gap-2">
                           {e.type === 'dossier' ? (
@@ -143,17 +219,46 @@ export function VueBucket({ id }: { id: string }) {
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         <span className="flex justify-end gap-1">
-                          <IconButton label="Télécharger" size="sm">
+                          <IconButton
+                            label={`Télécharger ${e.nom}`}
+                            size="sm"
+                            onClick={() =>
+                              executer({
+                                ton: 'info',
+                                titre: `Téléchargement de ${e.nom}`,
+                                detail:
+                                  e.type === 'dossier'
+                                    ? 'Un préfixe entier se récupère avec aws s3 sync, pas depuis le portail.'
+                                    : 'Lien signé valable dix minutes.',
+                              })
+                            }
+                          >
                             <Download size={13} />
                           </IconButton>
                           <IconButton
                             label={
                               bucket.objectLock?.actif
-                                ? 'Suppression impossible : verrouillage WORM actif'
-                                : 'Supprimer'
+                                ? `Suppression de ${e.nom} impossible : verrouillage WORM actif`
+                                : `Supprimer ${e.nom}`
                             }
                             size="sm"
                             disabled={bucket.objectLock?.actif}
+                            onClick={() =>
+                              executer({
+                                action: 'network.manage',
+                                ton: 'warn',
+                                titre: `${e.nom} supprimé`,
+                                detail: bucket.versioning
+                                  ? 'Le versioning est actif : un marqueur de suppression est posé, l’objet reste récupérable.'
+                                  : 'Sans versioning, la suppression est définitive.',
+                                effet: () => {
+                                  entrees.supprimer(e.id)
+                                  seaux.modifier(bucket.id, (b) => ({
+                                    objets: Math.max(0, b.objets - e.objets),
+                                  }))
+                                },
+                              })
+                            }
                           >
                             <Trash2
                               size={13}
@@ -308,37 +413,58 @@ export function VueBucket({ id }: { id: string }) {
               titre="Règles de cycle de vie"
               sousTitre="Transition chaud → froid et expiration automatique. Évaluées une fois par jour."
               actions={
-                <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />}>
-                  Ajouter une règle
-                </Button>
+                <BoutonFormulaire
+                  libelle="Ajouter une règle"
+                  icone={<Plus size={13} />}
+                  action="network.manage"
+                  titre="Ajouter une règle de cycle de vie"
+                  description="Les règles sont évaluées une fois par jour. Une transition vers la classe froide ne se rembobine pas gratuitement : la relecture d’un objet froid est facturée."
+                  champs={[
+                    { id: 'nom', label: 'Nom de la règle', placeholder: 'Archivage des exports', obligatoire: true },
+                    { id: 'prefixe', label: 'Préfixe visé', placeholder: 'exports/', demi: true },
+                    { id: 'apres', label: 'Après', type: 'nombre', demi: true, min: 1, suffixe: 'jours' },
+                    {
+                      id: 'action',
+                      label: 'Action',
+                      type: 'select',
+                      options: [
+                        { value: 'Passer en classe froide', label: 'Passer en classe froide' },
+                        { value: 'Supprimer les objets', label: 'Supprimer les objets' },
+                        { value: 'Supprimer les versions antérieures', label: 'Supprimer les versions antérieures' },
+                      ],
+                    },
+                  ]}
+                  valeursDepart={{ prefixe: '*', apres: 30, action: 'Passer en classe froide' }}
+                  libelleValider="Ajouter la règle"
+                  operation={(v) => ({
+                    titre: `Règle « ${v.nom} » ajoutée`,
+                    detail: `${v.action} · ${v.apres} jours`,
+                    effet: () =>
+                      regles.creer({
+                        id: regles.identifiant('rc'),
+                        nom: String(v.nom),
+                        prefixe: String(v.prefixe),
+                        action: String(v.action),
+                        apres: `${v.apres} jours`,
+                      }),
+                  })}
+                />
               }
             />
             <div className="space-y-3">
-              {[
-                {
-                  nom: 'Transition vers la classe froide',
-                  prefixe: '2026-*/',
-                  action: 'Passer en classe froide',
-                  apres: '30 jours après création',
-                  actif: bucket.classe === 'chaud',
-                },
-                {
-                  nom: 'Expiration des versions non courantes',
-                  prefixe: '*',
-                  action: 'Supprimer les versions antérieures',
-                  apres: '90 jours',
-                  actif: bucket.versioning,
-                },
-                {
-                  nom: 'Purge des téléversements incomplets',
-                  prefixe: '*',
-                  action: 'Abandonner les multipart incomplets',
-                  apres: '7 jours',
-                  actif: true,
-                },
-              ].map((r) => (
+              {regles.items
+                .map((regle) => ({
+                  ...regle,
+                  actif:
+                    regle.id === 'rc1'
+                      ? bucket.classe === 'chaud'
+                      : regle.id === 'rc2'
+                        ? bucket.versioning
+                        : true,
+                }))
+                .map((r) => (
                 <div
-                  key={r.nom}
+                  key={r.id}
                   className={cn(
                     'rounded-[8px] border px-3.5 py-3',
                     r.actif ? 'border-g-300' : 'border-g-300 bg-g-050 opacity-70',
@@ -356,7 +482,18 @@ export function VueBucket({ id }: { id: string }) {
                       <Badge tone={r.actif ? 'ok' : 'neutral'} size="sm">
                         {r.actif ? 'Active' : 'Inactive'}
                       </Badge>
-                      <IconButton label="Supprimer la règle" size="sm">
+                      <IconButton
+                        label={`Supprimer la règle ${r.nom}`}
+                        size="sm"
+                        onClick={() =>
+                          executer({
+                            action: 'network.manage',
+                            ton: 'warn',
+                            titre: `Règle « ${r.nom} » supprimée`,
+                            effet: () => regles.supprimer(r.id),
+                          })
+                        }
+                      >
                         <Trash2 size={13} className="text-err" />
                       </IconButton>
                     </span>
@@ -522,15 +659,33 @@ export function VueBucket({ id }: { id: string }) {
             <CardHeader
               titre="Clés d’accès ayant une portée sur ce bucket"
               actions={
-                <GatedAction autorise={autorise('network.manage')} message={refus('network.manage')}>
-                  <Button size="sm" iconBefore={<KeyRound size={13} />}>
-                    Créer une clé
-                  </Button>
-                </GatedAction>
+                <BoutonFormulaire
+                  libelle="Créer une clé"
+                  variant="primary"
+                  icone={<KeyRound size={13} />}
+                  action="network.manage"
+                  titre={`Créer une clé sur ${bucket.nom}`}
+                  description="La valeur secrète n’est affichée qu’une seule fois, à la création."
+                  champs={CHAMPS_CLE}
+                  valeursDepart={{ portee: 'ecriture' }}
+                  libelleValider="Créer la clé"
+                  operation={(v) => ({
+                    titre: `Clé ${v.nom} créée`,
+                    detail: 'Conservez la valeur secrète maintenant : elle ne sera plus affichée.',
+                    effet: () =>
+                      cles.creer({
+                        id: cles.identifiant('ak'),
+                        nom: String(v.nom),
+                        portee: `${bucket.nom} (${v.portee})`,
+                        creee: MAINTENANT.slice(0, 10),
+                        derniereUtilisation: MAINTENANT,
+                      }),
+                  })}
+                />
               }
             />
             <div className="space-y-2">
-              {CLES_S3.filter(
+              {cles.items.filter(
                 (c) => c.portee.includes(bucket.nom) || c.portee.includes('tous les buckets'),
               ).map((c) => (
                 <div
@@ -547,10 +702,33 @@ export function VueBucket({ id }: { id: string }) {
                     </span>
                   </span>
                   <span className="flex shrink-0 items-center gap-1.5">
-                    <IconButton label="Faire tourner la clé" size="sm">
+                    <IconButton
+                      label={`Faire tourner la clé ${c.nom}`}
+                      size="sm"
+                      onClick={() =>
+                        executer({
+                          action: 'network.manage',
+                          titre: `Clé ${c.nom} renouvelée`,
+                          detail: 'L’ancienne valeur reste valable une heure.',
+                          effet: () => cles.modifier(c.id, { creee: MAINTENANT.slice(0, 10) }),
+                        })
+                      }
+                    >
                       <RotateCw size={13} />
                     </IconButton>
-                    <IconButton label="Révoquer la clé" size="sm">
+                    <IconButton
+                      label={`Révoquer la clé ${c.nom}`}
+                      size="sm"
+                      onClick={() =>
+                        executer({
+                          action: 'network.manage',
+                          ton: 'warn',
+                          titre: `Clé ${c.nom} révoquée`,
+                          detail: 'Toute application qui l’utilise recevra un 403 immédiatement.',
+                          effet: () => cles.supprimer(c.id),
+                        })
+                      }
+                    >
                       <Trash2 size={13} className="text-err" />
                     </IconButton>
                   </span>
