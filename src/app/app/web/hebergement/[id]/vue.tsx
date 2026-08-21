@@ -23,9 +23,16 @@ import {
 import { cn, seededSeries, surfaceMarque } from '@/lib/utils'
 import { dateHeure, money, num, relatif } from '@/lib/format'
 import { SITE_LABEL } from '@/lib/types'
-import type { BaseHebergement, CompteFichiers, SiteWeb, TachePlanifieeWeb } from '@/lib/types'
+import type {
+  BaseHebergement,
+  CompteFichiers,
+  SiteWeb,
+  TachePlanifieeWeb,
+  WebHosting,
+} from '@/lib/types'
 import {
   BASES_HEBERGEMENT,
+  HEBERGEMENTS,
   CATALOGUE_PARTAGE,
   COMPTES_FICHIERS,
   LOGS_EXECUTION,
@@ -84,12 +91,13 @@ export function VueHebergement({ id }: { id: string }) {
   const [phpSite, setPhpSite] = useState<string | null>(null)
 
   const executer = useOperation()
+  const hebergements = useCollection<WebHosting>('hebergements', HEBERGEMENTS)
   const tousSites = useCollection<SiteWeb>('sites-web', SITES_WEB)
   const toutesBases = useCollection<BaseHebergement>('bases-hebergement', BASES_HEBERGEMENT)
   const tousComptes = useCollection<CompteFichiers>('comptes-fichiers', COMPTES_FICHIERS)
   const toutesTaches = useCollection<TachePlanifieeWeb>('taches-web', TACHES_WEB)
 
-  const h = hebergementById(id)
+  const h = hebergements.items.find((x) => x.id === id)
   if (!h) return null
   const entree = entreesWebCloud().find((e) => e.hebergement?.id === h.id)
   const sites = tousSites.items.filter((x) => x.hebergementId === h.id)
@@ -628,21 +636,77 @@ export function VueHebergement({ id }: { id: string }) {
               <div className="space-y-3">
                 <Switch
                   checked={h.acces.sftp}
+                  onChange={(v) =>
+                    executer({
+                      action: 'service.admin',
+                      ton: v ? 'ok' : 'info',
+                      titre: v ? 'SFTP ouvert' : 'SFTP fermé',
+                      detail: v
+                        ? undefined
+                        : 'Ce qui est fermé ne peut pas être attaqué.',
+                      effet: () =>
+                        hebergements.modifier(h.id, (x) => ({
+                          acces: { ...x.acces, sftp: v },
+                        })),
+                    })
+                  }
                   label="SFTP"
                   description="Transfert sur SSH, chiffré. Le choix par défaut."
                 />
                 <Switch
                   checked={h.acces.ftps}
+                  onChange={(v) =>
+                    executer({
+                      action: 'service.admin',
+                      ton: v ? 'ok' : 'info',
+                      titre: v ? 'FTPS ouvert' : 'FTPS fermé',
+                      detail: v
+                        ? undefined
+                        : 'Ce qui est fermé ne peut pas être attaqué.',
+                      effet: () =>
+                        hebergements.modifier(h.id, (x) => ({
+                          acces: { ...x.acces, ftps: v },
+                        })),
+                    })
+                  }
                   label="FTPS"
                   description="FTP sur TLS. Pour un vieux client qui ne parle pas SSH."
                 />
                 <Switch
                   checked={h.acces.ftp}
+                  onChange={(v) =>
+                    executer({
+                      action: 'service.admin',
+                      ton: v ? 'warn' : 'info',
+                      titre: v ? 'FTP simple ouvert' : 'FTP simple fermé',
+                      detail: v
+                        ? 'Le mot de passe circule en clair : à n’ouvrir que le temps d’un dépannage.'
+                        : 'Ce qui est fermé ne peut pas être attaqué.',
+                      effet: () =>
+                        hebergements.modifier(h.id, (x) => ({
+                          acces: { ...x.acces, ftp: v },
+                        })),
+                    })
+                  }
                   label="FTP simple"
                   description="Mot de passe en clair sur le réseau. Fermé par défaut, et nous le déconseillons."
                 />
                 <Switch
                   checked={h.acces.ssh}
+                  onChange={(v) =>
+                    executer({
+                      action: 'service.admin',
+                      ton: v ? 'ok' : 'info',
+                      titre: v ? 'Shell SSH ouvert' : 'Shell SSH fermé',
+                      detail: v
+                        ? undefined
+                        : 'Ce qui est fermé ne peut pas être attaqué.',
+                      effet: () =>
+                        hebergements.modifier(h.id, (x) => ({
+                          acces: { ...x.acces, ssh: v },
+                        })),
+                    })
+                  }
                   label="Shell SSH"
                   description={`Accès en ligne de commande sur le port ${h.acces.portSsh}, par clé uniquement.`}
                 />
@@ -717,6 +781,20 @@ export function VueHebergement({ id }: { id: string }) {
                 </Field>
                 <Switch
                   checked={h.php.limites.opcache}
+                  onChange={(v) =>
+                    executer({
+                      action: 'service.admin',
+                      ton: v ? 'ok' : 'warn',
+                      titre: v ? 'OPcache activé' : 'OPcache désactivé',
+                      detail: v
+                        ? 'Le bytecode compilé reste en mémoire : le gain est immédiat.'
+                        : 'Chaque requête recompile le code : à ne faire qu’en développement.',
+                      effet: () =>
+                        hebergements.modifier(h.id, (x) => ({
+                          php: { ...x.php, limites: { ...x.php.limites, opcache: v } },
+                        })),
+                    })
+                  }
                   label="OPcache"
                   description="Garde le bytecode compilé en mémoire. À laisser actif en production."
                 />
@@ -751,7 +829,27 @@ export function VueHebergement({ id }: { id: string }) {
                         </span>
                       </Tooltip>
                     ) : (
-                      <Switch checked={e.active} className="shrink-0" />
+                      <Switch
+                        checked={e.active}
+                        className="shrink-0"
+                        label={`Extension ${e.nom}`}
+                        onChange={(v) =>
+                          executer({
+                            action: 'service.admin',
+                            titre: v ? `Extension ${e.nom} activée` : `Extension ${e.nom} désactivée`,
+                            detail: 'Prise en compte au prochain rechargement de PHP-FPM.',
+                            effet: () =>
+                              hebergements.modifier(h.id, (x) => ({
+                                php: {
+                                  ...x.php,
+                                  extensions: x.php.extensions.map((ext) =>
+                                    ext.nom === e.nom ? { ...ext, active: v } : ext,
+                                  ),
+                                },
+                              })),
+                          })
+                        }
+                      />
                     )}
                   </div>
                 ))}

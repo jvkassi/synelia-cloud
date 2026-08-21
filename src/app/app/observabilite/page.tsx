@@ -27,7 +27,7 @@ import { HealthBadge, StatTile } from '@/components/composition/metrics'
 import { EventList, GrilleSparkCharts, LiensSortie, LogPeek } from '@/components/business/observabilite'
 import { useApp, useEspace } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
-import { BoutonFormulaire } from '@/components/app/actions'
+import { BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 /** Champs d'une règle d'alerte — mêmes champs à la création et à la reprise. */
 const CHAMPS_ALERTE = [
@@ -94,6 +94,10 @@ export default function Observabilite() {
   const espace = useEspace()
   const { autorise, refus, pousser } = useApp()
   const alertes = useCollection<AlerteRegle>('regles-alertes', REGLES_ALERTES)
+  const executer = useOperation()
+  const [canalCourriel, setCanalCourriel] = useState(true)
+  const [canalWebhook, setCanalWebhook] = useState(false)
+  const [canalTicket, setCanalTicket] = useState(false)
   const [onglet, setOnglet] = useState('vue')
   const [perimetre, setPerimetre] = useState('espace')
 
@@ -608,14 +612,44 @@ export default function Observabilite() {
                   </Select>
                 </Field>
                 <div className="space-y-3">
-                  <Switch checked label="Courriel aux administrateurs de l’organisation" />
                   <Switch
-                    checked={false}
+                    checked={canalCourriel}
+                    onChange={(v) =>
+                      executer({
+                        titre: v ? 'Courriel activé' : 'Courriel coupé',
+                        detail: v
+                          ? undefined
+                          : 'Plus aucune alerte ne partira par courriel : vérifiez qu’un autre canal reste actif.',
+                        effet: () => setCanalCourriel(v),
+                      })
+                    }
+                    label="Courriel aux administrateurs de l’organisation"
+                  />
+                  <Switch
+                    checked={canalWebhook}
+                    onChange={(v) =>
+                      executer({
+                        titre: v ? 'Webhook activé' : 'Webhook coupé',
+                        detail: v ? 'Charge JSON signée, format documenté.' : undefined,
+                        effet: () => setCanalWebhook(v),
+                      })
+                    }
                     label="Webhook vers un canal d’équipe"
                     description="Nous envoyons une charge JSON signée ; le format est décrit dans la documentation."
                   />
                   <Switch
-                    checked={false}
+                    checked={canalTicket}
+                    onChange={(v) =>
+                      executer({
+                        titre: v
+                          ? 'Ouverture automatique de ticket activée'
+                          : 'Ouverture automatique de ticket coupée',
+                        detail: v
+                          ? 'Uniquement pour les alertes critiques, rattachées à la ressource concernée.'
+                          : undefined,
+                        effet: () => setCanalTicket(v),
+                      })
+                    }
                     label="Ouvrir automatiquement un ticket de support"
                     description="Uniquement pour les alertes critiques. Le ticket est rattaché à la ressource concernée."
                   />

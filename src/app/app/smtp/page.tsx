@@ -455,6 +455,7 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
               <div className="space-y-3.5">
                 <Switch
                   checked
+                  disabled
                   label="Signer tous les courriels avec DKIM"
                   description="Non désactivable : un courriel non signé est massivement filtré."
                 />

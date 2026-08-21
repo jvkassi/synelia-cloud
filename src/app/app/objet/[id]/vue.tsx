@@ -365,6 +365,17 @@ export function VueBucket({ id }: { id: string }) {
             <CardHeader titre="Versioning" />
             <Switch
               checked={bucket.versioning}
+              onChange={(v) =>
+                executer({
+                  action: 'network.manage',
+                  ton: v ? 'ok' : 'warn',
+                  titre: v ? 'Versioning activé' : 'Versioning désactivé',
+                  detail: v
+                    ? 'Une écriture crée une version au lieu d’écraser ; une suppression pose un marqueur.'
+                    : 'Les versions déjà créées sont conservées, mais les prochaines écritures écraseront.',
+                  effet: () => seaux.modifier(bucket.id, { versioning: v }),
+                })
+              }
               label="Conserver chaque version d’un objet"
               description="Une écriture sur une clé existante crée une nouvelle version au lieu d’écraser l’ancienne. Une suppression pose un marqueur sans détruire les versions précédentes."
             />
@@ -550,6 +561,21 @@ export function VueBucket({ id }: { id: string }) {
             <div className="mt-4 space-y-4">
               <Switch
                 checked={bucket.objectLock?.actif ?? false}
+                disabled={bucket.objectLock?.actif}
+                onChange={(v) =>
+                  executer({
+                    action: 'network.manage',
+                    ton: 'warn',
+                    titre: 'Verrouillage d’objet activé',
+                    detail:
+                      'Définitif : le verrouillage ne peut plus être désactivé sur ce bucket. C’est une contrainte de la norme.',
+                    effet: () =>
+                      seaux.modifier(bucket.id, {
+                        objectLock: { actif: v, retentionJours: 35 },
+                        versioning: true,
+                      }),
+                  })
+                }
                 label="Activer le verrouillage d’objet"
                 description="Une fois activé sur un bucket, le verrouillage ne peut plus être désactivé. C’est une contrainte assumée de la norme, pas une limitation Synelia."
               />
@@ -619,6 +645,22 @@ export function VueBucket({ id }: { id: string }) {
           />
           <Switch
             checked={Boolean(bucket.replication)}
+            onChange={(v) =>
+              executer({
+                action: 'network.manage',
+                ton: 'info',
+                titre: v ? 'Réplication activée' : 'Réplication arrêtée',
+                detail: v
+                  ? 'Chaque nouvel objet est copié vers le second site. Les objets déjà présents ne le sont pas rétroactivement.'
+                  : 'La copie déjà écrite sur l’autre site reste en place et reste facturée.',
+                effet: () =>
+                  seaux.modifier(bucket.id, {
+                    replication: v
+                      ? { cible: bucket.region === 'ABJ' ? 'GBM' : 'ABJ' }
+                      : undefined,
+                  }),
+              })
+            }
             label={`Répliquer vers ${bucket.region === 'ABJ' ? 'Grand-Bassam' : 'Abidjan'}`}
             description="Réplication asynchrone de chaque nouvel objet vers le second site. Le trafic inter-site n’est pas facturé ; seul le stockage de la copie l’est."
           />
@@ -765,7 +807,17 @@ aws --endpoint-url https://s3.${bucket.region.toLowerCase()}.synelia.cloud \\
               actions={
                 <Switch
                   checked={bucket.accessLogs}
-                  label=""
+                  onChange={(v) =>
+                    executer({
+                      action: 'network.manage',
+                      titre: v ? 'Journaux d’accès activés' : 'Journaux d’accès coupés',
+                      detail: v
+                        ? 'Chaque requête est journalisée : utile en audit, et facturé au volume écrit.'
+                        : undefined,
+                      effet: () => seaux.modifier(bucket.id, { accessLogs: v }),
+                    })
+                  }
+                  label="Journaux d’accès"
                 />
               }
             />

@@ -33,6 +33,9 @@ export function VueSauvegarde({ id }: { id: string }) {
   const { autorise, refus, pousser } = useApp()
   const [onglet, setOnglet] = useState('executions')
   const [etape, setEtape] = useState(1)
+  const [perimetre, setPerimetre] = useState('Une application')
+  const [pointChoisi, setPointChoisi] = useState<string | null>(null)
+  const [destination, setDestination] = useState('À côté, sur le même serveur')
   const [immuable, setImmuable] = useState(true)
 
   const p = sauvegardeWebById(id)
@@ -333,7 +336,16 @@ export function VueSauvegarde({ id }: { id: string }) {
                     <button
                       key={x.l}
                       type="button"
-                      className="flex w-full items-start gap-2.5 rounded-[6px] border border-g-300 px-3 py-2.5 text-left transition-colors hover:border-p-400 hover:bg-p-050"
+                      onClick={() => {
+                        setPerimetre(x.l)
+                        setEtape(2)
+                      }}
+                      className={cn(
+                        'flex w-full items-start gap-2.5 rounded-[6px] border px-3 py-2.5 text-left transition-colors',
+                        perimetre === x.l
+                          ? 'border-p-600 bg-p-050'
+                          : 'border-g-300 hover:border-p-400 hover:bg-p-050',
+                      )}
                     >
                       <ShieldCheck size={14} className="mt-0.5 shrink-0 text-p-700" />
                       <span>
@@ -357,7 +369,16 @@ export function VueSauvegarde({ id }: { id: string }) {
                     <button
                       key={e.id}
                       type="button"
-                      className="flex w-full items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2.5 text-left transition-colors hover:border-p-400 hover:bg-p-050"
+                      onClick={() => {
+                        setPointChoisi(e.id)
+                        setEtape(3)
+                      }}
+                      className={cn(
+                        'flex w-full items-center justify-between gap-2 rounded-[6px] border px-3 py-2.5 text-left transition-colors',
+                        pointChoisi === e.id
+                          ? 'border-p-600 bg-p-050'
+                          : 'border-g-300 hover:border-p-400 hover:bg-p-050',
+                      )}
                     >
                       <span>
                         <span className="block text-[12.5px] font-semibold text-ink">
@@ -408,11 +429,17 @@ export function VueSauvegarde({ id }: { id: string }) {
                     <button
                       key={x.l}
                       type="button"
+                      onClick={() => {
+                        setDestination(x.l)
+                        setEtape(4)
+                      }}
                       className={cn(
                         'flex w-full items-start justify-between gap-2 rounded-[6px] border px-3 py-2.5 text-left transition-colors',
-                        x.ton === 'err'
-                          ? 'border-err/40 hover:bg-err-bg'
-                          : 'border-g-300 hover:border-p-400 hover:bg-p-050',
+                        destination === x.l
+                          ? 'border-p-600 bg-p-050'
+                          : x.ton === 'err'
+                            ? 'border-err/40 hover:bg-err-bg'
+                            : 'border-g-300 hover:border-p-400 hover:bg-p-050',
                       )}
                     >
                       <span>
@@ -448,20 +475,45 @@ export function VueSauvegarde({ id }: { id: string }) {
                     { cle: 'Impact sur la production', valeur: 'Aucun' },
                   ]}
                 />
-                <GatedAction autorise={autorise('backup.restore')} message={refus('backup.restore')}>
-                  <Button
-                    className="mt-4"
-                    onClick={() =>
-                      pousser({
-                        ton: 'ok',
-                        titre: 'Restauration lancée',
-                        detail: 'Suivi dans le centre de tâches. Vous serez notifié à la fin.',
-                      })
-                    }
-                  >
-                    Lancer la restauration
-                  </Button>
-                </GatedAction>
+                <BoutonAction
+                  libelle="Lancer la restauration"
+                  variant="primary"
+                  size="md"
+                  className="mt-4"
+                  operation={{
+                    action: 'backup.restore',
+                    ton: 'info',
+                    titre: 'Restauration lancée',
+                    detail: 'Suivi dans le centre de tâches. Vous serez notifié à la fin.',
+                    job: {
+                      type: 'sauvegarde.restore',
+                      label: `Restauration · ${perimetre.toLowerCase()}`,
+                      etapes: [
+                        'Monter le point de restauration',
+                        `Restaurer ${perimetre.toLowerCase()}`,
+                        destination.startsWith('Par-dessus')
+                          ? 'Remplacer les données de production'
+                          : 'Écrire la copie à côté',
+                        'Vérifier le résultat',
+                      ],
+                    },
+                    effetFinal: () => setEtape(1),
+                  }}
+                  confirmation={
+                    destination.startsWith('Par-dessus')
+                      ? {
+                          ressource: p.serveur,
+                          titre: 'Restaurer par-dessus la production ?',
+                          pertes: [
+                            'Les données actuelles du périmètre choisi seront écrasées',
+                            'Le travail postérieur au point de restauration sera perdu',
+                            'Le service sera indisponible pendant l’opération',
+                          ],
+                          libelleAction: 'Écraser et restaurer',
+                        }
+                      : undefined
+                  }
+                />
               </>
             )}
 

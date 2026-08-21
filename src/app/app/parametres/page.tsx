@@ -259,6 +259,7 @@ export default function Parametres() {
               <div className="space-y-3">
                 <Switch
                   checked
+                  disabled
                   label="Afficher le site physique sur chaque ressource"
                   description="Non désactivable. Savoir où tourne une ressource fait partie de ce que nous vous devons."
                 />

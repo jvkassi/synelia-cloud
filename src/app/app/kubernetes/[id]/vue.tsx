@@ -63,6 +63,9 @@ export function VueCluster({ id }: { id: string }) {
   const [brouillons, setBrouillons] = useState<
     Record<string, { nodes?: number; min?: number; max?: number; disk?: number }>
   >({})
+  const [oidcObligatoire, setOidcObligatoire] = useState(true)
+  const [auditApi, setAuditApi] = useState(true)
+  const [apiPublique, setApiPublique] = useState(false)
 
   const cluster = grappes.items.find((c) => c.id === id)!
   const espace = espaceById(cluster.espaceId)
@@ -958,17 +961,49 @@ users:
             <CardHeader titre="Options d’accès" />
             <div className="space-y-3.5">
               <Switch
-                checked
+                checked={oidcObligatoire}
+                onChange={(v) =>
+                  executer({
+                    action: 'espace.quota.update',
+                    ton: v ? 'ok' : 'warn',
+                    titre: v
+                      ? 'Authentification OIDC obligatoire'
+                      : 'Jetons de compte de service autorisés',
+                    detail: v
+                      ? 'Les accès expirent avec la session Synelia.'
+                      : 'Un jeton statique ne s’éteint pas au départ d’une personne : à éviter.',
+                    effet: () => setOidcObligatoire(v),
+                  })
+                }
                 label="Authentification OIDC obligatoire"
                 description="Aucun jeton de compte de service statique n’est distribué. Les accès expirent avec la session Synelia."
               />
               <Switch
-                checked
+                checked={auditApi}
+                onChange={(v) =>
+                  executer({
+                    action: 'espace.quota.update',
+                    ton: v ? 'ok' : 'warn',
+                    titre: v ? 'Accès à l’API journalisés' : 'Journalisation de l’API coupée',
+                    effet: () => setAuditApi(v),
+                  })
+                }
                 label="Journaliser les accès à l’API dans l’audit"
                 description="Chaque appel modifiant une ressource apparaît dans votre journal d’audit, avec l’acteur et l’objet visé."
               />
               <Switch
-                checked={false}
+                checked={apiPublique}
+                onChange={(v) =>
+                  executer({
+                    action: 'espace.quota.update',
+                    ton: v ? 'warn' : 'ok',
+                    titre: v ? 'API exposée sur Internet' : 'API ramenée aux réseaux privés',
+                    detail: v
+                      ? 'Ajoutez une liste d’adresses autorisées : sans elle, le serveur d’API est joignable du monde entier.'
+                      : 'L’accès depuis un poste passe désormais par le VPN de l’espace.',
+                    effet: () => setApiPublique(v),
+                  })
+                }
                 label="Exposer l’API sur Internet"
                 description="Par défaut, l’API n’est joignable que depuis vos réseaux privés et le pool VPN. L’exposition publique élargit fortement la surface d’attaque."
               />

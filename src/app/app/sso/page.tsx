@@ -68,6 +68,10 @@ export default function Sso() {
   const [emailSimule, setEmailSimule] = useState('k.toure@dba.africa')
   const [groupesSimules, setGroupesSimules] = useState('SYN-CLOUD-DEV-PROD\nTout le personnel')
   const [resultatSimulation, setResultatSimulation] = useState<Correspondance | null>(null)
+  const [creationAuto, setCreationAuto] = useState(true)
+  const [desactivationAuto, setDesactivationAuto] = useState(true)
+  const [comptesLocaux, setComptesLocaux] = useState(false)
+  const [envoiContinu, setEnvoiContinu] = useState(false)
   const [protocole, setProtocole] = useState('oidc')
   const [etape, setEtape] = useState(1)
 
@@ -511,17 +515,53 @@ export default function Sso() {
                 </div>
                 <div className="space-y-3">
                   <Switch
-                    checked
+                    checked={creationAuto}
+                    onChange={(v) =>
+                      executer({
+                        action: 'sso.configure',
+                        titre: v
+                          ? 'Création automatique activée'
+                          : 'Création automatique désactivée',
+                        detail: v
+                          ? undefined
+                          : 'Chaque arrivée exigera désormais une invitation manuelle.',
+                        effet: () => setCreationAuto(v),
+                      })
+                    }
                     label="Créer automatiquement les comptes à la première connexion"
                     description="Un collaborateur d’un groupe reconnu obtient son accès sans invitation préalable. Sans cela, chaque arrivée exige une invitation manuelle."
                   />
                   <Switch
-                    checked
+                    checked={desactivationAuto}
+                    onChange={(v) =>
+                      executer({
+                        action: 'sso.configure',
+                        ton: v ? 'ok' : 'warn',
+                        titre: v
+                          ? 'Désactivation automatique activée'
+                          : 'Désactivation automatique coupée',
+                        detail: v
+                          ? undefined
+                          : 'Un départ dans votre annuaire ne coupera plus l’accès ici : il faudra le faire à la main.',
+                        effet: () => setDesactivationAuto(v),
+                      })
+                    }
                     label="Désactiver les comptes disparus de l’annuaire"
                     description="À la synchronisation, un compte absent de votre annuaire est désactivé ici. C’est ce qui garantit qu’un départ coupe réellement les accès."
                   />
                   <Switch
-                    checked={false}
+                    checked={comptesLocaux}
+                    onChange={(v) =>
+                      executer({
+                        action: 'sso.configure',
+                        ton: v ? 'warn' : 'ok',
+                        titre: v ? 'Comptes locaux autorisés' : 'Comptes locaux interdits',
+                        detail: v
+                          ? 'Chaque compte local est une exception à surveiller : il survit à un départ de votre annuaire.'
+                          : undefined,
+                        effet: () => setComptesLocaux(v),
+                      })
+                    }
                     label="Autoriser les comptes locaux en parallèle"
                     description="Utile pour un prestataire externe qui n’est pas dans votre annuaire. Chaque compte local est une exception à surveiller."
                   />
@@ -964,7 +1004,17 @@ export default function Sso() {
                   </Select>
                 </Field>
                 <Switch
-                  checked={false}
+                  checked={envoiContinu}
+                  onChange={(v) =>
+                    executer({
+                      action: 'compliance.export',
+                      titre: v ? 'Envoi continu activé' : 'Envoi continu coupé',
+                      detail: v
+                        ? 'Chaque événement d’authentification part vers votre collecteur en temps réel.'
+                        : undefined,
+                      effet: () => setEnvoiContinu(v),
+                    })
+                  }
                   label="Envoi continu vers votre collecteur"
                   description="Nous poussons chaque événement d’authentification vers votre outil de corrélation, en temps réel, plutôt que par exports ponctuels."
                 />

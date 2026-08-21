@@ -106,6 +106,7 @@ export default function Securite() {
   const [approbationProd, setApprobationProd] = useState(true)
   const [plagesIp, setPlagesIp] = useState(false)
   const [expirationSession, setExpirationSession] = useState(true)
+  const [empreinteChainage, setEmpreinteChainage] = useState(true)
 
   const peutVoir = perm('audit.view') !== 'none'
   const refuses = AUDIT.filter((a) => a.result === 'refuse').length
@@ -447,11 +448,13 @@ export default function Securite() {
                   />
                   <Switch
                     checked
+                    disabled
                     label="Exiger la saisie du nom exact pour une suppression"
                     description="Non désactivable. Aucune ressource ne se supprime par un simple clic sur « Oui »."
                   />
                   <Switch
                     checked
+                    disabled
                     label="Journaliser les actions refusées"
                     description="Non désactivable. Un refus non journalisé est une information perdue."
                   />
@@ -753,7 +756,18 @@ export default function Securite() {
                 </Select>
               </Field>
               <Switch
-                checked
+                checked={empreinteChainage}
+                onChange={(v) =>
+                  executer({
+                    action: 'compliance.export',
+                    ton: v ? 'ok' : 'warn',
+                    titre: v ? 'Empreinte de chaînage incluse' : 'Empreinte de chaînage retirée',
+                    detail: v
+                      ? undefined
+                      : 'Sans elle, un tiers ne peut pas vérifier que l’export n’a pas été retouché — la plupart des auditeurs la demandent.',
+                    effet: () => setEmpreinteChainage(v),
+                  })
+                }
                 label="Inclure l’empreinte de chaînage"
                 description="Permet à un tiers de vérifier que l’export n’a pas été modifié après extraction. Attendu par la plupart des auditeurs."
               />

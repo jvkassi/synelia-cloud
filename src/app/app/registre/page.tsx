@@ -620,6 +620,7 @@ docker push registry.abj.synelia.cloud/org-dba/mon-app:v1.0.0`}
             />
             <Switch
               checked
+              disabled
               label="Protéger les étiquettes utilisées par un environnement"
               description="Non désactivable. Purger l’image d’un environnement en marche rendrait tout redémarrage impossible."
             />

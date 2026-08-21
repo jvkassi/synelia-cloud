@@ -64,6 +64,8 @@ export function VueTicket({ id }: { id: string }) {
   const tickets = useCollection<Ticket>('tickets', TICKETS)
   const [onglet, setOnglet] = useState('echanges')
   const [reponse, setReponse] = useState('')
+  const [lectureContexte, setLectureContexte] = useState(true)
+  const [interventionAutorisee, setInterventionAutorisee] = useState(false)
 
   const t = tickets.items.find((x) => x.id === id)!
   const ouvert = !['resolu', 'ferme'].includes(t.statut)
@@ -380,12 +382,36 @@ export function VueTicket({ id }: { id: string }) {
               <CardHeader titre="Accès de nos équipes" sousTitre="Ce que le support peut voir et faire." />
               <div className="space-y-3">
                 <Switch
-                  checked
+                  checked={lectureContexte}
+                  onChange={(v) =>
+                    executer({
+                      ton: v ? 'ok' : 'warn',
+                      titre: v
+                        ? 'Lecture du contexte technique autorisée'
+                        : 'Lecture du contexte technique retirée',
+                      detail: v
+                        ? undefined
+                        : 'Sans ce contexte, le diagnostic prendra plus longtemps : il faudra vous demander chaque élément.',
+                      effet: () => setLectureContexte(v),
+                    })
+                  }
                   label="Lecture du contexte technique"
                   description="Métriques, journaux, emplacement d’exécution, historique des déploiements des ressources liées à ce ticket."
                 />
                 <Switch
-                  checked={false}
+                  checked={interventionAutorisee}
+                  onChange={(v) =>
+                    executer({
+                      ton: v ? 'warn' : 'info',
+                      titre: v
+                        ? 'Intervention autorisée pour 4 heures'
+                        : 'Autorisation d’intervention retirée',
+                      detail: v
+                        ? 'Accès nominatif, limité à 4 heures, chaque action journalisée dans votre audit.'
+                        : undefined,
+                      effet: () => setInterventionAutorisee(v),
+                    })
+                  }
                   label="Autoriser une intervention sur mes ressources"
                   description="À n’accorder que si nous vous le demandons. L’accès est nominatif, limité à 4 heures, et chaque action est journalisée dans votre audit."
                 />

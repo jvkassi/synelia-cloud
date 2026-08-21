@@ -20,7 +20,7 @@ import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/
 import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
-import { BoutonFormulaire } from '@/components/app/actions'
+import { BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const TEINTE: Record<string, string> = {
   wordpress: '#21759B',
@@ -40,6 +40,7 @@ const CATALOGUE = [
 
 export default function ListeApplications() {
   const { autorise, refus } = useApp()
+  const executer = useOperation()
   const tousSites = useCollection<SiteWeb>('sites-web', SITES_WEB)
   const miens = new Set(HEBERGEMENTS.filter((h) => h.orgId === ORG_COURANTE.id).map((h) => h.id))
   const sites = tousSites.items.filter((s) => miens.has(s.hebergementId))
@@ -282,6 +283,48 @@ export default function ListeApplications() {
               <button
                 key={c.nom}
                 type="button"
+                onClick={() => {
+                  const premier = HEBERGEMENTS.find((h) => h.orgId === ORG_COURANTE.id)
+                  const idSite = tousSites.identifiant('site')
+                  const hote = `${c.nom.toLowerCase().replace(/[^a-z]/g, '')}.${premier ? nomServi(premier) : 'dba.africa'}`
+                  executer({
+                    action: 'service.admin',
+                    titre: `Installation de ${c.nom} lancée`,
+                    detail: `${hote} · PHP ${c.php}. Le contenu s’édite ensuite dans l’application.`,
+                    effet: () =>
+                      premier
+                        ? tousSites.creer({
+                            id: idSite,
+                            hebergementId: premier.id,
+                            hote,
+                            racine: `/var/www/${c.nom.toLowerCase()}`,
+                            type: c.type as SiteWeb['type'],
+                            phpVersion: c.php === '—' ? '8.3' : c.php,
+                            ssl: { etat: 'en_emission' },
+                            espaceMo: 0,
+                            visitesMois: 0,
+                            securite: { waf: true, bruteForce: true, scanMalware: true },
+                            statut: 'installation',
+                          })
+                        : undefined,
+                    job: {
+                      type: 'site.install',
+                      label: `Installation de ${c.nom} · ${hote}`,
+                      etapes: [
+                        'Créer la racine et les droits',
+                        'Créer la base et son utilisateur',
+                        `Installer ${c.nom}`,
+                        'Déclarer le sous-domaine',
+                        'Émettre le certificat',
+                      ],
+                    },
+                    effetFinal: () =>
+                      tousSites.modifier(idSite, {
+                        statut: 'en_ligne',
+                        ssl: { etat: 'actif', emetteur: 'Let’s Encrypt', expire: '2026-11-17' },
+                      }),
+                  })
+                }}
                 className="rounded-[8px] border border-g-300 bg-white p-3 text-left transition-colors hover:border-p-400 hover:bg-p-050"
               >
                 <span

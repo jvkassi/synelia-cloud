@@ -94,6 +94,8 @@ export default function Facturation() {
   const moyens = useCollection<MoyenEnregistre>('moyens-paiement', MOYENS)
   const [onglet, setOnglet] = useState('apercu')
   const [facture, setFacture] = useState<string | null>(null)
+  const [envoiMensuel, setEnvoiMensuel] = useState(true)
+  const [inclureNonAffecte, setInclureNonAffecte] = useState(true)
 
   const peutVoir = perm('invoice.view') !== 'none'
   const factures = lesFactures.items.filter((f) => f.orgId === ORG_COURANTE.id)
@@ -770,12 +772,35 @@ export default function Facturation() {
             </div>
             <div className="mt-3.5 space-y-3">
               <Switch
-                checked
+                checked={envoiMensuel}
+                onChange={(v) =>
+                  executer({
+                    action: 'invoice.view',
+                    titre: v ? 'Envoi mensuel activé' : 'Envoi mensuel coupé',
+                    detail: v
+                      ? 'Chaque responsable reçoit uniquement les lignes de son périmètre.'
+                      : undefined,
+                    effet: () => setEnvoiMensuel(v),
+                  })
+                }
                 label="Envoyer automatiquement le 3 de chaque mois"
                 description="Chaque responsable reçoit uniquement les lignes de son périmètre."
               />
               <Switch
-                checked
+                checked={inclureNonAffecte}
+                onChange={(v) =>
+                  executer({
+                    action: 'invoice.view',
+                    ton: v ? 'ok' : 'warn',
+                    titre: v
+                      ? 'Ligne « non affecté » incluse'
+                      : 'Ligne « non affecté » masquée',
+                    detail: v
+                      ? undefined
+                      : 'Ce qui n’est pas affecté disparaît du rapport — et cesse donc de diminuer.',
+                    effet: () => setInclureNonAffecte(v),
+                  })
+                }
                 label="Inclure les ressources sans étiquette dans une ligne « non affecté »"
                 description="Rendre visible ce qui n’est pas affecté est le seul moyen de le faire diminuer."
               />

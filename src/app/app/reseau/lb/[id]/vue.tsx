@@ -776,6 +776,18 @@ export function VueLb({ id }: { id: string }) {
             <div className="space-y-3.5">
               <Switch
                 checked={lb.waf?.actif ?? false}
+                onChange={(v) =>
+                  executer({
+                    action: 'lb.create',
+                    ton: v ? 'ok' : 'warn',
+                    titre: v ? 'Pare-feu applicatif activé' : 'Pare-feu applicatif désactivé',
+                    detail: v
+                      ? 'Les règles OWASP s’appliquent dès la prochaine requête.'
+                      : 'Les injections et le cross-site scripting ne sont plus filtrés.',
+                    effet: () =>
+                      lbs.modifier(lb.id, { waf: { actif: v, ruleset: 'OWASP CRS 4.3' } }),
+                  })
+                }
                 label="Jeu de règles OWASP Core Rule Set"
                 description="Détection des injections SQL, du cross-site scripting, des inclusions de fichiers, des scanners automatisés et des anomalies de protocole."
               />
