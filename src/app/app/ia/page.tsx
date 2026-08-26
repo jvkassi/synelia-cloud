@@ -1,12 +1,15 @@
 'use client'
 
 import {
+  Bot,
   Boxes,
   BrainCircuit,
   Cpu,
   KeyRound,
+  Plug,
   Route,
   Wallet,
+  Workflow,
 } from 'lucide-react'
 import { seededSeries } from '@/lib/utils'
 import { jetons, money, num, pct } from '@/lib/format'
@@ -27,6 +30,27 @@ import { EventList, GrilleSparkCharts, LiensSortie } from '@/components/business
 import { useEspace } from '@/components/app/contexte'
 
 const SECTIONS = [
+  {
+    href: '/app/ia/agents',
+    titre: 'Agents',
+    icone: <Bot size={17} />,
+    description:
+      'Rôle, consigne, variables, outils, connaissances et garde-fous. Chaque modification crée une version, et toute version se rejoue.',
+  },
+  {
+    href: '/app/ia/orchestration',
+    titre: 'Orchestration',
+    icone: <Workflow size={17} />,
+    description:
+      'Plusieurs agents qui se passent le relais : enchaînement, branches, exécution parallèle, reprise sur erreur, validation humaine.',
+  },
+  {
+    href: '/app/ia/outils',
+    titre: 'Outils & canaux',
+    icone: <Plug size={17} />,
+    description:
+      'Ce qu’un agent peut appeler — API internes, serveurs MCP — et par où les gens l’atteignent : WhatsApp, SMS, voix, REST.',
+  },
   {
     href: '/app/ia/modeles',
     titre: 'Catalogue de modèles',
@@ -84,7 +108,7 @@ export default function AccueilIA() {
   return (
     <div className="space-y-5">
       <PageHeader
-        fil={[{ label: 'Espace client', href: '/app' }, { label: 'IA & Modèles' }]}
+        fil={[{ label: 'Espace client', href: '/app' }, { label: 'IA & Agents' }]}
         titre="Intelligence artificielle"
         sousTitre="Une passerelle unique devant deux mondes : les modèles que nous hébergeons à Abidjan et à Grand-Bassam, et ceux des fournisseurs étrangers. Vous décidez, usage par usage, ce qui reste sur le territoire — et le portail compte ce qui en sort."
         meta={
@@ -127,12 +151,13 @@ export default function AccueilIA() {
         />
       </div>
 
-      <Callout ton="violet" titre="Ce que la passerelle fait, et ce qu’elle ne fait pas">
-        Elle distribue les accès, choisit le modèle, applique les garde-fous, mesure et facture. Elle
-        n’entraîne aucun modèle sur vos données, ne propose pas d’affinage, et n’offre pas
-        d’interface de conversation : l’IA se consomme depuis vos applications, ou depuis les
-        assistants que vous ouvrez déjà par le lanceur. Vos requêtes ne sont jamais réutilisées pour
-        entraîner quoi que ce soit — ni chez nous, ni chez les fournisseurs sous notre contrat cadre.
+      <Callout ton="violet" titre="Ce que la plateforme fait, et ce qu’elle ne fait pas">
+        Elle distribue les accès, choisit le modèle, exécute vos agents, applique les garde-fous,
+        mesure et facture. Elle n’entraîne aucun modèle sur vos données et ne propose pas d’affinage.
+        Vos requêtes ne sont jamais réutilisées pour entraîner quoi que ce soit — ni chez nous, ni
+        chez les fournisseurs sous notre contrat cadre. Un agent se met au travail sur un canal
+        publié — widget, WhatsApp, SMS, voix, API : ce portail sert à le construire, l’observer et le
+        borner, pas à converser avec lui.
       </Callout>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

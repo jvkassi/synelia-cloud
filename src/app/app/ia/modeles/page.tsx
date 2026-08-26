@@ -77,7 +77,7 @@ export default function CatalogueModeles() {
       <PageHeader
         fil={[
           { label: 'Espace client', href: '/app' },
-          { label: 'IA & Modèles', href: '/app/ia' },
+          { label: 'IA & Agents', href: '/app/ia' },
           { label: 'Catalogue de modèles' },
         ]}
         titre="Catalogue de modèles"

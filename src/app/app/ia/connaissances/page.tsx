@@ -66,7 +66,7 @@ export default function BasesDeConnaissance() {
       <PageHeader
         fil={[
           { label: 'Espace client', href: '/app' },
-          { label: 'IA & Modèles', href: '/app/ia' },
+          { label: 'IA & Agents', href: '/app/ia' },
           { label: 'Bases de connaissances' },
         ]}
         titre="Bases de connaissances"

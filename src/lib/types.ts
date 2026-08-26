@@ -1251,3 +1251,205 @@ export interface PointInference {
   statut: 'en_ligne' | 'demarrage' | 'en_veille' | 'erreur'
   creeLe: string
 }
+
+// ─── Agents et orchestration (CDC MIA, FONC-01 à FONC-06) ─────────────
+
+/**
+ * Quatre natures d'agent, parce qu'elles n'ont ni les mêmes réglages ni les
+ * mêmes garde-fous : un agent conversationnel garde un fil et parle à un
+ * humain, un extracteur rend du JSON et n'a rien à dire.
+ */
+export type TypeAgent = 'conversationnel' | 'tache' | 'flux' | 'extraction'
+
+export const TYPE_AGENT_LABEL: Record<TypeAgent, string> = {
+  conversationnel: 'Conversationnel',
+  tache: 'Agent de tâche',
+  flux: 'Flux déterministe',
+  extraction: 'Extracteur',
+}
+
+/** Variable injectable dans la consigne, façon `{{nom_client}}` (FONC-01.4). */
+export interface VariableAgent {
+  cle: string
+  libelle: string
+  type: 'texte' | 'nombre' | 'date' | 'liste'
+  /** D'où vient la valeur : l'appelant la fournit, ou la passerelle la calcule. */
+  source: 'appelant' | 'systeme' | 'annuaire'
+  obligatoire: boolean
+  exemple: string
+}
+
+/** Une version d'agent, conservée pour le retour arrière (FONC-01.5). */
+export interface VersionAgent {
+  numero: string
+  date: string
+  auteur: string
+  note: string
+  statut: 'publiee' | 'archivee' | 'brouillon'
+}
+
+export interface AgentIA {
+  id: string
+  slug: string
+  nom: string
+  /** Deux lettres et une teinte tiennent lieu d'icône — pas de téléversement. */
+  initiales: string
+  teinte: string
+  role: string
+  description: string
+  type: TypeAgent
+  espaceId: string
+  statut: 'brouillon' | 'publie' | 'suspendu'
+  modele: string
+  temperature: number
+  topP: number
+  jetonsMax: number
+  consigne: string
+  variables: VariableAgent[]
+  outils: string[]
+  connaissances: string[]
+  memoire: {
+    portee: 'aucune' | 'session' | 'longue'
+    dureeJours: number
+    /** Agents avec qui l'espace de contexte est partagé (FONC-02.6). */
+    partageeAvec: string[]
+  }
+  /** Reprise automatique sur échec d'outil ou de modèle (FONC-02.7). */
+  reprise: { tentatives: number; delaiS: number }
+  humainDansLaBoucle: boolean
+  classeDonnees: ClasseDonnees
+  budgetJour: number
+  canaux: string[]
+  versions: VersionAgent[]
+  metriques: {
+    conversations7j: number
+    tauxResolutionPct: number
+    satisfactionPct: number
+    latenceP50Ms: number
+    coutJour: number
+    appelsOutils24h: number
+    tauxEchecOutilPct: number
+  }
+  /** Jeu d'épreuves rejoué avant chaque publication. */
+  epreuves: { cas: number; reussis: number; dernierPassage: string }
+  annotations: number
+}
+
+/** Outil appelable par un agent (FONC-01.7). */
+export type CategorieOutil = 'integre' | 'interne' | 'openapi' | 'mcp'
+
+export const CATEGORIE_OUTIL_LABEL: Record<CategorieOutil, string> = {
+  integre: 'Fourni par la plateforme',
+  interne: 'API interne de l’organisation',
+  openapi: 'Importé depuis un schéma OpenAPI',
+  mcp: 'Serveur MCP',
+}
+
+export interface OutilAgent {
+  id: string
+  nom: string
+  categorie: CategorieOutil
+  fournisseur: string
+  description: string
+  /** Un outil qui écrit ne se traite pas comme un outil qui lit. */
+  effet: 'lecture' | 'ecriture'
+  confirmationRequise: boolean
+  signature: string
+  authentification: string
+  appels24h: number
+  tauxErreurPct: number
+  latenceP50Ms: number
+  statut: 'actif' | 'inactif' | 'erreur'
+  note?: string
+}
+
+/** Canal par lequel un utilisateur atteint un agent (FONC-06). */
+export type TypeCanal =
+  | 'widget'
+  | 'whatsapp'
+  | 'telegram'
+  | 'sms'
+  | 'voix'
+  | 'ivr'
+  | 'rest'
+  | 'websocket'
+
+export const TYPE_CANAL_LABEL: Record<TypeCanal, string> = {
+  widget: 'Widget web',
+  whatsapp: 'WhatsApp Business',
+  telegram: 'Telegram',
+  sms: 'SMS bidirectionnel',
+  voix: 'Voix — transcription et synthèse',
+  ivr: 'Serveur vocal interactif',
+  rest: 'API REST synchrone',
+  websocket: 'WebSocket',
+}
+
+export interface CanalAgent {
+  id: string
+  type: TypeCanal
+  nom: string
+  fournisseur: string
+  identifiant: string
+  etat: 'connecte' | 'a_configurer' | 'erreur' | 'indisponible'
+  messages24h: number
+  latenceMs: number
+  /** Le routeur omnicanal recolle les fils d'un même numéro (FONC-06.9). */
+  contexteOmnicanal: boolean
+  agents: string[]
+  note: string
+}
+
+/** Nœud d'un flux d'orchestration (FONC-02). */
+export type TypeNoeud =
+  | 'entree'
+  | 'agent'
+  | 'condition'
+  | 'outil'
+  | 'connaissance'
+  | 'synthese'
+  | 'humain'
+  | 'sortie'
+
+export interface NoeudFlux {
+  id: string
+  type: TypeNoeud
+  nom: string
+  detail: string
+  agentId?: string
+  /** Position dans la grille du studio, en pixels. */
+  x: number
+  y: number
+  executions24h: number
+  latenceMs: number
+  coutPourMille: number
+  tauxErreurPct: number
+  tentatives?: number
+}
+
+export interface LienFlux {
+  de: string
+  vers: string
+  libelle?: string
+  /** Une branche conditionnelle se dessine autrement qu'un enchaînement simple. */
+  conditionnel?: boolean
+}
+
+export interface FluxOrchestration {
+  id: string
+  nom: string
+  description: string
+  espaceId: string
+  statut: 'publie' | 'brouillon' | 'suspendu'
+  declencheur: string
+  noeuds: NoeudFlux[]
+  liens: LienFlux[]
+  executions7j: number
+  dureeMedianeS: number
+  tauxSuccesPct: number
+  coutParExecution: number
+  memoirePartagee: boolean
+  version: string
+  largeur: number
+  hauteur: number
+}

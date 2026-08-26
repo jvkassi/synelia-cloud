@@ -61,7 +61,7 @@ export default function InferenceDediee() {
       <PageHeader
         fil={[
           { label: 'Espace client', href: '/app' },
-          { label: 'IA & Modèles', href: '/app/ia' },
+          { label: 'IA & Agents', href: '/app/ia' },
           { label: 'Inférence dédiée' },
         ]}
         titre="Inférence dédiée"

@@ -126,7 +126,7 @@ export default function ConsommationIA() {
       <PageHeader
         fil={[
           { label: 'Espace client', href: '/app' },
-          { label: 'IA & Modèles', href: '/app/ia' },
+          { label: 'IA & Agents', href: '/app/ia' },
           { label: 'Consommation & coûts' },
         ]}
         titre="Consommation & coûts"

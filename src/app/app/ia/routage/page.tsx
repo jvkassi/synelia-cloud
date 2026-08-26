@@ -50,7 +50,7 @@ export default function RoutageGardeFous() {
       <PageHeader
         fil={[
           { label: 'Espace client', href: '/app' },
-          { label: 'IA & Modèles', href: '/app/ia' },
+          { label: 'IA & Agents', href: '/app/ia' },
           { label: 'Routage & garde-fous' },
         ]}
         titre="Routage & garde-fous"

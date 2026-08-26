@@ -159,7 +159,7 @@ export default function Passerelle() {
       <PageHeader
         fil={[
           { label: 'Espace client', href: '/app' },
-          { label: 'IA & Modèles', href: '/app/ia' },
+          { label: 'IA & Agents', href: '/app/ia' },
           { label: 'Passerelle & clés' },
         ]}
         titre="Passerelle & clés d’accès"

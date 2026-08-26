@@ -72,13 +72,15 @@ export const UNIVERS_CLIENT: UniversNav[] = [
   },
   {
     id: 'ia',
-    nom: 'IA & Modèles',
+    nom: 'IA & Agents',
     sections: [
-      // Même patron que Web Cloud : une entrée de tableau de bord, puis une
-      // section par objet manipulable. La passerelle est le cœur de l'offre —
-      // le catalogue la précède parce qu'on choisit un modèle avant d'ouvrir
-      // un accès pour l'appeler.
+      // L'ordre suit celui du travail : on construit un agent, on l'orchestre,
+      // on le relie au monde — puis viennent les rouages qui le font tourner,
+      // modèles, passerelle, routage, connaissances, GPU et facture.
       { nom: 'Accueil', href: '/app/ia' },
+      { nom: 'Agents', href: '/app/ia/agents' },
+      { nom: 'Orchestration', href: '/app/ia/orchestration' },
+      { nom: 'Outils & canaux', href: '/app/ia/outils' },
       { nom: 'Catalogue de modèles', href: '/app/ia/modeles' },
       { nom: 'Passerelle & clés', href: '/app/ia/passerelle' },
       { nom: 'Routage & garde-fous', href: '/app/ia/routage' },

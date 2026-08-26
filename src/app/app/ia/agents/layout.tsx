@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'IA & Agents',
+  title: 'Agents',
   description:
-    'Passerelle d’inférence unique devant des modèles hébergés à Abidjan et des modèles de fournisseurs externes.',
+    'Rôle, consigne, variables, modèle, outils, connaissances, garde-fous, versions et traces d’exécution de chaque agent.',
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
