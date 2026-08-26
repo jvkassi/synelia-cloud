@@ -27,7 +27,7 @@ export default function Histoire() {
           <>
             Nous avons construit ceci
             <br />
-            <span className="text-m-400">parce que nous en avions besoin.</span>
+            <span className="text-m-600">parce que nous en avions besoin.</span>
           </>
         }
         chapeau="Synelia n’a pas commencé comme hébergeur. Nous intégrions des systèmes, et nous achetions l’hébergement ailleurs — jusqu’au jour où cela nous a coûté trois jours de production chez un client, sans que nous puissions rien y faire."

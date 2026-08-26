@@ -158,6 +158,51 @@ export const UNIVERS_CLIENT: UniversNav[] = [
     ],
   },
   {
+    id: 'ia',
+    nom: 'IA & Agents',
+    pleineLargeur: true,
+    // Même patron que Web Cloud : chaque section liste ses propres ressources
+    // dans son panneau, monté par son `layout.tsx`. Pas de `panneauEspace` ici —
+    // un agent n'appartient pas à un Espace Cloud, il appartient à l'organisation
+    // qui l'exploite, et le déplacer d'un Espace à l'autre n'aurait aucun sens.
+    sections: [
+      // L'accueil et la consommation n'ont pas de panneau : ce sont des tableaux
+      // de bord, ils ne portent sur aucune ressource en particulier.
+      { nom: 'Accueil', href: '/app/ia' },
+      {
+        nom: 'Agents',
+        href: '/app/ia/agents',
+        // L'assistant de création vit hors du panneau : il ne parle d'aucun
+        // agent existant, il en fabrique un.
+        aussi: ['/app/ia/nouveau'],
+        panneau: ['/app/ia/agents'],
+      },
+      {
+        nom: 'Orchestration',
+        href: '/app/ia/orchestration',
+        panneau: ['/app/ia/orchestration'],
+      },
+      {
+        nom: 'Connaissances',
+        href: '/app/ia/connaissances',
+        panneau: ['/app/ia/connaissances'],
+      },
+      {
+        nom: 'Intégrations',
+        href: '/app/ia/integrations',
+        panneau: ['/app/ia/integrations'],
+      },
+      { nom: 'Modèles', href: '/app/ia/modeles', panneau: ['/app/ia/modeles'] },
+      { nom: 'Inférence dédiée', href: '/app/ia/inference', panneau: ['/app/ia/inference'] },
+      { nom: 'Consommation', href: '/app/ia/consommation' },
+      // Les réglages transverses — passerelle, routage, garde-fous, résidence,
+      // budget, coffre — étaient six sections dans la barre. Ils sont devenus
+      // six entrées d'un panneau : on n'ouvre pas un réglage aussi souvent qu'un
+      // agent, et la barre n'a pas à leur donner le même poids.
+      { nom: 'Paramètres', href: '/app/ia/parametres', panneau: ['/app/ia/parametres'] },
+    ],
+  },
+  {
     id: 'web',
     nom: 'Web Cloud',
     pleineLargeur: true,
@@ -216,6 +261,9 @@ export const UNIVERS_SUPER_ADMIN: UniversNav[] = [
     nom: 'Infrastructure',
     sections: [
       { nom: 'Capacité & backends', href: '/admin/capacite' },
+      // Le parc GPU se pilote à part : sa contrainte n'est pas le vCPU mais la
+      // VRAM, et sa marge dépend autant des contrats fournisseurs que du matériel.
+      { nom: 'Parc GPU & IA', href: '/admin/ia' },
       { nom: 'Sites & zones', href: '/admin/sites' },
       { nom: 'Migration inter-backend', href: '/admin/migration' },
     ],

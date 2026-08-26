@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { cn, surfaceMarque } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { SolutionLogo } from '@/components/ui/display'
 import { ButtonLink } from '@/components/ui/button'
 import { MicroLabel } from '@/components/ui/badge'
 
@@ -40,9 +41,11 @@ export function SiteSection({
   className?: string
   id?: string
 }) {
+  // « blanc » et « clair » alternent désormais deux crèmes : le blanc clinique
+  // et le violet très pâle appartenaient à l'ancienne charte froide.
   const fonds = {
-    blanc: 'bg-white',
-    clair: 'bg-p-050',
+    blanc: 'bg-creme',
+    clair: 'bg-creme-2',
     violet: 'bg-p-700',
     'violet-fonce': 'bg-p-900',
   }[fond]
@@ -154,7 +157,14 @@ export function PastilleEtat({
   )
 }
 
-/** Héros court des pages secondaires. */
+/**
+ * Héros court des pages secondaires.
+ *
+ * Passé au crème avec l'ambiance « Ronde & claire » : le halo flou et la grille
+ * appartenaient au héros sombre, et treize pages les portaient. Les pages qui
+ * lui passaient des boutons `inverse` ont été ajustées en conséquence — un
+ * bouton blanc sur crème ne se voit pas.
+ */
 export function HeroCourt({
   surtitre,
   titre,
@@ -169,19 +179,14 @@ export function HeroCourt({
   enfants?: ReactNode
 }) {
   return (
-    <section className="relative overflow-hidden border-b border-g-300 bg-p-900">
-      <span className="absolute inset-0 bg-grid-light opacity-60" aria-hidden />
-      <span
-        className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-m-600/20 blur-3xl"
-        aria-hidden
-      />
-      <Container className="relative py-14 sm:py-16">
-        {surtitre && <MicroLabel className="text-p-300">{surtitre}</MicroLabel>}
-        <h1 className="mt-2 max-w-3xl text-[30px] font-bold leading-[1.12] [font-family:var(--font-display)] text-white sm:text-[42px]">
+    <section className="border-b border-encre-2/10 bg-creme-2">
+      <Container className="py-14 sm:py-16">
+        {surtitre && <MicroLabel className="text-m-600">{surtitre}</MicroLabel>}
+        <h1 className="mt-2 max-w-3xl text-[32px] font-black leading-[1.06] tracking-[-0.02em] [font-family:var(--font-display)] text-encre-2 sm:text-[46px]">
           {titre}
         </h1>
         {chapeau && (
-          <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-p-300">{chapeau}</p>
+          <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-encre-2/70">{chapeau}</p>
         )}
         {actions && <div className="mt-6 flex flex-wrap items-center gap-3">{actions}</div>}
         {enfants}
@@ -442,7 +447,7 @@ export function Citation({
 export function CarrouselLogos({
   logos,
 }: {
-  logos: Array<{ nom: string; initiales: string; teinte: string }>
+  logos: Array<{ nom: string; initiales: string; teinte: string; icone?: string }>
 }) {
   const doubles = [...logos, ...logos]
   return (
@@ -451,20 +456,20 @@ export function CarrouselLogos({
         {doubles.map((l, i) => (
           <div
             key={`${l.nom}-${i}`}
-            className="flex w-40 shrink-0 items-center gap-2.5 rounded-[10px] border border-g-300 bg-white px-3 py-2.5"
+            className="flex w-40 shrink-0 items-center gap-2.5 rounded-[14px] border-2 border-encre-2/10 bg-creme px-3 py-2.5"
           >
-            <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[10.5px] font-bold"
-              style={{ background: surfaceMarque(l.teinte).fond, color: surfaceMarque(l.teinte).texte }}
-            >
-              {l.initiales}
-            </span>
-            <span className="truncate text-[12.5px] font-semibold text-ink">{l.nom}</span>
+            <SolutionLogo initiales={l.initiales} teinte={l.teinte} icone={l.icone} size="sm" />
+            <span className="truncate text-[12.5px] font-semibold text-encre-2">{l.nom}</span>
           </div>
         ))}
       </div>
-      <span className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-white to-transparent" />
-      <span className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white to-transparent" />
+      {/*
+        Les voiles de bord reprennent le fond de la section qui porte le
+        carrousel — `creme-2`. Ils étaient restés en blanc et posaient deux
+        traînées claires sur le crème.
+      */}
+      <span className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-creme-2 to-transparent" />
+      <span className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-creme-2 to-transparent" />
     </div>
   )
 }

@@ -31,13 +31,13 @@ export default function Equipe() {
           <>
             Derrière la supervision 24/7,
             <br />
-            <span className="text-m-400">huit personnes joignables.</span>
+            <span className="text-m-600">huit personnes joignables.</span>
           </>
         }
         chapeau="« Supervision 24/7 avec astreinte » est une phrase que tout le monde écrit. Voici ce qu’elle recouvre chez nous : les personnes, leur site, depuis quand elles sont là, et ce qu’elles font quand votre alerte se déclenche."
         actions={
           <>
-            <ButtonLink href="/entreprises#contact" size="lg" variant="inverse">
+            <ButtonLink href="/entreprises#contact" size="lg" variant="primary">
               Parler à un architecte
             </ButtonLink>
             <Badge tone="ok" dot>

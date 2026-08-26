@@ -15,7 +15,7 @@ décisions déjà prises.
 |---|---|
 | Paquets | `bun install` — **bun 1.4.0**, `bun.lock` fait foi, pas de npm |
 | Développement | `bun run dev` — Next avec Turbopack |
-| Construction | `bun run build` — Turbopack, ~20 s pour 106 routes |
+| Construction | `bun run build` — Turbopack, ~25 s pour 191 routes |
 | Comparaison | `bun run build:webpack` — ~50 s, gardé pour lever un doute |
 | Types | `bun run typecheck` |
 | Lint | `bun run lint` |
@@ -56,7 +56,7 @@ un écran disparu est pire qu'un contrat incomplet.
 
 ### L'audit
 
-`outils/audit.mjs` ouvre les 160 routes de `outils/routes.json` dans Chromium et
+`outils/audit.mjs` ouvre les 191 routes de `outils/routes.json` dans Chromium et
 relève : erreurs console et HTTP, débordement horizontal, contraste sous le seuil
 WCAG AA, boutons sans nom accessible, titres d'onglet laissés par défaut.
 
@@ -276,7 +276,7 @@ Deux barres, pas de barre latérale de navigation. `src/lib/navigation.ts` porte
 modèle ; `topbar.tsx` le rend.
 
 - **Barre 1** : les univers. Client — `Global · Infrastructure · Applications ·
-  Web Cloud · IAM & sécurité`. Super admin — `Pilotage · Clients ·
+  IA & Agents · Web Cloud · IAM & sécurité`. Super admin — `Pilotage · Clients ·
   Infrastructure · Produit · Finance · Exploitation`.
 - **Barre 2** : les sections de l'univers courant.
 
@@ -287,12 +287,12 @@ bas. C'est le seul de cet espace.
 les load balancers, pas le réseau. Le champ `aussi` rattache les routes sans
 onglet propre (`/app/dns` → Domaines, `/app/taches` → Tableau de bord).
 
-### Quatre façons d'occuper toute la largeur
+### Cinq façons d'occuper toute la largeur
 
-Trois univers clients portent des ressources et occupent tout l'écran :
-Infrastructure, Applications, Web Cloud. Côté super admin, l'univers Clients s'y
-ajoute. Mais leur panneau de gauche ne dit pas la même chose, et c'est la
-distinction à ne pas perdre.
+Quatre univers clients portent des ressources et occupent tout l'écran :
+Infrastructure, Applications, Web Cloud, IA & Agents. Côté super admin, l'univers
+Clients s'y ajoute. Mais leur panneau de gauche ne dit pas la même chose, et c'est
+la distinction à ne pas perdre.
 
 **Infrastructure : un contexte.** `panneauEspace: true` sur l'univers. Le panneau
 est un **sélecteur d'Espace Cloud unique**, rigoureusement identique sur toutes
@@ -333,6 +333,12 @@ le panneau liste les *ressources de la section* — domaines, hébergements,
 certificats — et change donc de contenu d'un onglet à l'autre. Ses entrées sont
 des liens vers une fiche.
 
+**IA & Agents : une navigation, comme Web Cloud.** Même forme, pour la même
+raison : il n'y a pas de contexte commun à tout l'univers — un agent, une base de
+connaissances et une clé d'API ne se rattachent à rien de partagé. Voir la section
+« IA & Agents » plus bas pour le détail des neuf onglets et des trois écrans qui
+gardent la pleine largeur sans panneau.
+
 **Clients, côté super admin : une navigation, elle aussi.** Même forme que Web
 Cloud — `pleineLargeur` sur l'univers, `panneau: ['/admin/organisations']` sur son
 unique section, et `app/admin/organisations/layout.tsx` monte la liste des
@@ -341,14 +347,14 @@ journée : sans panneau persistant, chaque saut repasse par la liste. C'est
 `ConteneurAdmin` qui applique `gabarit()` de ce côté, comme `Conteneur` le fait
 côté client.
 
-**Les quatre cas partagent la coquille** `CoquillePanneau`
+**Les cinq cas partagent la coquille** `CoquillePanneau`
 (`src/components/app/cadre-section.tsx`) : panneau collé au bord gauche en
 colonne au-delà de 1024 px, bandeau dépliant en dessous, et c'est le panneau qui
 porte la marge du contenu — d'où l'absence de conteneur de page sur ces routes.
 
 `gabarit()` rend `plein` (sous un panneau, quel qu'il soit), `large` (univers en
-pleine largeur, écran sans panneau : les trois accueils clients, le relais SMTP —
-borné à 1600 px) ou `borne` (1400 px, le reste). `topbar.tsx` s'en sert aussi : les
+pleine largeur, écran sans panneau : les quatre accueils clients, le relais SMTP,
+la consommation IA — borné à 1600 px) ou `borne` (1400 px, le reste). `topbar.tsx` s'en sert aussi : les
 onglets d'un univers en pleine largeur s'alignent sur le bord gauche, là où
 commence le panneau.
 
@@ -388,6 +394,90 @@ Drive · Applications · SSL · Backup · Relais SMTP`.
 Elle évite le défaut des portails qui vendent le nom, l'hébergement et la
 messagerie séparément : chez eux le même nom réapparaît dans trois listes et
 aucune page ne dit tout ce qui le concerne.
+
+### IA & Agents
+
+Neuf sections : `Accueil · Agents · Orchestration · Connaissances · Intégrations ·
+Modèles · Inférence dédiée · Consommation · Paramètres`. Contrepartie
+fournisseur : `/admin/ia`, dans l'univers Infrastructure. Données dans
+`src/lib/mock/ia.ts`.
+
+**Chaque section porte son propre panneau**, sur le patron de Web Cloud —
+`pleineLargeur` sur l'univers, `panneau: ['/prefixe']` sur chaque section, un
+`cadre.tsx` par section qui monte `CadreSection` depuis le `layout.tsx`. Le
+panneau liste les ressources *de la section* : les agents sous Agents, les flux
+sous Orchestration, les bases sous Connaissances, les canaux puis les outils sous
+Intégrations, les modèles, les points d'inférence, les six réglages sous
+Paramètres. Trois écrans font exception et gardent la pleine largeur sans
+panneau : l'Accueil (un tableau de bord ne porte sur aucune ressource),
+Consommation (une facture ne se choisit pas) et l'assistant `/app/ia/nouveau`.
+
+Ce n'est **pas** le patron d'Applications : là-bas le même panneau — les projets —
+est monté sur toutes les sections, parce que la question « de quel projet
+parle-t-on ? » se pose une fois pour tout l'univers. Ici il n'y a pas de contexte
+commun : un agent n'appartient pas à une base de connaissances, et une clé d'API
+ne se rattache à aucun agent. Le panneau change donc de contenu d'un onglet à
+l'autre, et ses entrées sont des liens vers une fiche.
+
+Les six réglages de `Paramètres` — passerelle, coffre-fort fournisseurs, routage,
+garde-fous, résidence, budget — sont une **liste fixe**, pas des ressources qu'on
+crée. Leur ordre suit le trajet d'un appel, et sa racine dit ce qui prime sur
+quoi : résidence, garde-fous d'entrée, routage, quotas, garde-fous de sortie. Un
+réglage plus bas ne contourne jamais un réglage plus haut — c'est ce qui permet
+de déléguer le routage sans déléguer la conformité.
+
+L'univers répond au cahier des charges MIA (Orange CI, 39 fonctions en 6 modules)
+dont la couverture fonction par fonction est tenue dans `PLAN-AGENTS-MIA.md`.
+
+**Trois couches, dans cet ordre.** Un agent est un rôle, une consigne, un modèle,
+des outils et des limites. Un flux enchaîne plusieurs agents. La passerelle, les
+modèles, les GPU et la facture sont la plomberie sous les deux.
+
+**La résidence est la propriété structurante.** Chaque modèle porte un champ
+`hebergement` (`souverain` ou `externe`) et chaque requête une classe de données
+(`publique · interne · personnelle · reglementee`). `MATRICE_RESIDENCE` croise les
+deux. Un écran qui parle d'un modèle externe doit dire où part la requête — c'est
+la même honnêteté que `/souverainete` pour les socles en sortie.
+
+**La consigne oriente, la plateforme empêche.** Écrire « ne demande jamais un mot
+de passe » réduit le risque sans le supprimer. Ce qui doit être impossible se règle
+ailleurs : garde-fou en entrée, portée de l'outil vérifiée côté API, classe de
+données. Chaque écran doit rendre cette différence visible — c'est exactement là
+que les plateformes d'agents déçoivent en production.
+
+**Deux étapes ne se négocient pas dans un flux** : l'anonymisation (Presidio, en
+coupure avant tout appel modèle, masquage réversible, voix comprise) et le filtrage
+par habilitation (portée dérivée de l'utilisateur final — jamais de l'agent —
+appliquée **avant** le calcul de similarité). Elles portent `verrouillee: true` :
+ni déplaçables, ni supprimables, absentes du sélecteur de pièces. Faire dépendre
+l'étanchéité d'un réglage reviendrait à ne pas l'avoir.
+
+**La pile est nommée** dans les flux, pas décrite en générique : Mastra pour les
+agents, LiteLLM pour le routage et les quotas, vLLM pour servir les modèles ouverts,
+Docling pour l'extraction, BGE-M3 et Qdrant pour la connaissance, Whisper et Piper
+pour la voix, Asterisk pour le SIP, Keycloak pour l'identité, Presidio pour
+l'anonymisation, OpenBao pour les secrets, Promptfoo pour le rejeu du corpus,
+Argo CD pour la bascule bleu / vert.
+
+**Le studio d'orchestration suit le patron d'Activepieces**, pas celui d'un canevas
+libre : colonne verticale de haut en bas, cartes de 260 px, bouton `+` entre chaque
+étape, glisser-déposer d'une carte sur un `+` pour la déplacer (déposer ailleurs ne
+fait rien), branches nommées avec leur part de trafic et une branche de repli,
+corps de boucle encadré, panneau de configuration à droite. Le flux est un **arbre**
+(`EtapeFlux` avec `branches` et `corps`) : la disposition se calcule au rendu, elle
+n'est pas une donnée — c'est ce qui permet d'insérer une étape sans rien déplacer.
+Le canevas se recentre au montage, sinon un écran étroit s'ouvre à côté du flux.
+
+**Pas d'interface de conversation.** C'est la règle « ne jamais reconstruire l'écran
+principal d'un produit existant » appliquée ici : un agent se construit, s'observe
+et se borne dans le portail ; il se parle sur son canal publié — widget, WhatsApp,
+SMS, voix, API. Le portail n'affiche pas non plus le contenu des bases de
+connaissances : ni visionneuse, ni recherche plein texte.
+
+**Une fiche ouverte depuis un panneau relit son entité par identifiant** et tolère
+son absence : `[id]/page.tsx` passe l'identifiant, `[id]/vue.tsx` est le client qui
+cherche dans la collection et rend un `EmptyState` nommé quand il ne trouve pas.
+Pas de `notFound()`, pas de `!` sur un `find`, et la garde après tous les hooks.
 
 ## Décisions déjà arbitrées
 

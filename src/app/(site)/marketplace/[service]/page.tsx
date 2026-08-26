@@ -65,22 +65,21 @@ export default async function FicheServicePublique({
   return (
     <>
       {/* Bloc 1 — en-tête */}
-      <section className="relative overflow-hidden border-b border-g-300 bg-p-900">
-        <span className="absolute inset-0 bg-grid-light opacity-60" aria-hidden />
-        <Container className="relative py-12 sm:py-14">
+      <section className="border-b border-encre-2/10 bg-creme-2">
+        <Container className="py-12 sm:py-14">
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="min-w-0 max-w-2xl">
               <div className="flex items-center gap-3">
-                <SolutionLogo initiales={s.logoInitiales} teinte={s.logoTeinte} size="lg" />
+                <SolutionLogo initiales={s.logoInitiales} teinte={s.logoTeinte} icone={s.icone} size="lg" />
                 <div>
-                  <MicroLabel className="text-p-300">{CATEGORIE_LABEL[s.categorie]}</MicroLabel>
-                  <h1 className="mt-1 text-[30px] font-bold leading-none [font-family:var(--font-display)] text-white sm:text-[38px]">
+                  <MicroLabel className="text-m-600">{CATEGORIE_LABEL[s.categorie]}</MicroLabel>
+                  <h1 className="mt-1 text-[32px] font-black leading-none [font-family:var(--font-display)] text-encre-2 sm:text-[40px]">
                     {s.nom}
                   </h1>
                 </div>
               </div>
-              <p className="mt-4 text-[15px] font-semibold text-m-400">{s.pitch}</p>
-              <p className="mt-2.5 text-[14px] leading-relaxed text-p-300">{s.description}</p>
+              <p className="mt-4 text-[15px] font-bold text-m-600">{s.pitch}</p>
+              <p className="mt-2.5 text-[14px] leading-relaxed text-encre-2/70">{s.description}</p>
               <div className="mt-5 flex flex-wrap items-center gap-2">
                 <Badge tone={s.certifie ? 'ok' : 'neutral'}>
                   {s.certifie ? 'Certifié Synelia' : 'Communauté'}
@@ -91,16 +90,16 @@ export default async function FicheServicePublique({
                     {m === 'dedie' ? 'Dédié' : 'Mutualisé'}
                   </Badge>
                 ))}
-                <span className="text-[12px] text-p-300">SLA {s.sla}</span>
+                <span className="text-[12px] text-encre-2/65">SLA {s.sla}</span>
               </div>
             </div>
 
-            <div className="w-full max-w-xs rounded-[14px] border border-p-400/50 bg-white/5 p-5 backdrop-blur-sm">
-              <MicroLabel className="text-p-300">Prix d’entrée</MicroLabel>
-              <p className="tnum mt-2 text-[28px] font-bold leading-none [font-family:var(--font-display)] text-white">
+            <div className="w-full max-w-xs rounded-[20px] border border-encre-2/10 bg-creme p-5">
+              <MicroLabel className="text-m-600">Prix d’entrée</MicroLabel>
+              <p className="tnum mt-2 text-[28px] font-black leading-none [font-family:var(--font-display)] text-p-600">
                 {prixEntree ? money(prixEntree.valeur) : 'Sur devis'}
                 {prixEntree && (
-                  <span className="block text-[12px] font-semibold text-p-300">
+                  <span className="block text-[12px] font-semibold text-encre-2/60">
                     {prixEntree.unite}
                   </span>
                 )}
@@ -109,12 +108,12 @@ export default async function FicheServicePublique({
                 href="/signup"
                 fullWidth
                 size="lg"
-                variant="inverse" className="mt-4"
+                variant="primary" className="mt-4"
                 iconAfter={<ArrowRight size={15} />}
               >
                 Souscrire
               </ButtonLink>
-              <p className="mt-2.5 text-[11px] leading-relaxed text-p-300">
+              <p className="mt-2.5 text-[11px] leading-relaxed text-encre-2/60">
                 Vous serez invité à créer un compte, puis l’assistant de souscription en six étapes
                 vous guidera : palier, mode et site, sièges, domaine, SSO et sauvegarde.
               </p>

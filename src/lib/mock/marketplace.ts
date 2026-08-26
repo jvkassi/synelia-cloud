@@ -70,7 +70,7 @@ export const CATALOGUE: CatalogService[] = [
     nom: 'Drive Pro',
     solutionOSS: 'Nextcloud',
     categorie: 'collaboration',
-    logoUrl: '/logos/nextcloud.svg',
+    icone: 'drive-pro',
     logoTeinte: '#0082C9',
     logoInitiales: 'NC',
     description:
@@ -105,7 +105,7 @@ export const CATALOGUE: CatalogService[] = [
     nom: 'Email Pro',
     solutionOSS: 'Grommunio',
     categorie: 'communication',
-    logoUrl: '/logos/grommunio.svg',
+    icone: 'email-pro',
     logoTeinte: '#7B2D8E',
     logoInitiales: 'GR',
     description:
@@ -141,7 +141,7 @@ export const CATALOGUE: CatalogService[] = [
     nom: 'Visio & Chat',
     solutionOSS: 'Jitsi Meet · Rocket.Chat',
     categorie: 'communication',
-    logoUrl: '/logos/jitsi.svg',
+    icone: 'visio',
     logoTeinte: '#1D76BA',
     logoInitiales: 'JM',
     description:
@@ -176,7 +176,7 @@ export const CATALOGUE: CatalogService[] = [
     nom: 'GED',
     solutionOSS: 'Mayan EDMS',
     categorie: 'collaboration',
-    logoUrl: '/logos/mayan.svg',
+    icone: 'ged',
     logoTeinte: '#2E7D32',
     logoInitiales: 'MY',
     description:
@@ -209,7 +209,7 @@ export const CATALOGUE: CatalogService[] = [
     nom: 'ERP',
     solutionOSS: 'Odoo Community',
     categorie: 'metier',
-    logoUrl: '/logos/odoo.svg',
+    icone: 'erp',
     logoTeinte: '#714B67',
     logoInitiales: 'OD',
     description:
@@ -243,7 +243,7 @@ export const CATALOGUE: CatalogService[] = [
     nom: 'CRM',
     solutionOSS: 'EspoCRM',
     categorie: 'metier',
-    logoUrl: '/logos/espocrm.svg',
+    icone: 'crm',
     logoTeinte: '#25A0DA',
     logoInitiales: 'ES',
     description:
@@ -275,7 +275,7 @@ export const CATALOGUE: CatalogService[] = [
     nom: 'WordPress managé',
     solutionOSS: 'WordPress',
     categorie: 'web',
-    logoUrl: '/logos/wordpress.svg',
+    icone: 'wordpress',
     logoTeinte: '#21759B',
     logoInitiales: 'WP',
     description:
@@ -309,7 +309,7 @@ export const CATALOGUE: CatalogService[] = [
     nom: 'PrestaShop managé',
     solutionOSS: 'PrestaShop',
     categorie: 'web',
-    logoUrl: '/logos/prestashop.svg',
+    icone: 'prestashop',
     logoTeinte: '#DF0067',
     logoInitiales: 'PS',
     description:
@@ -341,7 +341,7 @@ export const CATALOGUE: CatalogService[] = [
     nom: 'BI & Tableaux de bord',
     solutionOSS: 'Metabase',
     categorie: 'donnees',
-    logoUrl: '/logos/metabase.svg',
+    icone: 'bi',
     logoTeinte: '#509EE3',
     logoInitiales: 'MB',
     description:
@@ -373,7 +373,7 @@ export const CATALOGUE: CatalogService[] = [
     nom: 'Forge logicielle',
     solutionOSS: 'GitLab CE',
     categorie: 'technique',
-    logoUrl: '/logos/gitlab.svg',
+    icone: 'forge',
     logoTeinte: '#FC6D26',
     logoInitiales: 'GL',
     description:
@@ -405,7 +405,7 @@ export const CATALOGUE: CatalogService[] = [
     nom: 'Coffre de mots de passe',
     solutionOSS: 'Vaultwarden',
     categorie: 'technique',
-    logoUrl: '/logos/vaultwarden.svg',
+    icone: 'coffre',
     logoTeinte: '#175DDC',
     logoInitiales: 'VW',
     description:
@@ -437,7 +437,7 @@ export const CATALOGUE: CatalogService[] = [
     nom: 'Automatisation',
     solutionOSS: 'n8n',
     categorie: 'technique',
-    logoUrl: '/logos/n8n.svg',
+    icone: 'automatisation',
     logoTeinte: '#EA4B71',
     logoInitiales: 'N8',
     description:
@@ -469,7 +469,7 @@ export const CATALOGUE: CatalogService[] = [
     nom: 'Analytics web',
     solutionOSS: 'Matomo',
     categorie: 'donnees',
-    logoUrl: '/logos/matomo.svg',
+    icone: 'analytics-web',
     logoTeinte: '#3152A0',
     logoInitiales: 'MT',
     description:

@@ -32,7 +32,7 @@ export default function Souverainete() {
           <>
             Trois niveaux.
             <br />
-            <span className="text-m-400">Deux atteints, un en transition.</span>
+            <span className="text-m-600">Deux atteints, un en transition.</span>
           </>
         }
         chapeau="« Cloud souverain » ne veut rien dire tant qu’on ne précise pas de quelle souveraineté on parle. Il y en a trois : celle des données, celle des opérations, celle du logiciel. Voici notre position sur chacune — y compris là où nous ne sommes pas encore arrivés."

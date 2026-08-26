@@ -16,6 +16,7 @@ export * from './hebergement'
 export * from './webcloud'
 export * from './ops'
 export * from './humain'
+export * from './ia'
 export * from './vitrine'
 export * from './workflows'
 

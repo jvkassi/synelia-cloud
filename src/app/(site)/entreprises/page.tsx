@@ -53,7 +53,7 @@ export default function Entreprises() {
           <>
             Pour les DSI qui doivent
             <br />
-            <span className="text-m-400">prouver, pas promettre.</span>
+            <span className="text-m-600">prouver, pas promettre.</span>
           </>
         }
         chapeau="Appels d’offres, audits, comités de sécurité : à un moment, il faut produire des preuves. Attestations de résidence, rapports d’exercice PRA avec RTO constaté, matrice de rôles publiée, journal d’audit qui enregistre aussi les refus. C’est ce que nous construisons."

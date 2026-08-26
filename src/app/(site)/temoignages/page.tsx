@@ -29,14 +29,19 @@ export default function Temoignages() {
           <>
             Quatre migrations racontées,
             <br />
-            <span className="text-m-400">accrocs compris.</span>
+            <span className="text-m-600">accrocs compris.</span>
           </>
         }
         chapeau="Un témoignage sans accroc ne se lit pas : personne ne migre quatre cents boîtes aux lettres sans mauvaise surprise. Chaque récit dit donc aussi ce qui a dérapé, et de qui c’était la faute."
         actions={
-          <Badge tone="neutral">
+          /*
+            Une phrase de soixante-six caractères n'est pas une étiquette :
+            `Badge` porte `whitespace-nowrap` — correct pour un libellé court —
+            et celle-ci débordait de 38 px à 390 px. C'est une légende.
+          */
+          <p className="text-[12.5px] font-semibold text-encre-2/60">
             Organisations anonymisées · ordres de grandeur réellement constatés
-          </Badge>
+          </p>
         }
       />
 

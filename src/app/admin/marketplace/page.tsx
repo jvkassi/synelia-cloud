@@ -199,7 +199,7 @@ export default function MarketplaceAdmin() {
                 <Card key={c.slug} className="flex flex-col" hover>
                   <div className="flex items-start justify-between gap-3">
                     <span className="flex min-w-0 items-center gap-2.5">
-                      <SolutionLogo initiales={c.logoInitiales} teinte={c.logoTeinte} size="md" />
+                      <SolutionLogo initiales={c.logoInitiales} teinte={c.logoTeinte} icone={c.icone} size="md" />
                       <span className="min-w-0">
                         <span className="block truncate text-[13px] font-bold text-ink">{c.nom}</span>
                         <span className="block truncate text-[11px] text-g-500">{c.solutionOSS}</span>
@@ -346,7 +346,7 @@ export default function MarketplaceAdmin() {
                     return (
                       <span className="flex items-center gap-2">
                         {c && (
-                          <SolutionLogo initiales={c.logoInitiales} teinte={c.logoTeinte} size="sm" />
+                          <SolutionLogo initiales={c.logoInitiales} teinte={c.logoTeinte} icone={c.icone} size="sm" />
                         )}
                         <span className="min-w-0">
                           <span className="block truncate text-[12px] font-semibold text-ink">
@@ -539,7 +539,7 @@ export default function MarketplaceAdmin() {
                   titre={
                     <span className="flex flex-wrap items-center gap-2">
                       {solution && (
-                        <SolutionLogo initiales={solution.logoInitiales} teinte={solution.logoTeinte} size="sm" />
+                        <SolutionLogo initiales={solution.logoInitiales} teinte={solution.logoTeinte} icone={solution.icone} size="sm" />
                       )}
                       <span>{c.nom}</span>
                     </span>
@@ -857,7 +857,7 @@ export default function MarketplaceAdmin() {
                     <tr key={c.slug} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2.5">
                         <span className="flex items-center gap-2">
-                          <SolutionLogo initiales={c.logoInitiales} teinte={c.logoTeinte} size="sm" />
+                          <SolutionLogo initiales={c.logoInitiales} teinte={c.logoTeinte} icone={c.icone} size="sm" />
                           <span className="min-w-0">
                             <span className="block text-[12px] font-semibold text-ink">{c.nom}</span>
                             <span className="block text-[10.5px] text-g-500">{c.solutionOSS}</span>
