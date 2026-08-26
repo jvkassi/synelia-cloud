@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
+import { CadreConnaissances } from './cadre'
 
 export const metadata: Metadata = {
-  title: 'Bases de connaissances',
+  title: 'Connaissances',
   description:
-    'Collections vectorielles alimentées depuis vos sources : documents indexés, fraîcheur, modèle de vectorisation et accès.',
+    'Collections vectorielles alimentées depuis vos sources : documents indexés, fraîcheur, découpage, habilitations et recherche.',
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return children
+  return <CadreConnaissances>{children}</CadreConnaissances>
 }

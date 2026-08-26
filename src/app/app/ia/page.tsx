@@ -7,7 +7,6 @@ import {
   Cpu,
   KeyRound,
   Plug,
-  Route,
   Wallet,
   Workflow,
 } from 'lucide-react'
@@ -50,39 +49,25 @@ const SECTIONS = [
       'Plusieurs agents qui se passent le relais : enchaînement, branches, exécution parallèle, reprise sur erreur, validation humaine.',
   },
   {
-    href: '/app/ia/outils',
-    titre: 'Outils & canaux',
+    href: '/app/ia/connaissances',
+    titre: 'Connaissances',
+    icone: <BrainCircuit size={17} />,
+    description:
+      'Vos documents indexés pour que vos agents les interrogent. Nous indexons la source, nous ne la dupliquons pas.',
+  },
+  {
+    href: '/app/ia/integrations',
+    titre: 'Intégrations',
     icone: <Plug size={17} />,
     description:
-      'Ce qu’un agent peut appeler — API internes, serveurs MCP — et par où les gens l’atteignent : WhatsApp, SMS, voix, REST.',
+      'Par où les gens atteignent un agent — WhatsApp, SMS, voix, SIP, REST — et ce qu’un agent peut appeler : API internes, serveurs MCP.',
   },
   {
     href: '/app/ia/modeles',
-    titre: 'Catalogue de modèles',
+    titre: 'Modèles',
     icone: <Boxes size={17} />,
     description:
       'Ce qui est disponible, où le calcul a lieu, combien coûte un million de jetons et quelle latence attendre.',
-  },
-  {
-    href: '/app/ia/passerelle',
-    titre: 'Passerelle & clés',
-    icone: <KeyRound size={17} />,
-    description:
-      'Une URL, une clé par application, un quota et un plafond de dépense par clé. Compatible avec les bibliothèques OpenAI.',
-  },
-  {
-    href: '/app/ia/routage',
-    titre: 'Routage & garde-fous',
-    icone: <Route size={17} />,
-    description:
-      'Quel modèle répond à quelle requête, vers quoi basculer en cas de panne, et ce qui ne doit jamais quitter le territoire.',
-  },
-  {
-    href: '/app/ia/connaissances',
-    titre: 'Bases de connaissances',
-    icone: <BrainCircuit size={17} />,
-    description:
-      'Vos documents indexés pour que vos applications les interrogent. Nous indexons la source, nous ne la dupliquons pas.',
   },
   {
     href: '/app/ia/inference',
@@ -93,10 +78,17 @@ const SECTIONS = [
   },
   {
     href: '/app/ia/consommation',
-    titre: 'Consommation & coûts',
+    titre: 'Consommation',
     icone: <Wallet size={17} />,
     description:
-      'Jetons et FCFA par modèle, par clé et par jour, plafond mensuel et comparaison avec un scénario tout externe.',
+      'Jetons et FCFA par modèle, par clé et par jour, et comparaison avec un scénario tout externe.',
+  },
+  {
+    href: '/app/ia/parametres',
+    titre: 'Paramètres',
+    icone: <KeyRound size={17} />,
+    description:
+      'Passerelle et clés, coffre-fort fournisseurs, routage, garde-fous, résidence des données, budget. Ce qui s’applique à toute l’organisation.',
   },
 ]
 
@@ -198,7 +190,7 @@ export default function AccueilIA() {
             {agentsPublies.map((a) => (
               <Link
                 key={a.id}
-                href="/app/ia/agents"
+                href={`/app/ia/agents/${a.id}`}
                 className="rounded-[8px] border border-g-300 px-3 py-2.5 transition-colors hover:border-p-400"
               >
                 <span className="flex items-center gap-2.5">

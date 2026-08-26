@@ -160,6 +160,7 @@ export default function Passerelle() {
         fil={[
           { label: 'Espace client', href: '/app' },
           { label: 'IA & Agents', href: '/app/ia' },
+          { label: 'Paramètres', href: '/app/ia/parametres' },
           { label: 'Passerelle & clés' },
         ]}
         titre="Passerelle & clés d’accès"
@@ -310,54 +311,6 @@ curl ${PASSERELLE_IA.base}/models \\
         </Card>
       </div>
 
-      <Card>
-        <CardHeader
-          titre="Coffre-fort des clés fournisseurs"
-          sousTitre="Les clés des éditeurs étrangers sont détenues par Synelia, chiffrées au repos, et ne sont jamais exposées à vos applications : vous appelez la passerelle avec votre propre clé, elle appelle le fournisseur avec la sienne."
-          actions={
-            <Badge tone="violet" size="sm">
-              <Lock size={10} className="mr-1 inline" aria-hidden />
-              Chiffré au repos
-            </Badge>
-          }
-        />
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[680px] text-left">
-            <thead>
-              <tr className="border-b border-g-300 bg-g-050">
-                <th className="type-micro px-3 py-2.5 text-g-500">Fournisseur</th>
-                <th className="type-micro px-3 py-2.5 text-g-500">Empreinte</th>
-                <th className="type-micro px-3 py-2.5 text-g-500">Portée</th>
-                <th className="type-micro px-3 py-2.5 text-g-500">Ajoutée</th>
-                <th className="type-micro px-3 py-2.5 text-g-500">Rotation</th>
-                <th className="type-micro px-3 py-2.5 text-g-500">État</th>
-              </tr>
-            </thead>
-            <tbody>
-              {COFFRE_CLES_FOURNISSEURS.map((c) => (
-                <tr key={c.fournisseur} className="border-b border-g-100 last:border-0">
-                  <td className="px-3 py-3 text-[12.5px] font-semibold text-ink">{c.fournisseur}</td>
-                  <td className="px-3 py-3 font-mono text-[11.5px] text-g-500">{c.empreinte}</td>
-                  <td className="px-3 py-3 text-[12px] text-g-700">{c.portee}</td>
-                  <td className="px-3 py-3 text-[12px] text-g-500">{dateCourte(c.ajoutee)}</td>
-                  <td className="px-3 py-3 text-[12px] text-g-500">{dateCourte(c.rotation)}</td>
-                  <td className="px-3 py-3">
-                    <Badge tone={c.statut === 'valide' ? 'ok' : 'warn'} dot size="sm">
-                      {c.statut === 'valide' ? 'Valide' : 'À renouveler'}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <Callout ton="info" className="mt-4" titre="Pourquoi ces clés ne sont pas les vôtres">
-          Mutualiser les contrats cadres vous évite d’ouvrir un compte chez chaque éditeur, de
-          négocier quatre engagements et d’exposer quatre secrets de plus. La contrepartie est
-          assumée : vous ne voyez pas ces clés, et vous dépendez de nous pour leur rotation. Les
-          deux échéances de septembre et d’août sont suivies par l’exploitation, pas par vous.
-        </Callout>
-      </Card>
 
       <Modal
         open={creation}

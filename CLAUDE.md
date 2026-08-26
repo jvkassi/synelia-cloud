@@ -15,7 +15,7 @@ décisions déjà prises.
 |---|---|
 | Paquets | `bun install` — **bun 1.4.0**, `bun.lock` fait foi, pas de npm |
 | Développement | `bun run dev` — Next avec Turbopack |
-| Construction | `bun run build` — Turbopack, ~25 s pour 176 routes |
+| Construction | `bun run build` — Turbopack, ~25 s pour 191 routes |
 | Comparaison | `bun run build:webpack` — ~50 s, gardé pour lever un doute |
 | Types | `bun run typecheck` |
 | Lint | `bun run lint` |
@@ -56,7 +56,7 @@ un écran disparu est pire qu'un contrat incomplet.
 
 ### L'audit
 
-`outils/audit.mjs` ouvre les 176 routes de `outils/routes.json` dans Chromium et
+`outils/audit.mjs` ouvre les 191 routes de `outils/routes.json` dans Chromium et
 relève : erreurs console et HTTP, débordement horizontal, contraste sous le seuil
 WCAG AA, boutons sans nom accessible, titres d'onglet laissés par défaut.
 
@@ -249,12 +249,12 @@ bas. C'est le seul de cet espace.
 les load balancers, pas le réseau. Le champ `aussi` rattache les routes sans
 onglet propre (`/app/dns` → Domaines, `/app/taches` → Tableau de bord).
 
-### Quatre façons d'occuper toute la largeur
+### Cinq façons d'occuper toute la largeur
 
-Trois univers clients portent des ressources et occupent tout l'écran :
-Infrastructure, Applications, Web Cloud. Côté super admin, l'univers Clients s'y
-ajoute. Mais leur panneau de gauche ne dit pas la même chose, et c'est la
-distinction à ne pas perdre.
+Quatre univers clients portent des ressources et occupent tout l'écran :
+Infrastructure, Applications, Web Cloud, IA & Agents. Côté super admin, l'univers
+Clients s'y ajoute. Mais leur panneau de gauche ne dit pas la même chose, et c'est
+la distinction à ne pas perdre.
 
 **Infrastructure : un contexte.** `panneauEspace: true` sur l'univers. Le panneau
 est un **sélecteur d'Espace Cloud unique**, rigoureusement identique sur toutes
@@ -295,6 +295,12 @@ le panneau liste les *ressources de la section* — domaines, hébergements,
 certificats — et change donc de contenu d'un onglet à l'autre. Ses entrées sont
 des liens vers une fiche.
 
+**IA & Agents : une navigation, comme Web Cloud.** Même forme, pour la même
+raison : il n'y a pas de contexte commun à tout l'univers — un agent, une base de
+connaissances et une clé d'API ne se rattachent à rien de partagé. Voir la section
+« IA & Agents » plus bas pour le détail des neuf onglets et des trois écrans qui
+gardent la pleine largeur sans panneau.
+
 **Clients, côté super admin : une navigation, elle aussi.** Même forme que Web
 Cloud — `pleineLargeur` sur l'univers, `panneau: ['/admin/organisations']` sur son
 unique section, et `app/admin/organisations/layout.tsx` monte la liste des
@@ -303,14 +309,14 @@ journée : sans panneau persistant, chaque saut repasse par la liste. C'est
 `ConteneurAdmin` qui applique `gabarit()` de ce côté, comme `Conteneur` le fait
 côté client.
 
-**Les quatre cas partagent la coquille** `CoquillePanneau`
+**Les cinq cas partagent la coquille** `CoquillePanneau`
 (`src/components/app/cadre-section.tsx`) : panneau collé au bord gauche en
 colonne au-delà de 1024 px, bandeau dépliant en dessous, et c'est le panneau qui
 porte la marge du contenu — d'où l'absence de conteneur de page sur ces routes.
 
 `gabarit()` rend `plein` (sous un panneau, quel qu'il soit), `large` (univers en
-pleine largeur, écran sans panneau : les trois accueils clients, le relais SMTP —
-borné à 1600 px) ou `borne` (1400 px, le reste). `topbar.tsx` s'en sert aussi : les
+pleine largeur, écran sans panneau : les quatre accueils clients, le relais SMTP,
+la consommation IA — borné à 1600 px) ou `borne` (1400 px, le reste). `topbar.tsx` s'en sert aussi : les
 onglets d'un univers en pleine largeur s'alignent sur le bord gauche, là où
 commence le panneau.
 
@@ -353,10 +359,34 @@ aucune page ne dit tout ce qui le concerne.
 
 ### IA & Agents
 
-Dix sections : `Accueil · Agents · Orchestration · Outils & canaux · Catalogue de
-modèles · Passerelle & clés · Routage & garde-fous · Bases de connaissances ·
-Inférence dédiée · Consommation & coûts`. Contrepartie fournisseur : `/admin/ia`,
-dans l'univers Infrastructure. Données dans `src/lib/mock/ia.ts`.
+Neuf sections : `Accueil · Agents · Orchestration · Connaissances · Intégrations ·
+Modèles · Inférence dédiée · Consommation · Paramètres`. Contrepartie
+fournisseur : `/admin/ia`, dans l'univers Infrastructure. Données dans
+`src/lib/mock/ia.ts`.
+
+**Chaque section porte son propre panneau**, sur le patron de Web Cloud —
+`pleineLargeur` sur l'univers, `panneau: ['/prefixe']` sur chaque section, un
+`cadre.tsx` par section qui monte `CadreSection` depuis le `layout.tsx`. Le
+panneau liste les ressources *de la section* : les agents sous Agents, les flux
+sous Orchestration, les bases sous Connaissances, les canaux puis les outils sous
+Intégrations, les modèles, les points d'inférence, les six réglages sous
+Paramètres. Trois écrans font exception et gardent la pleine largeur sans
+panneau : l'Accueil (un tableau de bord ne porte sur aucune ressource),
+Consommation (une facture ne se choisit pas) et l'assistant `/app/ia/nouveau`.
+
+Ce n'est **pas** le patron d'Applications : là-bas le même panneau — les projets —
+est monté sur toutes les sections, parce que la question « de quel projet
+parle-t-on ? » se pose une fois pour tout l'univers. Ici il n'y a pas de contexte
+commun : un agent n'appartient pas à une base de connaissances, et une clé d'API
+ne se rattache à aucun agent. Le panneau change donc de contenu d'un onglet à
+l'autre, et ses entrées sont des liens vers une fiche.
+
+Les six réglages de `Paramètres` — passerelle, coffre-fort fournisseurs, routage,
+garde-fous, résidence, budget — sont une **liste fixe**, pas des ressources qu'on
+crée. Leur ordre suit le trajet d'un appel, et sa racine dit ce qui prime sur
+quoi : résidence, garde-fous d'entrée, routage, quotas, garde-fous de sortie. Un
+réglage plus bas ne contourne jamais un réglage plus haut — c'est ce qui permet
+de déléguer le routage sans déléguer la conformité.
 
 L'univers répond au cahier des charges MIA (Orange CI, 39 fonctions en 6 modules)
 dont la couverture fonction par fonction est tenue dans `PLAN-AGENTS-MIA.md`.
@@ -406,9 +436,10 @@ et se borne dans le portail ; il se parle sur son canal publié — widget, What
 SMS, voix, API. Le portail n'affiche pas non plus le contenu des bases de
 connaissances : ni visionneuse, ni recherche plein texte.
 
-Le catalogue de modèles reste **maître-détail dans la page** (cartes + `Tabs`), pas
-en panneau persistant : on compare des modèles avant d'en ouvrir un. L'univers garde
-la borne de 1400 px.
+**Une fiche ouverte depuis un panneau relit son entité par identifiant** et tolère
+son absence : `[id]/page.tsx` passe l'identifiant, `[id]/vue.tsx` est le client qui
+cherche dans la collection et rend un `EmptyState` nommé quand il ne trouve pas.
+Pas de `notFound()`, pas de `!` sur un `find`, et la garde après tous les hooks.
 
 ## Décisions déjà arbitrées
 

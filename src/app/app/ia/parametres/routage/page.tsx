@@ -14,12 +14,6 @@ import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/
 import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
 
-const ONGLETS = [
-  { id: 'regles', label: 'Règles de routage' },
-  { id: 'gardefous', label: 'Garde-fous' },
-  { id: 'residence', label: 'Résidence des données' },
-]
-
 const LIBELLE_ACTION = {
   bloquer: 'Bloque la requête',
   masquer: 'Masque avant l’appel',
@@ -30,9 +24,8 @@ const TON_ACTION = { bloquer: 'err', masquer: 'violet', journaliser: 'info' } as
 
 const LIBELLE_SENS = { entree: 'Entrée', sortie: 'Sortie', les_deux: 'Entrée et sortie' } as const
 
-export default function RoutageGardeFous() {
+export default function ReglesRoutage() {
   const { autorise, refus, pousser } = useApp()
-  const [onglet, setOnglet] = useState('regles')
   const [regles, setRegles] = useState(() =>
     Object.fromEntries(REGLES_ROUTAGE.map((r) => [r.id, r.actif])),
   )
@@ -51,10 +44,11 @@ export default function RoutageGardeFous() {
         fil={[
           { label: 'Espace client', href: '/app' },
           { label: 'IA & Agents', href: '/app/ia' },
-          { label: 'Routage & garde-fous' },
+          { label: 'Paramètres', href: '/app/ia/parametres' },
+          { label: 'Règles de routage' },
         ]}
-        titre="Routage & garde-fous"
-        sousTitre="Vos applications demandent une capacité, pas un modèle précis. Les règles ci-dessous décident lequel répond, vers quoi basculer quand il ne répond plus, et ce qui n’a pas le droit de sortir du territoire."
+        titre="Règles de routage"
+        sousTitre="Vos applications demandent une capacité, pas un modèle précis. Ces règles décident lequel répond, et vers quoi basculer quand il ne répond plus."
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -79,9 +73,6 @@ export default function RoutageGardeFous() {
         />
       </div>
 
-      <Tabs tabs={ONGLETS} active={onglet} onChange={setOnglet} />
-
-      {onglet === 'regles' && (
         <div className="space-y-4">
           <Card>
             <CardHeader
@@ -214,149 +205,6 @@ export default function RoutageGardeFous() {
             repli, c’est une panne différée.
           </Callout>
         </div>
-      )}
-
-      {onglet === 'gardefous' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {GARDE_FOUS.map((g) => (
-              <Card key={g.id}>
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <span className="min-w-0">
-                    <span className="block text-[13.5px] font-bold text-ink">{g.nom}</span>
-                    <span className="mt-1 flex flex-wrap gap-1.5">
-                      <Badge tone={TON_ACTION[g.action]} size="sm">
-                        {LIBELLE_ACTION[g.action]}
-                      </Badge>
-                      <Badge tone="neutral" size="sm">
-                        {LIBELLE_SENS[g.sens]}
-                      </Badge>
-                    </span>
-                  </span>
-                  <span className="tnum shrink-0 text-right">
-                    <span className="block text-[15px] font-bold text-ink">
-                      {num(g.declenchements24h)}
-                    </span>
-                    <span className="type-micro block text-g-500">déclenchements 24 h</span>
-                  </span>
-                </div>
-                <p className="mt-3 text-[12.5px] leading-relaxed text-g-500">{g.description}</p>
-                <div className="mt-3 border-t border-g-100 pt-3">
-                  <GatedAction autorise={peutModifier} message={refus('ia.routing.update')}>
-                    <Switch
-                      checked={gardes[g.id]}
-                      onChange={(v) => setGardes((s) => ({ ...s, [g.id]: v }))}
-                      label={gardes[g.id] ? 'Appliqué à toutes les clés' : 'Inactif'}
-                    />
-                  </GatedAction>
-                </div>
-              </Card>
-            ))}
-          </div>
-
-          <Callout ton="warn" titre="Un garde-fou se paie en faux positifs">
-            Le filtre de secrets refuse vingt-sept requêtes légitimes par jour, souvent des extraits
-            de configuration collés dans un ticket. C’est le prix à payer pour qu’une chaîne de
-            connexion ne parte jamais chez un fournisseur étranger. Le désactiver retire la
-            protection : il n’y a pas de réglage intermédiaire qui garde l’un sans l’autre.
-          </Callout>
-        </div>
-      )}
-
-      {onglet === 'residence' && (
-        <div className="space-y-4">
-          <Card padding={false}>
-            <div className="border-b border-g-100 px-4 py-3">
-              <CardHeader
-                titre="Où chaque classe de données a le droit d’être traitée"
-                sousTitre="Politique validée le 12 mai 2026. Elle prime sur les règles de routage : une règle qui la contredirait est refusée à l’enregistrement."
-                className="mb-0"
-              />
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left">
-                <thead>
-                  <tr className="border-b border-g-300 bg-g-050">
-                    <th className="type-micro px-4 py-2.5 text-g-500">Classe</th>
-                    <th className="type-micro px-4 py-2.5 text-g-500">Exemples</th>
-                    <th className="type-micro px-4 py-2.5 text-center text-g-500">Territoire</th>
-                    <th className="type-micro px-4 py-2.5 text-center text-g-500">Union européenne</th>
-                    <th className="type-micro px-4 py-2.5 text-center text-g-500">Hors UE</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {MATRICE_RESIDENCE.map((l) => (
-                    <tr key={l.classe} className="border-b border-g-100 last:border-0">
-                      <td className="px-4 py-3">
-                        <span className="block text-[12.5px] font-semibold text-ink">
-                          {CLASSE_DONNEES_LABEL[l.classe]}
-                        </span>
-                        <span className="block text-[11px] text-g-500">{l.note}</span>
-                      </td>
-                      <td className="px-4 py-3 text-[12px] text-g-500">{l.exemples}</td>
-                      {[l.souverain, l.ue, l.horsUe].map((permis, i) => (
-                        <td key={i} className="px-4 py-3 text-center">
-                          <Badge tone={permis ? 'ok' : 'err'} size="sm">
-                            {permis ? 'Autorisé' : 'Refusé'}
-                          </Badge>
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader
-                titre="Modèles concernés"
-                sousTitre="Ce que la politique autorise, modèle par modèle."
-              />
-              <div className="space-y-1.5">
-                {MODELES_IA.filter((m) => m.statut !== 'retire').map((m) => (
-                  <div
-                    key={m.id}
-                    className="flex flex-wrap items-center justify-between gap-2 border-b border-g-100 pb-1.5 last:border-0"
-                  >
-                    <span className="min-w-0 truncate text-[12.5px] text-ink">{m.nom}</span>
-                    <Badge tone={m.hebergement === 'souverain' ? 'ok' : 'warn'} size="sm">
-                      {m.hebergement === 'souverain'
-                        ? 'Toutes classes'
-                        : m.residence.startsWith('Union') || m.residence.startsWith('France')
-                          ? 'Publique et interne'
-                          : 'Publique seulement'}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            <div className="space-y-4">
-              <Callout ton="ok" titre="Ce que « souverain » veut dire ici">
-                Le calcul a lieu sur des GPU que nous exploitons, dans nos salles d’Abidjan et de
-                Grand-Bassam, sous droit ivoirien. Les poids des modèles sont ouverts et téléchargés
-                une fois : aucun appel sortant n’est nécessaire pour servir une requête. Ce n’est pas
-                le cas des modèles externes, quelle que soit leur juridiction.
-              </Callout>
-              <Callout
-                ton="info"
-                titre="Trajectoire publiée"
-                action={
-                  <ButtonLink size="sm" variant="secondary" href="/souverainete">
-                    Voir la trajectoire
-                  </ButtonLink>
-                }
-              >
-                La part de trafic traitée sur le territoire, la liste des sous-traitants étrangers et
-                le calendrier de sortie sont publiés sur la page souveraineté du site. Nous
-                n’affirmons pas que rien ne sort : nous publions ce qui sort, vers où, et pourquoi.
-              </Callout>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
