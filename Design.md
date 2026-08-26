@@ -111,7 +111,7 @@ l'atteint pas. La couleur d'un titre se met sur le titre.
 
 ## Iconographie : la pâte à modeler
 
-Dix-neuf pictogrammes dans `public/photos/pate-*.webp`, tous générés dans la
+Trente pictogrammes dans `public/photos/pate-*.webp`, tous générés dans la
 même matière pour former une famille : argile mate, arêtes biseautées, éclairage
 d'atelier doux, fond crème, violet / magenta / ocre uniquement.
 
@@ -141,10 +141,35 @@ lettre du nom dans une pastille — ce qui n'apprenait rien.
 
 Plus `sites` (les deux datacenters) et `fusee` (le parcours de démarrage).
 
-**Ce qui ne reçoit pas de pictogramme en pâte :** les solutions tierces du
-marketplace — Nextcloud, Zimbra, Odoo. Elles gardent leurs initiales et leur
-teinte de marque. Leur inventer une icône reviendrait à leur inventer une
-identité visuelle qui n'est pas la nôtre.
+**Les treize services du marketplace en ont un aussi** — `email-pro`, `visio`,
+`ged`, `erp`, `crm`, `prestashop`, `bi`, `forge`, `coffre`, `automatisation`,
+`analytics-web`, plus `drive-pro` et `wordpress` déjà présents.
+
+La position précédente était l'inverse : pas de pictogramme pour les solutions
+tierces, au motif qu'inventer une icône reviendrait à leur inventer une
+identité visuelle. L'arbitrage a changé, et la façon de le tenir sans mentir
+tient en une phrase : **le pictogramme illustre notre service, jamais la marque
+amont.** `pate-erp.webp` montre des modules qui s'emboîtent, pas un logo Odoo ;
+la carte affiche « ERP » en titre et « Odoo Community » en sous-titre. Aucune
+icône ne reprend une forme, une couleur ou une lettre d'une marque tierce.
+
+**Le champ s'appelle `icone`, et il a remplacé `logoUrl`.** Ce dernier pointait
+sur `/logos/<solution>.svg` — treize fichiers qui n'ont jamais existé, jamais
+rendus nulle part. Un champ obligatoire dont toutes les valeurs sont mortes est
+pire qu'un champ absent : il fait croire que la question est traitée.
+
+**Un seul composant les affiche : `SolutionLogo`.** Il rend le pictogramme quand
+`icone` est fourni, la pastille teintée à initiales sinon — le repli sert les
+agents IA et tout service hors catalogue. C'est ce qui met l'icône partout d'un
+coup : catalogue public, fiche de service, carrousel de l'accueil, lanceur
+d'applications, et les quatre listes du marketplace fournisseur.
+
+**Le fond des rendus est `creme` plein, pas de la transparence.** Sur une carte
+`creme` ils se fondent ; sur `creme-2` ou sur blanc ils laissent un carré. D'où
+deux règles : une carte qui porte un pictogramme est en `creme`, et le
+pictogramme reprend le rayon de la pastille qu'il remplace. C'est ce qui a fait
+passer les cartes du marketplace en Ronde — elles étaient restées blanches à
+bordure grise, seules de la vitrine.
 
 ## Photographies
 

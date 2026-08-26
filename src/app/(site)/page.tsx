@@ -566,6 +566,7 @@ export default function Accueil() {
                 nom: c.solutionOSS.split(' · ')[0],
                 initiales: c.logoInitiales,
                 teinte: c.logoTeinte,
+                icone: c.icone,
               }))}
             />
           </div>

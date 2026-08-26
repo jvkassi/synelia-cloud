@@ -61,11 +61,14 @@ export function Avatar({
 export function SolutionLogo({
   initiales,
   teinte,
+  icone,
   size = 'md',
   className,
 }: {
   initiales: string
   teinte: string
+  /** Pictogramme en pâte à modeler, sans l'extension : `pate-<icone>.webp`. */
+  icone?: string
   size?: 'sm' | 'md' | 'lg'
   className?: string
 }) {
@@ -74,6 +77,32 @@ export function SolutionLogo({
     md: 'h-11 w-11 text-[14px] rounded-[8px]',
     lg: 'h-14 w-14 text-[17px] rounded-[10px]',
   }[size]
+  // Le pictogramme prime quand il existe : il dit ce que le service fait, là
+  // où deux initiales n'apprenaient rien. La pastille teintée reste le repli
+  // pour ce qui n'en a pas — les agents IA, un service hors catalogue.
+  if (icone) {
+    return (
+      <img
+        src={`/photos/pate-${icone}.webp`}
+        alt=""
+        aria-hidden
+        width={320}
+        height={320}
+        // Le rendu porte son propre fond crème plein : sur une surface plus
+        // foncée il laisse un carré. Il reprend donc le rayon de la pastille
+        // teintée qu'il remplace, et occupe exactement la même empreinte.
+        className={cn(
+          'shrink-0',
+          {
+            sm: 'h-8 w-8 rounded-[6px]',
+            md: 'h-11 w-11 rounded-[8px]',
+            lg: 'h-14 w-14 rounded-[10px]',
+          }[size],
+          className,
+        )}
+      />
+    )
+  }
   return (
     <span
       className={cn(

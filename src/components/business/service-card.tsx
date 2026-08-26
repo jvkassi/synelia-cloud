@@ -48,6 +48,7 @@ export function ServiceCard({
         <SolutionLogo
           initiales={catalogue?.logoInitiales ?? service.nom.slice(0, 2).toUpperCase()}
           teinte={catalogue?.logoTeinte ?? '#4B2882'}
+          icone={catalogue?.icone}
           size={compact ? 'sm' : 'md'}
         />
         <div className="min-w-0 flex-1">
@@ -162,24 +163,32 @@ export function CatalogCard({
     <Link
       href={href}
       className={cn(
-        'group flex flex-col rounded-[10px] border border-g-300 bg-white p-4 shadow-[0_1px_2px_rgba(43,27,77,.06)] transition-all hover:border-p-400 hover:shadow-[0_4px_16px_rgba(43,27,77,.1)]',
+        // Même carte que les produits de l'accueil : crème, coins larges, pas de
+        // bordure colorée. Le fond du pictogramme est exactement `creme`, donc
+        // sur une carte blanche il laissait un carré beige visible.
+        'group flex flex-col rounded-[22px] border-2 border-encre-2/10 bg-creme p-5 transition-transform hover:-translate-y-1.5',
         className,
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <SolutionLogo initiales={service.logoInitiales} teinte={service.logoTeinte} />
+        <SolutionLogo
+          initiales={service.logoInitiales}
+          teinte={service.logoTeinte}
+          icone={service.icone}
+          size="lg"
+        />
         <Badge tone={service.certifie ? 'violet' : 'neutral'} size="sm">
           {service.certifie ? 'Certifié Synelia' : 'Communauté'}
         </Badge>
       </div>
-      <h3 className="type-h3 mt-3 group-hover:text-p-700">{service.nom}</h3>
-      <p className="mt-0.5 text-[11.5px] font-semibold text-g-500">{service.solutionOSS}</p>
-      <p className="mt-2 line-clamp-2 flex-1 text-[12.5px] leading-relaxed text-g-700">
+      <h3 className="type-h3 mt-3">{service.nom}</h3>
+      <p className="mt-0.5 text-[11.5px] font-semibold text-encre-2/55">{service.solutionOSS}</p>
+      <p className="mt-2 line-clamp-2 flex-1 text-[12.5px] leading-relaxed text-encre-2/70">
         {service.pitch}
       </p>
-      <div className="mt-3.5 flex items-end justify-between gap-2 border-t border-g-100 pt-3">
+      <div className="mt-3.5 flex items-end justify-between gap-2 border-t border-encre-2/10 pt-3">
         <div>
-          <p className="type-micro text-g-500">À partir de</p>
+          <p className="type-micro text-encre-2/55">À partir de</p>
           <p className="tnum mt-0.5 text-[15px] font-bold [font-family:var(--font-display)] text-p-700">
             {prixEntree ? money(prixEntree.valeur) : 'Sur devis'}
             {prixEntree && (
@@ -223,6 +232,7 @@ export function AppLauncherTile({
         <SolutionLogo
           initiales={catalogue?.logoInitiales ?? service.nom.slice(0, 2).toUpperCase()}
           teinte={catalogue?.logoTeinte ?? '#4B2882'}
+          icone={catalogue?.icone}
           size="lg"
         />
         <ExternalLink

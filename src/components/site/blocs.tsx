@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { cn, surfaceMarque } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import { SolutionLogo } from '@/components/ui/display'
 import { ButtonLink } from '@/components/ui/button'
 import { MicroLabel } from '@/components/ui/badge'
 
@@ -446,7 +447,7 @@ export function Citation({
 export function CarrouselLogos({
   logos,
 }: {
-  logos: Array<{ nom: string; initiales: string; teinte: string }>
+  logos: Array<{ nom: string; initiales: string; teinte: string; icone?: string }>
 }) {
   const doubles = [...logos, ...logos]
   return (
@@ -455,20 +456,20 @@ export function CarrouselLogos({
         {doubles.map((l, i) => (
           <div
             key={`${l.nom}-${i}`}
-            className="flex w-40 shrink-0 items-center gap-2.5 rounded-[10px] border border-g-300 bg-white px-3 py-2.5"
+            className="flex w-40 shrink-0 items-center gap-2.5 rounded-[14px] border-2 border-encre-2/10 bg-creme px-3 py-2.5"
           >
-            <span
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[10.5px] font-bold"
-              style={{ background: surfaceMarque(l.teinte).fond, color: surfaceMarque(l.teinte).texte }}
-            >
-              {l.initiales}
-            </span>
-            <span className="truncate text-[12.5px] font-semibold text-ink">{l.nom}</span>
+            <SolutionLogo initiales={l.initiales} teinte={l.teinte} icone={l.icone} size="sm" />
+            <span className="truncate text-[12.5px] font-semibold text-encre-2">{l.nom}</span>
           </div>
         ))}
       </div>
-      <span className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-white to-transparent" />
-      <span className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-white to-transparent" />
+      {/*
+        Les voiles de bord reprennent le fond de la section qui porte le
+        carrousel — `creme-2`. Ils étaient restés en blanc et posaient deux
+        traînées claires sur le crème.
+      */}
+      <span className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-creme-2 to-transparent" />
+      <span className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-creme-2 to-transparent" />
     </div>
   )
 }
