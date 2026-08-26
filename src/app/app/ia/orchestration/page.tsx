@@ -6,8 +6,11 @@ import {
   BookOpen,
   Code2,
   GitBranch,
+  EyeOff,
+  Lock,
   Maximize2,
   Minus,
+  PhoneForwarded,
   Plus,
   Repeat,
   Send,
@@ -56,14 +59,19 @@ const STYLE: Record<TypeEtape, { icone: React.ReactNode; pastille: string }> = {
   humain: { icone: <UserCheck size={14} />, pastille: 'bg-p-050 text-p-700' },
   code: { icone: <Code2 size={14} />, pastille: 'bg-g-100 text-g-700' },
   reponse: { icone: <Send size={14} />, pastille: 'bg-g-100 text-g-700' },
+  anonymisation: { icone: <EyeOff size={14} />, pastille: 'bg-p-700 text-white' },
+  habilitation: { icone: <Lock size={14} />, pastille: 'bg-p-700 text-white' },
+  transfert: { icone: <PhoneForwarded size={14} />, pastille: 'bg-g-100 text-g-700' },
 }
 
 const JOURNAL_FLUX: LigneLog[] = [
   { ts: '2026-08-19T15:14:15Z', niveau: 'INFO', source: 'exec-8841f2', message: 'WhatsApp · facturation · 12,8 s · 8 420 jetons · 46 F · succès' },
+  { ts: '2026-08-19T15:13:58Z', niveau: 'INFO', source: 'presidio', message: '3 entités masquées — téléphone, référence client, IBAN · avant appel modèle' },
   { ts: '2026-08-19T15:11:48Z', niveau: 'INFO', source: 'exec-8841e9', message: 'SMS · technique · 9,2 s · 6 180 jetons · 38 F · succès' },
+  { ts: '2026-08-19T15:10:22Z', niveau: 'INFO', source: 'habilitation', message: 'Portée « équipe support » · 2 bases sur 5 écartées avant calcul de similarité' },
   { ts: '2026-08-19T15:08:02Z', niveau: 'WARN', source: 'exec-8841d4', message: 'Dossier client en délai dépassé — reprise 1/2 réussie · 15,4 s' },
   { ts: '2026-08-19T15:04:37Z', niveau: 'INFO', source: 'exec-8841c1', message: 'Widget · facturation · 11,1 s · succès' },
-  { ts: '2026-08-19T14:59:20Z', niveau: 'ERROR', source: 'exec-8841b8', message: 'Journaux MCP indisponible après 2 reprises — branche technique abandonnée' },
+  { ts: '2026-08-19T14:59:20Z', niveau: 'ERROR', source: 'exec-8841b8', message: 'Journaux de supervision indisponibles après 2 reprises — branche technique abandonnée' },
   { ts: '2026-08-19T14:56:44Z', niveau: 'INFO', source: 'exec-8841a2', message: 'WhatsApp · technique · 18,7 s · succès' },
   { ts: '2026-08-19T14:52:10Z', niveau: 'WARN', source: 'exec-88419e', message: 'En attente de validation humaine depuis 6 min · enjeu 124 365 F' },
   { ts: '2026-08-19T14:48:33Z', niveau: 'WARN', source: 'exec-884188', message: 'Triage sous le seuil de confiance (0,54) — branche par défaut' },
@@ -185,16 +193,22 @@ function CarteEtape({
   return (
     <button
       type="button"
-      draggable
+      draggable={!etape.verrouillee}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onSelect}
       style={{ width: CARTE }}
+      title={etape.verrouillee ? 'Étape posée par la plateforme : ni déplaçable, ni supprimable' : undefined}
       className={cn(
-        'flex cursor-grab items-start gap-2.5 rounded-[8px] border-2 bg-white px-3 py-2.5 text-left transition-all active:cursor-grabbing',
+        'flex items-start gap-2.5 rounded-[8px] border-2 px-3 py-2.5 text-left transition-all',
+        etape.verrouillee
+          ? 'cursor-default border-p-400 bg-p-050'
+          : 'cursor-grab bg-white active:cursor-grabbing',
         selectionnee
           ? 'border-p-700 shadow-[0_0_0_3px_rgba(75,40,130,.18)]'
-          : 'border-g-300 hover:border-p-400',
+          : etape.verrouillee
+            ? 'border-p-400'
+            : 'border-g-300 hover:border-p-400',
         glissee && 'opacity-40',
       )}
     >
@@ -211,6 +225,11 @@ function CarteEtape({
           )}
           {etape.condition && (
             <span className="type-micro shrink-0 text-p-700">conditionnelle</span>
+          )}
+          {etape.verrouillee && (
+            <span className="ml-auto shrink-0 text-p-700" title="Non contournable">
+              <Lock size={11} aria-hidden />
+            </span>
           )}
         </span>
         <span className="block truncate text-[12.5px] font-bold text-ink">{etape.nom}</span>
@@ -359,6 +378,16 @@ function Constructeur({
 
   const deposer = (listeId: string, index: number) => {
     if (!glisse) return
+    const verrouillee = toutesLesEtapes(etapes).find((e) => e.id === glisse.id)?.verrouillee
+    if (verrouillee) {
+      onMessage(
+        'Étape non déplaçable',
+        'L’anonymisation et le filtrage par habilitation sont posés par la plateforme, à un endroit qui ne se négocie pas.',
+        'warn',
+      )
+      setGlisse(null)
+      return
+    }
     if (glisse.listeId !== listeId) {
       onMessage(
         'Déplacement refusé',
@@ -421,7 +450,8 @@ function Constructeur({
         <span className="flex items-center gap-2">
           <MicroLabel>Canevas</MicroLabel>
           <span className="text-[11.5px] text-g-500">
-            Glissez une carte sur un bouton <span className="font-bold">+</span> pour la déplacer
+            Glissez une carte sur un bouton <span className="font-bold">+</span> pour la déplacer ·
+            les étapes marquées d’un cadenas sont posées par la plateforme
           </span>
         </span>
         <span className="flex items-center gap-1">
@@ -560,7 +590,14 @@ function PanneauEtape({
         titre={etape.nom}
         sousTitre={TYPE_ETAPE_LABEL[etape.type]}
         actions={
-          <GatedAction autorise={peutEcrire} message={refus}>
+          <GatedAction
+            autorise={peutEcrire && !etape.verrouillee}
+            message={
+              etape.verrouillee
+                ? 'Étape posée par la plateforme : elle ne se supprime pas.'
+                : refus
+            }
+          >
             <IconButton
               label={`Supprimer l’étape ${etape.nom}`}
               size="sm"
@@ -573,6 +610,22 @@ function PanneauEtape({
         }
       />
       <div className="space-y-4">
+        {etape.verrouillee && (
+          <Callout
+            ton="violet"
+            titre={
+              etape.type === 'anonymisation'
+                ? 'Anonymisation en coupure'
+                : 'Filtre appliqué avant la recherche'
+            }
+          >
+            {etape.type === 'anonymisation'
+              ? 'Le masquage est réversible et s’applique à cent pour cent des flux, voix comprise, avant tout appel modèle. Aucune donnée personnelle en clair ne part au modèle, ni n’est écrite dans la trace.'
+              : 'La portée documentaire est dérivée de l’utilisateur final, jamais de l’agent, et le filtre est appliqué avant le calcul de similarité — pas après. Filtrer après aurait déjà exposé les fragments interdits au modèle.'}
+            {' '}Cette étape ne se déplace pas et ne se supprime pas : l’étanchéité ne peut pas
+            dépendre d’un réglage.
+          </Callout>
+        )}
         <Field label="Nom affiché">
           <Input defaultValue={etape.nom} key={`${etape.id}-nom`} disabled={!peutEcrire} />
         </Field>
@@ -593,17 +646,25 @@ function PanneauEtape({
           </Field>
         )}
 
-        {etape.type === 'outil' && (
-          <Field label="Outil appelé">
-            <Select defaultValue={etape.outilId ?? OUTILS_AGENT[0].id} key={`${etape.id}-ou`} disabled={!peutEcrire}>
-              {OUTILS_AGENT.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.nom} — {o.fournisseur}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        )}
+        {etape.type === 'outil' &&
+          (etape.outilId ? (
+            <Field label="Outil appelé">
+              <Select defaultValue={etape.outilId} key={`${etape.id}-ou`} disabled={!peutEcrire}>
+                {OUTILS_AGENT.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.nom} — {o.fournisseur}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : (
+            <Field
+              label="Composant appelé"
+              hint="Brique de la plateforme, pas un outil déclaré au catalogue"
+            >
+              <Input defaultValue={etape.source} key={`${etape.id}-src`} disabled />
+            </Field>
+          ))}
 
         {etape.type === 'routeur' && (
           <>
@@ -783,7 +844,7 @@ export default function Orchestration() {
           { label: 'Orchestration' },
         ]}
         titre="Orchestration"
-        sousTitre="Un agent seul traite une intention. Un flux en enchaîne plusieurs : il classe, aiguille, boucle, reprend ce qui a échoué et s’arrête devant un humain quand l’enjeu le demande. Le flux se lit de haut en bas, et chaque étape porte ce qu’elle dure, ce qu’elle coûte et ce qu’elle rate."
+        sousTitre="Un agent seul traite une intention. Un flux en enchaîne plusieurs : il anonymise, classe, aiguille, boucle, reprend ce qui a échoué et s’arrête devant un humain quand l’enjeu le demande. Deux étapes ne se négocient pas et figurent dans tous les flux — l’anonymisation avant tout appel modèle, et le filtrage par habilitation avant toute recherche. Le reste se compose."
         actions={
           <GatedAction autorise={peutEcrire} message={refus('ia.flow.write')}>
             <Button
@@ -897,12 +958,22 @@ export default function Orchestration() {
               onSelect={setSelection}
               onMessage={(titre, detail, ton) => pousser({ ton, titre, detail })}
             />
-            <Callout ton="violet" titre="Un flux se teste par ses branches, pas par son chemin heureux">
-              Le chemin nominal fonctionne toujours en démonstration. Ce qui casse en production, c’est
-              la branche rare : la classification incertaine, l’outil muet, le montant juste au-dessus
-              du seuil. Le jeu d’épreuves d’un flux doit contenir un cas par branche — sinon il ne
-              mesure que la moitié du graphe.
-            </Callout>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <Callout ton="violet" titre="Un flux se teste par ses branches, pas par son chemin heureux">
+                Le chemin nominal fonctionne toujours en démonstration. Ce qui casse en production,
+                c’est la branche rare : la classification incertaine, l’outil muet, le montant juste
+                au-dessus du seuil. Le jeu d’épreuves d’un flux doit contenir un cas par branche —
+                sinon il ne mesure que la moitié du graphe.
+              </Callout>
+              <Callout ton="info" titre="Les trois manières dont un flux se dégrade sans prévenir">
+                Une <strong>régression invisible</strong> : la réponse reste bien formée, mais moins
+                juste — c’est le corpus de référence rejoué à chaque livraison qui l’attrape. Une{' '}
+                <strong>fuite d’habilitation</strong> : une base mal filtrée expose ce qui est
+                cloisonné — c’est le filtre appliqué avant le calcul de similarité qui l’empêche. Une{' '}
+                <strong>dérive de coût</strong> : sans plafond appliqué, un agent consomme sans limite
+                — ce sont les quotas bloquants à la passerelle qui la coupent.
+              </Callout>
+            </div>
           </div>
 
           <div className="space-y-4 xl:sticky xl:top-24 xl:self-start">

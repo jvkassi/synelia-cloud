@@ -140,6 +140,20 @@ ailleurs : garde-fou en entrée, portée de l'outil vérifiée côté API, class
 données. Chaque écran doit rendre cette différence visible — c'est exactement là
 que les plateformes d'agents déçoivent en production.
 
+**Deux étapes ne se négocient pas dans un flux** : l'anonymisation (Presidio, en
+coupure avant tout appel modèle, masquage réversible, voix comprise) et le filtrage
+par habilitation (portée dérivée de l'utilisateur final — jamais de l'agent —
+appliquée **avant** le calcul de similarité). Elles portent `verrouillee: true` :
+ni déplaçables, ni supprimables, absentes du sélecteur de pièces. Faire dépendre
+l'étanchéité d'un réglage reviendrait à ne pas l'avoir.
+
+**La pile est nommée** dans les flux, pas décrite en générique : Mastra pour les
+agents, LiteLLM pour le routage et les quotas, vLLM pour servir les modèles ouverts,
+Docling pour l'extraction, BGE-M3 et Qdrant pour la connaissance, Whisper et Piper
+pour la voix, Asterisk pour le SIP, Keycloak pour l'identité, Presidio pour
+l'anonymisation, OpenBao pour les secrets, Promptfoo pour le rejeu du corpus,
+Argo CD pour la bascule bleu / vert.
+
 **Le studio d'orchestration suit le patron d'Activepieces**, pas celui d'un canevas
 libre : colonne verticale de haut en bas, cartes de 260 px, bouton `+` entre chaque
 étape, glisser-déposer d'une carte sur un `+` pour la déplacer (déposer ailleurs ne

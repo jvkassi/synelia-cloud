@@ -1433,6 +1433,11 @@ export type TypeEtape =
   | 'humain'
   | 'code'
   | 'reponse'
+  /** Masquage réversible des données personnelles, en coupure. */
+  | 'anonymisation'
+  /** Portée documentaire dérivée de l'utilisateur final, jamais de l'agent. */
+  | 'habilitation'
+  | 'transfert'
 
 export const TYPE_ETAPE_LABEL: Record<TypeEtape, string> = {
   declencheur: 'Déclencheur',
@@ -1444,6 +1449,9 @@ export const TYPE_ETAPE_LABEL: Record<TypeEtape, string> = {
   humain: 'Validation humaine',
   code: 'Code',
   reponse: 'Réponse',
+  anonymisation: 'Anonymisation',
+  habilitation: 'Habilitation',
+  transfert: 'Transfert',
 }
 
 export interface BrancheFlux {
@@ -1467,6 +1475,12 @@ export interface EtapeFlux {
   outilId?: string
   /** Étape conditionnelle : sautée quand la condition n'est pas remplie. */
   condition?: string
+  /**
+   * Étape posée par la plateforme, ni déplaçable ni supprimable. Deux étapes le
+   * sont toujours : l'anonymisation et le filtrage par habilitation. Les rendre
+   * facultatives reviendrait à faire dépendre l'étanchéité d'un réglage.
+   */
+  verrouillee?: boolean
   executions24h: number
   latenceMs: number
   coutPourMille: number
