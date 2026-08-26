@@ -45,8 +45,19 @@ export const metadata: Metadata = {
   /*
    * Sans `metadataBase`, Next émet une URL relative pour l'aperçu et la
    * plupart des robots la rejettent : le lien partagé restait sans vignette.
+   *
+   * L'URL suit le déploiement plutôt que d'être figée : le domaine définitif
+   * n'est pas encore rattaché, et une vignette codée en dur sur
+   * `cloud.synelia.tech` renverrait vers un domaine qui ne sert pas ce build —
+   * donc un aperçu vide sur les liens de démonstration.
    */
-  metadataBase: new URL('https://cloud.synelia.tech'),
+  metadataBase: new URL(
+    process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'https://cloud.synelia.tech',
+  ),
   openGraph: {
     title: 'Synelia Cloud — Infrastructure cloud souveraine en Côte d’Ivoire',
     description:
