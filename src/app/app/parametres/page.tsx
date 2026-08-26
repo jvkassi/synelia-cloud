@@ -741,16 +741,7 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
                   titre: 'Export complet demandé',
                   detail:
                     'Gratuit une fois par an et à la clôture. Vous recevrez un lien dès que l’archive est prête.',
-                  job: {
-                    type: 'org.export',
-                    label: 'Export complet des données de l’organisation',
-                    etapes: [
-                      'Inventorier les ressources',
-                      'Exporter les configurations',
-                      'Exporter les données et les sauvegardes',
-                      'Composer l’archive et publier le lien',
-                    ],
-                  },
+                  job: { workflow: 'export.donnees', cible: 'données de l’organisation' },
                 }}
               />
               <p className="mt-3 text-[11.5px] leading-relaxed text-g-500">

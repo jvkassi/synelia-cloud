@@ -217,15 +217,8 @@ export default function NouveauCluster() {
       detail: 'Le control plane est provisionné avant les pools. Suivi dans le centre de tâches.',
     })
     lancerJob({
-      type: 'k8s.create',
-      label: `Création du cluster ${nom} · ${site}`,
-      etapes: [
-        'Réserver le quota de l’espace',
-        `Provisionner le control plane ${modeCp === 'ha' ? '(3 masters)' : '(1 master)'}`,
-        'Joindre les nœuds des pools',
-        ...(modules.length ? ['Installer les modules préqualifiés'] : []),
-        'Publier le kubeconfig fédéré',
-      ],
+      workflow: 'k8s.create',
+      cible: `${nom} · ${site}`,
       alFin: () => {
         grappes.modifier(cluster.id, { statut: 'running' })
         pousser({

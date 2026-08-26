@@ -7,6 +7,7 @@ import { Field, Input, MonoTextarea, Select, Switch, Textarea } from '@/componen
 import { ConfirmDialog, Modal } from '@/components/ui/overlay'
 import type { AuditEvent } from '@/lib/types'
 import { UTILISATEUR_COURANT } from '@/lib/mock/orgs'
+import { libelleWorkflow, workflowById } from '@/lib/workflows'
 import { useApp } from './contexte'
 import { useAtelier, type SpecJob } from './atelier'
 
@@ -29,7 +30,7 @@ export interface SpecOperation {
   /** Mutation immédiate de l'atelier. */
   effet?: () => void
   /** Job de provisionnement affiché dans le centre de tâches. */
-  job?: Omit<SpecJob, 'alFin'>
+  job?: Omit<SpecJob, 'alFin' | 'alEchec'>
   /** Mutation appliquée à la fin du job — bascule d'état, par exemple. */
   effetFinal?: () => void
   /**
@@ -81,14 +82,48 @@ export function useOperation() {
       }
 
       spec.effet?.()
-      if (spec.job) lancerJob({ ...spec.job, alFin: spec.effetFinal })
-      else spec.effetFinal?.()
+
+      // Quand l'opération vient du catalogue, c'est lui qui fournit les phrases
+      // de départ, de fin et d'échec : deux écrans qui lancent la même
+      // opération ne doivent pas la raconter différemment.
+      const def = spec.job?.workflow ? workflowById(spec.job.workflow) : undefined
+      const libelle = def
+        ? libelleWorkflow(def, spec.job?.cible ?? '')
+        : (spec.job?.label ?? spec.titre)
+
+      if (spec.job) {
+        lancerJob({
+          ...spec.job,
+          alFin: def
+            ? () => {
+                spec.effetFinal?.()
+                pousser({ ton: 'ok', titre: libelle, detail: def.fin })
+              }
+            : spec.effetFinal,
+          alEchec: def
+            ? (etape) =>
+                pousser({
+                  ton: 'err',
+                  titre: `Échec · ${libelle}`,
+                  detail: `Étape « ${etape} ». Diagnostic et reprise dans le centre de tâches.`,
+                })
+            : undefined,
+        })
+      } else {
+        spec.effetFinal?.()
+      }
+
       trace('ok')
       pousser({
         ton: spec.ton ?? 'ok',
         titre: spec.titre,
         detail:
-          spec.detail ?? (spec.job ? 'Avancement suivi dans le centre de tâches.' : undefined),
+          spec.detail ??
+          (def
+            ? `${def.lancement} Suivi dans le centre de tâches.`
+            : spec.job
+              ? 'Avancement suivi dans le centre de tâches.'
+              : undefined),
       })
     },
     [autorise, journaliser, lancerJob, pousser, role],

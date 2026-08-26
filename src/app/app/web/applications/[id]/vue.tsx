@@ -259,16 +259,7 @@ export function VueApplication({ id }: { id: string }) {
                     action: 'service.admin',
                     titre: 'Mise à jour programmée',
                     detail: 'Sauvegarde prise, application dans la prochaine fenêtre de maintenance.',
-                    job: {
-                      type: 'site.update',
-                      label: `Mises à jour · ${s.hote}`,
-                      etapes: [
-                        'Prendre une sauvegarde',
-                        'Appliquer les mises à jour',
-                        'Vérifier que le site répond',
-                      ],
-                      dureeEtapeMs: 1100,
-                    },
+                    job: { workflow: 'web.app.update', cible: s.hote },
                     effetFinal: () => sites.modifier(s.id, { majEnAttente: 0 }),
                   })
                 }

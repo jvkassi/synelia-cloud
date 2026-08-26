@@ -369,17 +369,7 @@ export function VueBackup({ id }: { id: string }) {
             detail:
               'Le service est arrêté, le volume remplacé par le point choisi, puis le service redémarre.',
             effet: () => lesServices.modifier(cible.id, { statut: 'stopped' }),
-            job: {
-              type: 'backup.restore',
-              label: `Restauration · ${cible.nom} (${cible.environnement})`,
-              etapes: [
-                'Arrêter le service',
-                'Détacher le volume courant',
-                'Restaurer le point choisi',
-                'Rattacher et vérifier l’intégrité',
-                'Redémarrer le service',
-              ],
-            },
+            job: { workflow: 'backup.restore', cible: `${cible.nom} (${cible.environnement})` },
             effetFinal: () =>
               lesServices.modifier(cible.id, { statut: 'running', derniereMaj: MAINTENANT }),
           })

@@ -79,18 +79,8 @@ export function VueCertificat({ id }: { id: string }) {
                 action: 'service.admin',
                 ton: 'info',
                 titre: 'Renouvellement lancé',
-                detail: `Nouveau certificat en émission pour ${c.hote}.`,
                 effet: () => certificats.modifier(c.id, { etat: 'en_emission' }),
-                job: {
-                  type: 'certificat.renew',
-                  label: `Renouvellement · ${c.hote}`,
-                  etapes: [
-                    `Répondre au challenge ${c.validationDomaine.toUpperCase()}`,
-                    'Récupérer le certificat',
-                    'Installer sur les hôtes couverts',
-                  ],
-                  dureeEtapeMs: 1100,
-                },
+                job: { workflow: 'web.ssl.renew', cible: c.hote },
                 effetFinal: () =>
                   certificats.modifier(c.id, {
                     etat: 'actif',

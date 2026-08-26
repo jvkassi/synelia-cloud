@@ -92,16 +92,7 @@ export function VueMessagerie({ id }: { id: string }) {
                 action: 'service.admin',
                 titre: `Messagerie de ${m.domaine} en cours d’activation`,
                 detail: `${money(m.prixSiege)} par boîte et par mois, au prorata.`,
-                job: {
-                  type: 'messagerie.activate',
-                  label: `Activation de la messagerie · ${m.domaine}`,
-                  etapes: [
-                    'Créer l’instance',
-                    'Poser les enregistrements MX, SPF, DKIM et DMARC',
-                    'Déclarer le client SSO',
-                    'Appliquer le plan de sauvegarde',
-                  ],
-                },
+                job: { workflow: 'web.email.activate', cible: m.domaine },
                 effetFinal: () => messageries.modifier(m.id, { actif: true }),
               }}
             />
@@ -421,12 +412,7 @@ export function VueMessagerie({ id }: { id: string }) {
                     ton: 'info',
                     titre: 'Vérification des enregistrements d’expédition',
                     detail: 'SPF, DKIM et DMARC sont relus depuis nos résolveurs, sans cache.',
-                    job: {
-                      type: 'messagerie.verify',
-                      label: `Vérification SPF, DKIM et DMARC · ${m.domaine}`,
-                      etapes: ['Interroger la zone', 'Comparer aux enregistrements attendus'],
-                      dureeEtapeMs: 900,
-                    },
+                    job: { workflow: 'smtp.verify', cible: m.domaine },
                     effetFinal: () =>
                       messageries.modifier(m.id, (x) => ({
                         authentification: { ...x.authentification, spf: 'valide', dkim: 'valide' },

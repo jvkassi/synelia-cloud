@@ -17,6 +17,7 @@ export * from './webcloud'
 export * from './ops'
 export * from './humain'
 export * from './vitrine'
+export * from './workflows'
 
 import { ESPACES, BACKENDS, VMS, K8S_CLUSTERS } from './iaas'
 import { APPLICATIONS, ENVIRONNEMENTS } from './paas'

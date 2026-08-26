@@ -30,7 +30,7 @@ import { EventList, GrilleSparkCharts, LiensSortie } from '@/components/business
 import { BackendGauge } from '@/components/business/infra'
 import { JobTracker } from '@/components/business/paas'
 import { useApp } from '@/components/app/contexte'
-import { useCollection } from '@/components/app/atelier'
+import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
@@ -45,6 +45,7 @@ export default function SantePlateforme() {
   const { autorise, refus } = useApp()
   const executer = useOperation()
   const jobs = useCollection<ProvisioningJob>('jobs-plateforme', JOBS_PLATEFORME)
+  const { reprendreJob } = useAtelier()
   const incidents = useCollection<Incident>('incidents', INCIDENTS)
   const [onglet, setOnglet] = useState('services')
   const [communication, setCommunication] = useState<string | null>(null)
@@ -520,26 +521,7 @@ export default function SantePlateforme() {
                               detail:
                                 'Le provisionnement repart de l’étape échouée. Aucune ressource déjà créée n’est recréée.',
                               effet: () =>
-                                jobs.modifier(j.id, (x) => ({
-                                  statut: 'running',
-                                  erreur: undefined,
-                                  taches: x.taches.map((t) =>
-                                    t.statut === 'failed'
-                                      ? { ...t, statut: 'running', message: undefined }
-                                      : t,
-                                  ),
-                                })),
-                              job: {
-                                type: j.type,
-                                label: `Reprise · ${j.label}`,
-                                etapes: j.taches.filter((t) => t.statut !== 'ok').map((t) => t.nom),
-                                dureeEtapeMs: 1100,
-                              },
-                              effetFinal: () =>
-                                jobs.modifier(j.id, (x) => ({
-                                  statut: 'done',
-                                  taches: x.taches.map((t) => ({ ...t, statut: 'ok' })),
-                                })),
+                                reprendreJob(j.id, 'jobs-plateforme', JOBS_PLATEFORME),
                             })
                           }
                         >

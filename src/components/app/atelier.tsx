@@ -10,8 +10,15 @@ import {
   type ReactNode,
 } from 'react'
 import { MAINTENANT } from '@/lib/format'
-import type { AuditEvent, ProvisioningJob } from '@/lib/types'
+import { correlationId } from '@/lib/utils'
+import type { AuditEvent, DefinitionWorkflow, ProvisioningJob } from '@/lib/types'
 import { AUDIT, JOBS } from '@/lib/mock/ops'
+import {
+  etapeEnEchec,
+  libelleWorkflow,
+  planifier,
+  workflowById,
+} from '@/lib/workflows'
 
 /**
  * Atelier — couche d'état mutable posée par-dessus le jeu de données fictif.
@@ -36,15 +43,26 @@ export interface Entite {
 type Patch<T> = Partial<T> | ((item: T) => Partial<T>)
 
 export interface SpecJob {
+  /**
+   * Identifiant d'un workflow du catalogue. Quand il est fourni, le libellé,
+   * les étapes, leurs durées annoncées et l'échec éventuel viennent de là —
+   * c'est la forme à préférer : deux écrans qui lancent la même opération
+   * racontent alors la même chose.
+   */
+  workflow?: string
+  /** Ressource concernée, substituée à `{cible}` dans le libellé du catalogue. */
+  cible?: string
   /** Type technique, par exemple `vm.create` — sert au regroupement. */
-  type: string
-  label: string
-  /** Libellés des étapes, dans l'ordre. */
-  etapes: string[]
-  /** Durée simulée d'une étape. Une démonstration ne doit pas s'endormir. */
+  type?: string
+  label?: string
+  /** Libellés des étapes, dans l'ordre. Ignoré si `workflow` est fourni. */
+  etapes?: string[]
+  /** Durée simulée d'une étape, pour la forme sans catalogue. */
   dureeEtapeMs?: number
   /** Appelé une fois la dernière étape terminée : bascule d'état, toast… */
   alFin?: () => void
+  /** Appelé si l'étape écrite comme échouée interrompt la séquence. */
+  alEchec?: (etape: string) => void
 }
 
 interface CtxAtelier {
@@ -73,6 +91,12 @@ interface CtxAtelier {
   identifiant: (prefixe: string) => string
   jobs: ProvisioningJob[]
   lancerJob: (spec: SpecJob) => string
+  /**
+   * Reprend un job échoué à son étape échouée. L'espace fournisseur garde ses
+   * jobs dans une autre collection, d'où les deux paramètres facultatifs.
+   * Faux si le job est inconnu ou si son type n'est pas au catalogue.
+   */
+  reprendreJob: (id: string, nom?: string, graine?: readonly ProvisioningJob[]) => boolean
   /**
    * Écrit une entrée au journal d'audit. La vitrine promet un journal « qui
    * enregistre aussi les refus » : c'est ici que la promesse se tient, y compris
@@ -172,33 +196,141 @@ export function AtelierProvider({ children }: { children: ReactNode }) {
     [creer],
   )
 
+  /**
+   * Effets à appliquer à la fin d'un job, gardés hors de l'état : un job qui
+   * échoue ne doit pas muter les collections — la ressource ne doit pas
+   * apparaître — mais sa reprise, elle, doit pouvoir le faire.
+   */
+  const effetsDiferes = useRef(new Map<string, () => void>())
+  const alertesEchec = useRef(new Map<string, (etape: string) => void>())
+  const essais = useRef(new Map<string, number>())
+
+  /**
+   * Joue une séquence d'étapes sur un job existant. `depuis` permet de
+   * reprendre à l'étape échouée : les précédentes restent acquises.
+   */
+  const jouer = useCallback(
+    (
+      id: string,
+      def: DefinitionWorkflow,
+      essai: number,
+      depuis: number,
+      nom: string = NOM_JOBS,
+      graine: readonly ProvisioningJob[] = JOBS,
+    ) => {
+      const rangEchec = etapeEnEchec(def, essai)
+      const plan = planifier(def, { depuis, jusqua: rangEchec || def.etapes.length })
+      const totalAnnonce = def.etapes.reduce((a, e) => a + e.dureeS, 0)
+
+      plan.forEach((etape, i) => {
+        const ordre = depuis + i + 1
+        const derniere = i === plan.length - 1
+        const ratee = derniere && rangEchec > 0
+        const suivante = def.etapes[ordre]
+
+        setTimeout(() => {
+          modifier<ProvisioningJob>(nom, graine, id, (job) => ({
+            statut: ratee
+              ? def.echec?.rollback
+                ? 'rolled_back'
+                : 'failed'
+              : derniere
+                ? 'done'
+                : 'running',
+            dureeS: derniere
+              ? ratee
+                ? def.etapes.slice(0, ordre).reduce((a, e) => a + e.dureeS, 0)
+                : totalAnnonce
+              : undefined,
+            erreur:
+              ratee && def.echec
+                ? {
+                    message: def.echec.message,
+                    correlationId: correlationId(`${def.id}-${job.label}`),
+                    suggestion: def.echec.suggestion,
+                  }
+                : undefined,
+            taches: job.taches.map((t) =>
+              t.ordre === ordre
+                ? ratee
+                  ? {
+                      ...t,
+                      statut: 'failed',
+                      dureeS: etape.dureeS,
+                      message: 'Interrompue — voir le diagnostic',
+                    }
+                  : { ...t, statut: 'ok', dureeS: etape.dureeS, message: undefined }
+                : t.ordre === ordre + 1 && !ratee
+                  ? { ...t, statut: 'running', message: suivante?.message }
+                  : t,
+            ),
+          }))
+          if (derniere && !ratee) {
+            effetsDiferes.current.get(id)?.()
+            effetsDiferes.current.delete(id)
+          }
+          if (ratee) alertesEchec.current.get(id)?.(etape.nom)
+        }, etape.aMs)
+      })
+    },
+    [modifier],
+  )
+
   const lancerJob = useCallback<CtxAtelier['lancerJob']>(
     (spec) => {
       const id = identifiant('job')
+      const def = spec.workflow ? workflowById(spec.workflow) : undefined
+
+      if (def) {
+        const label = spec.label ?? libelleWorkflow(def, spec.cible ?? '')
+        creer(NOM_JOBS, JOBS, {
+          id,
+          orgId: 'org-dba',
+          type: def.id,
+          label,
+          statut: 'running',
+          startedAt: MAINTENANT,
+          taches: def.etapes.map((e, i) => ({
+            ordre: i + 1,
+            nom: e.nom,
+            statut: i === 0 ? 'running' : 'pending',
+            message: i === 0 ? e.message : undefined,
+          })),
+        } satisfies ProvisioningJob)
+
+        if (spec.alFin) effetsDiferes.current.set(id, spec.alFin)
+        if (spec.alEchec) alertesEchec.current.set(id, spec.alEchec)
+        essais.current.set(id, 0)
+        jouer(id, def, 0, 0)
+        return id
+      }
+
+      // Forme sans catalogue : étapes fournies au site d'appel, cadence fixe.
+      const etapes = spec.etapes ?? []
       const pas = spec.dureeEtapeMs ?? 1400
       const dureeEtapeS = Math.max(1, Math.round(pas / 1000))
 
       creer(NOM_JOBS, JOBS, {
         id,
         orgId: 'org-dba',
-        type: spec.type,
-        label: spec.label,
+        type: spec.type ?? 'ui.action',
+        label: spec.label ?? 'Opération',
         statut: 'running',
         startedAt: MAINTENANT,
-        taches: spec.etapes.map((nom, i) => ({
+        taches: etapes.map((nom, i) => ({
           ordre: i + 1,
           nom,
           statut: i === 0 ? 'running' : 'pending',
         })),
       } satisfies ProvisioningJob)
 
-      spec.etapes.forEach((_, i) => {
-        const derniere = i === spec.etapes.length - 1
+      etapes.forEach((_, i) => {
+        const derniere = i === etapes.length - 1
         setTimeout(
           () => {
             modifier<ProvisioningJob>(NOM_JOBS, JOBS, id, (job) => ({
               statut: derniere ? 'done' : 'running',
-              dureeS: derniere ? dureeEtapeS * spec.etapes.length : undefined,
+              dureeS: derniere ? dureeEtapeS * etapes.length : undefined,
               taches: job.taches.map((t) =>
                 t.ordre <= i + 1
                   ? { ...t, statut: 'ok', dureeS: dureeEtapeS }
@@ -215,7 +347,38 @@ export function AtelierProvider({ children }: { children: ReactNode }) {
 
       return id
     },
-    [creer, identifiant, modifier],
+    [creer, identifiant, jouer, modifier],
+  )
+
+  /**
+   * Reprise d'un job échoué, sur le job lui-même : l'étape échouée repart, les
+   * précédentes restent acquises, et l'essai suivant aboutit. Sans cela un
+   * échec resterait un cul-de-sac, ou obligerait à lancer un second job qui
+   * raconterait deux fois la même opération.
+   */
+  const reprendreJob = useCallback<CtxAtelier['reprendreJob']>(
+    (id, nom = NOM_JOBS, graine = JOBS) => {
+      const job = lire<ProvisioningJob>(nom, graine).find((j) => j.id === id)
+      const def = job && workflowById(job.type)
+      if (!job || !def) return false
+
+      const ratee = job.taches.find((t) => t.statut === 'failed')
+      const depuis = ratee ? ratee.ordre - 1 : 0
+      const essai = (essais.current.get(id) ?? 0) + 1
+      essais.current.set(id, essai)
+
+      modifier<ProvisioningJob>(nom, graine, id, (j) => ({
+        statut: 'running',
+        erreur: undefined,
+        dureeS: undefined,
+        taches: j.taches.map((t) =>
+          t.ordre === depuis + 1 ? { ...t, statut: 'running', message: undefined } : t,
+        ),
+      }))
+      jouer(id, def, essai, depuis, nom, graine)
+      return true
+    },
+    [jouer, lire, modifier],
   )
 
   const valeur = useMemo<CtxAtelier>(
@@ -228,6 +391,7 @@ export function AtelierProvider({ children }: { children: ReactNode }) {
       identifiant,
       jobs,
       lancerJob,
+      reprendreJob,
       journaliser,
       journal,
       collectionsModifiees: Object.keys(collections).length,
@@ -242,6 +406,7 @@ export function AtelierProvider({ children }: { children: ReactNode }) {
       identifiant,
       jobs,
       lancerJob,
+      reprendreJob,
       journaliser,
       journal,
       collections,

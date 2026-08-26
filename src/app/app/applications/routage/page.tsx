@@ -325,16 +325,7 @@ export default function Routage() {
                       ton: 'info',
                       titre: `Vérification DNS de ${d.hote}`,
                       detail: 'Nos résolveurs sont interrogés directement, sans cache.',
-                      job: {
-                        type: 'domaine.verify',
-                        label: `Vérification DNS · ${d.hote}`,
-                        etapes: [
-                          'Interroger les résolveurs',
-                          'Comparer à l’enregistrement attendu',
-                          'Émettre le certificat',
-                        ],
-                        dureeEtapeMs: 1100,
-                      },
+                      job: { workflow: 'domaine.verify', cible: d.hote },
                       effetFinal: () =>
                         domaines.modifier(d.id, (x) => ({
                           verification: x.verification

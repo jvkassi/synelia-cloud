@@ -155,17 +155,8 @@ export default function NouvelEspace() {
                   detail: 'Le quota est réservé, la plage réseau allouée. Suivi dans le centre de tâches.',
                 })
                 lancerJob({
-                  type: 'espace.create',
-                  label: `Création de l’Espace Cloud ${code} · ${site}`,
-                  etapes: [
-                    'Réserver le quota sur le site',
-                    `Allouer la plage réseau ${cidr}`,
-                    ...(dnsInterne ? ['Créer la zone DNS interne'] : []),
-                    ...(peering ? ['Établir le peering demandé'] : []),
-                    ...(planSauvegarde !== 'aucun' ? ['Rattacher le plan de sauvegarde'] : []),
-                    ...(supervision ? ['Déclarer les sondes de supervision'] : []),
-                    'Ouvrir la souscription facturable',
-                  ],
+                  workflow: 'espace.create',
+                  cible: code,
                   alFin: () => {
                     espaces.modifier(nouvel.id, { statut: 'active' })
                     pousser({

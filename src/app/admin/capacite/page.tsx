@@ -902,16 +902,7 @@ export default function Capacite() {
             action: 'capacity.manage',
             titre: 'Rééquilibrage appliqué',
             detail: `Le placement de ${espace?.code} est mis à jour. Les migrations à chaud démarrent maintenant ; les autres sont planifiées dans la fenêtre de maintenance du client.`,
-            job: {
-              type: 'capacite.rebalance',
-              label: `Rééquilibrage · ${espace?.code ?? 'espace'}`,
-              etapes: [
-                'Calculer le plan de migration',
-                'Migrer les machines à chaud',
-                'Planifier les redémarrages nécessaires',
-                'Vérifier l’équilibre atteint',
-              ],
-            },
+            job: { workflow: 'capacite.rebalance', cible: espace?.code ?? 'espace' },
             effetFinal: () => appliquerRepartition(repartition),
           })
           setRebalance(false)

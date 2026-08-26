@@ -254,16 +254,8 @@ export default function NouvellesVms() {
     })
 
     lancerJob({
-      type: 'vm.create',
-      label: `Création de ${nouvelles.length} machine${nouvelles.length > 1 ? 's' : ''} · ${espace.code}`,
-      etapes: [
-        'Réserver le quota de l’espace',
-        'Cloner l’image et provisionner les disques',
-        'Rattacher le réseau et les groupes de sécurité',
-        'Appliquer cloud-init',
-        ...(planSauvegarde ? ['Appliquer le plan de sauvegarde'] : []),
-        'Enregistrer les sondes de supervision',
-      ],
+      workflow: 'vm.create',
+      cible: `${nouvelles.length} machine${nouvelles.length > 1 ? 's' : ''} · ${espace.code}`,
       alFin: () => {
         parc.modifierPlusieurs(
           nouvelles.map((v) => v.id),

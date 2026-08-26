@@ -99,16 +99,7 @@ export function VueServeurBases({ id }: { id: string }) {
                 action: 'service.admin',
                 titre: 'Activation demandée',
                 detail: `${MOTEUR_WEB_LABEL[s.moteur]} sera installé sur ${s.serveur} dans quelques minutes.`,
-                job: {
-                  type: 'base.activate',
-                  label: `Activation de ${MOTEUR_WEB_LABEL[s.moteur]} · ${s.serveur}`,
-                  etapes: [
-                    'Installer le moteur',
-                    'Ouvrir le port sur la boucle locale',
-                    'Ajouter au plan de sauvegarde de l’hébergement',
-                  ],
-                  dureeEtapeMs: 1100,
-                },
+                job: { workflow: 'web.db.enable', cible: `${MOTEUR_WEB_LABEL[s.moteur]} · ${s.serveur}` },
                 effetFinal: () => serveurs.modifier(s.id, { actif: true }),
               }}
             />
@@ -525,12 +516,7 @@ export function VueServeurBases({ id }: { id: string }) {
                       ton: 'info',
                       titre: 'Restauration lancée',
                       detail: `La copie est créée à côté de l’originale, qui reste intacte.`,
-                      job: {
-                        type: 'base.restore',
-                        label: `Restauration · ${nomCopie ?? baseRestauree ?? s.bases[0]?.nom ?? 'base'}`,
-                        etapes: ['Monter la sauvegarde', 'Charger les données', 'Vérifier l’intégrité'],
-                        dureeEtapeMs: 1100,
-                      },
+                      job: { workflow: 'web.db.restore', cible: `${nomCopie ?? baseRestauree ?? s.bases[0]?.nom ?? 'base'}` },
                       effetFinal: () => {
                         const nomFinal =
                           nomCopie ?? `${baseRestauree ?? s.bases[0]?.nom ?? 'base'}_restauree`

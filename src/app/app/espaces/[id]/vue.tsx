@@ -99,12 +99,7 @@ export function VueEspace({ id }: { id: string }) {
               operation={(v) => ({
                 titre: `Capacité de ${espace.code} étendue`,
                 detail: `${v.vcpu} vCPU · ${v.ram} Go · ${v.stockage} To`,
-                job: {
-                  type: 'espace.quota.update',
-                  label: `Extension de capacité · ${espace.code}`,
-                  etapes: ['Vérifier la capacité du site', 'Appliquer le nouveau quota', 'Mettre à jour la souscription'],
-                  dureeEtapeMs: 900,
-                },
+                job: { workflow: 'espace.extend', cible: espace.code },
                 effetFinal: () =>
                   espaces.modifier(espace.id, {
                     quota: {

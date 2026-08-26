@@ -57,12 +57,7 @@ export function VuePra({ id }: { id: string }) {
       ton: 'info',
       titre: 'Bascule de test lancée en réseau isolé',
       detail: `Durée estimée ${dureeMin(plan.rtoCibleMin)}. Aucun impact sur la production.`,
-      job: {
-        type: 'dr.failover.test',
-        label: `Bascule de test · ${plan.nom}`,
-        etapes: etapesBascule(false),
-        dureeEtapeMs: 1100,
-      },
+      job: { workflow: 'dr.failover.test', cible: plan.nom },
       effetFinal: () =>
         plans.modifier(plan.id, (p) => ({
           statut: 'operationnel',
@@ -544,12 +539,7 @@ export function VuePra({ id }: { id: string }) {
                       ? {
                           ton: 'info',
                           titre: 'Exercice lancé en réseau isolé',
-                          job: {
-                            type: 'dr.failover.test',
-                            label: `Exercice de bascule · ${plan.nom}`,
-                            etapes: etapesBascule(false),
-                            dureeEtapeMs: 1100,
-                          },
+                          job: { workflow: 'dr.failover.test', cible: plan.nom },
                           effetFinal: () =>
                             plans.modifier(plan.id, (p) => ({
                               statut: 'operationnel',
@@ -697,12 +687,7 @@ export function VuePra({ id }: { id: string }) {
             ton: 'warn',
             titre: 'Bascule réelle engagée',
             detail: `Séquence de ${plan.groupes.length} groupes en cours. Suivi dans le centre de tâches.`,
-            job: {
-              type: 'dr.failover.real',
-              label: `Bascule réelle · ${plan.nom} → ${SITE_LABEL[plan.siteRepli]}`,
-              etapes: etapesBascule(true),
-              dureeEtapeMs: 1400,
-            },
+            job: { workflow: 'dr.failover.real', cible: `${plan.nom} → ${SITE_LABEL[plan.siteRepli]}` },
             effetFinal: () =>
               plans.modifier(plan.id, (p) => ({
                 exercices: [

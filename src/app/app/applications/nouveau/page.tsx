@@ -225,16 +225,8 @@ export default function NouvelleApplication() {
                   detail: 'Build, analyse DevSecOps, provisioning puis déploiement. Suivi dans le centre de tâches.',
                 })
                 lancerJob({
-                  type: 'projet.create',
-                  label: `Création et déploiement de ${nomApp}`,
-                  etapes: [
-                    'Créer le projet et ses environnements',
-                    source === 'git' ? 'Construire l’image depuis la source' : 'Récupérer l’image',
-                    'Analyse DevSecOps de l’image',
-                    cible === 'k8s' ? 'Créer les namespaces' : 'Provisionner les machines',
-                    'Déployer les environnements',
-                    'Publier les adresses offertes',
-                  ],
+                  workflow: 'projet.create',
+                  cible: nomApp,
                   alFin: () => {
                     services
                       .items.filter((x) => x.projetId === idProjet)

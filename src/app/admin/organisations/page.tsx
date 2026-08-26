@@ -49,17 +49,7 @@ export default function Organisations() {
       detail: `Le royaume d’identité est provisionné et l’invitation de ${
         adminCourriel.trim() || 'l’administrateur'
       } est envoyée.`,
-      job: {
-        type: 'org.create',
-        label: `Création · ${nom.trim()}`,
-        etapes: [
-          royaume ? 'Provisionnement du royaume d’identité' : 'Rattachement au royaume partagé',
-          'Création de l’organisation',
-          'Ouverture du compte de facturation',
-          ...(espaceEvaluation ? ['Création de l’Espace Cloud d’évaluation'] : []),
-          'Invitation de l’administrateur',
-        ],
-      },
+      job: { workflow: 'org.create', cible: nom.trim() },
       effet: () =>
         orgs.creer({
           id: orgs.identifiant('org'),

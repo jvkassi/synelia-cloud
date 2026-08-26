@@ -145,16 +145,7 @@ export default function ListeDrives() {
                   operation={(v) => ({
                     titre: `Drive de ${d.domaine} en cours d’activation`,
                     detail: `${v.sieges} sièges · ${v.quota} Go`,
-                    job: {
-                      type: 'drive.activate',
-                      label: `Activation du drive · ${d.domaine}`,
-                      etapes: [
-                        'Créer l’instance',
-                        `Poser le certificat sur ${d.hote}`,
-                        'Déclarer le client SSO',
-                        'Appliquer le plan de sauvegarde',
-                      ],
-                    },
+                    job: { workflow: 'web.drive.activate', cible: d.domaine },
                     effetFinal: () =>
                       collection.modifier(d.id, (x) => ({
                         actif: true,
