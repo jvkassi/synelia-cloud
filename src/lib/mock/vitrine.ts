@@ -130,18 +130,21 @@ export const BLOC_PRA = {
 export const BLOC_SOUVERAINETE = [
   {
     titre: 'Où sont vos données',
+    illustration: '/illustrations/souverainete-lieu.svg',
     texte:
       'Sur deux sites nommés, en Côte d’Ivoire : Synertech Vallon à Cocody (Abidjan) et le parc VITIB à Grand-Bassam. Aucune réplication hors du territoire, sauf demande écrite de votre part.',
     lien: { libelle: 'Voir les datacenters', href: '/datacenters' },
   },
   {
     titre: 'Qui peut y accéder',
+    illustration: '/illustrations/souverainete-acces.svg',
     texte:
       'Un modèle de droits explicite — onze rôles, une matrice publiée — et un journal d’audit qui enregistre aussi les refus. Les accès de nos ingénieurs sont nominatifs, élevés temporairement et justifiés.',
     lien: { libelle: 'Voir la matrice des rôles', href: '/souverainete#acces' },
   },
   {
     titre: 'Comment vous repartez',
+    illustration: '/illustrations/souverainete-sortie.svg',
     texte:
       'Chaque service documente son format d’export et son délai. Nous testons la réversibilité, comme nous testons les restaurations. Partir doit être possible pour que rester soit un choix.',
     lien: { libelle: 'Lire la procédure', href: '/souverainete#reversibilite' },
@@ -427,6 +430,12 @@ export interface FicheProduit {
   caracteristiques: Array<{ theme: string; items: Array<{ libelle: string; valeur: string }> }>
   sla: { dispo: string; reponse: string; resolution: string; credits: string }
   architecture: { titre: string; couches: Array<{ nom: string; elements: string[] }> }
+  /**
+   * Schéma illustré, quand il en existe un pour ce produit. Les couches ci-dessus
+   * énumèrent ; le schéma montre les frontières — qui règle quoi, et où sortent
+   * les copies. Tous les produits n'en méritent pas un.
+   */
+  schema?: { src: string; alt: string; largeur: number; hauteur: number }
   faq: Array<{ question: string; reponse: string }>
 }
 
@@ -498,6 +507,13 @@ export const FICHES_PRODUIT: FicheProduit[] = [
         { nom: 'Données', elements: ['Base managée PostgreSQL HA', 'Cache Redis', 'Volumes NVMe chiffrés'] },
         { nom: 'Protection', elements: ['Plan de sauvegarde immuable', 'Réplication vers le second site'] },
       ],
+    },
+    schema: {
+      src: '/illustrations/architecture-espace-cloud.svg',
+      alt:
+        "Schéma d'un Espace Cloud : Internet, pare-feu applicatif, répartiteur de charge, un sous-réseau public et un sous-réseau privé de machines virtuelles, le stockage bloc et objet, et sous le périmètre piloté par le client le socle opéré par Synelia.",
+      largeur: 760,
+      hauteur: 362,
     },
     faq: [
       { question: 'Puis-je avoir plusieurs Espaces Cloud ?', reponse: 'Oui, autant que nécessaire. C’est la façon habituelle de séparer production, préproduction et site de repli, chacun avec son quota et sa plage réseau.' },
@@ -709,6 +725,13 @@ export const FICHES_PRODUIT: FicheProduit[] = [
         { nom: 'Groupe 4 — Exposition', elements: ['Load balancer de repli', 'IP publique de repli', 'Bascule DNS'] },
       ],
     },
+    schema: {
+      src: '/illustrations/sauvegarde-321.svg',
+      alt:
+        "Schéma de la règle 3-2-1 : production dans l'Espace Cloud à Abidjan, instantané local sur NVMe, réplique hors site sur stockage objet à Grand-Bassam, et copie immuable verrouillée quatorze jours.",
+      largeur: 760,
+      hauteur: 306,
+    },
     faq: [
       { question: 'Un exercice de test perturbe-t-il la production ?', reponse: 'Non. La bascule de test démarre les ressources répliquées dans un réseau isolé, sans conflit d’adressage et sans toucher au DNS public. C’est précisément ce qui permet de l’exercer souvent.' },
       { question: 'Que vaut un RTO annoncé mais jamais mesuré ?', reponse: 'Rien, et c’est notre position. Nous affichons systématiquement cible et constaté côte à côte. Si l’écart se creuse, c’est visible avant le sinistre, pas pendant.' },
@@ -774,6 +797,13 @@ export const FICHES_PRODUIT: FicheProduit[] = [
         { nom: 'Copie 2 — locale', elements: ['Bucket S3 chaud, site Abidjan, versioning actif'] },
         { nom: 'Copie 3 — hors site immuable', elements: ['Bucket S3 froid, site Grand-Bassam, verrouillage WORM 35 j'] },
       ],
+    },
+    schema: {
+      src: '/illustrations/sauvegarde-321.svg',
+      alt:
+        "Schéma de la règle 3-2-1 : production dans l'Espace Cloud à Abidjan, instantané local sur NVMe, réplique hors site sur stockage objet à Grand-Bassam, et copie immuable verrouillée quatorze jours.",
+      largeur: 760,
+      hauteur: 306,
     },
     faq: [
       { question: 'Qu’est-ce que l’immuabilité change en cas de rançongiciel ?', reponse: 'Tout. Un point de restauration sous rétention WORM ne peut être supprimé par personne — ni par un attaquant ayant obtenu vos droits, ni par nous. C’est la seule protection qui résiste à une compromission d’administrateur.' },

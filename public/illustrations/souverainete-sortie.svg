@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96" role="img" aria-label="Un document exporté en CSV et SQL hors du cadre : comment vous repartez">
+  <rect width="96" height="96" rx="20" fill="#ede7f9"/>
+  
+  <rect x="16" y="26" width="44" height="48" rx="6" fill="#ffffff" stroke="#9b7fd4" stroke-width="1.8"/>
+  <path d="M24 38h26M24 48h26M24 58h16" stroke="#c9b6f5" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M46 50h28" stroke="#c0297a" stroke-width="3" stroke-linecap="round"/>
+  <path d="M67 41l9 9-9 9" fill="none" stroke="#c0297a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="60" y="20" width="20" height="14" rx="3" fill="#6b3fa0"/>
+  <text x="70" y="30.5" text-anchor="middle" font-size="8" font-weight="700" fill="#ffffff" font-family="'JetBrains Mono',monospace">CSV</text>
+  <rect x="60" y="66" width="20" height="14" rx="3" fill="#4b2882"/>
+  <text x="70" y="76.5" text-anchor="middle" font-size="8" font-weight="700" fill="#ffffff" font-family="'JetBrains Mono',monospace">SQL</text>
+</svg>

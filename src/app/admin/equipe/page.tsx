@@ -5,7 +5,7 @@ import { KeyRound, Plus, ShieldCheck, UserMinus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateHeure, MAINTENANT, relatif } from '@/lib/format'
 import type { MembreEquipe } from '@/lib/mock'
-import { AUDIT, EQUIPE_SYNELIA, TICKETS_PLATEFORME } from '@/lib/mock'
+import { EQUIPE_SYNELIA, TICKETS_PLATEFORME } from '@/lib/mock'
 import { MATRICE_RBAC, ROLES_SUPER_ADMIN, can } from '@/lib/rbac'
 import { ROLE_LABEL, type Role } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -17,7 +17,7 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { RoleMatrix } from '@/components/business/rbac-canvas'
 import { useApp } from '@/components/app/contexte'
-import { useCollection } from '@/components/app/atelier'
+import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
@@ -95,6 +95,10 @@ const POLITIQUE = [
 ]
 
 export default function Equipe() {
+  // Le journal vit dans l'atelier : les actions faites pendant la session s'y
+  // ajoutent, refus compris. Sans atelier touché, il retombe sur la graine.
+  const { journal: AUDIT } = useAtelier()
+
   const { autorise, refus } = useApp()
   const equipe = useCollection<MembreEquipe>('equipe-synelia', EQUIPE_SYNELIA)
   const executer = useOperation()

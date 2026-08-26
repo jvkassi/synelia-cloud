@@ -24,6 +24,21 @@ const ONGLETS = [
   { id: 'depreciation', label: 'Dépréciation' },
 ]
 
+/**
+ * Les cinq familles du catalogue, dans l'ordre où le cahier des charges les
+ * énumère. Le tableau unique mélangeait un Espace Cloud et une pile WordPress
+ * sur la même ligne : ce ne sont pas les mêmes objets, ni les mêmes décisions.
+ */
+const FAMILLES: Array<Offer['categorie']> = ['espace_cloud', 'image_vm', 'k8s', 'stack', 'web']
+
+const AIDE_FAMILLE: Record<Offer['categorie'], string> = {
+  espace_cloud: 'Enveloppes de capacité vendues au quota.',
+  image_vm: 'Gabarits de machines, facturés à l’instance.',
+  k8s: 'Clusters managés, control plane compris.',
+  stack: 'Piles applicatives déployées dans un projet.',
+  web: 'Hébergement mutualisé et services au domaine.',
+}
+
 const LIBELLE_CATEGORIE: Record<Offer['categorie'], string> = {
   espace_cloud: 'Espace Cloud',
   image_vm: 'Image de machine',
@@ -62,6 +77,7 @@ export default function Catalogue() {
   const offres = useCollection<Offer>('offres', OFFRES)
   const executer = useOperation()
   const [onglet, setOnglet] = useState('offres')
+  const [famille, setFamille] = useState<Offer['categorie'] | 'toutes'>('toutes')
   const [editionId, setEditionId] = useState<string | null>(null)
   const [creation, setCreation] = useState(false)
   const [depreciationId, setDepreciationId] = useState<string | null>(null)
@@ -189,10 +205,59 @@ export default function Catalogue() {
       <Tabs tabs={ONGLETS} active={onglet} onChange={setOnglet} />
 
       {onglet === 'offres' && (
-        <Card padding={false}>
+        <div className="space-y-4">
+          {/*
+            Le découpage par famille. Chaque tuile porte ses propres compteurs :
+            une famille sans offre publiée est une famille qu'on ne vend pas, et
+            c'est l'information qu'un tableau trié par nom ne donne jamais.
+          */}
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+            {(['toutes', ...FAMILLES] as const).map((f) => {
+              const lot = f === 'toutes' ? offres.items : offres.items.filter((o) => o.categorie === f)
+              const publiees = lot.filter((o) => o.statut === 'publiee').length
+              const actif = famille === f
+              return (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setFamille(f)}
+                  aria-pressed={actif}
+                  className={cn(
+                    'rounded-[10px] border px-3.5 py-3 text-left transition-colors',
+                    actif
+                      ? 'border-p-600 bg-p-050'
+                      : 'border-g-300 bg-white hover:border-p-400 hover:bg-g-050',
+                  )}
+                >
+                  <span className="block text-[12px] font-bold [font-family:var(--font-display)] text-ink">
+                    {f === 'toutes' ? 'Toutes' : LIBELLE_CATEGORIE[f]}
+                  </span>
+                  <span className="tnum mt-1 block text-[18px] font-bold leading-none [font-family:var(--font-display)] text-p-700">
+                    {lot.length}
+                  </span>
+                  <span className="mt-1 block text-[10.5px] leading-snug text-g-500">
+                    {publiees} publiée{publiees > 1 ? 's' : ''}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+
+          {famille !== 'toutes' && (
+            <p className="text-[12px] leading-relaxed text-g-500">
+              {AIDE_FAMILLE[famille]}
+            </p>
+          )}
+
+          <Card padding={false}>
           <div className="p-4">
             <DataTable<Offer>
-              lignes={offres.items}
+              key={famille}
+              lignes={
+                famille === 'toutes'
+                  ? offres.items
+                  : offres.items.filter((o) => o.categorie === famille)
+              }
               exportable
               parPage={12}
               placeholderRecherche="Rechercher une offre, un code…"
@@ -207,18 +272,8 @@ export default function Catalogue() {
                     { value: 'depreciee', label: 'Dépréciée' },
                   ],
                 },
-                {
-                  id: 'categorie',
-                  libelle: 'Catégorie',
-                  options: [
-                    { value: 'tous', label: 'Toutes les catégories' },
-                    ...Object.entries(LIBELLE_CATEGORIE).map(([v, l]) => ({ value: v, label: l })),
-                  ],
-                },
               ]}
-              selection={(l, fid, val) =>
-                fid === 'statut' ? l.statut === val : fid === 'categorie' ? l.categorie === val : true
-              }
+              selection={(l, fid, val) => (fid === 'statut' ? l.statut === val : true)}
               colonnes={[
                 {
                   id: 'nom',
@@ -365,12 +420,16 @@ export default function Catalogue() {
                 },
               ]}
               vide={{
-                titre: 'Aucune offre',
-                phrase: 'Créez votre première offre pour la rendre souscriptible.',
+                titre: famille === 'toutes' ? 'Aucune offre' : 'Aucune offre dans cette famille',
+                phrase:
+                  famille === 'toutes'
+                    ? 'Créez votre première offre pour la rendre souscriptible.'
+                    : 'Cette famille existe au catalogue mais ne contient encore rien de souscriptible.',
               }}
             />
           </div>
-        </Card>
+          </Card>
+        </div>
       )}
 
       {onglet === 'grille' && (

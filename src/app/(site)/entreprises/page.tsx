@@ -65,6 +65,26 @@ export default function Entreprises() {
             surtitre="Nos engagements sur mesure"
             titre="Quatre chantiers que nous menons pour les grands comptes"
           />
+          {/*
+            L'atelier de cadrage est cité partout sur le site sans jamais être
+            montré. Une table, des mains, un schéma : c'est littéralement ce qui
+            se passe, et cela vaut mieux qu'une photo de poignée de main.
+          */}
+          <figure className="mt-8 overflow-hidden rounded-[14px] border border-g-300">
+            <img
+              src="/photos/atelier-cadrage.webp"
+              alt="Vue de dessus d’une table d’atelier : plusieurs personnes dessinent un schéma d’architecture réseau sur une grande feuille, entourée de notes autocollantes et d’un ordinateur portable."
+              width={1376}
+              height={768}
+              loading="lazy"
+              className="h-52 w-full object-cover sm:h-64"
+            />
+            <figcaption className="bg-white px-5 py-3 text-[11.5px] leading-relaxed text-g-500">
+              Vue d’illustration d’un atelier de cadrage. Il dure une demi-journée, ne se facture
+              pas, et se termine par un dimensionnement chiffré que vous emportez même si vous ne
+              signez pas.
+            </figcaption>
+          </figure>
           <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2">
             {OFFRES_ENTREPRISE.map((o) => (
               <Card key={o.titre} className="flex flex-col">

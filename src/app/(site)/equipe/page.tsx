@@ -123,6 +123,25 @@ export default function Equipe() {
             chapeau="La question nous est posée à chaque atelier de cadrage. Autant y répondre ici."
             className="max-w-3xl"
           />
+          {/*
+            La salle, pas les visages : les portraits de cette page restent des
+            monogrammes, et une photo de personne achetée ailleurs contredirait
+            ce choix. Ici on montre l'endroit d'où l'astreinte répond.
+          */}
+          <figure className="mt-8 overflow-hidden rounded-[14px] border border-g-300">
+            <img
+              src="/photos/noc-supervision.webp"
+              alt="Salle de supervision de nuit : un mur d’écrans affichant graphes, cartes et journaux, deux opérateurs vus de dos."
+              width={1376}
+              height={768}
+              loading="lazy"
+              className="h-52 w-full object-cover sm:h-64"
+            />
+            <figcaption className="bg-white px-5 py-3 text-[11.5px] leading-relaxed text-g-500">
+              Vue d’illustration du poste de supervision d’Abidjan. Les tableaux affichés sont ceux
+              de Centreon et Grafana, dont les liens de sortie figurent dans votre espace client.
+            </figcaption>
+          </figure>
           <div className="mt-9 grid grid-cols-1 gap-4 lg:grid-cols-2">
             {ASTREINTE.map((a, i) => (
               <div

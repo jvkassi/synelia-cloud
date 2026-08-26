@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowRight, Check, ShieldCheck } from 'lucide-react'
+import { ArrowRight, Check } from 'lucide-react'
 import { money } from '@/lib/format'
 import { surfaceMarque } from '@/lib/utils'
 import { ButtonLink } from '@/components/ui/button'
@@ -151,6 +151,24 @@ export default function Accueil() {
 
       {/* ─── 1 · Héros ────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-p-900">
+        {/*
+          La photo reste sous un voile opaque à gauche : c'est là que se trouve
+          le texte, et un fond photographique sous du texte blanc fait tomber le
+          contraste sous le seuil AA. À droite le voile s'éclaircit, où il n'y a
+          que le visuel de baie.
+        */}
+        <img
+          src="/photos/datacenter-allee.webp"
+          alt=""
+          aria-hidden
+          width={1376}
+          height={768}
+          className="absolute inset-0 h-full w-full object-cover opacity-30"
+        />
+        <span
+          className="absolute inset-0 bg-gradient-to-r from-p-900 via-p-900/95 to-p-900/60"
+          aria-hidden
+        />
         <span className="absolute inset-0 bg-grid-light opacity-60" aria-hidden />
         <span
           className="absolute -right-40 -top-32 h-96 w-96 rounded-full bg-m-600/20 blur-3xl"
@@ -170,17 +188,24 @@ export default function Accueil() {
                 <PastilleEtat ton={etat.ton} texte={etat.texte} href="/statut" />
               </div>
               <h1 className="mt-4 text-[34px] font-bold leading-[1.08] tracking-[-0.02em] [font-family:var(--font-display)] text-white sm:text-[52px]">
-                Votre infrastructure,
+                Votre infrastructure et vos applications,
                 <br />
-                vos applications,
-                <br />
-                <span className="text-m-400">sur votre territoire.</span>
+                hébergées et opérées{' '}
+                <span className="text-m-400">en Côte d’Ivoire.</span>
               </h1>
               <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-p-300">
-                Synelia Cloud provisionne, dimensionne, sauvegarde et supervise votre infrastructure
-                et vos outils de travail depuis deux datacenters ivoiriens. Nous n’hébergeons pas
-                seulement vos données : nous nous engageons sur leur disponibilité, leur restauration
-                et votre capacité à repartir.
+                Espaces Cloud, machines virtuelles, Kubernetes managé, messagerie et Drive : Synelia
+                provisionne, dimensionne, sauvegarde et supervise depuis Abidjan et Grand-Bassam.
+                Deux sites nommés, une équipe joignable sur place, et un plan de reprise que nous
+                exerçons chaque trimestre.
+              </p>
+              {/*
+                Les vitrines de cloud promettent toutes la même chose. Dire ce
+                qu'on ne fait pas situe l'offre plus vite qu'un argument de plus.
+              */}
+              <p className="mt-3 max-w-xl text-[13.5px] leading-relaxed text-p-400">
+                Ce que nous ne faisons pas : réimplémenter les logiciels que vous utilisez déjà. Nous
+                les opérons, et vous les ouvrez dans leur propre interface.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <ButtonLink
@@ -398,6 +423,93 @@ export default function Accueil() {
               </p>
             </div>
           </div>
+          {/*
+            Le schéma dit où sont les copies et sur quel site. Les trois nombres
+            au-dessus disent à quelle vitesse on repart ; ils ne disent pas d'où.
+          */}
+          <figure className="mt-10">
+            <img
+              src="/illustrations/sauvegarde-321.svg"
+              alt="Schéma de la règle 3-2-1 appliquée par Synelia : la production dans l’Espace Cloud à Abidjan, un instantané local sur NVMe au site Synertech Vallon, une réplique hors site sur stockage objet au parc VITIB de Grand-Bassam, et une copie immuable verrouillée quatorze jours."
+              width={760}
+              height={306}
+              className="w-full max-w-[760px] rounded-[14px]"
+            />
+          </figure>
+        </Container>
+      </SiteSection>
+
+      {/* ─── 5 bis · Les deux sites ───────────────────────────────────── */}
+      <SiteSection>
+        <Container>
+          <SectionTitle
+            surtitre="Deux sites, nommés"
+            titre="Abidjan et Grand-Bassam, à 4–6 ms l’un de l’autre"
+            chapeau="« Cloud souverain » ne veut rien dire tant qu'on ne nomme pas les bâtiments. Voici les nôtres, la distance qui les sépare, et ce que cette distance permet : répliquer hors site sans sortir du territoire."
+          />
+          <div className="mt-10 grid grid-cols-1 items-start gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+            <figure>
+              <img
+                src="/illustrations/carte-sites.svg"
+                alt="Carte de la Côte d’Ivoire situant les deux sites de Synelia : Abidjan (Synertech Vallon, à Cocody) et Grand-Bassam (parc VITIB), reliés par une liaison de 4 à 6 millisecondes."
+                width={600}
+                height={735}
+                className="w-full"
+              />
+            </figure>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              {[
+                {
+                  photo: '/photos/abidjan.webp',
+                  alt: 'Vue aérienne du quartier du Plateau à Abidjan au crépuscule, le long de la lagune Ébrié.',
+                  titre: 'Abidjan · Synertech Vallon',
+                  detail: 'Cocody. Site principal : calcul, stockage bloc, réseau et supervision.',
+                },
+                {
+                  photo: '/photos/grand-bassam.webp',
+                  alt: 'Vue aérienne du littoral de Grand-Bassam, bordé de palmiers et de l’océan Atlantique.',
+                  titre: 'Grand-Bassam · Parc VITIB',
+                  detail: 'Site de réplication : stockage objet, copies immuables, bascule de PRA.',
+                },
+                {
+                  photo: '/photos/noc-supervision.webp',
+                  alt: 'Salle de supervision de nuit, murs d’écrans affichant des graphes et des cartes.',
+                  titre: 'Supervision 24/7',
+                  detail: 'Astreinte assurée depuis Abidjan, jamais déléguée à un centre d’appels.',
+                },
+                {
+                  photo: '/photos/fibre-optique.webp',
+                  alt: 'Gros plan sur un panneau de brassage optique et ses connecteurs.',
+                  titre: 'Liaison inter-site',
+                  detail: 'Deux chemins de fibre distincts. La réplication ne quitte pas le pays.',
+                },
+              ].map((c) => (
+                <figure
+                  key={c.titre}
+                  className="overflow-hidden rounded-[12px] border border-g-300 bg-white shadow-[0_1px_2px_rgba(43,27,77,.06)]"
+                >
+                  <img
+                    src={c.photo}
+                    alt={c.alt}
+                    width={1376}
+                    height={768}
+                    loading="lazy"
+                    className="h-36 w-full object-cover"
+                  />
+                  <figcaption className="p-4">
+                    <p className="text-[14px] font-bold [font-family:var(--font-display)] text-ink">
+                      {c.titre}
+                    </p>
+                    <p className="mt-1.5 text-[12.5px] leading-relaxed text-g-700">{c.detail}</p>
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+          <p className="mt-6 text-[11.5px] leading-relaxed text-g-500">
+            Vues d’illustration. Les visites de site se font sur rendez-vous, accompagnées, et se
+            demandent depuis votre espace client.
+          </p>
         </Container>
       </SiteSection>
 
@@ -412,9 +524,19 @@ export default function Accueil() {
           <div className="mt-9 grid grid-cols-1 gap-5 lg:grid-cols-3">
             {BLOC_SOUVERAINETE.map((b, i) => (
               <div key={b.titre} className="flex flex-col">
-                <span className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-p-100 text-p-700">
-                  <ShieldCheck size={18} />
-                </span>
+                {/*
+                  Trois pictogrammes distincts, pas trois fois le même bouclier :
+                  le lieu, la matrice de droits, l'export. L'icône doit aider à
+                  distinguer les questions, sinon elle ne sert à rien.
+                */}
+                <img
+                  src={b.illustration}
+                  alt=""
+                  aria-hidden
+                  width={40}
+                  height={40}
+                  className="h-10 w-10"
+                />
                 <h3 className="mt-4 text-[17px] font-bold [font-family:var(--font-display)] text-ink">
                   <span className="tnum mr-1.5 text-g-500">0{i + 1}</span>
                   {b.titre}

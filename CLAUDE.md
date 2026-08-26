@@ -76,6 +76,36 @@ Deux pièges déjà rencontrés :
 - Le harnais ne substitue pas d'identifiants : `routes.json` contient les vrais
   (`dba.africa`, `heb-dba`, `db-dba-maria`…). Ajoutez-y les nouvelles routes.
 
+## Les images de la vitrine
+
+Le projet n'avait aucune image : pas de dossier `public/`, tout était dessiné en
+CSS. Il y a maintenant deux familles, et elles ne se mélangent pas.
+
+**`public/illustrations/*.svg` — générées.** `node outils/illustrations.mjs`
+réécrit les huit fichiers depuis les coordonnées et les palettes du script. La
+carte de Côte d'Ivoire repose sur un contour en longitude/latitude et une
+projection ; ne retouchez pas le SVG à la main, corrigez le générateur et
+relancez-le. La sortie est déterministe : deux exécutions donnent deux fichiers
+identiques.
+
+**`public/photos/*.webp` — génératives.** Produites avec Gemini (Nano Banana),
+redimensionnées à 1600 px et encodées en WebP q76 : 693 Ko pour les sept, contre
+5,5 Mo en JPEG d'origine. Ce ne sont **pas** des photographies de Synertech
+Vallon ni du parc VITIB. Chaque emplacement le dit — « Vues d'illustration » —
+et il faudra les remplacer par de vraies prises de vue avant tout usage
+commercial.
+
+Deux garde-fous appris en les posant :
+
+- **Pas de visage.** La page équipe affiche des monogrammes et explique pourquoi
+  (« un visage acheté sur une banque d'images n'apprendrait rien sur l'équipe »).
+  Une photo de personne la contredirait. Les photos montrent des lieux, des
+  baies, des mains — jamais un portrait.
+- **Contraste avant décor.** Une photo posée en fond de héros sous du texte
+  blanc fait tomber le contraste sous le seuil AA. Le héros la garde sous un
+  dégradé opaque du côté du texte et ne l'éclaircit qu'à droite, où il n'y a que
+  le visuel de baie. L'audit vérifie.
+
 ## Règles qui ne se négocient pas
 
 **Passer par le skill `ponytail` avant d'écrire du code.** Écrire, ajouter,
@@ -363,17 +393,29 @@ lien, deux ancres imbriquées étant du HTML que React refuse d'hydrater.
 
 1. **`/app/docs`** — pas de parcours de formation, ni de suivi de complétion, ni
    d'accès au bac à sable.
-2. **`/admin/catalogue`** — le cahier demande un découpage par famille (Espace
-   Cloud, images VM, clusters, stacks, web) ; on a un tableau unique.
-3. **Anglais** — aucun mécanisme d'internationalisation ; tous les libellés sont
+2. **Anglais** — aucun mécanisme d'internationalisation ; tous les libellés sont
    en français en dur. Le cahier ne demande que la structure, pas la traduction.
    C'est le seul chantier de la liste qui se compte en jours.
-4. **Lanceur comme page d'accueil** — l'écran existe et l'explique, mais aucun
+3. **Lanceur comme page d'accueil** — l'écran existe et l'explique, mais aucun
    réglage ne le fixe pour les membres au rôle purement utilisateur.
-5. **Journal d'audit des actions** — `useOperation()` mute et notifie, mais
-   n'écrit pas dans `AUDIT`. Voir « Deux ateliers, un seul retenu ».
+4. **Refus non journalisables depuis l'interface** — `useOperation()` écrit bien
+   une entrée `result: 'refuse'`, mais `GatedAction` neutralise les événements de
+   pointeur (`pointer-events-none`) : une action interdite ne peut pas être
+   cliquée, donc la branche ne se déclenche pas depuis l'interface. Les refus
+   affichés viennent du jeu de données. Rendre la promesse vraie demanderait que
+   `GatedAction` intercepte le clic au lieu de le bloquer — ce qui change le
+   comportement arbitré « désactivée, jamais masquée ». À trancher.
+5. **Tableau de bord client** — `/app` est un composant serveur : il lit la
+   graine `AUDIT` et non le journal de l'atelier. Les entrées créées pendant la
+   session n'y apparaissent donc pas, contrairement à `/admin/audit` et
+   `/app/securite`.
 
-Fait depuis : l'assistant `/app/kubernetes/new` (cinq étapes), l'onglet
+Fait depuis : le découpage du catalogue par famille (`/admin/catalogue`, cinq
+tuiles qui filtrent le tableau), le journal d'audit alimenté par l'atelier —
+`useOperation()` écrit dans la collection `audit`, que `/admin/audit`,
+`/app/securite`, `/admin/equipe`, `/admin/page` et la fiche organisation lisent
+désormais en direct —, les illustrations et photographies de la vitrine, puis
+l'assistant `/app/kubernetes/new` (cinq étapes), l'onglet
 *Sessions actives* de `/app/securite` et sa politique d'organisation, le centre
 de tâches `/app/taches`, le glisser-déposer de composition de serveurs qui livre
 réellement ses lots (`/app/vms/composer`), et le câblage complet de l'espace

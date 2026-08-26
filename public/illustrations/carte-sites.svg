@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 735" width="600" height="735" role="img" aria-label="Carte de la Côte d'Ivoire : les deux sites de Synelia, Abidjan (Synertech Vallon, Cocody) et Grand-Bassam (parc VITIB), reliés par une liaison de 4 à 6 millisecondes">
+  <defs>
+    <linearGradient id="c-terre" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#ede7f9"/><stop offset="1" stop-color="#ddd2f4"/>
+    </linearGradient>
+    <pattern id="c-grille" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M24 0H0V24" fill="none" stroke="rgba(43,27,77,.06)" stroke-width="1"/>
+    </pattern>
+    <clipPath id="c-pays"><path d="M85.94 99.41L115.91 90.77L145.88 79.55L180.13 73.5L205.81 58.82L240.92 39.82L257.19 67.45L282.88 79.55L302.57 76.09L329.97 95.09L355.66 112.36L381.34 121L407.03 122.73L437 112.36L466.97 108.05L496.94 116.68L522.63 136.55L531.19 181.45L539.75 228.96L550.88 276.46L544.03 315.32L525.19 354.18L502.93 387L499.51 418.96L518.34 449.18L531.19 483.73L522.63 518.27L501.22 524.32L475.53 528.64L454.98 519.14L428.44 514.82L398.47 511.36L359.94 521.73L321.41 535.55L278.59 551.09L235.78 565.77L197.25 577L163 589.09L137.31 585.64L128.75 557.14L122.76 522.59L103.06 494.09L77.37 466.46L57.68 427.59L49.12 393.05L64.53 362.82L74.81 336.91L60.25 311L71.38 276.46L83.37 241.91L94.5 211.68L98.78 177.14L91.93 142.59L85.94 116.68Z"/></clipPath>
+  </defs>
+
+  <path d="M85.94 99.41L115.91 90.77L145.88 79.55L180.13 73.5L205.81 58.82L240.92 39.82L257.19 67.45L282.88 79.55L302.57 76.09L329.97 95.09L355.66 112.36L381.34 121L407.03 122.73L437 112.36L466.97 108.05L496.94 116.68L522.63 136.55L531.19 181.45L539.75 228.96L550.88 276.46L544.03 315.32L525.19 354.18L502.93 387L499.51 418.96L518.34 449.18L531.19 483.73L522.63 518.27L501.22 524.32L475.53 528.64L454.98 519.14L428.44 514.82L398.47 511.36L359.94 521.73L321.41 535.55L278.59 551.09L235.78 565.77L197.25 577L163 589.09L137.31 585.64L128.75 557.14L122.76 522.59L103.06 494.09L77.37 466.46L57.68 427.59L49.12 393.05L64.53 362.82L74.81 336.91L60.25 311L71.38 276.46L83.37 241.91L94.5 211.68L98.78 177.14L91.93 142.59L85.94 116.68Z" fill="url(#c-terre)"/>
+  <g clip-path="url(#c-pays)"><rect width="600" height="631" fill="url(#c-grille)"/></g>
+  <path d="M85.94 99.41L115.91 90.77L145.88 79.55L180.13 73.5L205.81 58.82L240.92 39.82L257.19 67.45L282.88 79.55L302.57 76.09L329.97 95.09L355.66 112.36L381.34 121L407.03 122.73L437 112.36L466.97 108.05L496.94 116.68L522.63 136.55L531.19 181.45L539.75 228.96L550.88 276.46L544.03 315.32L525.19 354.18L502.93 387L499.51 418.96L518.34 449.18L531.19 483.73L522.63 518.27L501.22 524.32L475.53 528.64L454.98 519.14L428.44 514.82L398.47 511.36L359.94 521.73L321.41 535.55L278.59 551.09L235.78 565.77L197.25 577L163 589.09L137.31 585.64L128.75 557.14L122.76 522.59L103.06 494.09L77.37 466.46L57.68 427.59L49.12 393.05L64.53 362.82L74.81 336.91L60.25 311L71.38 276.46L83.37 241.91L94.5 211.68L98.78 177.14L91.93 142.59L85.94 116.68Z" fill="none" stroke="#6b3fa0" stroke-width="1.8" stroke-linejoin="round"/>
+
+  <g><circle cx="323.72" cy="377.76" r="2.5" fill="#67677c" opacity=".7"/><text x="330.72" y="381.26" font-size="10.5" fill="#67677c" font-family="'Open Sans',system-ui,sans-serif">Yamoussoukro</text></g><g><circle cx="344.52" cy="303.23" r="2.5" fill="#67677c" opacity=".7"/><text x="351.52" y="306.73" font-size="10.5" fill="#67677c" font-family="'Open Sans',system-ui,sans-serif">Bouaké</text></g><g><circle cx="206.93" cy="557.31" r="2.5" fill="#67677c" opacity=".7"/><text x="213.93" y="560.81" font-size="10.5" fill="#67677c" font-family="'Open Sans',system-ui,sans-serif">San-Pédro</text></g><g><circle cx="293.24" cy="150.54" r="2.5" fill="#67677c" opacity=".7"/><text x="300.24" y="154.04" font-size="10.5" fill="#67677c" font-family="'Open Sans',system-ui,sans-serif">Korhogo</text></g>
+  <path d="M432.03 506.53L455.15 518.62" fill="none" stroke="#e766a6" stroke-width="2" stroke-dasharray="4 3"/>
+  <g>
+      <circle cx="432.03" cy="506.53" r="16" fill="#c0297a" opacity=".15"/>
+      <circle cx="432.03" cy="506.53" r="10" fill="#c0297a" opacity=".3"/>
+      <circle cx="432.03" cy="506.53" r="6.5" fill="#e766a6" stroke="#ffffff" stroke-width="1.8"/>
+      <text x="432.03" y="509.92999999999995" text-anchor="middle" font-size="9" font-weight="700" fill="#2b1b4d" font-family="Montserrat,system-ui,sans-serif">1</text>
+    </g>
+  <g>
+      <circle cx="455.15" cy="518.62" r="16" fill="#c0297a" opacity=".15"/>
+      <circle cx="455.15" cy="518.62" r="10" fill="#c0297a" opacity=".3"/>
+      <circle cx="455.15" cy="518.62" r="6.5" fill="#e766a6" stroke="#ffffff" stroke-width="1.8"/>
+      <text x="455.15" y="522.02" text-anchor="middle" font-size="9" font-weight="700" fill="#2b1b4d" font-family="Montserrat,system-ui,sans-serif">2</text>
+    </g>
+
+  <g transform="translate(0 631)">
+    <rect x="26" y="0" width="548" height="64" rx="11" fill="#f7f4fc" stroke="#c8c8d4" stroke-width="1.2"/>
+    <g>
+      <circle cx="47" cy="26" r="6.5" fill="#e766a6"/>
+      <text x="47" y="29.4" text-anchor="middle" font-size="9" font-weight="700" fill="#2b1b4d" font-family="Montserrat,system-ui,sans-serif">1</text>
+      <text x="61" y="23" font-size="12.5" font-weight="700" fill="#2b1b4d" font-family="Montserrat,system-ui,sans-serif">Abidjan</text>
+      <text x="61" y="38" font-size="10.5" fill="#67677c" font-family="'Open Sans',system-ui,sans-serif">Synertech Vallon · Cocody</text>
+    </g>
+    <g>
+      <circle cx="251" cy="26" r="6.5" fill="#e766a6"/>
+      <text x="251" y="29.4" text-anchor="middle" font-size="9" font-weight="700" fill="#2b1b4d" font-family="Montserrat,system-ui,sans-serif">2</text>
+      <text x="265" y="23" font-size="12.5" font-weight="700" fill="#2b1b4d" font-family="Montserrat,system-ui,sans-serif">Grand-Bassam</text>
+      <text x="265" y="38" font-size="10.5" fill="#67677c" font-family="'Open Sans',system-ui,sans-serif">Parc VITIB</text>
+    </g>
+    <g>
+      <path d="M450 26h22" stroke="#e766a6" stroke-width="2" stroke-dasharray="4 3"/>
+      <text x="450" y="16" font-size="10.5" fill="#67677c" font-family="'Open Sans',system-ui,sans-serif">liaison inter-site</text>
+      <text x="478" y="30" font-size="12.5" font-weight="700" fill="#c0297a" font-family="'JetBrains Mono',ui-monospace,monospace">4–6 ms</text>
+    </g>
+  </g>
+</svg>
