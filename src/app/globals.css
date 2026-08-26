@@ -259,6 +259,39 @@
   }
 }
 
+/*
+ * Dérive des halos du héros. Deux amplitudes lentes et décalées : un mouvement
+ * régulier se lit comme un carrousel, un mouvement lent et irrégulier se lit
+ * comme de la profondeur. Les halos vivent dans une section `overflow-hidden`,
+ * donc la translation ne peut pas pousser la page hors de l'écran.
+ */
+@keyframes syn-derive {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(-3%, 4%, 0) scale(1.06);
+  }
+  66% {
+    transform: translate3d(4%, -2%, 0) scale(0.97);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* Apparition au défilement : opacité et léger décalage vertical. */
+@keyframes syn-revele {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @keyframes syn-marquee {
   from {
     transform: translateX(0);
@@ -286,6 +319,34 @@
 
 @utility animate-marquee {
   animation: syn-marquee 38s linear infinite;
+}
+
+@utility animate-derive {
+  animation: syn-derive 26s ease-in-out infinite;
+}
+
+/* Décalé, pour que les deux halos ne respirent pas ensemble. */
+@utility animate-derive-lente {
+  animation: syn-derive 34s ease-in-out -12s infinite;
+}
+
+/*
+ * Apparition pilotée par le défilement, sans JavaScript ni dépendance :
+ * `animation-timeline: view()` fait avancer l'animation selon la position de
+ * l'élément dans la fenêtre.
+ *
+ * Tout est sous `@supports` pour une raison précise : hors de cette garde, un
+ * navigateur sans timelines de défilement appliquerait l'état initial
+ * — `opacity: 0` — et ne l'animerait jamais. Le contenu resterait invisible.
+ * Ici, faute de prise en charge, aucune règle ne s'applique et la page
+ * s'affiche simplement sans mouvement.
+ */
+@utility revele {
+  @supports (animation-timeline: view()) {
+    animation: syn-revele linear both;
+    animation-timeline: view();
+    animation-range: entry 4% entry 46%;
+  }
 }
 
 /* Squelettes de chargement (§1.5.1) */
@@ -373,5 +434,22 @@
   .animate-pulse-dot {
     animation: none !important;
     opacity: 1 !important;
+  }
+
+  /*
+   * Une animation pilotée par le défilement n'est pas bornée par une durée :
+   * la règle globale ci-dessus ne l'arrête pas. Il faut couper la timeline et
+   * rétablir l'état final, sinon le contenu reste à `opacity: 0`.
+   */
+  .revele {
+    animation: none !important;
+    animation-timeline: auto !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .animate-derive,
+  .animate-derive-lente {
+    animation: none !important;
   }
 }

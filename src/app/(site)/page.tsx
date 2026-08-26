@@ -171,11 +171,11 @@ export default function Accueil() {
         />
         <span className="absolute inset-0 bg-grid-light opacity-60" aria-hidden />
         <span
-          className="absolute -right-40 -top-32 h-96 w-96 rounded-full bg-m-600/20 blur-3xl"
+          className="animate-derive absolute -right-40 -top-32 h-96 w-96 rounded-full bg-m-600/20 blur-3xl"
           aria-hidden
         />
         <span
-          className="absolute -bottom-40 -left-32 h-96 w-96 rounded-full bg-p-600/30 blur-3xl"
+          className="animate-derive-lente absolute -bottom-40 -left-32 h-96 w-96 rounded-full bg-p-600/30 blur-3xl"
           aria-hidden
         />
         <Container className="relative py-16 sm:py-24">
