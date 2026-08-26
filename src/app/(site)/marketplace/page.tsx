@@ -70,7 +70,7 @@ export default function MarketplacePublic() {
         }
       />
 
-      <SiteSection>
+      <SiteSection fond="clair">
         <Container>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -146,7 +146,7 @@ export default function MarketplacePublic() {
         </Container>
       </SiteSection>
 
-      <SiteSection fond="clair">
+      <SiteSection>
         <Container>
           <SectionTitle
             surtitre="Contrat d’intégration"
@@ -169,7 +169,7 @@ export default function MarketplacePublic() {
         </Container>
       </SiteSection>
 
-      <SiteSection>
+      <SiteSection fond="clair">
         <Container>
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
             <div>

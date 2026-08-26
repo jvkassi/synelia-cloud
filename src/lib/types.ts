@@ -659,7 +659,13 @@ export interface CatalogService {
   nom: string
   solutionOSS: string
   categorie: CategorieService
-  logoUrl: string
+  /**
+   * Nom du pictogramme en pâte à modeler, dans `public/photos/pate-<icone>.webp`.
+   * Il illustre *ce que le service fait* chez nous, pas la marque de la solution
+   * amont : inventer un logo Nextcloud serait lui prêter une identité qui n'est
+   * pas la nôtre. Les initiales et la teinte restent le repli.
+   */
+  icone: string
   /** Couleur d'accent du logo de la solution, pour la vignette. */
   logoTeinte: string
   logoInitiales: string

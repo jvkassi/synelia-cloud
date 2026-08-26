@@ -70,7 +70,7 @@ export default async function FicheServicePublique({
           <div className="flex flex-wrap items-start justify-between gap-6">
             <div className="min-w-0 max-w-2xl">
               <div className="flex items-center gap-3">
-                <SolutionLogo initiales={s.logoInitiales} teinte={s.logoTeinte} size="lg" />
+                <SolutionLogo initiales={s.logoInitiales} teinte={s.logoTeinte} icone={s.icone} size="lg" />
                 <div>
                   <MicroLabel className="text-m-600">{CATEGORIE_LABEL[s.categorie]}</MicroLabel>
                   <h1 className="mt-1 text-[32px] font-black leading-none [font-family:var(--font-display)] text-encre-2 sm:text-[40px]">

@@ -50,7 +50,9 @@ export default async function FicheProduit({
                 aria-hidden
                 width={320}
                 height={320}
-                className="h-16 w-16 shrink-0"
+                // Fond crème plein sur un héros crème foncé : sans rayon, le
+                // rendu se lit comme un carré rapporté.
+                className="h-16 w-16 shrink-0 rounded-[12px]"
               />
             )}
             <MicroLabel className="text-m-600">{f.surtitre}</MicroLabel>
