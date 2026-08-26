@@ -100,15 +100,26 @@ export const PORTES_ENTREE = [
 
 // ─── Catalogue par besoin — cartes d'accueil (§2.2 §4) ────────────────
 
+/**
+ * Les huit produits mis en avant sur l'accueil.
+ *
+ * `href` n'apparaît que pour Drive Pro : c'est un service du marketplace, pas
+ * une fiche d'offre, et la carte pointait sur `/offres/drive-pro` — qui
+ * renvoyait 404. L'audit ne l'avait pas vu : il visite les routes listées dans
+ * `outils/routes.json`, il ne suit pas les liens sortants.
+ *
+ * `icone` est un pictogramme en pâte à modeler, de la même famille que les
+ * visuels de la vitrine.
+ */
 export const CARTES_PRODUIT = [
-  { nom: 'Espace Cloud', slug: 'espace-cloud', phrase: 'Votre enveloppe de capacité, isolée et dimensionnable.', prix: 25000, unite: '/mois', famille: 'Calcul' },
-  { nom: 'Machines virtuelles', slug: 'machines-virtuelles', phrase: 'Linux ou Windows, du 2 vCPU au 64 vCPU.', prix: 4200, unite: '/mois', famille: 'Calcul' },
-  { nom: 'Kubernetes managé', slug: 'kubernetes', phrase: 'Control plane opéré, pools autoscalés, modules prêts.', prix: 45000, unite: '/mois', famille: 'Calcul' },
-  { nom: 'Stockage objet S3', slug: 'stockage-objet', phrase: 'Compatible S3, versioning, verrouillage WORM.', prix: 1500, unite: '/To/mois', famille: 'Stockage' },
-  { nom: 'Cloud Backup', slug: 'cloud-backup', phrase: 'Sauvegarde immuable, restauration au fichier près.', prix: 2800, unite: '/To/mois', famille: 'Protection' },
-  { nom: 'PRA / DRaaS', slug: 'pra', phrase: 'Bascule inter-site testée, RPO et RTO constatés.', prix: 96000, unite: '/mois', famille: 'Protection' },
-  { nom: 'Drive Pro', slug: 'drive-pro', phrase: 'Fichiers partagés et documents collaboratifs.', prix: 2200, unite: '/siège/mois', famille: 'Applications' },
-  { nom: 'WordPress managé', slug: 'wordpress', phrase: 'Votre site opéré, mis à jour et protégé.', prix: 14000, unite: '/mois', famille: 'Web' },
+  { nom: 'Espace Cloud', slug: 'espace-cloud', icone: 'nuage', phrase: 'Votre enveloppe de capacité, isolée et dimensionnable.', prix: 25000, unite: '/mois', famille: 'Calcul' },
+  { nom: 'Machines virtuelles', slug: 'machines-virtuelles', icone: 'serveurs', phrase: 'Linux ou Windows, du 2 vCPU au 64 vCPU.', prix: 4200, unite: '/mois', famille: 'Calcul' },
+  { nom: 'Kubernetes managé', slug: 'kubernetes', icone: 'kubernetes', phrase: 'Control plane opéré, pools autoscalés, modules prêts.', prix: 45000, unite: '/mois', famille: 'Calcul' },
+  { nom: 'Stockage objet S3', slug: 'stockage-objet', icone: 'stockage-objet', phrase: 'Compatible S3, versioning, verrouillage WORM.', prix: 1500, unite: '/To/mois', famille: 'Stockage' },
+  { nom: 'Cloud Backup', slug: 'cloud-backup', icone: 'sauvegarde', phrase: 'Sauvegarde immuable, restauration au fichier près.', prix: 2800, unite: '/To/mois', famille: 'Protection' },
+  { nom: 'PRA / DRaaS', slug: 'pra', icone: 'bouclier', phrase: 'Bascule inter-site testée, RPO et RTO constatés.', prix: 96000, unite: '/mois', famille: 'Protection' },
+  { nom: 'Drive Pro', slug: 'drive-pro', icone: 'drive-pro', href: '/marketplace/drive-pro', phrase: 'Fichiers partagés et documents collaboratifs.', prix: 2200, unite: '/siège/mois', famille: 'Applications' },
+  { nom: 'WordPress managé', slug: 'wordpress', icone: 'wordpress', phrase: 'Votre site opéré, mis à jour et protégé.', prix: 14000, unite: '/mois', famille: 'Web' },
 ]
 
 // ─── Bloc PRA (§2.2 §5) ───────────────────────────────────────────────
@@ -436,12 +447,15 @@ export interface FicheProduit {
    * les copies. Tous les produits n'en méritent pas un.
    */
   schema?: { src: string; alt: string; largeur: number; hauteur: number }
+  /** Pictogramme en pâte à modeler, dans `public/photos/pate-*.webp`. */
+  icone?: string
   faq: Array<{ question: string; reponse: string }>
 }
 
 export const FICHES_PRODUIT: FicheProduit[] = [
   {
     slug: 'espace-cloud',
+    icone: 'nuage',
     nom: 'Espace Cloud (VDC)',
     surtitre: 'Calcul & réseau',
     accroche: 'Une enveloppe de capacité, vos ressources dedans.',
@@ -523,6 +537,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
   },
   {
     slug: 'machines-virtuelles',
+    icone: 'serveurs',
     nom: 'Machines virtuelles',
     surtitre: 'Calcul & réseau',
     accroche: 'Linux et Windows, du gabarit standard au sur-mesure.',
@@ -592,6 +607,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
   },
   {
     slug: 'kubernetes',
+    icone: 'kubernetes',
     nom: 'Kubernetes managé',
     surtitre: 'Calcul & réseau',
     accroche: 'Control plane opéré, pools autoscalés, modules prêts.',
@@ -668,6 +684,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
   },
   {
     slug: 'pra',
+    icone: 'bouclier',
     nom: 'PRA / DRaaS',
     surtitre: 'Stockage & protection',
     accroche: 'Votre plan de reprise, testé et prouvé.',
@@ -740,6 +757,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
   },
   {
     slug: 'cloud-backup',
+    icone: 'sauvegarde',
     nom: 'Cloud Backup',
     surtitre: 'Stockage & protection',
     accroche: 'Sauvegarde immuable, restauration au fichier près.',
@@ -813,6 +831,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
   },
   {
     slug: 'stockage-objet',
+    icone: 'stockage-objet',
     nom: 'Stockage objet S3',
     surtitre: 'Stockage & protection',
     accroche: 'Compatible S3, versioning, verrouillage WORM.',
@@ -878,6 +897,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
   },
   {
     slug: 'load-balancer',
+    icone: 'load-balancer',
     nom: 'Load balancer',
     surtitre: 'Calcul & réseau',
     accroche: 'L4 et L7, WAF OWASP, health checks.',
@@ -950,6 +970,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
   },
   {
     slug: 'wordpress',
+    icone: 'wordpress',
     nom: 'WordPress managé',
     surtitre: 'Web',
     accroche: 'Votre site opéré, mis à jour et protégé.',
@@ -1017,6 +1038,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
   },
   {
     slug: 'reseau-vpn',
+    icone: 'reseau-vpn',
     nom: 'Réseau privé & VPN',
     surtitre: 'Calcul & réseau',
     accroche: 'Vos machines se parlent entre elles, pas au reste du monde.',
@@ -1084,6 +1106,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
   },
   {
     slug: 'ip-antiddos',
+    icone: 'ip-antiddos',
     nom: 'IP & anti-DDoS',
     surtitre: 'Calcul & réseau',
     accroche: 'Une adresse publique, filtrée avant d’arriver chez vous.',
@@ -1151,6 +1174,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
   },
   {
     slug: 'volumes',
+    icone: 'volumes',
     nom: 'Volumes',
     surtitre: 'Stockage & protection',
     accroche: 'Du disque que vous étendez sans arrêter la machine.',
@@ -1218,6 +1242,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
   },
   {
     slug: 'bases-managees',
+    icone: 'bases-managees',
     nom: 'Bases managées',
     surtitre: 'Stockage & protection',
     accroche: 'Le moteur est à vous, l’exploitation est à nous.',
@@ -1286,6 +1311,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
   },
   {
     slug: 'hebergement-web',
+    icone: 'hebergement-web',
     nom: 'Hébergement web',
     surtitre: 'Web',
     accroche: 'Mettre un site en ligne sans administrer un serveur.',
@@ -1354,6 +1380,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
   },
   {
     slug: 'domaines',
+    icone: 'domaines',
     nom: 'Noms de domaine',
     surtitre: 'Web',
     accroche: 'Enregistrer, transférer, et ne jamais perdre la main.',
@@ -1421,6 +1448,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
   },
   {
     slug: 'dns',
+    icone: 'dns',
     nom: 'DNS managé',
     surtitre: 'Web',
     accroche: 'Des zones qui résolvent, même quand un site tombe.',
@@ -1489,6 +1517,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
   },
   {
     slug: 'smtp',
+    icone: 'smtp',
     nom: 'Relais SMTP',
     surtitre: 'Web',
     accroche: 'Vos courriers transactionnels arrivent, et vous le vérifiez.',

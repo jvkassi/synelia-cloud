@@ -325,14 +325,18 @@ export default function Accueil() {
             {CARTES_PRODUIT.map((c, n) => (
               <Link
                 key={c.slug}
-                href={`/offres/${c.slug}`}
+                /* Drive Pro est un service du marketplace, pas une fiche d'offre. */
+                href={c.href ?? `/offres/${c.slug}`}
                 className="group flex flex-col rounded-[22px] border-2 border-encre-2/10 bg-creme p-5 transition-transform hover:-translate-y-1.5"
               >
-                <span
-                  className={`flex h-11 w-11 items-center justify-center rounded-[14px] text-[16px] font-black [font-family:var(--font-display)] ${PASTILLES[n % 4]} ${TEINTES[n % 4]}`}
-                >
-                  {c.nom.slice(0, 1)}
-                </span>
+                <img
+                  src={`/photos/pate-${c.icone}.webp`}
+                  alt=""
+                  aria-hidden
+                  width={320}
+                  height={320}
+                  className="h-14 w-14"
+                />
                 <span className="mt-3.5 text-[11px] font-bold uppercase tracking-wider text-encre-2/45">
                   {c.famille}
                 </span>

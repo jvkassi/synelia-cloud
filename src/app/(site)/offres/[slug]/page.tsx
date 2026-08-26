@@ -42,7 +42,19 @@ export default async function FicheProduit({
       */}
       <section className="border-b border-encre-2/10 bg-creme-2">
         <Container className="py-14 sm:py-16">
-          <MicroLabel className="text-m-600">{f.surtitre}</MicroLabel>
+          <div className="flex flex-wrap items-center gap-4">
+            {f.icone && (
+              <img
+                src={`/photos/pate-${f.icone}.webp`}
+                alt=""
+                aria-hidden
+                width={320}
+                height={320}
+                className="h-16 w-16 shrink-0"
+              />
+            )}
+            <MicroLabel className="text-m-600">{f.surtitre}</MicroLabel>
+          </div>
           <h1 className="mt-3 text-[34px] font-black leading-[1.06] tracking-[-0.02em] [font-family:var(--font-display)] text-encre-2 sm:text-[46px]">
             {f.nom}
           </h1>
