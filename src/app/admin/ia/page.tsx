@@ -4,9 +4,11 @@ import { cn, seededSeries } from '@/lib/utils'
 import { dateCourte, jetons, money, num, pct } from '@/lib/format'
 import { SITE_LABEL } from '@/lib/types'
 import {
+  AGENTS_PLATEFORME,
   CONTRATS_FOURNISSEURS,
   FLOTTE_MODELES,
   PARC_GPU,
+  SYNTHESE_AGENTS_PLATEFORME,
   SYNTHESE_IA_PLATEFORME,
   modeleParSlug,
 } from '@/lib/mock'
@@ -159,6 +161,70 @@ export default function ParcGpuEtIA() {
           </Callout>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader
+          titre="Agents et orchestration"
+          sousTitre="La consommation ne vient plus seulement d’appels directs : deux tiers des jetons servis passent aujourd’hui par un agent ou un flux, ce qui change la nature de la charge — plus de petits appels enchaînés, moins de gros appels isolés."
+        />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatTile
+            libelle="Agents déployés"
+            valeur={SYNTHESE_AGENTS_PLATEFORME.agents}
+            detail={`${SYNTHESE_AGENTS_PLATEFORME.publies} publiés`}
+          />
+          <StatTile
+            libelle="Flux d’orchestration"
+            valeur={SYNTHESE_AGENTS_PLATEFORME.flux}
+            detail={`${num(SYNTHESE_AGENTS_PLATEFORME.executions30j)} exécutions sur 30 j`}
+          />
+          <StatTile
+            libelle="Trafic orchestré"
+            valeur={pct(SYNTHESE_AGENTS_PLATEFORME.partOrchestreePct, 1)}
+            ton="ok"
+            detail="Part des jetons issus d’un agent"
+          />
+          <StatTile
+            libelle="Outils déclarés"
+            valeur={SYNTHESE_AGENTS_PLATEFORME.outilsDeclares}
+            detail={`dont ${SYNTHESE_AGENTS_PLATEFORME.serveursMcp} serveurs MCP`}
+          />
+        </div>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left">
+            <thead>
+              <tr className="border-b border-g-300 bg-g-050">
+                <th className="type-micro px-3 py-2.5 text-g-500">Organisation</th>
+                <th className="type-micro px-3 py-2.5 text-right text-g-500">Agents</th>
+                <th className="type-micro px-3 py-2.5 text-right text-g-500">Publiés</th>
+                <th className="type-micro px-3 py-2.5 text-right text-g-500">Flux</th>
+                <th className="type-micro px-3 py-2.5 text-right text-g-500">Exécutions 30 j</th>
+                <th className="type-micro px-3 py-2.5 text-g-500">Canaux ouverts</th>
+              </tr>
+            </thead>
+            <tbody>
+              {AGENTS_PLATEFORME.map((o) => (
+                <tr key={o.org} className="border-b border-g-100 last:border-0">
+                  <td className="px-3 py-3 text-[12.5px] font-semibold text-ink">{o.org}</td>
+                  <td className="tnum px-3 py-3 text-right text-[12.5px] text-g-700">{o.agents}</td>
+                  <td className="tnum px-3 py-3 text-right text-[12.5px] text-g-700">{o.publies}</td>
+                  <td className="tnum px-3 py-3 text-right text-[12.5px] text-g-700">{o.flux}</td>
+                  <td className="tnum px-3 py-3 text-right text-[12.5px] font-semibold text-ink">
+                    {num(o.executions30j)}
+                  </td>
+                  <td className="px-3 py-3 text-[11.5px] text-g-500">{o.canaux}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <Callout ton="warn" className="mt-4" titre="Vingt-et-un agents créés ne sont jamais publiés">
+          Sur 43 agents, 13 restent en brouillon — pour la plupart parce que leur jeu d’épreuves ne
+          passe pas le seuil de 80 %. C’est le garde-fou qui fonctionne, mais c’est aussi une
+          promesse commerciale non tenue chez le client. Un accompagnement sur la constitution des
+          jeux d’épreuves aurait plus d’effet sur l’adoption que n’importe quelle remise.
+        </Callout>
+      </Card>
 
       <Card>
         <CardHeader

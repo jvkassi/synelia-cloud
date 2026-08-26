@@ -3,13 +3,20 @@
 import { useState } from 'react'
 import { Cloud, FolderGit2, Globe, HardDrive, Plus, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dateHeure, goHumain, jetons, money, num, relatif } from '@/lib/format'
+import { dateHeure, goHumain, jetons, money, num, pct, relatif } from '@/lib/format'
 import type { BaseConnaissance } from '@/lib/types'
-import { BASES_CONNAISSANCE, CLES_IA, MODELES_IA } from '@/lib/mock'
+import {
+  BASES_CONNAISSANCE,
+  CLES_IA,
+  CONNECTEURS_CONNAISSANCE,
+  DECOUPAGE_DEFAUT,
+  FILTRES_METADONNEES,
+  MODELES_IA,
+} from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CodeBlock, GatedAction, Tabs } from '@/components/ui/display'
-import { Field, Select, Switch } from '@/components/ui/field'
+import { Field, Select, Slider, Switch } from '@/components/ui/field'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { EmptyState, ErrorState } from '@/components/composition/states'
@@ -263,6 +270,46 @@ export default function BasesDeConnaissance() {
                           />
                         </div>
                       </Card>
+
+                      <Card>
+                        <CardHeader
+                          titre="Découpage"
+                          sousTitre="Un document entier ne tient pas dans une requête : il est coupé en fragments, et c’est le fragment qui est retrouvé, pas le document."
+                        />
+                        <div className="space-y-4">
+                          <Slider
+                            label="Taille d’un fragment"
+                            value={DECOUPAGE_DEFAUT.tailleFragment}
+                            onChange={() => undefined}
+                            min={120}
+                            max={1_200}
+                            step={20}
+                            unite="jetons"
+                          />
+                          <Slider
+                            label="Recouvrement entre fragments"
+                            value={DECOUPAGE_DEFAUT.recouvrement}
+                            onChange={() => undefined}
+                            min={0}
+                            max={200}
+                            step={10}
+                            unite="jetons"
+                          />
+                          <Field label="Stratégie de coupe">
+                            <Select defaultValue="titre" disabled={!peutEcrire}>
+                              <option value="titre">{DECOUPAGE_DEFAUT.strategie}</option>
+                              <option value="fixe">Longueur fixe, sans tenir compte de la structure</option>
+                              <option value="phrase">Par phrase, pour des textes courts</option>
+                            </Select>
+                          </Field>
+                        </div>
+                        <Callout ton="warn" className="mt-4" titre="Changer ces valeurs impose de tout réindexer">
+                          Les fragments existants ne se recoupent pas à la volée : modifier la taille
+                          ou le recouvrement déclenche une passe complète, facturée{' '}
+                          {money(coutIndexation(base))} sur cette base. Le recouvrement évite qu’une
+                          phrase coupée en deux perde son sens des deux côtés.
+                        </Callout>
+                      </Card>
                     </div>
                   </div>
                 </div>
@@ -372,12 +419,84 @@ curl ${PASSERELLE_IA.base}/chat/completions \\
                       préférer : une réponse absente se traite, une réponse inventée se propage.
                     </Callout>
                   </div>
+
+                  <Card className="lg:col-span-2">
+                    <CardHeader
+                      titre="Filtres de métadonnées"
+                      sousTitre="Restreindre la recherche avant de chercher coûte moins cher que trier après. Chaque document porte ces attributs, hérités de sa source ou lus dans son contenu."
+                    />
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[620px] text-left">
+                        <thead>
+                          <tr className="border-b border-g-300">
+                            <th className="type-micro py-2 text-g-500">Attribut</th>
+                            <th className="type-micro py-2 text-g-500">Exemple de filtre</th>
+                            <th className="type-micro py-2 text-right text-g-500">Couverture</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {FILTRES_METADONNEES.map((f) => (
+                            <tr key={f.cle} className="border-b border-g-100 last:border-0">
+                              <td className="py-2.5">
+                                <span className="block font-mono text-[12px] font-semibold text-ink">
+                                  {f.cle}
+                                </span>
+                                <span className="block text-[11px] text-g-500">{f.libelle}</span>
+                              </td>
+                              <td className="py-2.5 font-mono text-[11.5px] text-g-700">
+                                {f.exemple}
+                              </td>
+                              <td className="py-2.5 text-right">
+                                <Badge tone={f.couverture > 90 ? 'ok' : 'warn'} size="sm">
+                                  {pct(f.couverture)}
+                                </Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <Callout ton="warn" className="mt-4" titre="Un filtre à 62 % de couverture est un piège">
+                      Filtrer sur <span className="font-mono text-[12px]">version</span> écarte
+                      silencieusement les 38 % de documents qui ne portent pas l’attribut — y compris
+                      ceux qui contenaient la réponse. Un filtre ne vaut que si l’attribut est
+                      renseigné partout ; sinon il faut le remplir d’abord.
+                    </Callout>
+                  </Card>
                 </div>
               )}
             </>
           )}
         </>
       )}
+
+      <Card>
+        <CardHeader
+          titre="Connecteurs d’ingestion"
+          sousTitre="D’où les documents peuvent venir. Nous lisons la source là où elle vit et n’en gardons que les vecteurs — pas de seconde copie de vos documents chez nous."
+        />
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+          {CONNECTEURS_CONNAISSANCE.map((c) => (
+            <div key={c.id} className="rounded-[8px] border border-g-300 px-3 py-2.5">
+              <div className="flex items-start justify-between gap-2">
+                <span className="min-w-0 truncate text-[12.5px] font-semibold text-ink">
+                  {c.nom}
+                </span>
+                <Badge tone={c.etat === 'disponible' ? 'ok' : 'info'} size="sm">
+                  {c.etat === 'disponible' ? 'Disponible' : 'Aperçu'}
+                </Badge>
+              </div>
+              <p className="mt-1 font-mono text-[10.5px] text-g-500">{c.formats}</p>
+              <p className="mt-1.5 text-[11.5px] leading-relaxed text-g-500">{c.note}</p>
+            </div>
+          ))}
+        </div>
+        <Callout ton="violet" className="mt-4" titre="Le téléversement direct est le dernier recours">
+          Déposer des fichiers une fois donne un index qui vieillit sans prévenir : la procédure
+          révisée en octobre restera absente jusqu’à ce que quelqu’un y repense. Branchez une source
+          vivante partout où c’est possible, même au prix d’une configuration d’accès.
+        </Callout>
+      </Card>
     </div>
   )
 }

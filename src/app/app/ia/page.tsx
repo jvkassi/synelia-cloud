@@ -11,9 +11,12 @@ import {
   Wallet,
   Workflow,
 } from 'lucide-react'
+import Link from 'next/link'
 import { seededSeries } from '@/lib/utils'
+import { TYPE_AGENT_LABEL } from '@/lib/types'
 import { jetons, money, num, pct } from '@/lib/format'
 import {
+  AGENTS_IA,
   BUDGET_IA,
   CLES_IA,
   CONSOMMATION_PAR_MODELE,
@@ -24,6 +27,8 @@ import {
   modeleParSlug,
 } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
+import { ButtonLink } from '@/components/ui/button'
+import { SolutionLogo } from '@/components/ui/display'
 import { Card, CardHeader, Callout, NavCard, PageHeader } from '@/components/composition/card'
 import { StackedBar, StatTile } from '@/components/composition/metrics'
 import { EventList, GrilleSparkCharts, LiensSortie } from '@/components/business/observabilite'
@@ -102,6 +107,7 @@ export default function AccueilIA() {
     (m) => m.hebergement === 'souverain' && m.statut !== 'retire',
   )
   const points = POINTS_INFERENCE.filter((p) => p.espaceId === espace.id)
+  const agentsPublies = AGENTS_IA.filter((a) => a.espaceId === espace.id && a.statut === 'publie')
 
   const partExterne = 100 - PASSERELLE_IA.partTerritoirePct
 
@@ -171,6 +177,50 @@ export default function AccueilIA() {
           />
         ))}
       </div>
+
+      <Card>
+        <CardHeader
+          titre="Agents en production"
+          sousTitre="Ce que la plateforme fait tourner pour vous en ce moment, et ce que cela coûte par jour."
+          actions={
+            <ButtonLink href="/app/ia/agents" variant="ghost" size="sm">
+              Tous les agents
+            </ButtonLink>
+          }
+        />
+        {agentsPublies.length === 0 ? (
+          <p className="text-[12.5px] leading-relaxed text-g-500">
+            Aucun agent publié sur cet espace. La passerelle est utilisable telle quelle depuis vos
+            applications, mais rien ne tourne pour vous.
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            {agentsPublies.map((a) => (
+              <Link
+                key={a.id}
+                href="/app/ia/agents"
+                className="rounded-[8px] border border-g-300 px-3 py-2.5 transition-colors hover:border-p-400"
+              >
+                <span className="flex items-center gap-2.5">
+                  <SolutionLogo initiales={a.initiales} teinte={a.teinte} size="sm" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[12.5px] font-semibold text-ink">
+                      {a.nom}
+                    </span>
+                    <span className="block truncate text-[11px] text-g-500">
+                      {TYPE_AGENT_LABEL[a.type]} · {num(a.metriques.conversations7j)} échanges / 7 j
+                    </span>
+                  </span>
+                  <span className="tnum shrink-0 text-right text-[11px] text-g-500">
+                    {money(a.metriques.coutJour)}
+                    <span className="block">par jour</span>
+                  </span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>

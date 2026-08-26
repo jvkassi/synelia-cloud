@@ -4,12 +4,14 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { dateCourte, jetons, money, num, pct } from '@/lib/format'
 import {
+  ALERTES_IA,
   BUDGET_IA,
   CLES_IA,
   COMPARAISON_SOUVERAIN,
   CONSOMMATION_IA_JOURS,
   CONSOMMATION_PAR_CLE,
   CONSOMMATION_PAR_MODELE,
+  QUOTAS_DEPARTEMENT,
   modeleParSlug,
 } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
@@ -337,6 +339,91 @@ export default function ConsommationIA() {
           des jetons, sur les tâches où l’écart de qualité se voit encore.
         </Callout>
       </Card>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader
+            titre="Quotas par direction"
+            sousTitre="Le plafond de l’organisation se répartit entre les directions métier. Une direction qui atteint le sien n’entame pas celui des autres."
+          />
+          <div className="space-y-3.5">
+            {QUOTAS_DEPARTEMENT.map((d) => (
+              <div key={d.departement}>
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <span className="text-[12.5px] font-semibold text-ink">{d.departement}</span>
+                  <span className="tnum text-[11px] text-g-500">
+                    {d.utilisateurs} utilisateurs · {d.cles} clé{d.cles > 1 ? 's' : ''}
+                  </span>
+                </div>
+                <QuotaBar
+                  utilise={d.consomme}
+                  total={d.quotaMensuel}
+                  compact
+                  seuil={85}
+                  formateur={(v) => money(v)}
+                  className="mt-1.5"
+                />
+              </div>
+            ))}
+          </div>
+          <Callout ton="info" className="mt-4" titre="Le commerce consomme 10 % de son quota">
+            Son agent est encore en brouillon : le quota a été posé avant que l’usage existe. Un
+            quota inutilisé n’est pas gratuit — il immobilise une part du plafond que les autres
+            directions ne peuvent pas prendre.
+          </Callout>
+        </Card>
+
+        <Card padding={false}>
+          <div className="border-b border-g-100 px-4 py-3">
+            <CardHeader
+              titre="Alertes de seuil"
+              sousTitre="Ce qui déclenche une notification, et vers qui. Une alerte qui n’arrive à personne ne sert à rien."
+              className="mb-0"
+            />
+          </div>
+          <div className="divide-y divide-g-100">
+            {ALERTES_IA.map((a) => (
+              <div key={a.id} className="px-4 py-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <span className="min-w-0">
+                    <span className="block text-[12.5px] font-semibold text-ink">{a.metrique}</span>
+                    <span className="block text-[11.5px] text-g-500">
+                      {a.cible} · seuil : {a.seuil}
+                    </span>
+                  </span>
+                  <Badge tone={a.actif ? 'ok' : 'neutral'} dot size="sm">
+                    {a.actif ? 'Active' : 'Inactive'}
+                  </Badge>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  {a.canaux.map((c) => (
+                    <Badge key={c} tone="neutral" size="sm">
+                      {c === 'email'
+                        ? 'E-mail'
+                        : c === 'sms'
+                          ? 'SMS'
+                          : c === 'whatsapp'
+                            ? 'WhatsApp'
+                            : 'Webhook'}
+                    </Badge>
+                  ))}
+                  <span className="text-[11px] text-g-500">· {a.plage}</span>
+                </div>
+                {a.escalade && (
+                  <p className="mt-1.5 text-[11.5px] text-g-500">Escalade : {a.escalade}</p>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="border-t border-g-100 px-4 py-3">
+            <GatedAction autorise={peutBudgeter} message={refus('ia.budget.update')}>
+              <Button size="sm" variant="secondary">
+                Ajouter une alerte
+              </Button>
+            </GatedAction>
+          </div>
+        </Card>
+      </div>
 
       <Card padding={false}>
         <div className="border-b border-g-100 px-4 py-3">
