@@ -97,6 +97,35 @@ export function SectionTitle({
   )
 }
 
+/**
+ * Pastille d'état posée dans un héros sombre. Le héros affirmait « 99,98 % de
+ * disponibilité » sans jamais renvoyer vers la page qui le prouve : la pastille
+ * fait le lien, et dit l'état du moment plutôt qu'une moyenne.
+ */
+export function PastilleEtat({
+  ton,
+  texte,
+  href,
+}: {
+  ton: 'ok' | 'warn' | 'err'
+  texte: string
+  href: string
+}) {
+  const pastille = { ok: 'bg-ok', warn: 'bg-warn', err: 'bg-err' }[ton]
+  return (
+    <Link
+      href={href}
+      className="group inline-flex items-center gap-2 rounded-full border border-p-400/60 bg-white/5 py-1 pl-2.5 pr-3 transition-colors hover:border-p-300 hover:bg-white/10"
+    >
+      <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full animate-pulse-dot', pastille)} />
+      <span className="text-[12px] font-semibold text-white">{texte}</span>
+      <span className="text-[12px] text-p-300 transition-transform group-hover:translate-x-0.5">
+        →
+      </span>
+    </Link>
+  )
+}
+
 /** Héros court des pages secondaires. */
 export function HeroCourt({
   surtitre,
@@ -287,6 +316,97 @@ export function VisuelRack({ className }: { className?: string }) {
         <p className="text-[10px] text-p-300">ABJ ↔ GBM</p>
       </div>
     </div>
+  )
+}
+
+/**
+ * Portrait en monogramme. La charte proscrit les photographies génériques, et
+ * un visage de banque d'images réchauffe moins qu'un nom : on affiche les
+ * initiales sur une teinte de la palette, choisie par la position pour rester
+ * stable d'un rendu à l'autre.
+ */
+const TEINTES_MONOGRAMME = [
+  'bg-p-700 text-white',
+  'bg-p-100 text-p-700',
+  'bg-p-600 text-white',
+  'bg-m-050 text-m-700',
+  'bg-p-800 text-white',
+  'bg-p-050 text-p-700',
+]
+
+export function Monogramme({
+  initiales,
+  index = 0,
+  taille = 'md',
+  className,
+}: {
+  initiales: string
+  index?: number
+  taille?: 'sm' | 'md' | 'lg'
+  className?: string
+}) {
+  const tailles = {
+    sm: 'h-9 w-9 text-[12px] rounded-[8px]',
+    md: 'h-12 w-12 text-[15px] rounded-[10px]',
+    lg: 'h-16 w-16 text-[19px] rounded-[12px]',
+  }[taille]
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'flex shrink-0 items-center justify-center font-bold [font-family:var(--font-display)]',
+        tailles,
+        TEINTES_MONOGRAMME[index % TEINTES_MONOGRAMME.length],
+        className,
+      )}
+    >
+      {initiales}
+    </span>
+  )
+}
+
+/** Citation mise en avant — le seul endroit de la vitrine où un client parle. */
+export function Citation({
+  texte,
+  auteur,
+  role,
+  initiales,
+  index = 0,
+  sombre,
+  className,
+}: {
+  texte: string
+  auteur: string
+  role: string
+  initiales: string
+  index?: number
+  sombre?: boolean
+  className?: string
+}) {
+  return (
+    <figure className={cn('flex flex-col', className)}>
+      <blockquote
+        className={cn(
+          'text-[16px] font-medium leading-relaxed [font-family:var(--font-display)] sm:text-[18px]',
+          sombre ? 'text-white' : 'text-ink',
+        )}
+      >
+        <span aria-hidden>«&nbsp;</span>
+        {texte}
+        <span aria-hidden>&nbsp;»</span>
+      </blockquote>
+      <figcaption className="mt-5 flex items-center gap-3">
+        <Monogramme initiales={initiales} index={index} taille="sm" />
+        <span className="min-w-0">
+          <span className={cn('block text-[13px] font-semibold', sombre ? 'text-white' : 'text-ink')}>
+            {auteur}
+          </span>
+          <span className={cn('block text-[12px] leading-snug', sombre ? 'text-p-300' : 'text-g-500')}>
+            {role}
+          </span>
+        </span>
+      </figcaption>
+    </figure>
   )
 }
 

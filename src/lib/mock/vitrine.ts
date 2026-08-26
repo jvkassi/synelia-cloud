@@ -212,6 +212,59 @@ export const ETUDES_CAS = [
   },
 ]
 
+// ─── Parcours de démarrage — de la signature à la production ──────────
+
+/**
+ * La vitrine annonçait le produit et la preuve, jamais le chemin entre les
+ * deux. Les durées sont des ordres de grandeur constatés, pas un engagement
+ * contractuel : c'est dit dans la note de la section.
+ */
+export const PARCOURS_DEMARRAGE = [
+  {
+    jalon: 'Jour 0',
+    titre: 'Atelier de cadrage',
+    texte:
+      'Un architecte relève vos charges, vos contraintes de conformité et les fenêtres d’indisponibilité que vous pouvez accepter. Il en sort un dimensionnement chiffré et le site qui vous accueille.',
+    livrable: 'Dimensionnement et devis',
+  },
+  {
+    jalon: 'Jour 1',
+    titre: 'Espace Cloud ouvert',
+    texte:
+      'Votre enveloppe de capacité, vos rôles et votre plan de sauvegarde sont en place. Vous créez vos premières ressources vous-même, depuis le portail.',
+    livrable: 'Accès portail et matrice de rôles',
+  },
+  {
+    jalon: 'Semaines 1 à 6',
+    titre: 'Migration accompagnée',
+    texte:
+      'Reprise des machines, des bases et des boîtes aux lettres. Pré-synchronisation, répétition à blanc, puis bascule sur une fenêtre que vous choisissez.',
+    livrable: 'Plan de bascule daté',
+  },
+  {
+    jalon: 'Chaque trimestre',
+    titre: 'Exercice de reprise',
+    texte:
+      'Bascule inter-site en réseau isolé, sans toucher à la production. Vous recevez le temps de reprise réellement constaté, pas la cible contractuelle.',
+    livrable: 'Rapport opposable à un auditeur',
+  },
+]
+
+/** Ce que le parcours n'inclut pas — dit avant qu'on le demande. */
+export const PARCOURS_LIMITES =
+  'Le cadrage n’est pas facturé et n’engage à rien. En revanche, nous ne prenons pas la main sur vos applications : la migration se fait avec vos équipes, pas à leur place, et l’exploitation applicative reste chez vous.'
+
+// ─── Moyens de paiement — argument local, sorti de la FAQ ──────────────
+
+export const MOYENS_PAIEMENT = [
+  { nom: 'Orange Money', initiales: 'OM', teinte: '#FF7900', detail: 'Débit immédiat, reçu dans le portail' },
+  { nom: 'MTN MoMo', initiales: 'MM', teinte: '#FFCC00', detail: 'Débit immédiat, reçu dans le portail' },
+  { nom: 'Wave', initiales: 'WV', teinte: '#1DC8F2', detail: 'Débit immédiat, reçu dans le portail' },
+  { nom: 'Virement bancaire', initiales: 'VB', teinte: '#4B2882', detail: 'Facture à 30 jours, relance automatique' },
+  { nom: 'Carte bancaire', initiales: 'CB', teinte: '#2B1B4D', detail: 'Visa et Mastercard, 3-D Secure' },
+  { nom: 'Porte-monnaie prépayé', initiales: 'PP', teinte: '#C0297A', detail: 'Provision à l’avance, seuil d’alerte' },
+]
+
 // ─── FAQ d'accueil (§2.2 §9) ──────────────────────────────────────────
 
 export const FAQ_ACCUEIL = [

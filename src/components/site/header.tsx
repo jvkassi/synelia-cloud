@@ -8,6 +8,18 @@ import { MEGAMENU } from '@/lib/mock/vitrine'
 import { Logo } from '@/components/brand/logo'
 import { ButtonLink } from '@/components/ui/button'
 
+/**
+ * Le menu déroulant ne proposait que de la documentation et des fiches
+ * techniques : rien ne menait aux pages qui parlent des personnes. Deux
+ * groupes libellés valent mieux qu'une liste de dix entrées dépareillées.
+ */
+const SOCIETE = [
+  { nom: 'L’équipe', href: '/equipe', resume: 'Les huit personnes qui exploitent la plateforme.' },
+  { nom: 'Notre histoire', href: '/histoire', resume: 'Pourquoi nous avons construit nos propres sites.' },
+  { nom: 'Témoignages', href: '/temoignages', resume: 'Quatre migrations racontées, accrocs compris.' },
+  { nom: 'Écosystème', href: '/communaute', resume: 'Écoles, alternance, contributions en amont.' },
+]
+
 const RESSOURCES = [
   { nom: 'Ressources', href: '/ressources', resume: 'Livres blancs, guides, webinaires, études.' },
   { nom: 'Documentation', href: '/docs', resume: 'Documentation technique et utilisateur, en français.' },
@@ -139,14 +151,28 @@ export function SiteHeader() {
 
       {menu === 'ressources' && (
         <div className="absolute inset-x-0 top-full hidden animate-fade-in border-b border-g-300 bg-white shadow-[0_16px_40px_rgba(43,27,77,.12)] lg:block">
-          <div className="mx-auto grid grid-cols-1 max-w-4xl gap-x-8 gap-y-3.5 px-6 py-7 md:grid-cols-2">
-            {RESSOURCES.map((r) => (
-              <Link key={r.href} href={r.href} onClick={() => setMenu(null)} className="group block">
-                <span className="block text-[13px] font-semibold text-ink group-hover:text-p-700">
-                  {r.nom}
-                </span>
-                <span className="block text-[11.5px] leading-snug text-g-500">{r.resume}</span>
-              </Link>
+          <div className="mx-auto grid grid-cols-1 max-w-5xl gap-x-10 gap-y-7 px-6 py-7 md:grid-cols-2">
+            {[
+              { colonne: 'Ressources', entrees: RESSOURCES },
+              { colonne: 'La société', entrees: SOCIETE },
+            ].map((groupe) => (
+              <div key={groupe.colonne}>
+                <p className="type-micro mb-3 text-m-600">{groupe.colonne}</p>
+                <ul className="space-y-2.5">
+                  {groupe.entrees.map((r) => (
+                    <li key={r.href}>
+                      <Link href={r.href} onClick={() => setMenu(null)} className="group block">
+                        <span className="block text-[13px] font-semibold text-ink group-hover:text-p-700">
+                          {r.nom}
+                        </span>
+                        <span className="block text-[11.5px] leading-snug text-g-500">
+                          {r.resume}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
           </div>
         </div>
@@ -182,6 +208,7 @@ export function SiteHeader() {
                   { nom: 'Tarifs', href: '/tarifs' },
                   { nom: 'Entreprises', href: '/entreprises' },
                   ...RESSOURCES,
+                  ...SOCIETE,
                 ].map((r) => (
                   <li key={r.href}>
                     <Link

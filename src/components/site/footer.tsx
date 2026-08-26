@@ -32,11 +32,13 @@ const COLONNES = [
   {
     titre: 'Société',
     liens: [
+      { nom: 'Notre histoire', href: '/histoire' },
+      { nom: 'L’équipe', href: '/equipe' },
+      { nom: 'Témoignages', href: '/temoignages' },
+      { nom: 'Écosystème', href: '/communaute' },
       { nom: 'Entreprises', href: '/entreprises' },
       { nom: 'Souveraineté', href: '/souverainete' },
       { nom: 'Datacenters', href: '/datacenters' },
-      { nom: 'Tarifs', href: '/tarifs' },
-      { nom: 'Simulateur', href: '/simulateur' },
     ],
   },
   {
@@ -45,6 +47,8 @@ const COLONNES = [
       { nom: 'Livres blancs & guides', href: '/ressources' },
       { nom: 'Documentation', href: '/docs' },
       { nom: 'État des services', href: '/statut' },
+      { nom: 'Tarifs', href: '/tarifs' },
+      { nom: 'Simulateur', href: '/simulateur' },
       { nom: 'Espace client', href: '/app' },
       { nom: 'Espace super admin', href: '/admin' },
     ],
