@@ -131,8 +131,8 @@ function carteSites({ sombre }) {
     .join('')
 
   /** Un site : halo, pastille magenta, numéro repris dans la légende. */
-  const site = ([x, y], n) => `<g>
-      <circle cx="${x}" cy="${y}" r="16" fill="${C.m600}" opacity=".15"/>
+  const site = ([x, y], n, rang) => `<g>
+      <circle class="halo${rang === 2 ? ' halo-2' : ''}" cx="${x}" cy="${y}" r="16" fill="${C.m600}" opacity=".15"/>
       <circle cx="${x}" cy="${y}" r="10" fill="${C.m600}" opacity=".3"/>
       <circle cx="${x}" cy="${y}" r="6.5" fill="${C.m400}" stroke="${sombre ? C.p900 : C.blanc}" stroke-width="1.8"/>
       <text x="${x}" y="${y + 3.4}" text-anchor="middle" font-size="9" font-weight="700" fill="${C.p900}" font-family="Montserrat,system-ui,sans-serif">${n}</text>
@@ -159,14 +159,33 @@ function carteSites({ sombre }) {
     <clipPath id="${id}-pays"><path d="${trait}"/></clipPath>
   </defs>
 
+  <style>
+    /*
+     * L'animation vit dans le fichier : une feuille externe ne serait pas
+     * chargée pour un SVG servi via &lt;img&gt;, un &lt;style&gt; interne si.
+     * La liaison inter-site défile et les halos respirent — c'est la seule
+     * chose qui bouge, et elle désigne précisément ce que la carte raconte.
+     */
+    .lien { stroke-dasharray: 4 3; animation: marche 1.1s linear infinite; }
+    .halo { animation: souffle 3.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+    .halo-2 { animation-delay: -1.7s; }
+    @keyframes marche { to { stroke-dashoffset: -14; } }
+    @keyframes souffle {
+      0%, 100% { opacity: .15; transform: scale(1); }
+      50% { opacity: .32; transform: scale(1.18); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .lien, .halo { animation: none; }
+    }
+  </style>
   <path d="${trait}" fill="url(#${id}-terre)"/>
   <g clip-path="url(#${id}-pays)"><rect width="${L}" height="${Hcarte}" fill="url(#${id}-grille)"/></g>
   <path d="${trait}" fill="none" stroke="${t.bord}" stroke-width="1.8" stroke-linejoin="round"/>
 
   ${reperes}
-  <path d="M${abj.join(' ')}L${gbm.join(' ')}" fill="none" stroke="${C.m400}" stroke-width="2" stroke-dasharray="4 3"/>
-  ${site(abj, 1)}
-  ${site(gbm, 2)}
+  <path class="lien" d="M${abj.join(' ')}L${gbm.join(' ')}" fill="none" stroke="${C.m400}" stroke-width="2"/>
+  ${site(abj, 1, 1)}
+  ${site(gbm, 2, 2)}
 
   <g transform="translate(0 ${Hcarte})">
     <rect x="${MARGE}" y="0" width="${L - MARGE * 2}" height="64" rx="11" fill="${t.fondLeg}" stroke="${t.bordLeg}" stroke-width="1.2"/>

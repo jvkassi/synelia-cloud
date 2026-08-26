@@ -48,7 +48,12 @@ export function SiteSection({
   }[fond]
   return (
     <section id={id} className={cn('py-14 sm:py-20', fonds, className)}>
-      {children}
+      {/*
+        L'apparition porte sur le contenu, pas sur la section : la section
+        porte la couleur de fond, et la faire varier en opacité laisserait
+        voir le fond de page au travers à chaque défilement.
+      */}
+      <div className="revele">{children}</div>
     </section>
   )
 }
