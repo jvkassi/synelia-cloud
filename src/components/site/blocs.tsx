@@ -107,24 +107,47 @@ export function SectionTitle({
  * disponibilité » sans jamais renvoyer vers la page qui le prouve : la pastille
  * fait le lien, et dit l'état du moment plutôt qu'une moyenne.
  */
+/**
+ * Pastille d'état, en lien vers `/statut`.
+ *
+ * `clair` la rend lisible sur fond blanc : le libellé était en `text-white` en
+ * dur, donc invisible dès qu'on posait la pastille ailleurs que sur le violet
+ * foncé du héros. Une variante, pas une surcharge par `className` — deux
+ * classes de couleur concurrentes se départagent par l'ordre de la feuille de
+ * style, pas par l'ordre des classes.
+ */
 export function PastilleEtat({
   ton,
   texte,
   href,
+  clair,
 }: {
   ton: 'ok' | 'warn' | 'err'
   texte: string
   href: string
+  clair?: boolean
 }) {
   const pastille = { ok: 'bg-ok', warn: 'bg-warn', err: 'bg-err' }[ton]
   return (
     <Link
       href={href}
-      className="group inline-flex items-center gap-2 rounded-full border border-p-400/60 bg-white/5 py-1 pl-2.5 pr-3 transition-colors hover:border-p-300 hover:bg-white/10"
+      className={cn(
+        'group inline-flex items-center gap-2 rounded-full border py-1 pl-2.5 pr-3 transition-colors',
+        clair
+          ? 'border-g-300 bg-white hover:border-p-400 hover:bg-p-050'
+          : 'border-p-400/60 bg-white/5 hover:border-p-300 hover:bg-white/10',
+      )}
     >
       <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full animate-pulse-dot', pastille)} />
-      <span className="text-[12px] font-semibold text-white">{texte}</span>
-      <span className="text-[12px] text-p-300 transition-transform group-hover:translate-x-0.5">
+      <span className={cn('text-[12px] font-semibold', clair ? 'text-ink' : 'text-white')}>
+        {texte}
+      </span>
+      <span
+        className={cn(
+          'text-[12px] transition-transform group-hover:translate-x-0.5',
+          clair ? 'text-g-500' : 'text-p-300',
+        )}
+      >
         →
       </span>
     </Link>
