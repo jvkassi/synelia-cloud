@@ -4,13 +4,14 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import { relatif } from '@/lib/format'
+import type { Projet, ServiceProjet } from '@/lib/types'
 import {
   ANOMALIES,
   EVENEMENTS_SUPERVISION,
   LOGS_BUILD,
   LOGS_EXECUTION,
-  projetById,
-  servicesDuProjet,
+  PROJETS,
+  SERVICES_PROJET,
 } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, Callout } from '@/components/composition/card'
@@ -22,7 +23,8 @@ import {
   LogPeek,
 } from '@/components/business/observabilite'
 import { AnomalieCard } from '@/components/business/paas'
-import { EnteteProjet, StatutServiceBadge, couleurStatut } from '@/components/business/projets'
+import { useCollection } from '@/components/app/atelier'
+import { EnteteProjet, StatutServiceBadge, couleurStatut, ProjetIntrouvable } from '@/components/business/projets'
 
 /**
  * Observabilité d'un projet — les quatre formats autorisés, et rien de plus.
@@ -33,9 +35,15 @@ import { EnteteProjet, StatutServiceBadge, couleurStatut } from '@/components/bu
  * portail répond à « est-ce que ça va, et depuis quand ? » puis ouvre la porte.
  */
 export function VueObservabilite({ id }: { id: string }) {
-  const projet = projetById(id)!
-  const services = servicesDuProjet(id)
-  const [env, setEnv] = useState(projet.environnements[0])
+  const lesProjets = useCollection<Projet>('projets', PROJETS)
+  const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+
+  const projet = lesProjets.items.find((p) => p.id === id)
+  const services = lesServices.items.filter((x) => x.projetId === id)
+
+  const [env, setEnv] = useState(projet?.environnements[0] ?? '')
+
+  if (!projet) return <ProjetIntrouvable section="Observabilité" />
 
   const servicesEnv = services.filter((s) => s.environnement === env)
   const enEchec = servicesEnv.filter((s) => s.statut === 'failed')

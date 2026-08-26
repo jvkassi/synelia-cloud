@@ -231,6 +231,23 @@ export default async function FicheProduit({
               </div>
             ))}
           </div>
+          {/*
+            La pile de couches au-dessus énumère les composants ; le schéma, quand
+            il existe, montre les frontières — ce que le client règle, ce que nous
+            opérons, et sur quel site partent les copies.
+          */}
+          {f.schema && (
+            <figure className="mt-9 flex justify-center">
+              <img
+                src={f.schema.src}
+                alt={f.schema.alt}
+                width={f.schema.largeur}
+                height={f.schema.hauteur}
+                loading="lazy"
+                className="w-full max-w-[760px] rounded-[14px]"
+              />
+            </figure>
+          )}
           <p className="mt-6 text-center text-[12px] text-g-500">
             Chaque ressource affiche son emplacement physique — site ABJ ou GBM — partout dans le
             portail.

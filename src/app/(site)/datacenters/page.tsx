@@ -34,6 +34,72 @@ export default function Datacenters() {
         chapeau="Synertech Vallon à Cocody pour la production, le parc technologique VITIB de Grand-Bassam pour le repli et l’archivage immuable. Quarante-cinq kilomètres, deux chemins de fibre distincts, une latence mesurée de 4 à 6 millisecondes."
       />
 
+      {/*
+        La carte situe les deux sites dans le pays ; le schéma de la section
+        suivante dit comment ils se répartissent les rôles. Les deux répondent à
+        des questions différentes, d'où les deux visuels.
+      */}
+      <SiteSection className="!pb-6">
+        <Container>
+          <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+            <figure>
+              <img
+                src="/illustrations/carte-sites.svg"
+                alt="Carte de la Côte d’Ivoire situant les deux sites de Synelia : Abidjan (Synertech Vallon, à Cocody) et Grand-Bassam (parc VITIB), reliés par une liaison de 4 à 6 millisecondes."
+                width={600}
+                height={735}
+                className="w-full"
+              />
+            </figure>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {[
+                {
+                  photo: '/photos/datacenter-allee.webp',
+                  alt: 'Allée froide d’une salle serveurs : deux rangées de baies sombres aux voyants violets, sol poli.',
+                  legende: 'Allée froide, site de production',
+                },
+                {
+                  photo: '/photos/baie-cablage.webp',
+                  alt: 'Baie ouverte montrant des faisceaux de cordons de brassage soigneusement rangés.',
+                  legende: 'Brassage d’une baie de calcul',
+                },
+                {
+                  photo: '/photos/fibre-optique.webp',
+                  alt: 'Panneau de brassage optique et ses connecteurs LC.',
+                  legende: 'Panneau optique de la liaison inter-site',
+                },
+                {
+                  photo: '/photos/parc-vitib.webp',
+                  alt: 'Vue aérienne du campus technologique de Grand-Bassam : bâtiments bas, groupes de refroidissement en toiture, océan au loin.',
+                  legende: 'Parc VITIB, site de repli',
+                },
+              ].map((c) => (
+                <figure
+                  key={c.legende}
+                  className="overflow-hidden rounded-[12px] border border-g-300 bg-white"
+                >
+                  <img
+                    src={c.photo}
+                    alt={c.alt}
+                    width={1376}
+                    height={768}
+                    loading="lazy"
+                    className="h-32 w-full object-cover"
+                  />
+                  <figcaption className="px-3.5 py-2.5 text-[12px] leading-snug text-g-700">
+                    {c.legende}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          </div>
+          <p className="mt-5 text-[11.5px] leading-relaxed text-g-500">
+            Vues d’illustration. Une visite accompagnée se demande depuis votre espace client ; les
+            salles ne se photographient pas librement.
+          </p>
+        </Container>
+      </SiteSection>
+
       {/* Schéma des deux sites */}
       <SiteSection className="!py-10">
         <Container>

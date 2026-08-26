@@ -5,6 +5,8 @@ import { Button, type ButtonSize, type ButtonVariant } from '@/components/ui/but
 import { GatedAction } from '@/components/ui/display'
 import { Field, Input, MonoTextarea, Select, Switch, Textarea } from '@/components/ui/field'
 import { ConfirmDialog, Modal } from '@/components/ui/overlay'
+import type { AuditEvent } from '@/lib/types'
+import { UTILISATEUR_COURANT } from '@/lib/mock/orgs'
 import { useApp } from './contexte'
 import { useAtelier, type SpecJob } from './atelier'
 
@@ -30,18 +32,58 @@ export interface SpecOperation {
   job?: Omit<SpecJob, 'alFin'>
   /** Mutation appliquée à la fin du job — bascule d'état, par exemple. */
   effetFinal?: () => void
+  /**
+   * Ce qu'on écrit au journal d'audit. Par défaut l'opération est journalisée
+   * en déduisant l'action de `action` et la cible de `titre` ; `audit: false`
+   * dispense les gestes qui ne valent pas une trace — replier un panneau,
+   * exporter un CSV déjà affiché.
+   */
+  audit?:
+    | false
+    | {
+        action?: string
+        cible?: string
+        scope?: AuditEvent['scope']
+        detail?: string
+      }
 }
 
 export function useOperation() {
-  const { pousser, autorise } = useApp()
-  const { lancerJob } = useAtelier()
+  const { pousser, autorise, role } = useApp()
+  const { lancerJob, journaliser } = useAtelier()
 
   const executer = useCallback(
     (spec: SpecOperation) => {
-      if (spec.action && !autorise(spec.action)) return
+      /** L'acteur, tel que le journal doit le nommer. */
+      const trace = (result: AuditEvent['result'], detail?: string) => {
+        if (spec.audit === false) return
+        journaliser({
+          actor: {
+            id: UTILISATEUR_COURANT.id,
+            nom: UTILISATEUR_COURANT.nom,
+            email: UTILISATEUR_COURANT.email,
+            type: 'user',
+          },
+          role,
+          scope: spec.audit?.scope ?? { type: 'plateforme', label: 'Portail' },
+          action: spec.audit?.action ?? spec.action ?? 'ui.action',
+          target: spec.audit?.cible ?? spec.titre,
+          result,
+          detail: detail ?? spec.audit?.detail ?? spec.detail,
+        })
+      }
+
+      // Un refus se journalise aussi : c'est ce que la vitrine promet, et c'est
+      // la seule trace qu'un auditeur ne peut pas reconstituer autrement.
+      if (spec.action && !autorise(spec.action)) {
+        trace('refuse', `Rôle ${role} insuffisant pour ${spec.action}`)
+        return
+      }
+
       spec.effet?.()
       if (spec.job) lancerJob({ ...spec.job, alFin: spec.effetFinal })
       else spec.effetFinal?.()
+      trace('ok')
       pousser({
         ton: spec.ton ?? 'ok',
         titre: spec.titre,
@@ -49,7 +91,7 @@ export function useOperation() {
           spec.detail ?? (spec.job ? 'Avancement suivi dans le centre de tâches.' : undefined),
       })
     },
-    [autorise, lancerJob, pousser],
+    [autorise, journaliser, lancerJob, pousser, role],
   )
 
   return executer
@@ -72,6 +114,7 @@ export function BoutonAction({
   fullWidth,
   className,
   desactive,
+  nomAccessible,
 }: {
   operation: SpecOperation
   libelle: ReactNode
@@ -82,6 +125,8 @@ export function BoutonAction({
   fullWidth?: boolean
   className?: string
   desactive?: boolean
+  /** Obligatoire quand `libelle` n'est qu'une icône : sinon le bouton est muet. */
+  nomAccessible?: string
 }) {
   const { autorise, refus } = useApp()
   const executer = useOperation()
@@ -98,6 +143,8 @@ export function BoutonAction({
           fullWidth={fullWidth}
           className={className}
           disabled={desactive}
+          aria-label={nomAccessible}
+          title={nomAccessible}
           onClick={() => (confirmation ? setOuvert(true) : executer(operation))}
         >
           {libelle}

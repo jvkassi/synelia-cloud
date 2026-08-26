@@ -1,23 +1,40 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, Trash2 } from 'lucide-react'
 import { money } from '@/lib/format'
-import { projetById, servicesDuProjet } from '@/lib/mock'
+import { ESPACES, PROJETS, SERVICES_PROJET } from '@/lib/mock'
+import type { Projet, ServiceProjet } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
 import { Field, Input, Select, Switch, Textarea } from '@/components/ui/field'
 import { Card, CardHeader } from '@/components/composition/card'
 import { ConfirmDialog } from '@/components/ui/overlay'
-import { EnteteProjet } from '@/components/business/projets'
+import { EnteteProjet, ProjetIntrouvable } from '@/components/business/projets'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 export function VueParametres({ id }: { id: string }) {
-  const projet = projetById(id)!
+  const router = useRouter()
+  const lesProjets = useCollection<Projet>('projets', PROJETS)
+  const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+  const executer = useOperation()
   const { autorise, refus } = useApp()
-  const services = servicesDuProjet(projet.id)
+
+  const projet = lesProjets.items.find((p) => p.id === id)
+  const services = lesServices.items.filter((x) => x.projetId === id)
   const [suppression, setSuppression] = useState(false)
+  const [nom, setNom] = useState(projet?.nom ?? '')
+  const [description, setDescription] = useState(projet?.description ?? '')
+  const [espaceId, setEspaceId] = useState(projet?.espaceId ?? '')
+  // Une approbation exigée sur un environnement : réglage de la session, il ne
+  // change aucun service en marche.
+  const [approbations, setApprobations] = useState<Record<string, boolean>>({})
+
+  if (!projet) return <ProjetIntrouvable section="Paramètres" />
 
   return (
     <div className="space-y-5">
@@ -45,26 +62,57 @@ export function VueParametres({ id }: { id: string }) {
             sousTitre="Le nom apparaît dans les journaux, la facturation et le showback."
           />
           <div className="space-y-3.5">
-            <Field label="Nom">
-              <Input defaultValue={projet.nom} />
+            <Field label="Nom" required>
+              <Input value={nom} onChange={(e) => setNom(e.target.value)} />
             </Field>
             <Field label="Description">
-              <Textarea rows={3} defaultValue={projet.description} />
+              <Textarea
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
             </Field>
             <Field
               label="Espace Cloud de rattachement"
               hint="Détermine le quota consommé et le site physique par défaut des services."
             >
-              <Select defaultValue={projet.espaceId}>
-                <option value={projet.espaceId}>{projet.espaceId.toUpperCase()}</option>
+              <Select value={espaceId} onChange={(e) => setEspaceId(e.target.value)}>
+                {ESPACES.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.code} — {e.offreNom}
+                  </option>
+                ))}
               </Select>
             </Field>
+            {espaceId !== projet.espaceId && (
+              <p className="text-[11.5px] leading-relaxed text-warn">
+                Changer d’Espace Cloud déplace le quota consommé par ce projet, mais ne déplace
+                aucune machine : les services en marche restent sur leur socle jusqu’à leur prochain
+                redéploiement.
+              </p>
+            )}
           </div>
-          <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-            <Button size="sm" className="mt-4">
-              Enregistrer
-            </Button>
-          </GatedAction>
+          <BoutonAction
+            libelle="Enregistrer"
+            className="mt-4"
+            desactive={
+              nom.trim().length === 0 ||
+              (nom === projet.nom &&
+                description === projet.description &&
+                espaceId === projet.espaceId)
+            }
+            operation={{
+              action: 'app.deploy',
+              titre: `Paramètres de ${nom.trim()} enregistrés`,
+              detail: 'Aucun service n’a été redémarré : ces réglages sont de l’identité, pas de la configuration d’exécution.',
+              effet: () =>
+                lesProjets.modifier(projet.id, {
+                  nom: nom.trim(),
+                  description: description.trim(),
+                  espaceId,
+                }),
+            }}
+          />
         </Card>
 
         <div className="space-y-4">
@@ -96,21 +144,42 @@ export function VueParametres({ id }: { id: string }) {
                       Protégé
                     </Badge>
                   ) : (
-                    <Switch checked={false} onChange={() => {}} label="Approbation requise" />
+                    <Switch
+                      checked={Boolean(approbations[e])}
+                      onChange={(v) => setApprobations((p) => ({ ...p, [e]: v }))}
+                      label="Approbation requise"
+                    />
                   )}
                 </div>
               ))}
             </div>
-            <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="mt-3"
-                iconBefore={<Plus size={13} />}
-              >
-                Ajouter un environnement
-              </Button>
-            </GatedAction>
+            <BoutonFormulaire
+              libelle="Ajouter un environnement"
+              variant="secondary"
+              className="mt-3"
+              icone={<Plus size={13} />}
+              action="app.deploy"
+              titre={`Ajouter un environnement à ${projet.nom}`}
+              description="Il naît vide : aucun service n’est copié depuis un autre environnement, et rien n’est facturé tant que vous n’y déployez pas."
+              libelleValider="Ajouter"
+              champs={[
+                {
+                  id: 'nom',
+                  label: 'Nom de l’environnement',
+                  obligatoire: true,
+                  placeholder: 'Recette',
+                  hint: 'apparaît dans les adresses offertes des services qu’il portera',
+                },
+              ]}
+              operation={(v) => ({
+                titre: `Environnement « ${v.nom} » ajouté`,
+                detail: 'Il est vide : déployez-y un service pour qu’il commence à exister.',
+                effet: () =>
+                  lesProjets.modifier(projet.id, (p) => ({
+                    environnements: [...p.environnements, String(v.nom).trim()],
+                  })),
+              })}
+            />
           </Card>
 
           <Card className="border-err/40">
@@ -146,7 +215,20 @@ export function VueParametres({ id }: { id: string }) {
       <ConfirmDialog
         open={suppression}
         onClose={() => setSuppression(false)}
-        onConfirm={() => setSuppression(false)}
+        onConfirm={() => {
+          executer({
+            action: 'app.deploy',
+            ton: 'warn',
+            titre: `Projet ${projet.nom} supprimé`,
+            detail: `${services.length} service(s) arrêté(s) puis détruit(s). Les sauvegardes suivent leur rétention légale, puis disparaissent.`,
+            effet: () => {
+              lesServices.supprimer(services.map((x) => x.id))
+              lesProjets.supprimer(projet.id)
+            },
+          })
+          setSuppression(false)
+          router.push('/app/applications/projets')
+        }}
         titre="Supprimer le projet"
         ressource={projet.nom}
         pertes={[

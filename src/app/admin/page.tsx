@@ -13,7 +13,6 @@ import { cn, seededSeries, trendSeries } from '@/lib/utils'
 import { dateHeure, goHumain, money, num, pct, relatif } from '@/lib/format'
 import {
   ALERTES_PLATEFORME,
-  AUDIT,
   BACKENDS,
   IMPAYES,
   INCIDENTS,
@@ -30,11 +29,15 @@ import { Card, CardHeader, Callout, NavCard, PageHeader } from '@/components/com
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { EventList } from '@/components/business/observabilite'
 import { BackendGauge } from '@/components/business/infra'
-import { useCollection } from '@/components/app/atelier'
+import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
 import type { ProvisioningJob } from '@/lib/types'
 
 export default function VuePlateforme() {
+  // Le journal vit dans l'atelier : les actions faites pendant la session s'y
+  // ajoutent, refus compris. Sans atelier touché, il retombe sur la graine.
+  const { journal: AUDIT } = useAtelier()
+
   const jobs = useCollection<ProvisioningJob>('jobs-plateforme', JOBS_PLATEFORME)
   const enSortie = BACKENDS.filter((b) => b.enSortie?.actif)
   const satures = BACKENDS.filter((b) => (b.saturation?.j30 ?? 0) > 85)

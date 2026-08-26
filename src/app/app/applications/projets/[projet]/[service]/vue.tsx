@@ -16,9 +16,10 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MAINTENANT, dateHeure, duree, money, relatif } from '@/lib/format'
-import type { DomaineApplicatif, ServiceProjet } from '@/lib/types'
+import type { DomaineApplicatif, Projet, ServiceProjet } from '@/lib/types'
 import {
   DOMAINES_APPLICATIFS,
+  PROJETS,
   SERVICES_PROJET,
   EVENEMENTS_SUPERVISION,
   LOGS_EXECUTION,
@@ -28,7 +29,6 @@ import {
   ZONE_APPLICATIVE,
   deploiementsDeLApp,
   domainesDuService,
-  projetById,
   serviceProjetById,
 } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -51,6 +51,27 @@ import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/a
 /** Raccourci : la collection des services d'un projet, partout dans ce fichier. */
 function useServices() {
   return useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+}
+
+/** Le serveur ne répond plus 404 sur cette route : la vue s'en explique. */
+function ServiceIntrouvable() {
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        fil={[
+          { label: 'Espace client', href: '/app' },
+          { label: 'Applications', href: '/app/applications' },
+          { label: 'Service introuvable' },
+        ]}
+        titre="Ce service n’existe plus"
+      />
+      <EmptyState
+        titre="Ce service n’existe plus"
+        phrase="Il a été supprimé, ou la démonstration a été réinitialisée. La fiche de son projet liste les services encore en place."
+        action={{ libelle: 'Voir tous les projets', href: '/app/applications/projets' }}
+      />
+    </div>
+  )
 }
 
 /**
@@ -97,12 +118,17 @@ function ongletsDu(service: ServiceProjet) {
 
 export function VueService({ id }: { id: string }) {
   const services = useServices()
-  const service = services.items.find((x) => x.id === id)!
-  const projet = projetById(service.projetId)!
-  const domaines = domainesDuService(id)
-  const onglets = ongletsDu(service)
+  const lesProjets = useCollection<Projet>('projets', PROJETS)
   const [onglet, setOnglet] = useState('apercu')
   const { autorise, refus } = useApp()
+
+  const service = services.items.find((x) => x.id === id)
+  const projet = service ? lesProjets.items.find((p) => p.id === service.projetId) : undefined
+
+  if (!service || !projet) return <ServiceIntrouvable />
+
+  const domaines = domainesDuService(id)
+  const onglets = ongletsDu(service)
 
   return (
     <div className="space-y-5">
@@ -539,6 +565,8 @@ function Connexion({ service }: { service: ServiceProjet }) {
 
 function Sauvegardes({ service }: { service: ServiceProjet }) {
   const { autorise, refus } = useApp()
+  const [instant, setInstant] = useState('2026-08-19T09:30')
+  const [baseCible, setBaseCible] = useState(`${service.base?.nom ?? service.nom}_restore`)
   const s = service.sauvegarde
 
   if (!s) {
@@ -629,24 +657,33 @@ function Sauvegardes({ service }: { service: ServiceProjet }) {
           </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Date et heure visées">
-              <Input type="datetime-local" defaultValue="2026-08-19T09:30" />
+              <Input
+                type="datetime-local"
+                value={instant}
+                onChange={(e) => setInstant(e.target.value)}
+              />
             </Field>
-            <Field label="Nom de la nouvelle base">
-              <Input defaultValue={`${service.base?.nom}_restore`} className="font-mono" />
+            <Field label="Nom de la nouvelle base" required>
+              <Input
+                value={baseCible}
+                onChange={(e) => setBaseCible(e.target.value)}
+                className="font-mono"
+              />
             </Field>
           </div>
           <BoutonAction
             libelle="Lancer la restauration"
             variant="primary"
             className="mt-3"
+            desactive={baseCible.trim().length === 0}
             operation={{
               action: 'backup.restore',
               ton: 'info',
-              titre: 'Restauration à un instant précis lancée',
-              detail: 'Les journaux de transaction sont rejoués jusqu’à la minute demandée.',
+              titre: `Restauration vers ${baseCible.trim()} lancée`,
+              detail: `Les journaux de transaction sont rejoués jusqu’au ${instant.replace('T', ' à ')}. La base d’origine n’est pas touchée : la restauration crée une nouvelle base.`,
               job: {
                 type: 'base.pitr',
-                label: `Restauration à un instant précis · ${service.nom}`,
+                label: `Restauration à un instant précis · ${baseCible.trim()}`,
                 etapes: [
                   'Créer la base cible',
                   'Charger la sauvegarde de base',
@@ -1098,8 +1135,65 @@ function TiroirDomaine({
   onClose: () => void
   service: ServiceProjet
 }) {
+  const domaines = useCollection<DomaineApplicatif>('domaines-applicatifs', DOMAINES_APPLICATIFS)
+  const executer = useOperation()
   const [hote, setHote] = useState('')
   const [etape, setEtape] = useState<'saisie' | 'dns'>('saisie')
+  const [chemin, setChemin] = useState('/')
+  const [port, setPort] = useState(service.portConteneur ?? 80)
+  const [certificat, setCertificat] = useState('acme')
+  const [redirection, setRedirection] = useState(true)
+
+  const brancher = () => {
+    const id = domaines.identifiant('dom')
+    const enregistrement = {
+      type: 'A' as const,
+      nom: hote,
+      valeur: ZONE_APPLICATIVE.ingress[0].ip,
+    }
+    executer({
+      action: 'app.deploy',
+      ton: 'info',
+      titre: `${hote} branché sur ${service.nom}`,
+      detail:
+        'La vérification DNS démarre. L’adresse offerte du service continue de répondre pendant ce temps.',
+      effet: () =>
+        domaines.creer({
+          id,
+          hote,
+          origine: 'personnalise',
+          serviceId: service.id,
+          chemin,
+          portConteneur: port,
+          https: redirection,
+          certificat: { etat: certificat === 'acme' ? 'en_emission' : 'actif' },
+          verification: { etat: 'attente', enregistrement },
+        }),
+      job: {
+        type: 'domaine.attach',
+        label: `Branchement de ${hote}`,
+        etapes: [
+          'Vérifier l’enregistrement DNS',
+          'Déclarer la route sur l’entrée',
+          ...(certificat === 'acme' ? ['Émettre le certificat'] : []),
+          ...(redirection ? ['Activer la redirection HTTPS'] : []),
+        ],
+        dureeEtapeMs: 1100,
+      },
+      effetFinal: () =>
+        domaines.modifier(id, {
+          verification: { etat: 'ok', enregistrement, verifieLe: MAINTENANT },
+          certificat: {
+            etat: 'actif',
+            emetteur: certificat === 'acme' ? 'Let’s Encrypt' : 'Certificat fourni',
+            expire: '2026-11-17',
+          },
+        }),
+    })
+    setHote('')
+    setEtape('saisie')
+    onClose()
+  }
 
   return (
     <Drawer
@@ -1117,7 +1211,7 @@ function TiroirDomaine({
               Continuer
             </Button>
           ) : (
-            <Button iconBefore={<RefreshCw size={13} />} onClick={onClose}>
+            <Button iconBefore={<RefreshCw size={13} />} onClick={brancher}>
               Vérifier et activer
             </Button>
           )}
@@ -1139,19 +1233,38 @@ function TiroirDomaine({
           </Field>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Chemin" hint="Laissez / pour tout le trafic.">
-              <Input defaultValue="/" className="font-mono" />
+              <Input
+                value={chemin}
+                onChange={(e) => setChemin(e.target.value)}
+                className="font-mono"
+              />
             </Field>
             <Field label="Port du conteneur" hint="Le port sur lequel votre service écoute.">
-              <Input defaultValue={service.portConteneur ?? 80} type="number" />
+              <Input
+                type="number"
+                min={1}
+                max={65535}
+                value={port}
+                onChange={(e) => setPort(Number(e.target.value))}
+              />
             </Field>
           </div>
           <Field label="Certificat">
-            <Select defaultValue="acme">
+            <Select value={certificat} onChange={(e) => setCertificat(e.target.value)}>
               <option value="acme">Émission automatique (Let’s Encrypt)</option>
               <option value="manuel">Certificat que je fournis</option>
             </Select>
           </Field>
-          <Switch checked onChange={() => {}} label="Rediriger HTTP vers HTTPS" />
+          <Switch
+            checked={redirection}
+            onChange={setRedirection}
+            label="Rediriger HTTP vers HTTPS"
+            description={
+              redirection
+                ? undefined
+                : 'Sans redirection, une adresse tapée en http:// reste en clair : le certificat existe mais personne ne l’emprunte.'
+            }
+          />
         </div>
       ) : (
         <div className="space-y-4">
@@ -1295,8 +1408,11 @@ function Deploiements({ service }: { service: ServiceProjet }) {
 
 function Variables({ service }: { service: ServiceProjet }) {
   const { autorise, refus } = useApp()
-  const projet = projetById(service.projetId)!
-  const heritees = projet.variables.filter((v) => v.environnements.includes(service.environnement))
+  const lesProjets = useCollection<Projet>('projets', PROJETS)
+  const projet = lesProjets.items.find((p) => p.id === service.projetId)
+  const heritees = (projet?.variables ?? []).filter((v) =>
+    v.environnements.includes(service.environnement),
+  )
 
   const propres =
     service.type === 'base'
@@ -1352,7 +1468,7 @@ function Variables({ service }: { service: ServiceProjet }) {
 
       <Card>
         <CardHeader
-          titre={`Héritées du projet ${projet.nom}`}
+          titre={`Héritées du projet ${projet?.nom ?? ''}`}
           sousTitre={`Environnement ${service.environnement}. Modifiables au niveau du projet.`}
         />
         <div className="space-y-2">
@@ -1374,7 +1490,7 @@ function Variables({ service }: { service: ServiceProjet }) {
           ))}
         </div>
         <Link
-          href={`/app/applications/projets/${projet.id}`}
+          href={`/app/applications/variables/${service.projetId}`}
           className="mt-3 inline-block text-[12px] font-semibold text-p-700 hover:text-m-600"
         >
           Gérer les variables du projet →
@@ -1476,6 +1592,8 @@ function Avance({ service }: { service: ServiceProjet }) {
   const [cpu, setCpu] = useState(service.ressources.cpu)
   const [ram, setRam] = useState(service.ressources.ramMo / 1024)
   const [suppression, setSuppression] = useState(false)
+  const [redemarrage, setRedemarrage] = useState('echec')
+  const [sonde, setSonde] = useState('/healthz')
 
   const coutEstime = Math.round(cpu * 4200 + ram * 1800 + service.ressources.diskGo * 70)
 
@@ -1527,7 +1645,7 @@ function Avance({ service }: { service: ServiceProjet }) {
               label="Politique de redémarrage"
               hint="Par défaut, la plateforme relance un conteneur qui s’arrête anormalement."
             >
-              <Select defaultValue="echec">
+              <Select value={redemarrage} onChange={(e) => setRedemarrage(e.target.value)}>
                 <option value="echec">Relancer en cas d’échec</option>
                 <option value="toujours">Toujours relancer</option>
                 <option value="jamais">Ne jamais relancer</option>
@@ -1538,10 +1656,37 @@ function Avance({ service }: { service: ServiceProjet }) {
                 label="Contrôle de santé"
                 hint="Un service qui ne répond pas à sa sonde n’entre pas en production."
               >
-                <Input defaultValue="/healthz" className="font-mono" />
+                <Input
+                  value={sonde}
+                  onChange={(e) => setSonde(e.target.value)}
+                  className="font-mono"
+                />
               </Field>
             )}
+            {redemarrage === 'jamais' && (
+              <Callout ton="warn" titre="Un service qui ne se relance pas reste tombé">
+                Personne ne le remettra en marche à 3 h du matin. À réserver aux traitements dont un
+                redémarrage automatique ferait plus de dégâts qu’un arrêt.
+              </Callout>
+            )}
           </div>
+          <BoutonAction
+            libelle="Enregistrer"
+            className="mt-3"
+            operation={{
+              action: 'app.deploy',
+              titre: `Politique de ${service.nom} enregistrée`,
+              detail:
+                redemarrage === 'jamais'
+                  ? 'La plateforme ne relancera plus ce service : sa remise en marche est désormais manuelle.'
+                  : `Relance ${redemarrage === 'toujours' ? 'systématique' : 'en cas d’échec'}${
+                      service.type !== 'base' && service.type !== 'cron'
+                        ? `, sonde de santé sur ${sonde}`
+                        : ''
+                    }. Effet au prochain démarrage du conteneur.`,
+              effet: () => services.modifier(service.id, { derniereMaj: MAINTENANT }),
+            }}
+          />
         </Card>
       </div>
 

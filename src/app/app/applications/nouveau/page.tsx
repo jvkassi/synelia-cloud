@@ -15,7 +15,7 @@ import {
   TriangleAlert,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { MAINTENANT, money } from '@/lib/format'
+import { MAINTENANT, money, num } from '@/lib/format'
 import {
   ANALYSE_DEPOT,
   ESPACES,
@@ -50,11 +50,19 @@ const DEPOTS = [
   { url: 'github.com/dba-africa/portail-client', branches: ['main'] },
 ]
 
+/** Composition de départ du canvas, ajustable à l'étape « Ressources ». */
+const COMPOSANTS_CANVAS = [
+  { nom: 'traefik', role: 'Proxy d’entrée', cpu: 1, ram: 512, disk: 5, rep: 2 },
+  { nom: 'api', role: 'Service applicatif', cpu: 2, ram: 2048, disk: 20, rep: 2 },
+  { nom: 'postgres', role: 'Base de données managée', cpu: 4, ram: 16384, disk: 500, rep: 1 },
+  { nom: 'redis', role: 'Cache', cpu: 1, ram: 4096, disk: 10, rep: 1 },
+]
+
 const ENVIRONNEMENTS_MODELE = [
-  { nom: 'Production', couleur: '#1B8F62', domaine: 'api', actif: true, protection: true },
-  { nom: 'Préproduction', couleur: '#B8690B', domaine: 'preprod-api', actif: true, protection: false },
-  { nom: 'Développement', couleur: '#2563A8', domaine: 'dev-api', actif: true, protection: false },
-  { nom: 'Recette', couleur: '#6B3FA0', domaine: 'recette-api', actif: false, protection: false },
+  { nom: 'Production', couleur: '#1B8F62', domaine: 'api', actif: true, protection: true, autoDeploy: false, motDePasse: false },
+  { nom: 'Préproduction', couleur: '#B8690B', domaine: 'preprod-api', actif: true, protection: false, autoDeploy: true, motDePasse: true },
+  { nom: 'Développement', couleur: '#2563A8', domaine: 'dev-api', actif: true, protection: false, autoDeploy: true, motDePasse: true },
+  { nom: 'Recette', couleur: '#6B3FA0', domaine: 'recette-api', actif: false, protection: false, autoDeploy: true, motDePasse: true },
 ]
 
 export default function NouvelleApplication() {
@@ -84,6 +92,10 @@ export default function NouvelleApplication() {
   const [domaineBase, setDomaineBase] = useState('dba.africa')
   const [previewPr, setPreviewPr] = useState(true)
   const [conditions, setConditions] = useState(false)
+  // Les valeurs de départ des composants du canvas : saisies ici, reprises dans
+  // l'aperçu de coût et dans les ressources des services créés.
+  const [composants, setComposants] = useState(COMPOSANTS_CANVAS)
+  const [vmsReutilisees, setVmsReutilisees] = useState<string[]>([])
 
   const depotChoisi = DEPOTS.find((d) => d.url === depot)!
   const modeleChoisi = modeleBySlug(modeleSlug)!
@@ -653,7 +665,16 @@ export default function NouvelleApplication() {
                     key={v.id}
                     className="flex cursor-pointer items-center gap-3 rounded-[6px] border border-g-300 px-3 py-2 hover:bg-g-050"
                   >
-                    <input type="checkbox" className="h-3.5 w-3.5 accent-[#4B2882]" />
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 accent-[#4B2882]"
+                      checked={vmsReutilisees.includes(v.id)}
+                      onChange={(e) =>
+                        setVmsReutilisees((prev) =>
+                          e.target.checked ? [...prev, v.id] : prev.filter((x) => x !== v.id),
+                        )
+                      }
+                    />
                     <span className="min-w-0 flex-1">
                       <span className="block font-mono text-[12.5px] text-ink">{v.nom}</span>
                       <span className="block text-[11px] text-g-500">
@@ -685,23 +706,52 @@ export default function NouvelleApplication() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { nom: 'traefik', role: 'Proxy d’entrée', cpu: 1, ram: 512, disk: 5, rep: 2 },
-                    { nom: 'api', role: 'Service applicatif', cpu: 2, ram: 2048, disk: 20, rep: 2 },
-                    { nom: 'postgres', role: 'Base de données managée', cpu: 4, ram: 16384, disk: 500, rep: 1 },
-                    { nom: 'redis', role: 'Cache', cpu: 1, ram: 4096, disk: 10, rep: 1 },
-                  ].map((c) => (
+                  {composants.map((c, ligne) => (
                     <tr key={c.nom} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2 font-mono text-[12.5px] text-ink">{c.nom}</td>
                       <td className="px-3 py-2 text-[12px] text-g-700">{c.role}</td>
-                      {([c.cpu, c.ram, c.disk, c.rep] as const).map((v, i) => (
-                        <td key={i} className="px-3 py-2">
-                          <Input type="number" defaultValue={v} className="w-24" aria-label="valeur" />
+                      {(['cpu', 'ram', 'disk', 'rep'] as const).map((champ) => (
+                        <td key={champ} className="px-3 py-2">
+                          <Input
+                            type="number"
+                            min={champ === 'rep' ? 1 : 0}
+                            value={c[champ]}
+                            className="w-24"
+                            aria-label={`${c.nom} — ${
+                              { cpu: 'vCPU', ram: 'mémoire en Mo', disk: 'disque en Go', rep: 'réplicas' }[
+                                champ
+                              ]
+                            }`}
+                            onChange={(e) =>
+                              setComposants((prev) =>
+                                prev.map((x, j) =>
+                                  j === ligne ? { ...x, [champ]: Number(e.target.value) } : x,
+                                ),
+                              )
+                            }
+                          />
                         </td>
                       ))}
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t border-g-300 bg-g-050">
+                    <td className="px-3 py-2 text-[12px] font-semibold text-ink" colSpan={2}>
+                      Total demandé
+                    </td>
+                    <td className="tnum px-3 py-2 text-[12px] font-semibold text-ink">
+                      {composants.reduce((a, c) => a + c.cpu * c.rep, 0)}
+                    </td>
+                    <td className="tnum px-3 py-2 text-[12px] font-semibold text-ink">
+                      {num(composants.reduce((a, c) => a + c.ram * c.rep, 0))}
+                    </td>
+                    <td className="tnum px-3 py-2 text-[12px] font-semibold text-ink">
+                      {num(composants.reduce((a, c) => a + c.disk * c.rep, 0))}
+                    </td>
+                    <td className="px-3 py-2" />
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </Card>
@@ -756,9 +806,16 @@ export default function NouvelleApplication() {
                     {e.actif && (
                       <span className="flex flex-wrap items-center gap-2">
                         <Input
-                          defaultValue={e.domaine}
+                          value={e.domaine}
                           className="w-40 font-mono"
-                          aria-label="Sous-domaine"
+                          aria-label={`Sous-domaine de ${e.nom}`}
+                          onChange={(ev) =>
+                            setEnvs((prev) =>
+                              prev.map((x) =>
+                                x.nom === e.nom ? { ...x, domaine: ev.target.value } : x,
+                              ),
+                            )
+                          }
                         />
                         <span className="font-mono text-[12px] text-g-500">.{domaineBase}</span>
                       </span>
@@ -766,32 +823,34 @@ export default function NouvelleApplication() {
                   </div>
                   {e.actif && (
                     <div className="mt-3 flex flex-wrap gap-4 border-t border-g-100 pt-2.5">
-                      <label className="flex items-center gap-2 text-[11.5px] text-g-700">
-                        <input
-                          type="checkbox"
-                          defaultChecked={e.protection}
-                          className="h-3 w-3 accent-[#4B2882]"
-                        />
-                        Approbation requise avant mise en production
-                      </label>
-                      <label className="flex items-center gap-2 text-[11.5px] text-g-700">
-                        <input
-                          type="checkbox"
-                          defaultChecked={e.nom !== 'Production'}
-                          className="h-3 w-3 accent-[#4B2882]"
-                        />
-                        Déploiement automatique sur poussée
-                      </label>
-                      {e.nom !== 'Production' && (
-                        <label className="flex items-center gap-2 text-[11.5px] text-g-700">
+                      {(
+                        [
+                          { cle: 'protection' as const, libelle: 'Approbation requise avant mise en production' },
+                          { cle: 'autoDeploy' as const, libelle: 'Déploiement automatique sur poussée' },
+                          ...(e.nom !== 'Production'
+                            ? [{ cle: 'motDePasse' as const, libelle: 'Protégé par mot de passe' }]
+                            : []),
+                        ]
+                      ).map((opt) => (
+                        <label
+                          key={opt.cle}
+                          className="flex items-center gap-2 text-[11.5px] text-g-700"
+                        >
                           <input
                             type="checkbox"
-                            defaultChecked
+                            checked={e[opt.cle]}
                             className="h-3 w-3 accent-[#4B2882]"
+                            onChange={(ev) =>
+                              setEnvs((prev) =>
+                                prev.map((x) =>
+                                  x.nom === e.nom ? { ...x, [opt.cle]: ev.target.checked } : x,
+                                ),
+                              )
+                            }
                           />
-                          Protégé par mot de passe
+                          {opt.libelle}
                         </label>
-                      )}
+                      ))}
                     </div>
                   )}
                 </div>

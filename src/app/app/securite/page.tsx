@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Download, FileCheck2, Fingerprint, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateHeure, pct, relatif } from '@/lib/format'
-import { AUDIT, CONFORMITE, ORG_COURANTE, USERS } from '@/lib/mock'
+import { CONFORMITE, ORG_COURANTE, USERS } from '@/lib/mock'
 import { ROLE_LABEL, type Role } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
@@ -16,7 +16,7 @@ import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { Regle321 } from '@/components/business/infra'
 import { useApp } from '@/components/app/contexte'
-import { useCollection } from '@/components/app/atelier'
+import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, useOperation } from '@/components/app/actions'
 import type { AuditEvent } from '@/lib/types'
 
@@ -96,6 +96,10 @@ const ONGLETS = [
 ]
 
 export default function Securite() {
+  // Le journal vit dans l'atelier : les actions faites pendant la session s'y
+  // ajoutent, refus compris. Sans atelier touché, il retombe sur la graine.
+  const { journal: AUDIT } = useAtelier()
+
   const { autorise, refus, perm, pousser } = useApp()
   const executer = useOperation()
   const sessions = useCollection<SessionActive>('sessions', SESSIONS)

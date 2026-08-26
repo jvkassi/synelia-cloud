@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
-import { TYPE_SERVICE_LABEL, projetById, serviceProjetById } from '@/lib/mock'
+import { TYPE_SERVICE_LABEL, serviceProjetById } from '@/lib/mock'
 import { VueService } from './vue'
 
 export async function generateMetadata({
@@ -20,10 +19,9 @@ export default async function PageService({
 }: {
   params: Promise<{ projet: string; service: string }>
 }) {
-  const { projet, service } = await params
-  const s = serviceProjetById(service)
-  // Le service doit exister ET appartenir au projet de l'URL : sinon l'adresse
-  // décrit une hiérarchie qui n'existe pas, et vaut un 404.
-  if (!s || s.projetId !== projet || !projetById(projet)) notFound()
+  const { service } = await params
+  // Pas de 404 côté serveur : un service créé pendant la session n'existe pas
+  // dans le jeu figé, et une page d'erreur ferait croire à une panne. La vue
+  // cliente vérifie l'appartenance au projet et le dit elle-même.
   return <VueService id={service} />
 }

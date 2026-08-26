@@ -42,6 +42,11 @@ export const metadata: Metadata = {
     'Nextcloud',
     'marketplace open source',
   ],
+  /*
+   * Sans `metadataBase`, Next émet une URL relative pour l'aperçu et la
+   * plupart des robots la rejettent : le lien partagé restait sans vignette.
+   */
+  metadataBase: new URL('https://cloud.synelia.tech'),
   openGraph: {
     title: 'Synelia Cloud — Infrastructure cloud souveraine en Côte d’Ivoire',
     description:
@@ -49,6 +54,22 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'fr_CI',
     siteName: 'Synelia Cloud',
+    // En JPEG, pas en WebP : tous les robots d'indexation ne le décodent pas.
+    images: [
+      {
+        url: '/photos/og.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Allée froide d’une salle serveurs, aux voyants violets.',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Synelia Cloud — Infrastructure cloud souveraine en Côte d’Ivoire',
+    description:
+      'Infrastructure, applications et solutions open source opérées, hébergées à Abidjan et Grand-Bassam.',
+    images: ['/photos/og.jpg'],
   },
 }
 

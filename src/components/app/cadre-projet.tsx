@@ -1,7 +1,9 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { PROJETS, servicesDuProjet, syntheseProjet } from '@/lib/mock'
+import { PROJETS, SERVICES_PROJET, syntheseDeServices } from '@/lib/mock'
+import type { Projet, ServiceProjet } from '@/lib/types'
+import { useCollection } from '@/components/app/atelier'
 import type { Tone } from '@/components/ui/badge'
 import {
   SelecteurRessource,
@@ -31,6 +33,10 @@ export function CadreProjet({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  // Le panneau lit les collections : un projet créé pendant la session doit y
+  // apparaître, et un projet supprimé en sortir.
+  const lesProjets = useCollection<Projet>('projets', PROJETS)
+  const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
 
   // `/app/applications/backup/prj-metier` → `prj-metier`. La racine de la
   // section ne sélectionne rien : elle montre la vue tous projets confondus.
@@ -38,8 +44,9 @@ export function CadreProjet({
     ? decodeURIComponent(pathname.slice(base.length + 1).split('/')[0])
     : undefined
 
-  const entrees: EntreeSelecteur[] = PROJETS.map((p) => {
-    const s = syntheseProjet(p.id)
+  const entrees: EntreeSelecteur[] = lesProjets.items.map((p) => {
+    const services = lesServices.items.filter((x) => x.projetId === p.id)
+    const s = syntheseDeServices(services)
     const etat =
       s.enEchec > 0
         ? { texte: `${s.enEchec} en échec`, ton: 'err' as Tone }
@@ -56,11 +63,7 @@ export function CadreProjet({
       etat: etat.texte,
       ton: etat.ton,
       href: `${base}/${p.id}`,
-      motsCles: [
-        p.espaceId,
-        ...p.environnements,
-        ...servicesDuProjet(p.id).map((s) => s.nom),
-      ],
+      motsCles: [p.espaceId, ...p.environnements, ...services.map((x) => x.nom)],
     }
   })
 

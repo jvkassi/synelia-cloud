@@ -10,8 +10,8 @@ import {
   type ReactNode,
 } from 'react'
 import { MAINTENANT } from '@/lib/format'
-import type { ProvisioningJob } from '@/lib/types'
-import { JOBS } from '@/lib/mock/ops'
+import type { AuditEvent, ProvisioningJob } from '@/lib/types'
+import { AUDIT, JOBS } from '@/lib/mock/ops'
 
 /**
  * Atelier — couche d'état mutable posée par-dessus le jeu de données fictif.
@@ -73,6 +73,13 @@ interface CtxAtelier {
   identifiant: (prefixe: string) => string
   jobs: ProvisioningJob[]
   lancerJob: (spec: SpecJob) => string
+  /**
+   * Écrit une entrée au journal d'audit. La vitrine promet un journal « qui
+   * enregistre aussi les refus » : c'est ici que la promesse se tient, y compris
+   * quand le RBAC refuse l'action.
+   */
+  journaliser: (ev: Omit<AuditEvent, 'id' | 'ts'> & { ts?: string }) => void
+  journal: AuditEvent[]
   /** Nombre de collections modifiées depuis le chargement de la page. */
   collectionsModifiees: number
   reinitialiser: () => void
@@ -81,6 +88,7 @@ interface CtxAtelier {
 const Ctx = createContext<CtxAtelier | null>(null)
 
 const NOM_JOBS = 'jobs'
+const NOM_AUDIT = 'audit'
 
 export function AtelierProvider({ children }: { children: ReactNode }) {
   const [collections, setCollections] = useState<Record<string, Entite[]>>({})
@@ -143,6 +151,26 @@ export function AtelierProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const jobs = lire<ProvisioningJob>(NOM_JOBS, JOBS)
+  const journal = lire<AuditEvent>(NOM_AUDIT, AUDIT)
+
+  /**
+   * Les entrées ajoutées pendant la session portent `MAINTENANT` décalé d'une
+   * seconde par événement : sans ce décalage elles partageraient toutes le même
+   * horodatage et le tri antéchronologique du journal deviendrait arbitraire.
+   * `Date.now()` reste exclu — il ferait diverger serveur et client.
+   */
+  const journaliser = useCallback<CtxAtelier['journaliser']>(
+    (ev) => {
+      compteur.current += 1
+      const decale = new Date(new Date(MAINTENANT).getTime() + compteur.current * 1000)
+      creer(NOM_AUDIT, AUDIT, {
+        ...ev,
+        id: `ev-s${compteur.current}`,
+        ts: ev.ts ?? decale.toISOString().replace('.000', ''),
+      } as AuditEvent)
+    },
+    [creer],
+  )
 
   const lancerJob = useCallback<CtxAtelier['lancerJob']>(
     (spec) => {
@@ -200,6 +228,8 @@ export function AtelierProvider({ children }: { children: ReactNode }) {
       identifiant,
       jobs,
       lancerJob,
+      journaliser,
+      journal,
       collectionsModifiees: Object.keys(collections).length,
       reinitialiser: () => setCollections({}),
     }),
@@ -212,6 +242,8 @@ export function AtelierProvider({ children }: { children: ReactNode }) {
       identifiant,
       jobs,
       lancerJob,
+      journaliser,
+      journal,
       collections,
     ],
   )

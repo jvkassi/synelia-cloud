@@ -4,8 +4,14 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { GitCommitHorizontal, Rocket, RotateCcw, ShieldCheck } from 'lucide-react'
 import { dateHeure, duree, relatif } from '@/lib/format'
-import type { Deployment } from '@/lib/types'
-import { DEPLOIEMENTS, appById, envById, projetById, servicesDuProjet } from '@/lib/mock'
+import type { Deployment, Projet, ServiceProjet } from '@/lib/types'
+import {
+  DEPLOIEMENTS,
+  PROJETS,
+  SERVICES_PROJET,
+  appById,
+  envById,
+} from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -13,8 +19,10 @@ import { Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { DeploymentPipeline, SecurityFindings } from '@/components/business/paas'
-import { EnteteProjet } from '@/components/business/projets'
+import { EnteteProjet, ProjetIntrouvable } from '@/components/business/projets'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
+import { BoutonAction } from '@/components/app/actions'
 
 const LIBELLE_STATUT: Record<Deployment['statut'], string> = {
   queued: 'En file',
@@ -39,20 +47,26 @@ const TON_STATUT: Record<Deployment['statut'], 'ok' | 'err' | 'warn' | 'info'> =
 }
 
 export function VueDeploiements({ id }: { id: string }) {
-  const projet = projetById(id)!
-  const services = servicesDuProjet(id)
-  const { autorise, refus, pousser } = useApp()
+  const lesProjets = useCollection<Projet>('projets', PROJETS)
+  const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+  const lesDeploiements = useCollection<Deployment>('deploiements', DEPLOIEMENTS)
+  const { autorise, refus } = useApp()
+
+  const projet = lesProjets.items.find((p) => p.id === id)
+  const services = lesServices.items.filter((x) => x.projetId === id)
 
   // Un déploiement désigne encore une application par son identifiant
   // historique ; le rattachement au projet passe par les services.
   const apps = new Set(services.map((s) => s.appId).filter(Boolean))
-  const deploiements = DEPLOIEMENTS.filter((d) => apps.has(d.appId)).sort((a, b) =>
-    b.startedAt.localeCompare(a.startedAt),
-  )
+  const deploiements = lesDeploiements.items
+    .filter((d) => apps.has(d.appId))
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
 
   const [ouvert, setOuvert] = useState<string | null>(
     deploiements.find((d) => d.statut === 'failed')?.id ?? deploiements[0]?.id ?? null,
   )
+  if (!projet) return <ProjetIntrouvable section="Déploiements" />
+
   const selection = deploiements.find((d) => d.id === ouvert)
 
   const echecs = deploiements.filter((d) => d.statut === 'failed')
@@ -193,25 +207,35 @@ export function VueDeploiements({ id }: { id: string }) {
                         {d.id === ouvert ? 'Replier' : 'Détail'}
                       </Button>
                       {d.statut === 'live' && (
-                        <GatedAction
-                          autorise={autorise('app.rollback')}
-                          message={refus('app.rollback')}
-                        >
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            iconBefore={<RotateCcw size={12} />}
-                            onClick={() =>
-                              pousser({
-                                ton: 'ok',
-                                titre: 'Retour arrière déclenché',
-                                detail: `L’artefact précédent de ${appById(d.appId)?.nom} est repromu. Aucun rebuild : la bascule prend quelques secondes.`,
-                              })
-                            }
-                          >
-                            Retour arrière
-                          </Button>
-                        </GatedAction>
+                        <BoutonAction
+                          libelle="Retour arrière"
+                          icone={<RotateCcw size={12} />}
+                          operation={{
+                            action: 'app.rollback',
+                            titre: 'Retour arrière déclenché',
+                            detail: `L’artefact précédent de ${appById(d.appId)?.nom} est repromu. Aucun rebuild : la bascule prend quelques secondes.`,
+                            job: {
+                              type: 'app.rollback',
+                              label: `Retour arrière · ${appById(d.appId)?.nom ?? d.appId} ${d.version}`,
+                              etapes: [
+                                'Repromouvoir l’artefact précédent',
+                                'Basculer le trafic',
+                                'Vérifier les sondes de vivacité',
+                              ],
+                            },
+                            // Le déploiement annulé n'est pas effacé : l'historique
+                            // doit dire qu'il a existé, et qu'on est revenu en arrière.
+                            effetFinal: () => {
+                              lesDeploiements.modifier(d.id, { statut: 'rolled_back' })
+                              const precedent = deploiements.find(
+                                (x) => x.appId === d.appId && x.id !== d.id && x.statut !== 'failed',
+                              )
+                              if (precedent) {
+                                lesDeploiements.modifier(precedent.id, { statut: 'live' })
+                              }
+                            },
+                          }}
+                        />
                       )}
                     </div>
                   </div>

@@ -6,7 +6,7 @@ import { Download, FileCheck2, KeyRound, ShieldAlert } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { dateHeure, num, pct, relatif } from '@/lib/format'
 import { telechargerCsv, telechargerTexte } from '@/lib/export'
-import { AUDIT, EQUIPE_SYNELIA, ORGANISATIONS } from '@/lib/mock'
+import { EQUIPE_SYNELIA, ORGANISATIONS } from '@/lib/mock'
 import type { MembreEquipe } from '@/lib/mock'
 import { ROLE_LABEL, type Role } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -18,7 +18,7 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
-import { useCollection } from '@/components/app/atelier'
+import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, useOperation } from '@/components/app/actions'
 import type { AuditEvent } from '@/lib/types'
 
@@ -30,6 +30,10 @@ const ONGLETS = [
 ]
 
 export default function AuditAdmin() {
+  // Le journal vit dans l'atelier : les actions faites pendant la session s'y
+  // ajoutent, refus compris. Sans atelier touché, il retombe sur la graine.
+  const { journal: AUDIT } = useAtelier()
+
   const { autorise, refus, pousser } = useApp()
   const equipe = useCollection<MembreEquipe>('equipe-synelia', EQUIPE_SYNELIA)
   const executer = useOperation()

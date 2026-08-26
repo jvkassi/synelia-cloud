@@ -130,18 +130,21 @@ export const BLOC_PRA = {
 export const BLOC_SOUVERAINETE = [
   {
     titre: 'Où sont vos données',
+    illustration: '/illustrations/souverainete-lieu.svg',
     texte:
       'Sur deux sites nommés, en Côte d’Ivoire : Synertech Vallon à Cocody (Abidjan) et le parc VITIB à Grand-Bassam. Aucune réplication hors du territoire, sauf demande écrite de votre part.',
     lien: { libelle: 'Voir les datacenters', href: '/datacenters' },
   },
   {
     titre: 'Qui peut y accéder',
+    illustration: '/illustrations/souverainete-acces.svg',
     texte:
       'Un modèle de droits explicite — onze rôles, une matrice publiée — et un journal d’audit qui enregistre aussi les refus. Les accès de nos ingénieurs sont nominatifs, élevés temporairement et justifiés.',
     lien: { libelle: 'Voir la matrice des rôles', href: '/souverainete#acces' },
   },
   {
     titre: 'Comment vous repartez',
+    illustration: '/illustrations/souverainete-sortie.svg',
     texte:
       'Chaque service documente son format d’export et son délai. Nous testons la réversibilité, comme nous testons les restaurations. Partir doit être possible pour que rester soit un choix.',
     lien: { libelle: 'Lire la procédure', href: '/souverainete#reversibilite' },
@@ -210,6 +213,59 @@ export const ETUDES_CAS = [
     texte:
       'Migration depuis Microsoft 365, avec conservation de l’historique des boîtes et bascule MX en une nuit après pré-synchronisation.',
   },
+]
+
+// ─── Parcours de démarrage — de la signature à la production ──────────
+
+/**
+ * La vitrine annonçait le produit et la preuve, jamais le chemin entre les
+ * deux. Les durées sont des ordres de grandeur constatés, pas un engagement
+ * contractuel : c'est dit dans la note de la section.
+ */
+export const PARCOURS_DEMARRAGE = [
+  {
+    jalon: 'Jour 0',
+    titre: 'Atelier de cadrage',
+    texte:
+      'Un architecte relève vos charges, vos contraintes de conformité et les fenêtres d’indisponibilité que vous pouvez accepter. Il en sort un dimensionnement chiffré et le site qui vous accueille.',
+    livrable: 'Dimensionnement et devis',
+  },
+  {
+    jalon: 'Jour 1',
+    titre: 'Espace Cloud ouvert',
+    texte:
+      'Votre enveloppe de capacité, vos rôles et votre plan de sauvegarde sont en place. Vous créez vos premières ressources vous-même, depuis le portail.',
+    livrable: 'Accès portail et matrice de rôles',
+  },
+  {
+    jalon: 'Semaines 1 à 6',
+    titre: 'Migration accompagnée',
+    texte:
+      'Reprise des machines, des bases et des boîtes aux lettres. Pré-synchronisation, répétition à blanc, puis bascule sur une fenêtre que vous choisissez.',
+    livrable: 'Plan de bascule daté',
+  },
+  {
+    jalon: 'Chaque trimestre',
+    titre: 'Exercice de reprise',
+    texte:
+      'Bascule inter-site en réseau isolé, sans toucher à la production. Vous recevez le temps de reprise réellement constaté, pas la cible contractuelle.',
+    livrable: 'Rapport opposable à un auditeur',
+  },
+]
+
+/** Ce que le parcours n'inclut pas — dit avant qu'on le demande. */
+export const PARCOURS_LIMITES =
+  'Le cadrage n’est pas facturé et n’engage à rien. En revanche, nous ne prenons pas la main sur vos applications : la migration se fait avec vos équipes, pas à leur place, et l’exploitation applicative reste chez vous.'
+
+// ─── Moyens de paiement — argument local, sorti de la FAQ ──────────────
+
+export const MOYENS_PAIEMENT = [
+  { nom: 'Orange Money', initiales: 'OM', teinte: '#FF7900', detail: 'Débit immédiat, reçu dans le portail' },
+  { nom: 'MTN MoMo', initiales: 'MM', teinte: '#FFCC00', detail: 'Débit immédiat, reçu dans le portail' },
+  { nom: 'Wave', initiales: 'WV', teinte: '#1DC8F2', detail: 'Débit immédiat, reçu dans le portail' },
+  { nom: 'Virement bancaire', initiales: 'VB', teinte: '#4B2882', detail: 'Facture à 30 jours, relance automatique' },
+  { nom: 'Carte bancaire', initiales: 'CB', teinte: '#2B1B4D', detail: 'Visa et Mastercard, 3-D Secure' },
+  { nom: 'Porte-monnaie prépayé', initiales: 'PP', teinte: '#C0297A', detail: 'Provision à l’avance, seuil d’alerte' },
 ]
 
 // ─── FAQ d'accueil (§2.2 §9) ──────────────────────────────────────────
@@ -374,6 +430,12 @@ export interface FicheProduit {
   caracteristiques: Array<{ theme: string; items: Array<{ libelle: string; valeur: string }> }>
   sla: { dispo: string; reponse: string; resolution: string; credits: string }
   architecture: { titre: string; couches: Array<{ nom: string; elements: string[] }> }
+  /**
+   * Schéma illustré, quand il en existe un pour ce produit. Les couches ci-dessus
+   * énumèrent ; le schéma montre les frontières — qui règle quoi, et où sortent
+   * les copies. Tous les produits n'en méritent pas un.
+   */
+  schema?: { src: string; alt: string; largeur: number; hauteur: number }
   faq: Array<{ question: string; reponse: string }>
 }
 
@@ -445,6 +507,13 @@ export const FICHES_PRODUIT: FicheProduit[] = [
         { nom: 'Données', elements: ['Base managée PostgreSQL HA', 'Cache Redis', 'Volumes NVMe chiffrés'] },
         { nom: 'Protection', elements: ['Plan de sauvegarde immuable', 'Réplication vers le second site'] },
       ],
+    },
+    schema: {
+      src: '/illustrations/architecture-espace-cloud.svg',
+      alt:
+        "Schéma d'un Espace Cloud : Internet, pare-feu applicatif, répartiteur de charge, un sous-réseau public et un sous-réseau privé de machines virtuelles, le stockage bloc et objet, et sous le périmètre piloté par le client le socle opéré par Synelia.",
+      largeur: 760,
+      hauteur: 362,
     },
     faq: [
       { question: 'Puis-je avoir plusieurs Espaces Cloud ?', reponse: 'Oui, autant que nécessaire. C’est la façon habituelle de séparer production, préproduction et site de repli, chacun avec son quota et sa plage réseau.' },
@@ -656,6 +725,13 @@ export const FICHES_PRODUIT: FicheProduit[] = [
         { nom: 'Groupe 4 — Exposition', elements: ['Load balancer de repli', 'IP publique de repli', 'Bascule DNS'] },
       ],
     },
+    schema: {
+      src: '/illustrations/sauvegarde-321.svg',
+      alt:
+        "Schéma de la règle 3-2-1 : production dans l'Espace Cloud à Abidjan, instantané local sur NVMe, réplique hors site sur stockage objet à Grand-Bassam, et copie immuable verrouillée quatorze jours.",
+      largeur: 760,
+      hauteur: 306,
+    },
     faq: [
       { question: 'Un exercice de test perturbe-t-il la production ?', reponse: 'Non. La bascule de test démarre les ressources répliquées dans un réseau isolé, sans conflit d’adressage et sans toucher au DNS public. C’est précisément ce qui permet de l’exercer souvent.' },
       { question: 'Que vaut un RTO annoncé mais jamais mesuré ?', reponse: 'Rien, et c’est notre position. Nous affichons systématiquement cible et constaté côte à côte. Si l’écart se creuse, c’est visible avant le sinistre, pas pendant.' },
@@ -721,6 +797,13 @@ export const FICHES_PRODUIT: FicheProduit[] = [
         { nom: 'Copie 2 — locale', elements: ['Bucket S3 chaud, site Abidjan, versioning actif'] },
         { nom: 'Copie 3 — hors site immuable', elements: ['Bucket S3 froid, site Grand-Bassam, verrouillage WORM 35 j'] },
       ],
+    },
+    schema: {
+      src: '/illustrations/sauvegarde-321.svg',
+      alt:
+        "Schéma de la règle 3-2-1 : production dans l'Espace Cloud à Abidjan, instantané local sur NVMe, réplique hors site sur stockage objet à Grand-Bassam, et copie immuable verrouillée quatorze jours.",
+      largeur: 760,
+      hauteur: 306,
     },
     faq: [
       { question: 'Qu’est-ce que l’immuabilité change en cas de rançongiciel ?', reponse: 'Tout. Un point de restauration sous rétention WORM ne peut être supprimé par personne — ni par un attaquant ayant obtenu vos droits, ni par nous. C’est la seule protection qui résiste à une compromission d’administrateur.' },

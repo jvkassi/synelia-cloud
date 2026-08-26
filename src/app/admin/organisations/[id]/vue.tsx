@@ -6,7 +6,6 @@ import { Ban, KeyRound, Pause, Play, ShieldAlert, UserCog } from 'lucide-react'
 import { cn, trendSeries } from '@/lib/utils'
 import { dateCourte, dateHeure, goHumain, MAINTENANT, money, num, pct, relatif } from '@/lib/format'
 import {
-  AUDIT,
   ELEVATIONS,
   EQUIPE_SYNELIA,
   ESPACES,
@@ -37,7 +36,7 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { Timeline } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
-import { useCollection } from '@/components/app/atelier'
+import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
@@ -51,6 +50,10 @@ const ONGLETS = [
 ]
 
 export function VueOrganisation({ id }: { id: string }) {
+  // Le journal vit dans l'atelier : les actions faites pendant la session s'y
+  // ajoutent, refus compris. Sans atelier touché, il retombe sur la graine.
+  const { journal: AUDIT } = useAtelier()
+
   const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
   const lesFactures = useCollection<Invoice>('factures', FACTURES)

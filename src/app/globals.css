@@ -342,3 +342,36 @@
     }
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   Mouvement réduit
+
+   Le carrousel de logos de la vitrine et les pastilles d'état tournent en
+   boucle : sans borne, ils déclenchent des malaises chez les personnes
+   sensibles au mouvement, et rien n'est perdu à les figer. Règle hors couche
+   pour qu'elle l'emporte sur les utilitaires d'animation, quel que soit
+   l'ordre de la feuille.
+   ══════════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Le marquee figé à mi-course laisserait un vide : on le remet à zéro. */
+  .animate-marquee {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  /* La pastille doit rester lisible, donc pleinement opaque. */
+  .animate-pulse-dot {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}

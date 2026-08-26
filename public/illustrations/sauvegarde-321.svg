@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 306" width="760" height="306" role="img" aria-label="Schéma de la règle 3-2-1 : production à Abidjan, instantané local sur NVMe, réplique hors site sur stockage objet à Grand-Bassam, et copie immuable verrouillée quatorze jours">
+  <defs>
+    <linearGradient id="v-cadre" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7f4fc"/><stop offset="1" stop-color="#ffffff"/>
+    </linearGradient>
+  </defs>
+  <rect width="760" height="306" rx="14" fill="url(#v-cadre)" stroke="#c8c8d4" stroke-width="1.2"/>
+
+  <text x="40" y="38" font-size="11" font-weight="700" letter-spacing="1.1" fill="#c0297a" font-family="Montserrat,system-ui,sans-serif">RÈGLE 3-2-1</text>
+  <text x="40" y="62" font-size="15" font-weight="700" fill="#2b1b4d" font-family="Montserrat,system-ui,sans-serif">Trois copies, deux supports, une hors site</text>
+
+  <g>
+    <rect x="40" y="96" width="168" height="74" rx="10" fill="#ffffff" stroke="#c8c8d4" stroke-width="1.4"/>
+    <rect x="40" y="96" width="168" height="3.5" rx="1.75" fill="#4b2882"/>
+    <text x="124" y="130" text-anchor="middle" font-size="12.5" font-weight="700" fill="#2b1b4d" font-family="Montserrat,system-ui,sans-serif">Production</text>
+    <text x="124" y="146" text-anchor="middle" font-size="10.5" fill="#67677c" font-family="'Open Sans',system-ui,sans-serif">Espace Cloud · ABJ</text>
+  </g><g>
+    <rect x="258" y="96" width="168" height="74" rx="10" fill="#ffffff" stroke="#c8c8d4" stroke-width="1.4"/>
+    <rect x="258" y="96" width="168" height="3.5" rx="1.75" fill="#6b3fa0"/>
+    <text x="342" y="130" text-anchor="middle" font-size="12.5" font-weight="700" fill="#2b1b4d" font-family="Montserrat,system-ui,sans-serif">Instantané local</text>
+    <text x="342" y="146" text-anchor="middle" font-size="10.5" fill="#67677c" font-family="'Open Sans',system-ui,sans-serif">NVMe · Vallon (ABJ)</text>
+  </g><g>
+    <rect x="476" y="96" width="168" height="74" rx="10" fill="#ffffff" stroke="#c8c8d4" stroke-width="1.4"/>
+    <rect x="476" y="96" width="168" height="3.5" rx="1.75" fill="#c0297a"/>
+    <text x="560" y="130" text-anchor="middle" font-size="12.5" font-weight="700" fill="#2b1b4d" font-family="Montserrat,system-ui,sans-serif">Réplique hors site</text>
+    <text x="560" y="146" text-anchor="middle" font-size="10.5" fill="#67677c" font-family="'Open Sans',system-ui,sans-serif">Objet S3 · VITIB (GBM)</text>
+  </g>
+  <g><rect x="364" y="150" width="54" height="17" rx="8.5" fill="#ede7f9"/>
+      <text x="391" y="162" text-anchor="middle" font-size="9.5" font-weight="700" fill="#4b2882" font-family="'Open Sans',system-ui,sans-serif">copie 1</text></g><g><rect x="582" y="150" width="54" height="17" rx="8.5" fill="#ede7f9"/>
+      <text x="609" y="162" text-anchor="middle" font-size="9.5" font-weight="700" fill="#4b2882" font-family="'Open Sans',system-ui,sans-serif">copie 2</text></g>
+
+  <g>
+    <path d="M214 133H245" fill="none" stroke="#9b7fd4" stroke-width="1.8"/>
+    <path d="M244 128.5L252 133L244 137.5Z" fill="#9b7fd4"/>
+    <text x="233" y="124" text-anchor="middle" font-size="10" fill="#67677c" font-family="'Open Sans',system-ui,sans-serif">15 min</text>
+  </g>
+  <g>
+    <path d="M432 133H463" fill="none" stroke="#e766a6" stroke-width="1.8"/>
+    <path d="M462 128.5L470 133L462 137.5Z" fill="#e766a6"/>
+    <text x="451" y="124" text-anchor="middle" font-size="10" fill="#67677c" font-family="'Open Sans',system-ui,sans-serif">1 h</text>
+  </g>
+
+  <path d="M560 170V212" fill="none" stroke="#15704d" stroke-width="1.8" stroke-dasharray="5 4"/>
+  <path d="M555.5 204L560 212L564.5 204Z" fill="#15704d"/>
+  <g>
+    <rect x="476" y="212" width="168" height="64" rx="10" fill="#ffffff" stroke="#b9dccd" stroke-width="1.4"/>
+    <rect x="476" y="212" width="168" height="3.5" rx="1.75" fill="#15704d"/>
+    <text x="560" y="241" text-anchor="middle" font-size="12.5" font-weight="700" fill="#2b1b4d" font-family="Montserrat,system-ui,sans-serif">Copie immuable</text>
+    <text x="560" y="257" text-anchor="middle" font-size="10.5" fill="#67677c" font-family="'Open Sans',system-ui,sans-serif">verrou 14 j · non effaçable</text>
+  </g>
+
+  <g>
+    <rect x="40" y="212" width="404" height="64" rx="10" fill="#ffffff" stroke="#c8c8d4" stroke-width="1.4" stroke-dasharray="4 4"/>
+    <text x="58" y="233" font-size="11.5" font-weight="700" fill="#2b1b4d" font-family="Montserrat,system-ui,sans-serif">Ce que le schéma ne promet pas</text>
+    <text x="58" y="249" font-size="10.5" fill="#67677c" font-family="'Open Sans',system-ui,sans-serif">Une sauvegarde n'est prouvée que par une restauration.</text>
+    <text x="58" y="263" font-size="10.5" fill="#67677c" font-family="'Open Sans',system-ui,sans-serif">Les nôtres sont exercées chaque trimestre, rapport à l'appui.</text>
+  </g>
+</svg>
