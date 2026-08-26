@@ -35,30 +35,26 @@ export default async function FicheProduit({
   return (
     <>
       {/* Héros court */}
-      <section className="relative overflow-hidden border-b border-g-300 bg-p-900">
-        <span className="absolute inset-0 bg-grid-light opacity-60" aria-hidden />
-        <span
-          className="absolute -right-32 -top-24 h-80 w-80 rounded-full bg-m-600/20 blur-3xl"
-          aria-hidden
-        />
-        <Container className="relative py-14 sm:py-16">
-          <MicroLabel className="text-p-300">{f.surtitre}</MicroLabel>
-          <h1 className="mt-3 text-[32px] font-bold leading-[1.1] [font-family:var(--font-display)] text-white sm:text-[44px]">
+      {/*
+        Même traitement que `HeroCourt` : crème, encre, sans halo flou ni grille.
+        Cette page portait son propre héros sombre, ce qui la laissait seule en
+        violet une fois les treize autres passées au crème.
+      */}
+      <section className="border-b border-encre-2/10 bg-creme-2">
+        <Container className="py-14 sm:py-16">
+          <MicroLabel className="text-m-600">{f.surtitre}</MicroLabel>
+          <h1 className="mt-3 text-[34px] font-black leading-[1.06] tracking-[-0.02em] [font-family:var(--font-display)] text-encre-2 sm:text-[46px]">
             {f.nom}
           </h1>
-          <p className="mt-3 max-w-2xl text-[18px] font-semibold leading-snug text-m-400 sm:text-[22px]">
+          <p className="mt-3 max-w-2xl text-[18px] font-bold leading-snug text-m-600 sm:text-[22px]">
             {f.accroche}
           </p>
-          <p className="mt-4 max-w-2xl text-[14.5px] leading-relaxed text-p-300">{f.resume}</p>
+          <p className="mt-4 max-w-2xl text-[14.5px] leading-relaxed text-encre-2/70">{f.resume}</p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
-            <ButtonLink href="/signup" size="lg" variant="inverse">
+            <ButtonLink href="/signup" size="lg" variant="primary">
               Créer un compte
             </ButtonLink>
-            <ButtonLink
-              href="/entreprises#contact"
-              size="lg"
-              variant="ghostInverse"
-            >
+            <ButtonLink href="/entreprises#contact" size="lg" variant="secondary">
               Demander un devis
             </ButtonLink>
           </div>

@@ -187,7 +187,7 @@ export default function Accueil() {
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
                   href="/offres/espace-cloud"
-                  className="inline-flex items-center gap-2 rounded-full bg-p-700 px-7 py-4 text-[15px] font-bold text-creme shadow-[0_6px_0_0_var(--color-encre-2)] transition-transform hover:-translate-y-1"
+                  className="inline-flex items-center gap-2 rounded-full bg-p-700 px-7 py-4 text-[15px] font-bold text-creme transition-transform hover:-translate-y-1"
                 >
                   Commencer <ArrowRight size={17} />
                 </Link>
@@ -215,15 +215,20 @@ export default function Accueil() {
               </dl>
             </div>
 
-            <div className="rounded-[36px] bg-creme-2 p-3 shadow-[0_10px_0_0_rgba(36,20,54,.08)]">
-              <img
-                src="/photos/formes-3d.webp"
-                alt="Volumes géométriques arrondis en violet, magenta et ocre, flottant sur un fond crème."
-                width={1376}
-                height={768}
-                className="w-full rounded-[28px]"
-              />
-            </div>
+            {/*
+              Pas de cadre : le fond de l'image est déjà le crème de la page,
+              donc l'encadrer ne faisait qu'ajouter un rectangle visible autour
+              de rien. Le visuel dit ce que fait la plateforme — deux baies,
+              deux sites, un nuage au-dessus — au lieu de formes flottantes qui
+              ne racontent rien.
+            */}
+            <img
+              src="/photos/hero-pate.webp"
+              alt="Deux baies de serveurs côte à côte sur une plateforme, deux épingles de carte, et un nuage relié par un pointillé au-dessus."
+              width={1200}
+              height={896}
+              className="w-full"
+            />
           </div>
         </Container>
       </section>
@@ -263,11 +268,7 @@ export default function Accueil() {
               return (
                 <div
                   key={p.titre}
-                  className={`flex flex-col rounded-[28px] bg-creme p-7 sm:p-9 ${
-                    n === 0
-                      ? 'shadow-[0_8px_0_0_var(--color-p-600)]'
-                      : 'shadow-[0_8px_0_0_var(--color-m-600)]'
-                  }`}
+                  className="flex flex-col rounded-[28px] border border-encre-2/10 bg-creme p-7 sm:p-9"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <span
@@ -601,9 +602,7 @@ export default function Accueil() {
             {PARCOURS_DEMARRAGE.map((e, n) => (
               <li
                 key={e.jalon}
-                className={`flex flex-col rounded-[24px] bg-creme-2 p-6 ${
-                  n === 0 ? 'shadow-[0_6px_0_0_var(--color-ocre)]' : ''
-                }`}
+                className="flex flex-col rounded-[24px] bg-creme-2 p-6"
               >
                 <span
                   className={`self-start rounded-full px-3 py-1 text-[11.5px] font-bold ${PASTILLES[n % 4]} ${TEINTES[n % 4]}`}
@@ -672,7 +671,7 @@ export default function Accueil() {
             </p>
             <Link
               href="/entreprises#contact"
-              className="mt-8 inline-flex items-center gap-2 rounded-full bg-ocre px-8 py-4 text-[16px] font-bold text-encre-2 shadow-[0_6px_0_0_rgba(36,20,54,.35)] transition-transform hover:-translate-y-1"
+              className="mt-8 inline-flex items-center gap-2 rounded-full bg-ocre px-8 py-4 text-[16px] font-bold text-encre-2 transition-transform hover:-translate-y-1"
             >
               Réserver l’atelier <ArrowRight size={18} />
             </Link>

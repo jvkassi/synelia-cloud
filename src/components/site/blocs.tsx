@@ -40,9 +40,11 @@ export function SiteSection({
   className?: string
   id?: string
 }) {
+  // « blanc » et « clair » alternent désormais deux crèmes : le blanc clinique
+  // et le violet très pâle appartenaient à l'ancienne charte froide.
   const fonds = {
-    blanc: 'bg-white',
-    clair: 'bg-p-050',
+    blanc: 'bg-creme',
+    clair: 'bg-creme-2',
     violet: 'bg-p-700',
     'violet-fonce': 'bg-p-900',
   }[fond]
@@ -154,7 +156,14 @@ export function PastilleEtat({
   )
 }
 
-/** Héros court des pages secondaires. */
+/**
+ * Héros court des pages secondaires.
+ *
+ * Passé au crème avec l'ambiance « Ronde & claire » : le halo flou et la grille
+ * appartenaient au héros sombre, et treize pages les portaient. Les pages qui
+ * lui passaient des boutons `inverse` ont été ajustées en conséquence — un
+ * bouton blanc sur crème ne se voit pas.
+ */
 export function HeroCourt({
   surtitre,
   titre,
@@ -169,19 +178,14 @@ export function HeroCourt({
   enfants?: ReactNode
 }) {
   return (
-    <section className="relative overflow-hidden border-b border-g-300 bg-p-900">
-      <span className="absolute inset-0 bg-grid-light opacity-60" aria-hidden />
-      <span
-        className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-m-600/20 blur-3xl"
-        aria-hidden
-      />
-      <Container className="relative py-14 sm:py-16">
-        {surtitre && <MicroLabel className="text-p-300">{surtitre}</MicroLabel>}
-        <h1 className="mt-2 max-w-3xl text-[30px] font-bold leading-[1.12] [font-family:var(--font-display)] text-white sm:text-[42px]">
+    <section className="border-b border-encre-2/10 bg-creme-2">
+      <Container className="py-14 sm:py-16">
+        {surtitre && <MicroLabel className="text-m-600">{surtitre}</MicroLabel>}
+        <h1 className="mt-2 max-w-3xl text-[32px] font-black leading-[1.06] tracking-[-0.02em] [font-family:var(--font-display)] text-encre-2 sm:text-[46px]">
           {titre}
         </h1>
         {chapeau && (
-          <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-p-300">{chapeau}</p>
+          <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-encre-2/70">{chapeau}</p>
         )}
         {actions && <div className="mt-6 flex flex-wrap items-center gap-3">{actions}</div>}
         {enfants}
