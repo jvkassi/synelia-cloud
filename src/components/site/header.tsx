@@ -44,7 +44,9 @@ export function SiteHeader() {
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 border-b bg-white transition-shadow',
+        // Crème plutôt que blanc : le fond de page l'est désormais, et une barre
+        // blanche au-dessus se lisait comme un bandeau collé.
+        'sticky top-0 z-40 border-b bg-creme transition-shadow',
         defile ? 'border-g-300 shadow-[0_1px_12px_rgba(43,27,77,.08)]' : 'border-transparent',
       )}
       onMouseLeave={() => setMenu(null)}

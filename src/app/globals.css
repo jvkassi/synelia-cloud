@@ -30,6 +30,37 @@
   --color-m-400: #e766a6;
   --color-m-050: #fcedf4;
 
+  /*
+   * Palette chaude, retenue avec l'ambiance « Ronde & claire » du labo.
+   *
+   * La charte n'avait que du violet, du magenta et du gris : aucune couleur
+   * chaude, donc aucune chance qu'une page paraisse accueillante. L'ocre et la
+   * terre viennent de là. Le crème remplace le blanc clinique comme fond de
+   * page — c'est le changement qui se voit le plus, pour une seule valeur.
+   *
+   * Il y a DEUX crèmes, et c'est le piège : tout doit être mesuré sur le plus
+   * sombre (#f3e7d3), pas seulement sur le fond de page (#fbf4e8). La terre a
+   * été corrigée deux fois pour cette raison — #d4553b du labo donnait 3,7:1,
+   * puis #b84327 passait sur crème (4,96) mais échouait sur crème-2 (4,44),
+   * et l'audit l'a relevé sur les pastilles du parcours.
+   *
+   * Mesuré crème / crème-2 :
+   *   encre-2  15,6 / 14,0     violet p-600  6,8 / 6,0
+   *   p-700     9,98 / 8,9     terre         6,0 / 5,4
+   *   ok        5,6 / 5,0      g-500         5,0 / 4,5
+   *
+   * Deux réserves à ne pas oublier :
+   * - `m-600` tombe à 4,48:1 sur crème-2 : réservé au grand texte là-dessus
+   *   (≥ 24 px, ou ≥ 18,7 px en gras). Jamais en libellé courant.
+   * - `ocre` est à 2,0:1 : jamais une couleur de texte, seulement un aplat
+   *   sous de l'encre ou un fond de pastille.
+   */
+  --color-creme: #fbf4e8;
+  --color-creme-2: #f3e7d3;
+  --color-ocre: #e8a33d;
+  --color-terre: #a33a21;
+  --color-encre-2: #241436;
+
   /* ─── Sémantique ──────────────────────────────────────────────────── */
   /* Valeurs choisies pour tenir 4,5:1 sur blanc, g-050, p-050 et leur
      propre fond teinté — un badge « ok » posé sur ok-bg reste lisible. */

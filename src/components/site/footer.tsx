@@ -66,7 +66,7 @@ const COLONNES = [
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-g-300 bg-g-050">
+    <footer className="border-t border-g-300 bg-creme-2">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.4fr_repeat(5,1fr)]">
           <div>
