@@ -48,7 +48,7 @@ export default function MarketplacePublic() {
           <>
             Des logiciels libres,
             <br />
-            <span className="text-m-400">opérés comme un service.</span>
+            <span className="text-m-600">opérés comme un service.</span>
           </>
         }
         chapeau="Vous pourriez installer chacune de ces solutions vous-même. Ce que nous vendons, c’est l’exploitation : provisioning, dimensionnement à chaud, fédération d’identité, sauvegarde immuable avec restauration testée, supervision avec engagement, montées de version qualifiées, et réversibilité documentée."
@@ -59,11 +59,11 @@ export default function MarketplacePublic() {
               { v: `${CATALOGUE.filter((c) => c.certifie).length}`, l: 'certifiées Synelia' },
               { v: '2', l: 'sites en Côte d’Ivoire' },
             ].map((x) => (
-              <div key={x.l} className="rounded-[10px] border border-p-400/40 bg-white/5 px-4 py-3">
-                <p className="tnum text-[22px] font-bold leading-none [font-family:var(--font-display)] text-white">
+              <div key={x.l} className="rounded-[14px] border border-encre-2/10 bg-creme px-4 py-3">
+                <p className="tnum text-[22px] font-black leading-none [font-family:var(--font-display)] text-p-600">
                   {x.v}
                 </p>
-                <p className="mt-1.5 text-[11.5px] text-p-300">{x.l}</p>
+                <p className="mt-1.5 text-[11.5px] text-encre-2/65">{x.l}</p>
               </div>
             ))}
           </div>

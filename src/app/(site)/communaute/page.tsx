@@ -35,7 +35,7 @@ export default function Communaute() {
           <>
             Une plateforme locale
             <br />
-            <span className="text-m-400">doit servir localement.</span>
+            <span className="text-m-600">doit servir localement.</span>
           </>
         }
         chapeau="Nous vendons de la souveraineté : ce serait creux si nous ne formions personne ici et si nous nous contentions de consommer les logiciels libres sur lesquels toute notre offre est bâtie. Voici ce que nous rendons, et ce que ça vaut."

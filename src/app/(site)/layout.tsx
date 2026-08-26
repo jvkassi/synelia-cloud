@@ -3,7 +3,9 @@ import { SiteFooter } from '@/components/site/footer'
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col">
+    // `bg-creme` ici et pas sur `body` : la règle globale sert aussi /app et
+    // /admin, qui gardent leur fond blanc.
+    <div className="flex min-h-screen flex-col bg-creme">
       {/*
         Le header de la vitrine porte un mégamenu de quatre colonnes : au clavier,
         atteindre le contenu demandait une trentaine de tabulations. Le lien reste
