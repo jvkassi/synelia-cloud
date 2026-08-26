@@ -761,7 +761,14 @@ export function pointsRestaurationDuService(
 
 /** Synthèse d'un projet, pour sa carte dans la liste. */
 export function syntheseProjet(projetId: string) {
-  const services = servicesDuProjet(projetId)
+  return syntheseDeServices(servicesDuProjet(projetId))
+}
+
+/**
+ * Mêmes agrégats, sur un jeu de services fourni : les écrans lisent le leur
+ * dans l'atelier, qui contient les services créés pendant la session.
+ */
+export function syntheseDeServices(services: ServiceProjet[]) {
   return {
     services: services.length,
     parType: services.reduce<Record<string, number>>((acc, s) => {

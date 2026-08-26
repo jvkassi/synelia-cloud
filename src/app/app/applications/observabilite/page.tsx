@@ -5,17 +5,20 @@ import {
   EVENEMENTS_SUPERVISION,
   PROJETS,
   SERVICES_PROJET,
-  servicesDuProjet,
 } from '@/lib/mock'
+import type { Projet, ServiceProjet } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
+import { useCollection } from '@/components/app/atelier'
 import { EventList, LiensSortie } from '@/components/business/observabilite'
 
 export default function ObservabiliteTousProjets() {
-  const enEchec = SERVICES_PROJET.filter((s) => s.statut === 'failed')
-  const degrades = SERVICES_PROJET.filter((s) => s.statut === 'degraded')
-  const enMarche = SERVICES_PROJET.filter((s) => s.statut === 'running')
+  const lesProjets = useCollection<Projet>('projets', PROJETS)
+  const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+  const enEchec = lesServices.items.filter((s) => s.statut === 'failed')
+  const degrades = lesServices.items.filter((s) => s.statut === 'degraded')
+  const enMarche = lesServices.items.filter((s) => s.statut === 'running')
 
   return (
     <div className="space-y-5">
@@ -29,17 +32,17 @@ export default function ObservabiliteTousProjets() {
         sousTitre="L’état de tous les projets d’un coup d’œil. Choisissez un projet dans le panneau de gauche pour ses courbes, ses événements et son journal récent."
         meta={
           <Badge tone={enEchec.length > 0 ? 'err' : degrades.length > 0 ? 'warn' : 'ok'} dot>
-            {enMarche.length} sur {SERVICES_PROJET.length} services en marche
+            {enMarche.length} sur {lesServices.items.length} services en marche
           </Badge>
         }
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile libelle="Projets suivis" valeur={PROJETS.length} />
+        <StatTile libelle="Projets suivis" valeur={lesProjets.items.length} />
         <StatTile
           libelle="Services en marche"
           valeur={enMarche.length}
-          detail={`sur ${SERVICES_PROJET.length}`}
+          detail={`sur ${lesServices.items.length}`}
           ton="ok"
         />
         <StatTile
@@ -62,8 +65,8 @@ export default function ObservabiliteTousProjets() {
           sousTitre="Le détail — courbes, événements, journal — s’ouvre projet par projet."
         />
         <ul className="divide-y divide-g-100">
-          {PROJETS.map((p) => {
-            const services = servicesDuProjet(p.id)
+          {lesProjets.items.map((p) => {
+            const services = lesServices.items.filter((x) => x.projetId === p.id)
             const ko = services.filter((s) => s.statut === 'failed').length
             const warn = services.filter((s) => s.statut === 'degraded').length
             const ok = services.filter((s) => s.statut === 'running').length

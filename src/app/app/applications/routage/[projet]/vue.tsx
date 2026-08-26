@@ -3,19 +3,20 @@
 import Link from 'next/link'
 import { Globe } from 'lucide-react'
 import { dateCourte } from '@/lib/format'
-import { SITE_LABEL } from '@/lib/types'
+import { SITE_LABEL, type Projet, type ServiceProjet } from '@/lib/types'
 import {
   DOMAINES_APPLICATIFS,
   ZONE_APPLICATIVE,
-  projetById,
-  servicesDuProjet,
+  PROJETS,
+  SERVICES_PROJET,
 } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { CopyField } from '@/components/ui/display'
 import { Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
-import { EnteteProjet } from '@/components/business/projets'
+import { useCollection } from '@/components/app/atelier'
+import { EnteteProjet, ProjetIntrouvable } from '@/components/business/projets'
 
 const ETAT_CERT = {
   actif: { ton: 'ok' as const, label: 'Certificat actif' },
@@ -25,8 +26,13 @@ const ETAT_CERT = {
 }
 
 export function VueRoutage({ id }: { id: string }) {
-  const projet = projetById(id)!
-  const services = servicesDuProjet(id)
+  const lesProjets = useCollection<Projet>('projets', PROJETS)
+  const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+
+  const projet = lesProjets.items.find((p) => p.id === id)
+  const services = lesServices.items.filter((x) => x.projetId === id)
+
+  if (!projet) return <ProjetIntrouvable />
   const ids = new Set(services.map((s) => s.id))
   const domaines = DOMAINES_APPLICATIFS.filter((d) => ids.has(d.serviceId))
 

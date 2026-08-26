@@ -1,20 +1,24 @@
 'use client'
 
 import Link from 'next/link'
-import { PROJETS } from '@/lib/mock'
+import { PROJETS, SERVICES_PROJET } from '@/lib/mock'
+import type { Projet, ServiceProjet } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
+import { useCollection } from '@/components/app/atelier'
 
 export default function VariablesTousProjets() {
-  const toutes = PROJETS.flatMap((p) => p.variables)
+  const lesProjets = useCollection<Projet>('projets', PROJETS)
+  const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+  const toutes = lesProjets.items.flatMap((p) => p.variables)
   const secrets = toutes.filter((v) => v.secret)
   const build = toutes.filter((v) => v.portee === 'build')
 
   // Une même clé définie dans plusieurs projets n'est pas une erreur, mais
   // savoir laquelle vaut où évite de chercher longtemps.
   const cles = new Map<string, string[]>()
-  for (const p of PROJETS) {
+  for (const p of lesProjets.items) {
     for (const v of p.variables) {
       cles.set(v.cle, [...(cles.get(v.cle) ?? []), p.nom])
     }
@@ -66,7 +70,7 @@ export default function VariablesTousProjets() {
           sousTitre="Le contenu ne s’ouvre que projet par projet : une liste globale des secrets serait une cible, pas un service."
         />
         <ul className="divide-y divide-g-100">
-          {PROJETS.map((p) => {
+          {lesProjets.items.map((p) => {
             const s = p.variables.filter((v) => v.secret).length
             return (
               <li key={p.id} className="py-2.5 first:pt-0">

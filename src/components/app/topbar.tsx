@@ -199,10 +199,14 @@ function BarreUnivers({
  * dans l'adresse de la section visée. Ailleurs, chaque section a sa propre
  * ressource et la question ne se pose pas.
  */
-function hrefSection(section: SectionNav, chemin: string): string {
+function hrefSection(
+  section: SectionNav,
+  chemin: string,
+  projets: readonly { id: string }[],
+): string {
   if (!section.href.startsWith('/app/applications/')) return section.href
   const segment = chemin.split('/')[4]
-  return segment && PROJETS.some((p) => p.id === segment)
+  return segment && projets.some((p) => p.id === segment)
     ? `${section.href}/${segment}`
     : section.href
 }
@@ -215,6 +219,9 @@ function BarreSections({
   univers: UniversNav
 }) {
   const pathname = usePathname()
+  // Le report du projet d'un onglet à l'autre doit connaître les projets de la
+  // session, pas seulement ceux du jeu figé.
+  const lesProjets = useCollection<{ id: string }>('projets', PROJETS)
   const active = sectionActive(
     portee === 'client' ? UNIVERS_CLIENT : UNIVERS_SUPER_ADMIN,
     pathname,
@@ -242,7 +249,7 @@ function BarreSections({
         {univers.sections.map((s) => (
           <li key={s.href} className="flex">
             <Link
-              href={hrefSection(s, pathname)}
+              href={hrefSection(s, pathname, lesProjets.items)}
               className={cn(
                 'relative flex items-center whitespace-nowrap px-3 py-2.5 text-[12.5px] font-semibold transition-colors',
                 s.href === active?.href

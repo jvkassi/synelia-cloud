@@ -13,31 +13,45 @@ import {
   SlidersHorizontal,
 } from 'lucide-react'
 import { money, num, relatif } from '@/lib/format'
+import type { Deployment, Projet, ServiceProjet } from '@/lib/types'
 import {
   DEPLOIEMENTS,
   DOMAINES_APPLICATIFS,
   PROJETS,
   SERVICES_PROJET,
-  SYNTHESE_PROJETS,
   ZONE_APPLICATIVE,
   appById,
-  syntheseProjet,
+  syntheseDeServices,
 } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { ButtonLink } from '@/components/ui/button'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { StatutServiceBadge } from '@/components/business/projets'
+import { useCollection } from '@/components/app/atelier'
 
 export default function AccueilApplications() {
-  const sauvegardes = SERVICES_PROJET.filter((s) => s.sauvegarde)
-  const enEchec = SERVICES_PROJET.filter((s) => s.statut === 'failed')
-  const degrades = SERVICES_PROJET.filter((s) => s.statut === 'degraded')
-  const deploiementsRates = DEPLOIEMENTS.filter((d) => d.statut === 'failed')
+  // Le tableau de bord lit l'état de la session : un service créé ou arrêté
+  // ailleurs doit se compter ici aussi.
+  const lesProjets = useCollection<Projet>('projets', PROJETS)
+  const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+  const lesDeploiements = useCollection<Deployment>('deploiements', DEPLOIEMENTS)
+
+  // Les agrégats figés du jeu de données seraient faux dès la première création.
+  const synthese = {
+    projets: lesProjets.items.length,
+    services: lesServices.items.length,
+    coutMensuel: lesServices.items.reduce((a, s) => a + s.coutMensuel, 0),
+  }
+
+  const sauvegardes = lesServices.items.filter((s) => s.sauvegarde)
+  const enEchec = lesServices.items.filter((s) => s.statut === 'failed')
+  const degrades = lesServices.items.filter((s) => s.statut === 'degraded')
+  const deploiementsRates = lesDeploiements.items.filter((d) => d.statut === 'failed')
   const domainesAVerifier = DOMAINES_APPLICATIFS.filter(
     (d) => d.verification && d.verification.etat !== 'ok',
   )
-  const secrets = PROJETS.flatMap((p) => p.variables.filter((v) => v.secret))
+  const secrets = lesProjets.items.flatMap((p) => p.variables.filter((v) => v.secret))
 
   // Ce qui demande une décision, rassemblé une fois — la même liste qu'ouvre
   // chaque section, mais vue de haut.
@@ -76,15 +90,15 @@ export default function AccueilApplications() {
       nom: 'Projets',
       href: '/app/applications/projets',
       icone: <Boxes size={16} />,
-      valeur: SYNTHESE_PROJETS.projets,
-      detail: `${SYNTHESE_PROJETS.services} services au total`,
+      valeur: synthese.projets,
+      detail: `${synthese.services} services au total`,
     },
     {
       nom: 'Déploiements',
       href: '/app/applications/deploiements',
       icone: <Rocket size={16} />,
-      valeur: DEPLOIEMENTS.length,
-      detail: `${DEPLOIEMENTS.filter((d) => d.statut === 'live').length} en ligne`,
+      valeur: lesDeploiements.items.length,
+      detail: `${lesDeploiements.items.filter((d) => d.statut === 'live').length} en ligne`,
     },
     {
       nom: 'Observabilité',
@@ -98,7 +112,7 @@ export default function AccueilApplications() {
       href: '/app/applications/backup',
       icone: <HardDrive size={16} />,
       valeur: sauvegardes.length,
-      detail: `sur ${SERVICES_PROJET.length} services`,
+      detail: `sur ${lesServices.items.length} services`,
     },
     {
       nom: 'Domaines & routage',
@@ -111,14 +125,14 @@ export default function AccueilApplications() {
       nom: 'Variables & secrets',
       href: '/app/applications/variables',
       icone: <KeyRound size={16} />,
-      valeur: PROJETS.reduce((a, p) => a + p.variables.length, 0),
+      valeur: lesProjets.items.reduce((a, p) => a + p.variables.length, 0),
       detail: `dont ${secrets.length} secrets`,
     },
     {
       nom: 'Paramètres',
       href: '/app/applications/parametres',
       icone: <SlidersHorizontal size={16} />,
-      valeur: PROJETS.reduce((a, p) => a + p.environnements.length, 0),
+      valeur: lesProjets.items.reduce((a, p) => a + p.environnements.length, 0),
       detail: 'environnements déclarés',
     },
   ]
@@ -160,24 +174,24 @@ export default function AccueilApplications() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
           libelle="Projets"
-          valeur={SYNTHESE_PROJETS.projets}
-          detail={`${SYNTHESE_PROJETS.services} services`}
+          valeur={synthese.projets}
+          detail={`${synthese.services} services`}
         />
         <StatTile
           libelle="Services en marche"
-          valeur={SERVICES_PROJET.filter((s) => s.statut === 'running').length}
-          detail={`sur ${SERVICES_PROJET.length}`}
+          valeur={lesServices.items.filter((s) => s.statut === 'running').length}
+          detail={`sur ${lesServices.items.length}`}
           ton={enEchec.length > 0 ? 'err' : degrades.length > 0 ? 'warn' : 'ok'}
         />
         <StatTile
           libelle="Services sauvegardés"
           valeur={sauvegardes.length}
-          detail={`${SERVICES_PROJET.length - sauvegardes.length} sans plan`}
-          ton={sauvegardes.length === SERVICES_PROJET.length ? 'ok' : 'warn'}
+          detail={`${lesServices.items.length - sauvegardes.length} sans plan`}
+          ton={sauvegardes.length === lesServices.items.length ? 'ok' : 'warn'}
         />
         <StatTile
           libelle="Coût mensuel"
-          valeur={money(SYNTHESE_PROJETS.coutMensuel)}
+          valeur={money(synthese.coutMensuel)}
           detail="tous projets confondus"
         />
       </div>
@@ -213,9 +227,9 @@ export default function AccueilApplications() {
             sousTitre="Un projet regroupe ce qui casse ensemble. Ouvrez-en un pour retrouver le même choix dans toutes les sections."
           />
           <div className="space-y-3">
-            {PROJETS.map((p) => {
-              const s = syntheseProjet(p.id)
-              const services = SERVICES_PROJET.filter((x) => x.projetId === p.id)
+            {lesProjets.items.map((p) => {
+              const s = syntheseDeServices(lesServices.items.filter((x) => x.projetId === p.id))
+              const services = lesServices.items.filter((x) => x.projetId === p.id)
               const proteges = services.filter((x) => x.sauvegarde).length
               return (
                 <div key={p.id} className="rounded-[8px] border border-g-300 p-3">
@@ -285,7 +299,7 @@ export default function AccueilApplications() {
             sousTitre="Les cinq derniers déploiements, tous projets confondus."
           />
           <ul className="divide-y divide-g-100">
-            {[...DEPLOIEMENTS]
+            {[...lesDeploiements.items]
               .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
               .slice(0, 5)
               .map((d) => (
