@@ -24,7 +24,7 @@ const ONGLETS = [
 ]
 
 export default function Parametres() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, pousser, lancer } = useApp()
   const [onglet, setOnglet] = useState('organisation')
   const [fermeture, setFermeture] = useState(false)
 
@@ -671,11 +671,7 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
           'Les domaines non transférés reviendront au registre à leur échéance',
         ]}
         onConfirm={() => {
-          pousser({
-            ton: 'info',
-            titre: 'Demande de clôture enregistrée',
-            detail: 'Rien n’est supprimé aujourd’hui. Vous avez 30 jours pour récupérer vos données et autant pour annuler.',
-          })
+          lancer('compte.cloture', ORG_COURANTE.nom)
           setFermeture(false)
         }}
       />

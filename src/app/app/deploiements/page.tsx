@@ -40,7 +40,7 @@ const TON_STATUT: Record<Deployment['statut'], 'ok' | 'err' | 'warn' | 'info'> =
 }
 
 export default function Deploiements() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [ouvert, setOuvert] = useState<string | null>(
     DEPLOIEMENTS.find((d) => d.statut === 'failed')?.id ?? DEPLOIEMENTS[0]?.id ?? null,
   )
@@ -282,11 +282,7 @@ export default function Deploiements() {
                           variant="secondary"
                           iconBefore={<RotateCcw size={12} />}
                           onClick={() =>
-                            pousser({
-                              ton: 'ok',
-                              titre: 'Retour arrière déclenché',
-                              detail: `L’artefact précédent de ${appById(d.appId)?.nom} est repromu. Aucun rebuild : la bascule prend quelques secondes.`,
-                            })
+                            lancer('app.rollback', appById(d.appId)?.nom ?? d.appId)
                           }
                         >
                           Retour arrière

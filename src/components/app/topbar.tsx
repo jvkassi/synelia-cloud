@@ -20,6 +20,7 @@ import { ROLES_CLIENT, ROLES_FOURNISSEUR } from '@/lib/rbac'
 import { MES_ORGANISATIONS, ORG_COURANTE, UTILISATEUR_COURANT } from '@/lib/mock/orgs'
 import { ESPACES } from '@/lib/mock/iaas'
 import { JOBS, JOBS_PLATEFORME } from '@/lib/mock/ops'
+import { LIBELLE_STATUT, TON_STATUT, porteeDuJob } from '@/lib/workflows'
 import {
   UNIVERS_CLIENT,
   UNIVERS_FOURNISSEUR,
@@ -326,10 +327,19 @@ function SelecteurContexte() {
 
 // ─── Contrôles de droite ───────────────────────────────────────────────
 
+/**
+ * Les tâches lancées pendant la session passent devant les jobs du jeu de
+ * démonstration : ce sont les seules qui avancent, et donc les seules qu'on
+ * revient consulter.
+ */
 function CentreDeTaches({ fournisseur }: { fournisseur: boolean }) {
-  const jobs = fournisseur ? JOBS_PLATEFORME : JOBS
-  const enCours = jobs.filter((j) => j.statut === 'running' || j.statut === 'queued')
-  const echecs = jobs.filter((j) => j.statut === 'failed')
+  const { jobs } = useApp()
+  const portee = fournisseur ? 'fournisseur' : 'client'
+  const miennes = jobs.filter((j) => porteeDuJob(j) === portee)
+  const centre = fournisseur ? '/admin/taches' : '/app/taches'
+  const listee = [...miennes, ...(fournisseur ? JOBS_PLATEFORME : JOBS)]
+  const enCours = listee.filter((j) => j.statut === 'running' || j.statut === 'queued')
+  const echecs = listee.filter((j) => j.statut === 'failed' || j.statut === 'rolled_back')
 
   return (
     <Popover
@@ -358,12 +368,16 @@ function CentreDeTaches({ fournisseur }: { fournisseur: boolean }) {
             </span>
           </div>
           <div className="max-h-80 overflow-y-auto py-1">
-            {jobs.slice(0, 6).map((j) => {
+            {listee.slice(0, 6).map((j, i) => {
               const faites = j.taches.filter((t) => t.statut === 'ok').length
+              const mienne = i < miennes.length
+              // Une tâche de la session n'a pas de page dédiée : elle vit dans
+              // l'état du navigateur, un lien profond n'y mènerait à rien.
+              const href = mienne || fournisseur ? centre : `/app/taches/${j.id}`
               return (
                 <Link
                   key={j.id}
-                  href={fournisseur ? '/admin' : `/app/taches/${j.id}`}
+                  href={href}
                   onClick={close}
                   className="block px-3 py-2 transition-colors hover:bg-p-050"
                 >
@@ -371,35 +385,18 @@ function CentreDeTaches({ fournisseur }: { fournisseur: boolean }) {
                     <p className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-ink">
                       {j.label}
                     </p>
-                    <Badge
-                      size="sm"
-                      tone={
-                        j.statut === 'done'
-                          ? 'ok'
-                          : j.statut === 'failed'
-                            ? 'err'
-                            : j.statut === 'rolled_back'
-                              ? 'warn'
-                              : 'info'
-                      }
-                    >
-                      {
-                        {
-                          queued: 'En file',
-                          running: 'En cours',
-                          done: 'Prêt',
-                          failed: 'Échec',
-                          rolled_back: 'Restauré',
-                        }[j.statut]
-                      }
+                    <Badge size="sm" tone={TON_STATUT[j.statut]}>
+                      {LIBELLE_STATUT[j.statut]}
                     </Badge>
                   </div>
                   <div className="mt-1.5 flex items-center gap-2">
                     <div className="h-1 flex-1 overflow-hidden rounded-full bg-g-100">
                       <div
                         className={cn(
-                          'h-full rounded-full',
-                          j.statut === 'failed' ? 'bg-err' : 'bg-p-600',
+                          'h-full rounded-full transition-[width] duration-300',
+                          j.statut === 'failed' || j.statut === 'rolled_back'
+                            ? 'bg-err'
+                            : 'bg-p-600',
                         )}
                         style={{ width: `${Math.round((faites / j.taches.length) * 100)}%` }}
                       />
@@ -411,6 +408,15 @@ function CentreDeTaches({ fournisseur }: { fournisseur: boolean }) {
                 </Link>
               )
             })}
+          </div>
+          <div className="border-t border-g-100 px-3 py-2">
+            <Link
+              href={centre}
+              onClick={close}
+              className="text-[12px] font-semibold text-p-700 hover:underline"
+            >
+              Ouvrir le centre de tâches
+            </Link>
           </div>
         </div>
       )}

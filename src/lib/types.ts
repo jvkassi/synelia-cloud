@@ -1048,6 +1048,43 @@ export interface ProvisioningJob {
   dureeS?: number
 }
 
+/**
+ * Définition d'un workflow simulé. La maquette n'exécute rien : elle rejoue la
+ * séquence écrite ici, à cadence accélérée, pour que l'écran montre ce que
+ * l'utilisateur verrait vraiment — la file, les étapes, l'échec, la reprise.
+ */
+export interface DefinitionWorkflow {
+  id: string
+  /** Libellé du job. `{cible}` est remplacé par la ressource concernée. */
+  libelle: string
+  portee: 'client' | 'fournisseur'
+  /** Ce qui est déjà engagé au lancement — dit dans la notification de départ. */
+  lancement: string
+  /** Ce qui est acquis à la fin. */
+  fin: string
+  etapes: Array<{ nom: string; dureeS: number; message?: string }>
+  /**
+   * Échec écrit, joué au premier essai seulement : la reprise aboutit. Sans
+   * cela une démonstration ne montrerait jamais le diagnostic ni le rollback.
+   */
+  echec?: { etape: number; message: string; suggestion: string; rollback: boolean }
+  /** Où mène la ressource produite, quand elle a une page. */
+  href?: string
+}
+
+/** Instance de workflow lancée pendant la session. */
+export interface TacheSimulee {
+  id: string
+  workflowId: string
+  /** Ressource concernée, substituée dans le libellé. */
+  cible: string
+  /** Millisecondes écoulées depuis le lancement, à cadence accélérée. */
+  ecoule: number
+  /** 0 au premier essai ; une reprise incrémente et neutralise l'échec écrit. */
+  essai: number
+  href?: string
+}
+
 // ─── Observabilité (formats encadrés §0.3) ────────────────────────────
 
 export interface EvenementSupervision {

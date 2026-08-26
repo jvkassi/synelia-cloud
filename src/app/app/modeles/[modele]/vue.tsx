@@ -24,7 +24,8 @@ import { Button, ButtonLink } from '@/components/ui/button'
 import { CopyField, GatedAction } from '@/components/ui/display'
 import { Field, Input, SegmentedControl, Select, Switch } from '@/components/ui/field'
 import { PageHeader, Card, CardHeader, Callout, KeyValueList } from '@/components/composition/card'
-import { CostPreview, Stepper, Timeline } from '@/components/composition/flow'
+import { CostPreview, Stepper } from '@/components/composition/flow'
+import { JobTracker } from '@/components/business/paas'
 import { useApp } from '@/components/app/contexte'
 
 const ETAPES = [
@@ -36,18 +37,8 @@ const ETAPES = [
 ]
 
 /** Les sept tâches de l'orchestrateur (§6.4), rejouées à chaque déploiement. */
-const TACHES_DEPLOIEMENT = [
-  'Allouer la capacité dans l’Espace Cloud',
-  'Déployer l’instance et ses dépendances',
-  'Configurer le domaine et le certificat',
-  'Déclarer le client OIDC dans Keycloak',
-  'Appliquer le plan de sauvegarde',
-  'Enregistrer les sondes de supervision',
-  'Créer la souscription facturable',
-]
-
 export function VueModele({ slug }: { slug: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer, jobs } = useApp()
   const m = modeleBySlug(slug)
 
   const [etape, setEtape] = useState(1)
@@ -60,7 +51,8 @@ export function VueModele({ slug }: { slug: string }) {
   const [domainePerso, setDomainePerso] = useState('')
   const [sso, setSso] = useState(true)
   const [sauvegarde, setSauvegarde] = useState(true)
-  const [lance, setLance] = useState(false)
+  const [tacheId, setTacheId] = useState<string | null>(null)
+  const job = jobs.find((j) => j.id === tacheId)
 
   const projet = PROJETS.find((p) => p.id === projetId) ?? PROJETS[0]
   const config = m?.configuration ? configurationDuService(m.configuration) : undefined
@@ -305,31 +297,21 @@ export function VueModele({ slug }: { slug: string }) {
         <div className="min-w-0">
           <div className="lg:sticky lg:top-[7.5rem]">
             <Card>
-              {lance ? (
+              {job ? (
                 <>
                   <CardHeader
                     titre="Déploiement lancé"
                     sousTitre={`${m.nom} arrive dans ${projet.nom}. Vous pouvez quitter cette page : le centre de tâches garde le suivi.`}
                   />
-                  <Timeline
-                    evenements={TACHES_DEPLOIEMENT.map((t, i) => ({
-                      id: `tache-${i}`,
-                      titre: t,
-                      detail:
-                        i === 0
-                          ? 'Terminé en 12 s'
-                          : i === 1
-                            ? 'Récupération de l’image'
-                            : 'En attente',
-                      horodatage: i === 0 ? 'terminé' : i === 1 ? 'en cours' : '—',
-                      ton: i === 0 ? ('ok' as const) : i === 1 ? ('info' as const) : ('neutral' as const),
-                    }))}
-                  />
+                  <JobTracker job={job} />
                   <div className="mt-4 flex flex-wrap gap-2">
                     <ButtonLink href={`/app/projets/${projet.id}`} variant="secondary" size="sm">
                       Voir le projet
                     </ButtonLink>
-                    <Button variant="ghost" size="sm" onClick={() => setLance(false)}>
+                    <ButtonLink href="/app/taches" variant="ghost" size="sm">
+                      Centre de tâches
+                    </ButtonLink>
+                    <Button variant="ghost" size="sm" onClick={() => setTacheId(null)}>
                       Déployer un autre exemplaire
                     </Button>
                   </div>
@@ -576,12 +558,12 @@ export function VueModele({ slug }: { slug: string }) {
                           size="sm"
                           iconBefore={<Rocket size={13} />}
                           onClick={() => {
-                            setLance(true)
-                            pousser({
-                              ton: 'info',
-                              titre: `Déploiement de ${m.nom}`,
-                              detail: `Dans ${projet.nom} · ${environnement} — sept tâches, suivi dans le centre de tâches.`,
-                            })
+                            setTacheId(
+                              lancer(
+                                'modele.deploy',
+                                `${m.nom} · ${projet.nom} · ${environnement}`,
+                              ),
+                            )
                           }}
                         >
                           Déployer

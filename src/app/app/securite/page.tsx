@@ -26,7 +26,7 @@ const ONGLETS = [
 ]
 
 export default function Securite() {
-  const { autorise, refus, perm, pousser } = useApp()
+  const { autorise, refus, perm, lancer } = useApp()
   const [onglet, setOnglet] = useState('audit')
   const [detail, setDetail] = useState<string | null>(null)
 
@@ -550,13 +550,7 @@ export default function Securite() {
               <Button
                 className="mt-4"
                 iconBefore={<FileCheck2 size={14} />}
-                onClick={() =>
-                  pousser({
-                    ton: 'ok',
-                    titre: 'Export en préparation',
-                    detail: 'Vous recevrez un lien de téléchargement par courriel dans quelques minutes. Le lien expire après 24 heures.',
-                  })
-                }
+                onClick={() => lancer('export.donnees', 'journal d’audit')}
               >
                 Générer l’export
               </Button>

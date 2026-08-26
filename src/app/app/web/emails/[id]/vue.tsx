@@ -26,7 +26,7 @@ const ONGLETS = [
 ]
 
 export function VueMessagerie({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('boites')
   const [creation, setCreation] = useState(false)
   const [antivirus, setAntivirus] = useState(true)
@@ -88,7 +88,11 @@ export function VueMessagerie({ id }: { id: string }) {
           <EmptyState
             titre="La messagerie n’est pas activée sur ce domaine"
             phrase={`L’activation crée les boîtes, pose MX, SPF, DKIM et DMARC dans la zone de ${m.domaine}, et déclare le client SSO. Comptez ${money(m.prixSiege)} par boîte et par mois, facturés au prorata.`}
-            action={{ libelle: 'Retour aux messageries', href: '/app/web/emails' }}
+            action={{
+              libelle: 'Activer la messagerie',
+              onClick: () => lancer('web.email.activate', m.domaine),
+            }}
+            actionSecondaire={{ libelle: 'Retour aux messageries', href: '/app/web/emails' }}
           />
         </Card>
       ) : (
@@ -432,11 +436,7 @@ export function VueMessagerie({ id }: { id: string }) {
             <Button
               onClick={() => {
                 setCreation(false)
-                pousser({
-                  ton: 'ok',
-                  titre: 'Boîte créée',
-                  detail: 'Le titulaire reçoit son lien de première connexion par SMS.',
-                })
+                lancer('web.email.create', `nouvelle boîte · ${m.domaine}`)
               }}
             >
               Créer la boîte

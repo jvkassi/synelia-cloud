@@ -16,7 +16,7 @@ import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { useApp, useEspace } from '@/components/app/contexte'
 
 export default function ListeVms() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const espace = useEspace()
   const vms = VMS.filter((v) => v.espaceId === espace.id)
 
@@ -239,18 +239,21 @@ export default function ListeVms() {
                 variant="secondary"
                 iconBefore={<Power size={13} />}
                 onClick={() =>
-                  pousser({
-                    ton: 'info',
-                    titre: `Démarrage de ${ids.length} machine(s)`,
-                    detail: 'Suivi dans le centre de tâches.',
-                  })
+                  lancer('vm.power.start', `${ids.length} machine${ids.length > 1 ? 's' : ''}`)
                 }
               >
                 Démarrer
               </Button>
             </GatedAction>
             <GatedAction autorise={autorise('vm.power')} message={refus('vm.power')}>
-              <Button size="sm" variant="secondary" iconBefore={<Power size={13} />}>
+              <Button
+                size="sm"
+                variant="secondary"
+                iconBefore={<Power size={13} />}
+                onClick={() =>
+                  lancer('vm.power.stop', `${ids.length} machine${ids.length > 1 ? 's' : ''}`)
+                }
+              >
                 Arrêter
               </Button>
             </GatedAction>

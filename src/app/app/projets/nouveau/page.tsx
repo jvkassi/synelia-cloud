@@ -48,7 +48,7 @@ const ENVIRONNEMENTS_MODELE = [
 
 export default function NouvelleApplication() {
   const router = useRouter()
-  const { pousser } = useApp()
+  const { lancer } = useApp()
   const espaceCourant = useEspace()
 
   const [etape, setEtape] = useState(1)
@@ -138,12 +138,8 @@ export default function NouvelleApplication() {
             <Button
               disabled={!peutContinuer}
               onClick={() => {
-                pousser({
-                  ton: 'info',
-                  titre: `Création de ${nomApp} lancée`,
-                  detail: 'Build, analyse DevSecOps, provisioning puis déploiement. Suivi dans le centre de tâches.',
-                })
-                router.push('/app/projets')
+                lancer('projet.create', nomApp)
+                router.push('/app/taches')
               }}
             >
               Créer et déployer

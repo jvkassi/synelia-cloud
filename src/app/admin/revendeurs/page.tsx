@@ -22,7 +22,7 @@ const ONGLETS = [
 ]
 
 export default function Revendeurs() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('partenaires')
   const [creation, setCreation] = useState(false)
 
@@ -465,11 +465,7 @@ export default function Revendeurs() {
             </Button>
             <Button
               onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: 'Partenaire agréé',
-                  detail: 'Le portail sous sa marque est provisionné et son organisation revendeur est créée.',
-                })
+                lancer('reseller.create', 'nouveau partenaire')
                 setCreation(false)
               }}
             >

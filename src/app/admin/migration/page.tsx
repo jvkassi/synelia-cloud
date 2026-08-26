@@ -126,7 +126,7 @@ const TON_STATUT: Record<Vague['statut'], 'ok' | 'info' | 'neutral' | 'warn'> = 
 }
 
 export default function Migration() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('trajectoire')
   const [lancement, setLancement] = useState<Vague | null>(null)
 
@@ -708,11 +708,7 @@ export default function Migration() {
           'Le retour arrière reste possible pendant sept jours, machine par machine',
         ]}
         onConfirm={() => {
-          pousser({
-            ton: 'info',
-            titre: `${lancement?.nom} lancée`,
-            detail: 'Les migrations à chaud démarrent immédiatement. Les autres sont réparties dans les fenêtres de maintenance déclarées par chaque client.',
-          })
+          if (lancement) lancer('migration.lot', lancement.nom)
           setLancement(null)
         }}
       />

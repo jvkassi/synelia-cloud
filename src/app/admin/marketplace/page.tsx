@@ -31,7 +31,7 @@ const ONGLETS = [
 ]
 
 export default function MarketplaceAdmin() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, pousser, lancer } = useApp()
   const [onglet, setOnglet] = useState('catalogue')
   const [arret, setArret] = useState<CampagneMaj | null>(null)
 
@@ -484,13 +484,7 @@ export default function MarketplaceAdmin() {
                       <Button
                         size="sm"
                         iconBefore={<PlayCircle size={13} />}
-                        onClick={() =>
-                          pousser({
-                            ton: 'info',
-                            titre: `${c.nom} démarrée`,
-                            detail: 'La vague 1 démarre. Un snapshot est pris avant chaque instance, et le point d’arrêt bloquera la suite en cas d’anomalie.',
-                          })
-                        }
+                        onClick={() => lancer('campagne.vague', `${c.nom} · vague 1`)}
                       >
                         Démarrer la campagne
                       </Button>
@@ -506,11 +500,7 @@ export default function MarketplaceAdmin() {
                           size="sm"
                           variant="secondary"
                           onClick={() =>
-                            pousser({
-                              ton: 'ok',
-                              titre: 'Vague suivante autorisée',
-                              detail: 'Le point d’arrêt est levé. La vague suivante démarre à la prochaine fenêtre.',
-                            })
+                            lancer('campagne.vague', `${c.nom} · vague suivante`)
                           }
                         >
                           Lever le point d’arrêt
@@ -737,11 +727,7 @@ export default function MarketplaceAdmin() {
           'Le parc se retrouve avec deux versions en production, ce qui complique le support',
         ]}
         onConfirm={() => {
-          pousser({
-            ton: 'warn',
-            titre: `${arret?.nom} arrêtée`,
-            detail: 'Les instances déjà traitées peuvent être ramenées à leur version antérieure depuis leur snapshot, pendant sept jours.',
-          })
+          if (arret) lancer('campagne.arret', arret.nom)
           setArret(null)
         }}
       />

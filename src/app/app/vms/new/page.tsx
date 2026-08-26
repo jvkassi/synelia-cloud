@@ -88,7 +88,7 @@ runcmd:
 
 export default function NouvellesVms() {
   const router = useRouter()
-  const { pousser } = useApp()
+  const { lancer } = useApp()
   const espaceCourant = useEspace()
 
   const [etape, setEtape] = useState(1)
@@ -249,12 +249,13 @@ export default function NouvellesVms() {
             <Button
               disabled={!peutContinuer}
               onClick={() => {
-                pousser({
-                  ton: 'info',
-                  titre: `Création de ${machinesACreer.length} machine(s) lancée`,
-                  detail: 'Le quota est réservé. Suivi dans le centre de tâches.',
-                })
-                router.push('/app/vms')
+                lancer(
+                  'vm.create',
+                  machinesACreer.length === 1
+                    ? machinesACreer[0].nom
+                    : `${machinesACreer.length} machines · ${espaceCourant.code}`,
+                )
+                router.push('/app/taches')
               }}
             >
               Créer {machinesACreer.length} machine{machinesACreer.length > 1 ? 's' : ''}

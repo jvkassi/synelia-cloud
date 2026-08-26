@@ -31,7 +31,7 @@ const LATENCE: Record<Site, string> = {
 
 export default function NouvelEspace() {
   const router = useRouter()
-  const { pousser } = useApp()
+  const { lancer } = useApp()
 
   const [etape, setEtape] = useState(1)
   const [offerId, setOfferId] = useState('off-pro')
@@ -117,12 +117,8 @@ export default function NouvelEspace() {
             <Button
               disabled={!conditions}
               onClick={() => {
-                pousser({
-                  ton: 'info',
-                  titre: `Création de ${code} lancée`,
-                  detail: 'Le quota est réservé, la plage réseau allouée. Suivi dans le centre de tâches.',
-                })
-                router.push('/app/espaces')
+                lancer('espace.create', code)
+                router.push('/app/taches')
               }}
             >
               Créer l’Espace Cloud

@@ -23,7 +23,7 @@ const ONGLETS = [
 ]
 
 export default function Conformite() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('restauration')
   const [attestation, setAttestation] = useState<string | null>(null)
 
@@ -932,11 +932,7 @@ export default function Conformite() {
             <Button
               iconBefore={<FileCheck2 size={13} />}
               onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: 'Attestation générée',
-                  detail: 'Le document signé est disponible au téléchargement. La génération est journalisée dans l’audit.',
-                })
+                if (attestation) lancer('conformite.attestation', attestation)
                 setAttestation(null)
               }}
             >

@@ -23,7 +23,7 @@ const ONGLETS = [
 ]
 
 export function VueRevendeur({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('synthese')
 
   const r = RESELLERS.find((x) => x.id === id)!
@@ -603,11 +603,7 @@ export function VueRevendeur({ id }: { id: string }) {
                                   size="sm"
                                   variant="secondary"
                                   onClick={() =>
-                                    pousser({
-                                      ton: 'ok',
-                                      titre: `Partage de ${x.periode} validé`,
-                                      detail: `${money(x.montant)} seront versés à ${r.nom} sous 15 jours, avec le relevé détaillé ligne par ligne.`,
-                                    })
+                                    lancer('revshare.valider', `${r.nom} · ${x.periode}`)
                                   }
                                 >
                                   Valider le versement

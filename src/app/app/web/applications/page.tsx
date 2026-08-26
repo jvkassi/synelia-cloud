@@ -36,7 +36,7 @@ const CATALOGUE = [
 ]
 
 export default function ListeApplications() {
-  const { autorise, refus } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const miens = new Set(HEBERGEMENTS.filter((h) => h.orgId === ORG_COURANTE.id).map((h) => h.id))
   const sites = SITES_WEB.filter((s) => miens.has(s.hebergementId))
   const majEnAttente = sites.reduce((a, s) => a + (s.majEnAttente ?? 0), 0)
@@ -202,6 +202,7 @@ export default function ListeApplications() {
               <button
                 key={c.nom}
                 type="button"
+                onClick={() => lancer('web.app.install', c.nom)}
                 className="rounded-[8px] border border-g-300 bg-white p-3 text-left transition-colors hover:border-p-400 hover:bg-p-050"
               >
                 <span

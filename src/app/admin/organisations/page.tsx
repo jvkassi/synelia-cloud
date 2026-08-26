@@ -19,8 +19,9 @@ import { useApp } from '@/components/app/contexte'
 import type { Organisation } from '@/lib/types'
 
 export default function Organisations() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, pousser, lancer } = useApp()
   const [creation, setCreation] = useState(false)
+  const [nomOrg, setNomOrg] = useState('')
 
   const actives = ORGANISATIONS.filter((o) => o.statut === 'active')
   const suspendues = ORGANISATIONS.filter((o) => o.statut === 'suspendue')
@@ -346,11 +347,7 @@ export default function Organisations() {
             </Button>
             <Button
               onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: 'Organisation créée',
-                  detail: 'Le royaume d’identité est provisionné et l’invitation de l’administrateur est envoyée.',
-                })
+                lancer('org.create', nomOrg.trim() || 'nouvelle organisation')
                 setCreation(false)
               }}
             >
@@ -361,7 +358,11 @@ export default function Organisations() {
       >
         <div className="space-y-4">
           <Field label="Raison sociale">
-            <Input placeholder="Nom de l’entreprise" />
+            <Input
+              placeholder="Nom de l’entreprise"
+              value={nomOrg}
+              onChange={(e) => setNomOrg(e.target.value)}
+            />
           </Field>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Pays">

@@ -34,7 +34,7 @@ const ONGLETS = [
 ]
 
 export default function SantePlateforme() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, pousser, lancer } = useApp()
   const [onglet, setOnglet] = useState('services')
   const [communication, setCommunication] = useState<string | null>(null)
 
@@ -473,13 +473,7 @@ export default function SantePlateforme() {
                           size="sm"
                           variant="secondary"
                           iconBefore={<RefreshCw size={12} />}
-                          onClick={() =>
-                            pousser({
-                              ton: 'info',
-                              titre: 'Reprise déclenchée',
-                              detail: `Le provisionnement repart de l’étape échouée. Aucune ressource déjà créée n’est recréée.`,
-                            })
-                          }
+                          onClick={() => lancer('job.reprise', j.label)}
                         >
                           Reprendre à l’étape échouée
                         </Button>

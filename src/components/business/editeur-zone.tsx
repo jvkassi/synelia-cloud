@@ -50,7 +50,7 @@ const EXPLICATIONS: Record<string, string> = {
 }
 
 export function EditeurZone({ zoneId }: { zoneId: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('enregistrements')
   const [filtre, setFiltre] = useState<string>('tous')
   const [q, setQ] = useState('')
@@ -500,11 +500,7 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
             </Button>
             <Button
               onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: enEdition ? 'Enregistrement modifié' : 'Enregistrement créé',
-                  detail: 'Publié sur les trois serveurs de noms. Visible partout après expiration du TTL.',
-                })
+                lancer('web.dns.apply', zone.domaine)
                 setAjout(false)
                 setEdition(null)
               }}
@@ -567,11 +563,7 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
             </Button>
             <Button
               onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: 'Modèle appliqué',
-                  detail: 'Les enregistrements ont été créés. Les enregistrements existants n’ont pas été touchés.',
-                })
+                lancer('web.dns.apply', zone.domaine)
                 setModele(null)
               }}
             >
@@ -623,11 +615,7 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
           'La suppression est journalisée dans l’audit, avec votre nom',
         ]}
         onConfirm={() => {
-          pousser({
-            ton: 'err',
-            titre: 'Enregistrement supprimé',
-            detail: 'Vous pouvez le recréer depuis l’historique de la zone dans les sept jours.',
-          })
+          lancer('web.dns.apply', zone.domaine)
           setSuppression(null)
         }}
       />

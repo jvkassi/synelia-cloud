@@ -23,7 +23,7 @@ const ONGLETS = [
 ]
 
 export function VueDrive({ id }: { id: string }) {
-  const { autorise, refus } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('sieges')
   const [externe, setExterne] = useState(true)
   const [motDePasse, setMotDePasse] = useState(true)
@@ -71,7 +71,12 @@ export function VueDrive({ id }: { id: string }) {
             </>
           ) : (
             <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-              <Button iconBefore={<Plus size={14} />}>Activer le drive</Button>
+              <Button
+                iconBefore={<Plus size={14} />}
+                onClick={() => lancer('web.drive.activate', d.hote)}
+              >
+                Activer le drive
+              </Button>
             </GatedAction>
           )
         }
@@ -82,7 +87,11 @@ export function VueDrive({ id }: { id: string }) {
           <EmptyState
             titre="Le drive n’est pas activé sur ce domaine"
             phrase={`L’activation crée l’instance, pose le certificat sur ${d.hote}, déclare le client SSO et applique le plan de sauvegarde. Comptez ${money(d.prixSiege)} par siège et par mois.`}
-            action={{ libelle: 'Retour aux drives', href: '/app/web/drive' }}
+            action={{
+              libelle: 'Activer le drive',
+              onClick: () => lancer('web.drive.activate', d.hote),
+            }}
+            actionSecondaire={{ libelle: 'Retour aux drives', href: '/app/web/drive' }}
           />
         </Card>
       ) : (
@@ -172,6 +181,15 @@ export function VueDrive({ id }: { id: string }) {
                       { cle: 'Suite bureautique', valeur: d.suiteBureautique },
                     ]}
                   />
+                  <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => lancer('web.drive.quota', d.hote)}
+                    >
+                      Appliquer le dimensionnement
+                    </Button>
+                  </GatedAction>
                 </div>
               </Card>
             </div>

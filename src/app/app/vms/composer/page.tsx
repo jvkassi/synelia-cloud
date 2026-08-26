@@ -9,13 +9,14 @@ import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
 import { Field, SegmentedControl, Select } from '@/components/ui/field'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
-import { CostPreview, Timeline } from '@/components/composition/flow'
+import { CostPreview } from '@/components/composition/flow'
 import {
   ComposeurServeurs,
   ROLES_SERVEUR,
   coutLot,
   type LotServeurs,
 } from '@/components/business/composeur-serveurs'
+import { JobTracker } from '@/components/business/paas'
 import { useApp } from '@/components/app/contexte'
 
 /** Le plan de départ raconte une architecture courante : deux frontaux, une base. */
@@ -51,11 +52,12 @@ const PLAN_INITIAL: LotServeurs[] = [
 ]
 
 export default function ComposerServeurs() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer, jobs } = useApp()
   const [espaceId, setEspaceId] = useState(ESPACES[0].id)
   const [image, setImage] = useState<'debian' | 'ubuntu' | 'rocky' | 'windows'>('debian')
   const [lots, setLots] = useState<LotServeurs[]>(PLAN_INITIAL)
-  const [lance, setLance] = useState(false)
+  const [tacheId, setTacheId] = useState<string | null>(null)
+  const job = jobs.find((j) => j.id === tacheId)
 
   const espace = ESPACES.find((e) => e.id === espaceId) ?? ESPACES[0]
   const reseaux = NETWORKS.filter((r) => r.espaceId === espace.id).map((r) => r.nom)
@@ -90,27 +92,21 @@ export default function ComposerServeurs() {
         }
       />
 
-      {lance ? (
+      {job ? (
         <Card>
           <CardHeader
             titre="Livraison lancée"
             sousTitre={`${machines} machines en préparation dans ${espace.code}. Vous pouvez quitter cette page : le centre de tâches garde le suivi.`}
           />
-          <Timeline
-            evenements={[
-              { id: 'e1', titre: 'Plan validé et quota réservé', horodatage: 'terminé', ton: 'ok' },
-              { id: 'e2', titre: `Création des ${machines} machines`, detail: 'Placement sur hôtes distincts pour les lots redondants', horodatage: 'en cours', ton: 'info' },
-              { id: 'e3', titre: 'Rattachement aux réseaux et attribution des adresses', horodatage: '—', ton: 'neutral' },
-              { id: 'e4', titre: 'Installation des logiciels demandés', horodatage: '—', ton: 'neutral' },
-              { id: 'e5', titre: 'Pose des sondes de supervision', horodatage: '—', ton: 'neutral' },
-              { id: 'e6', titre: 'Rattachement au plan de sauvegarde', horodatage: '—', ton: 'neutral' },
-            ]}
-          />
+          <JobTracker job={job} />
           <div className="mt-4 flex flex-wrap gap-2">
             <ButtonLink href="/app/vms" variant="secondary" size="sm">
               Voir les machines
             </ButtonLink>
-            <Button variant="ghost" size="sm" onClick={() => setLance(false)}>
+            <ButtonLink href="/app/taches" variant="ghost" size="sm">
+              Centre de tâches
+            </ButtonLink>
+            <Button variant="ghost" size="sm" onClick={() => setTacheId(null)}>
               Composer un autre lot
             </Button>
           </div>
@@ -212,12 +208,12 @@ export default function ComposerServeurs() {
                     iconBefore={<Rocket size={14} />}
                     disabled={depasse || machines === 0}
                     onClick={() => {
-                      setLance(true)
-                      pousser({
-                        ton: 'info',
-                        titre: `${machines} machines en préparation`,
-                        detail: `${espace.code} · ${SITE_LABEL[espace.site]} — suivi dans le centre de tâches.`,
-                      })
+                      setTacheId(
+                        lancer(
+                          'vm.compose',
+                          `${machines} machines · ${espace.code} · ${SITE_LABEL[espace.site]}`,
+                        ),
+                      )
                     }}
                   >
                     Livrer {machines} machine{machines > 1 ? 's' : ''} · {cout.toLocaleString('fr-FR')} FCFA/mois

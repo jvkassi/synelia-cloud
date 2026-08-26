@@ -22,7 +22,7 @@ const ONGLETS = [
 ]
 
 export default function Revshare() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('releves')
   const [detail, setDetail] = useState<(typeof RELEVES_REVSHARE)[number] | null>(null)
 
@@ -182,11 +182,7 @@ export default function Revshare() {
                                 variant="secondary"
                                 iconBefore={<Send size={12} />}
                                 onClick={() =>
-                                  pousser({
-                                    ton: 'ok',
-                                    titre: `Relevé de ${r.periode} validé`,
-                                    detail: `${money(r.montant)} seront versés à ${r.reseller} sous 15 jours, avec le relevé détaillé.`,
-                                  })
+                                  lancer('revshare.valider', `${r.reseller} · ${r.periode}`)
                                 }
                               >
                                 Valider

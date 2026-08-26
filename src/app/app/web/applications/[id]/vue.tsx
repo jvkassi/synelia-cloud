@@ -29,7 +29,7 @@ const TEINTE: Record<string, string> = {
 }
 
 export function VueApplication({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('apercu')
   const [majAuto, setMajAuto] = useState(true)
 
@@ -249,13 +249,7 @@ export function VueApplication({ id }: { id: string }) {
                 size="sm"
                 className="mt-3"
                 iconBefore={<Upload size={13} />}
-                onClick={() =>
-                  pousser({
-                    ton: 'ok',
-                    titre: 'Mise à jour programmée',
-                    detail: 'Sauvegarde prise, application dans la prochaine fenêtre de maintenance.',
-                  })
-                }
+                onClick={() => lancer('web.app.update', `${s.type} · ${s.hote}`)}
               >
                 Tout mettre à jour
               </Button>

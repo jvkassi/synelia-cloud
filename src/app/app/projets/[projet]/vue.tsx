@@ -267,6 +267,7 @@ function TiroirCreation({
   env: string
   onClose: () => void
 }) {
+  const { lancer } = useApp()
   const [nom, setNom] = useState('')
   const [moteur, setMoteur] = useState<MoteurBase>('postgresql')
   const choix = MOTEURS_DISPONIBLES.find((m) => m.moteur === moteur)!
@@ -289,7 +290,15 @@ function TiroirCreation({
           {type === 'application' || type === 'statique' ? (
             <ButtonLink href="/app/projets/nouveau">Ouvrir l’assistant complet</ButtonLink>
           ) : (
-            <Button onClick={onClose}>Créer le service</Button>
+            <Button
+              disabled={!nom.trim()}
+              onClick={() => {
+                lancer('service.create', `${nom} · ${projet.nom} · ${env}`)
+                onClose()
+              }}
+            >
+              Créer le service
+            </Button>
           )}
         </div>
       }
@@ -624,7 +633,7 @@ function OngletDomaines({ projetId }: { projetId: string }) {
 // ─── Paramètres du projet ─────────────────────────────────────────────
 
 function OngletParametres({ projet }: { projet: NonNullable<ReturnType<typeof projetById>> }) {
-  const { autorise, refus } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const services = servicesDuProjet(projet.id)
   const [suppression, setSuppression] = useState(false)
 
@@ -734,7 +743,10 @@ function OngletParametres({ projet }: { projet: NonNullable<ReturnType<typeof pr
       <ConfirmDialog
         open={suppression}
         onClose={() => setSuppression(false)}
-        onConfirm={() => setSuppression(false)}
+        onConfirm={() => {
+          lancer('projet.delete', projet.nom)
+          setSuppression(false)
+        }}
         titre="Supprimer le projet"
         ressource={projet.nom}
         pertes={[

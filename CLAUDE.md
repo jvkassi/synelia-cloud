@@ -81,6 +81,44 @@ Utilisez `seededSeries`, `trendSeries` et la date figée `MAINTENANT`
 partout, `CostPreview` avant toute action facturable, saisie du nom exact avant
 toute action destructive.
 
+**Une action longue passe par `lancer`, jamais par `pousser` seul.** Voir la
+section suivante.
+
+## Les workflows simulés
+
+Une trentaine d'écrans annonçaient « suivi dans le centre de tâches » — et ce
+centre n'existait pas : l'action se réduisait à une notification, puis rien. Un
+`ConfirmDialog` de suppression de projet appelait même `setSuppression(false)` et
+c'est tout. Ces promesses creuses sont maintenant tenues.
+
+- **Catalogue** — `src/lib/mock/workflows.ts`. Une entrée par opération : libellé
+  (`{cible}` substitué), étapes avec durées annoncées, phrase de lancement,
+  phrase de fin, `portee`, et un `echec` facultatif.
+- **Moteur** — `src/lib/workflows.ts`. Le `ProvisioningJob` affiché est **dérivé**
+  du temps écoulé, jamais stocké : une seule variable avance. D'où le
+  déterminisme (aucun `Math.random()`, aucune date réelle — `startedAt` vaut
+  `MAINTENANT`) et une reprise qui consiste à remettre le compteur à zéro. Le
+  temps d'écran est fixe (~11 s), réparti entre les étapes au prorata de leurs
+  durées annoncées.
+- **État** — dans `AppProvider`. `lancer(workflowId, cible, href?)` suffit :
+  la notification de départ, celle de fin et le suivi en découlent.
+- **Écrans** — `/app/taches` et `/admin/taches`, plus la pastille de la barre
+  supérieure. Le détail figé d'un job de démonstration reste sur
+  `/app/taches/[id]`.
+
+Deux règles de tenue :
+
+1. **Le texte appartient au catalogue, pas au site d'appel.** Deux écrans qui
+   lancent la même opération doivent raconter la même chose.
+2. **Un `echec` ne joue qu'au premier essai** ; la reprise aboutit. Sans cela,
+   une démonstration ne montre jamais le diagnostic ni le rollback — ou reste
+   bloquée. Deux workflows échouent volontairement : le renouvellement d'un
+   certificat (validation DNS) et un lot de migration inter-backend (conversion
+   de disque), qui reprend l'histoire du job `job-8` du jeu de données.
+
+`pousser` garde ce qui est instantané : un réglage enregistré, une copie, un
+acquittement, l'envoi d'une réponse de ticket.
+
 ## Architecture de la navigation
 
 Deux barres, pas de barre latérale de navigation. `src/lib/navigation.ts` porte le
@@ -93,7 +131,8 @@ modèle ; `topbar.tsx` le rend.
 
 `sectionActive()` résout au **préfixe le plus long** : `/app/reseau/lb` désigne
 les load balancers, pas le réseau. Le champ `aussi` rattache les routes sans
-onglet propre (`/app/dns` → Domaines, `/app/taches` → Tableau de bord).
+onglet propre (`/app/dns` → Domaines, `/app/taches` → Tableau de bord,
+`/admin/taches` → Santé du parc).
 
 ### Web Cloud, en maître-détail
 

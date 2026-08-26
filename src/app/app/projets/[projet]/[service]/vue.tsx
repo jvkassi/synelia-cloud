@@ -93,7 +93,7 @@ export function VueService({ id }: { id: string }) {
   const domaines = domainesDuService(id)
   const onglets = ongletsDu(service)
   const [onglet, setOnglet] = useState('apercu')
-  const { autorise, refus } = useApp()
+  const { autorise, refus, lancer } = useApp()
 
   return (
     <div className="space-y-5">
@@ -151,9 +151,22 @@ export function VueService({ id }: { id: string }) {
             )}
             <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
               {service.statut === 'stopped' ? (
-                <Button iconBefore={<Play size={14} />}>Démarrer</Button>
+                <Button
+                  iconBefore={<Play size={14} />}
+                  onClick={() => lancer('service.start', service.nom)}
+                >
+                  Démarrer
+                </Button>
               ) : (
-                <Button iconBefore={<RefreshCw size={14} />}>
+                <Button
+                  iconBefore={<RefreshCw size={14} />}
+                  onClick={() =>
+                    lancer(
+                      service.type === 'base' ? 'component.restart' : 'app.deploy',
+                      service.nom,
+                    )
+                  }
+                >
                   {service.type === 'base' ? 'Redémarrer' : 'Redéployer'}
                 </Button>
               )}
@@ -827,6 +840,8 @@ export function LigneDomaine({
   domaine: DomaineApplicatif
   portDefaut: number
 }) {
+  const { lancer } = useApp()
+
   return (
     <div className="rounded-[8px] border border-g-300 p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -905,7 +920,12 @@ export function LigneDomaine({
             </div>
           </div>
           <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="secondary" iconBefore={<RefreshCw size={12} />}>
+            <Button
+              size="sm"
+              variant="secondary"
+              iconBefore={<RefreshCw size={12} />}
+              onClick={() => lancer('domaine.verify', d.hote)}
+            >
               Vérifier maintenant
             </Button>
             {d.verification.verifieLe && (
@@ -1307,7 +1327,7 @@ function Supervision({ service }: { service: ServiceProjet }) {
 // ─── Avancé ───────────────────────────────────────────────────────────
 
 function Avance({ service }: { service: ServiceProjet }) {
-  const { autorise, refus } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [cpu, setCpu] = useState(service.ressources.cpu)
   const [ram, setRam] = useState(service.ressources.ramMo / 1024)
   const [suppression, setSuppression] = useState(false)
@@ -1387,7 +1407,12 @@ function Avance({ service }: { service: ServiceProjet }) {
                 </span>
               </span>
               <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-                <Button size="sm" variant="secondary" iconBefore={<Square size={12} />}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  iconBefore={<Square size={12} />}
+                  onClick={() => lancer('service.stop', service.nom)}
+                >
                   Arrêter
                 </Button>
               </GatedAction>
@@ -1433,7 +1458,10 @@ function Avance({ service }: { service: ServiceProjet }) {
       <ConfirmDialog
         open={suppression}
         onClose={() => setSuppression(false)}
-        onConfirm={() => setSuppression(false)}
+        onConfirm={() => {
+          lancer('service.delete', service.nom)
+          setSuppression(false)
+        }}
         titre={`Supprimer le service ${service.nom}`}
         ressource={service.nom}
         pertes={
@@ -1561,7 +1589,7 @@ function Sieges({ service }: { service: ServiceProjet }) {
 
 /** Cycle de vie : versions qualifiées, fenêtre de mise à jour, retour arrière. */
 function Versions({ service }: { service: ServiceProjet }) {
-  const { autorise, refus } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const modele = service.modeleSlug ? modeleBySlug(service.modeleSlug) : undefined
   if (!modele) return null
 
@@ -1573,7 +1601,9 @@ function Versions({ service }: { service: ServiceProjet }) {
           sousTitre="Nous qualifions chaque version avant de la proposer : jamais de « latest », jamais de mise à jour non annoncée."
           actions={
             <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-              <Button size="sm">Planifier la mise à jour</Button>
+              <Button size="sm" onClick={() => lancer('service.update', service.nom)}>
+                Planifier la mise à jour
+              </Button>
             </GatedAction>
           }
         />
@@ -1627,7 +1657,7 @@ function Versions({ service }: { service: ServiceProjet }) {
 
 /** Réversibilité — §6.1 capacité 9. Une instance qu'on ne peut pas quitter ne se prend pas. */
 function Reversibilite({ service }: { service: ServiceProjet }) {
-  const { autorise, refus } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const modele = service.modeleSlug ? modeleBySlug(service.modeleSlug) : undefined
   if (!modele) return null
 
@@ -1639,7 +1669,9 @@ function Reversibilite({ service }: { service: ServiceProjet }) {
           sousTitre="L’export se fait dans le format natif de la solution, documenté, et nous testons sa réimportation comme nous testons nos restaurations."
           actions={
             <GatedAction autorise={autorise('compliance.export')} message={refus('compliance.export')}>
-              <Button size="sm">Générer un export complet</Button>
+              <Button size="sm" onClick={() => lancer('export.donnees', service.nom)}>
+                Générer un export complet
+              </Button>
             </GatedAction>
           }
         />

@@ -257,11 +257,40 @@ Ombres : `shadow-[0_1px_2px_rgba(43,27,77,.06)]` au repos ·
 
 ```tsx
 const { role, setRole, espaceId, setEspaceId, autorise, refus, pousser } = useApp()
+const { taches, jobs, lancer, relancer, oublier } = useApp()
 const espace = useEspace()   // EspaceCloud sélectionné
 ```
 `autorise('vm.create_delete')` → booléen · `refus('vm.create_delete')` → phrase
 d'infobulle. Disponible uniquement dans un composant `'use client'` sous
 `/app` ou `/admin`.
+
+### Workflows simulés — `lancer()`
+
+**Toute action qui prendrait plus de quelques secondes passe par `lancer`, pas
+par `pousser`.** `pousser` reste pour ce qui est instantané : un enregistrement
+de réglage, une copie, un acquittement, l'envoi d'une réponse de ticket.
+
+```tsx
+const { lancer } = useApp()
+lancer('vm.create', 'web-prod-01')            // → notification + job traçable
+lancer('backup.restore', vm.nom, '/app/vms')  // href facultatif : la ressource produite
+```
+
+L'identifiant doit exister dans `WORKFLOWS` (`src/lib/mock/workflows.ts`) : c'est
+là que vivent le libellé (`{cible}` est substitué), les étapes avec leurs durées,
+les phrases de lancement et de fin, et l'échec éventuel. **N'écrivez pas de texte
+de notification sur le site d'appel** — il appartient au catalogue, sinon deux
+écrans qui lancent la même opération racontent deux histoires.
+
+Ajouter un workflow = une entrée dans `WORKFLOWS`. Le moteur
+(`src/lib/workflows.ts`) dérive le `ProvisioningJob` du temps écoulé et le rend
+avec `JobTracker` ; le centre de tâches (`/app/taches`, `/admin/taches`) et la
+pastille de la barre supérieure s'alimentent tout seuls. `portee` décide dans
+quel espace la tâche apparaît.
+
+Un `echec` dans la définition n'est joué qu'au **premier essai** : la reprise
+aboutit. C'est le seul moyen de montrer le diagnostic et le rollback en
+démonstration sans bloquer un parcours.
 
 ---
 
@@ -316,6 +345,7 @@ CONTRAT_INTEGRATION TACHES_PROVISIONING` ·
 `OFFRES SOUSCRIPTIONS FACTURES DEVIS TICKETS TICKETS_PLATEFORME
 ENGAGEMENTS_SLA CREDITS_SLA ARTICLES_KB` ·
 `HEBERGEMENTS DOMAINES ZONES_DNS MODELES_DNS SMTP` ·
+`WORKFLOWS workflowById()` — catalogue des workflows simulés ·
 `AUDIT JOBS JOBS_PLATEFORME EVENEMENTS_SUPERVISION ALERTES_PLATEFORME
 REGLES_ALERTES STATUT_SERVICES INCIDENTS CONFORMITE_PLATEFORME` ·
 `SYNTHESE_CLIENT SYNTHESE_PLATEFORME TOP_ORGANISATIONS VENTILATION_DEPENSE

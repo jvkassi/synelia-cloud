@@ -72,7 +72,7 @@ const TON_STATUT: Record<Invoice['statut'], 'ok' | 'err' | 'info' | 'neutral'> =
 }
 
 export default function Facturation() {
-  const { autorise, refus, perm, pousser } = useApp()
+  const { autorise, refus, perm, lancer } = useApp()
   const [onglet, setOnglet] = useState('apercu')
   const [facture, setFacture] = useState<string | null>(null)
 
@@ -889,13 +889,7 @@ export default function Facturation() {
                               <Button
                                 size="sm"
                                 variant="secondary"
-                                onClick={() =>
-                                  pousser({
-                                    ton: 'ok',
-                                    titre: `Devis ${d.numero} accepté`,
-                                    detail: 'Les souscriptions correspondantes sont créées et le provisionnement démarre.',
-                                  })
-                                }
+                                onClick={() => lancer('devis.accept', d.numero)}
                               >
                                 Accepter
                               </Button>

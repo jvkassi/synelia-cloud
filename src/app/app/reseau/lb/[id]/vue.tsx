@@ -26,7 +26,7 @@ const ONGLETS = [
 export function VueLb({ id }: { id: string }) {
   const lb = LOAD_BALANCERS.find((l) => l.id === id)!
   const espace = espaceById(lb.espaceId)
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, pousser, lancer } = useApp()
   const [onglet, setOnglet] = useState('apercu')
   const [drains, setDrains] = useState<string[]>(
     lb.pool.filter((p) => p.sante === 'drain').map((p) => p.targetId),
@@ -263,15 +263,15 @@ export function VueLb({ id }: { id: string }) {
                               setDrains((prev) =>
                                 v ? [...prev, p.targetId] : prev.filter((x) => x !== p.targetId),
                               )
-                              pousser({
-                                ton: 'info',
-                                titre: v
-                                  ? `${p.targetLabel} passe en drain`
-                                  : `${p.targetLabel} réintégré au pool`,
-                                detail: v
-                                  ? 'Aucune nouvelle requête ne lui est envoyée ; les connexions en cours se terminent normalement.'
-                                  : 'Réintégration après validation du health check.',
-                              })
+                              if (v) {
+                                lancer('lb.drain', p.targetLabel)
+                              } else {
+                                pousser({
+                                  ton: 'ok',
+                                  titre: `${p.targetLabel} réintégré au pool`,
+                                  detail: 'Le trafic reprend dès la validation du health check.',
+                                })
+                              }
                             }}
                             label=""
                           />

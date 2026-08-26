@@ -49,7 +49,7 @@ const ONGLETS = [
 export function VueVm({ id }: { id: string }) {
   const vm = VMS.find((v) => v.id === id)!
   const espace = espaceById(vm.espaceId)
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('apercu')
   const [console_, setConsole] = useState(false)
   const [suppression, setSuppression] = useState(false)
@@ -108,19 +108,17 @@ export function VueVm({ id }: { id: string }) {
               <Button
                 variant="secondary"
                 iconBefore={<RotateCw size={14} />}
-                onClick={() =>
-                  pousser({
-                    ton: 'info',
-                    titre: `Redémarrage de ${vm.nom}`,
-                    detail: 'La machine sera de nouveau disponible dans environ 40 secondes.',
-                  })
-                }
+                onClick={() => lancer('vm.power.reboot', vm.nom)}
               >
                 Redémarrer
               </Button>
             </GatedAction>
             <GatedAction autorise={autorise('vm.create_delete')} message={refus('vm.create_delete')}>
-              <Button variant="secondary" iconBefore={<Camera size={14} />}>
+              <Button
+                variant="secondary"
+                iconBefore={<Camera size={14} />}
+                onClick={() => lancer('vm.snapshot', vm.nom)}
+              >
                 Snapshot
               </Button>
             </GatedAction>
@@ -136,14 +134,17 @@ export function VueVm({ id }: { id: string }) {
               {(close) => (
                 <div className="p-1.5">
                   {[
-                    { l: 'Arrêter', i: <Power size={13} />, action: 'vm.power' },
-                    { l: 'Redimensionner', i: <Ruler size={13} />, action: 'vm.hardware.update' },
-                    { l: 'Migrer vers un autre hôte', i: <MoveRight size={13} />, action: 'vm.hardware.update' },
+                    { l: 'Arrêter', i: <Power size={13} />, action: 'vm.power', wf: 'vm.power.stop' },
+                    { l: 'Redimensionner', i: <Ruler size={13} />, action: 'vm.hardware.update', wf: 'vm.resize' },
+                    { l: 'Migrer vers un autre hôte', i: <MoveRight size={13} />, action: 'vm.hardware.update', wf: 'vm.migrate' },
                   ].map((a) => (
                     <GatedAction key={a.l} autorise={autorise(a.action)} message={refus(a.action)}>
                       <button
                         type="button"
-                        onClick={close}
+                        onClick={() => {
+                          close()
+                          lancer(a.wf, vm.nom)
+                        }}
                         className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[12.5px] text-ink hover:bg-p-050"
                       >
                         <span className="text-g-500">{a.i}</span>
@@ -497,7 +498,11 @@ export function VueVm({ id }: { id: string }) {
             sousTitre="Copie instantanée de l’état de la machine. Utile avant une mise à jour, mais ce n’est pas une sauvegarde : le snapshot vit sur le même stockage."
             actions={
               <GatedAction autorise={autorise('vm.create_delete')} message={refus('vm.create_delete')}>
-                <Button size="sm" iconBefore={<Camera size={13} />}>
+                <Button
+                  size="sm"
+                  iconBefore={<Camera size={13} />}
+                  onClick={() => lancer('vm.snapshot', vm.nom)}
+                >
                   Prendre un snapshot
                 </Button>
               </GatedAction>
@@ -615,7 +620,9 @@ export function VueVm({ id }: { id: string }) {
               sousTitre="La restauration granulaire descend jusqu’au fichier."
               actions={
                 <GatedAction autorise={autorise('backup.restore')} message={refus('backup.restore')}>
-                  <Button size="sm">Lancer une restauration</Button>
+                  <Button size="sm" onClick={() => lancer('backup.restore', vm.nom)}>
+                    Lancer une restauration
+                  </Button>
                 </GatedAction>
               }
             />
@@ -747,13 +754,7 @@ ops@${vm.nom}:~$ _`}
       <ConfirmDialog
         open={suppression}
         onClose={() => setSuppression(false)}
-        onConfirm={() =>
-          pousser({
-            ton: 'warn',
-            titre: `Suppression de ${vm.nom} lancée`,
-            detail: 'Le quota sera libéré à la fin de l’opération.',
-          })
-        }
+        onConfirm={() => lancer('vm.delete', vm.nom)}
         titre="Supprimer cette machine virtuelle"
         ressource={vm.nom}
         pertes={[

@@ -32,7 +32,7 @@ const ONGLETS = [
 
 export function VuePra({ id }: { id: string }) {
   const plan = DR_PLANS.find((p) => p.id === id)!
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('composition')
   const [bascule, setBascule] = useState(false)
   const [ordre, setOrdre] = useState(plan.groupes)
@@ -80,13 +80,7 @@ export function VuePra({ id }: { id: string }) {
               <Button
                 variant="secondary"
                 iconBefore={<FlaskConical size={14} />}
-                onClick={() =>
-                  pousser({
-                    ton: 'info',
-                    titre: 'Bascule de test lancée en réseau isolé',
-                    detail: 'Aucun impact sur la production. Suivi dans le centre de tâches.',
-                  })
-                }
+                onClick={() => lancer('dr.failover.test', plan.nom)}
               >
                 Bascule de test
               </Button>
@@ -350,13 +344,7 @@ export function VuePra({ id }: { id: string }) {
                     <Button
                       className="mt-4"
                       iconBefore={<FlaskConical size={14} />}
-                      onClick={() =>
-                        pousser({
-                          ton: 'info',
-                          titre: 'Bascule de test lancée',
-                          detail: `Durée estimée ${dureeMin(plan.rtoCibleMin)}. Aucun impact sur la production.`,
-                        })
-                      }
+                      onClick={() => lancer('dr.failover.test', plan.nom)}
                     >
                       Lancer une bascule de test
                     </Button>
@@ -572,13 +560,7 @@ export function VuePra({ id }: { id: string }) {
       <ConfirmDialog
         open={bascule}
         onClose={() => setBascule(false)}
-        onConfirm={() =>
-          pousser({
-            ton: 'warn',
-            titre: 'Bascule réelle engagée',
-            detail: `Séquence de ${plan.groupes.length} groupes en cours. Suivi dans le centre de tâches.`,
-          })
-        }
+        onConfirm={() => lancer('dr.failover.real', plan.nom)}
         titre="Déclencher une bascule réelle"
         ressource={plan.nom}
         pertes={[

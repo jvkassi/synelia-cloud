@@ -226,7 +226,7 @@ const ETAPES = [
 
 function AssistantLb({ onFermer }: { onFermer: () => void }) {
   const espace = useEspace()
-  const { pousser } = useApp()
+  const { lancer } = useApp()
   const [etape, setEtape] = useState(1)
 
   const [nom, setNom] = useState('lb-nouveau')
@@ -296,11 +296,7 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
             <Button
               disabled={!conditions}
               onClick={() => {
-                pousser({
-                  ton: 'info',
-                  titre: `Création de ${nom} lancée`,
-                  detail: 'La VIP est réservée, les health checks démarrent dans une minute.',
-                })
+                lancer('lb.create', nom)
                 onFermer()
               }}
             >

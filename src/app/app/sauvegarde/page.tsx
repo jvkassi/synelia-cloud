@@ -530,7 +530,7 @@ const GRANULARITES = [
 ]
 
 function AssistantRestauration() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [etape, setEtape] = useState(1)
   const [granularite, setGranularite] = useState('fichiers')
   const [ressource, setRessource] = useState('vm-web-01')
@@ -782,11 +782,7 @@ function AssistantRestauration() {
                 <Button
                   disabled={!confirme}
                   onClick={() => {
-                    pousser({
-                      ton: 'info',
-                      titre: 'Restauration lancée',
-                      detail: `Durée estimée ${dureeMin(dureeEstimee)}. Suivi dans le centre de tâches.`,
-                    })
+                    lancer('backup.restore', ressource)
                     setEtape(1)
                     setConfirme(false)
                   }}

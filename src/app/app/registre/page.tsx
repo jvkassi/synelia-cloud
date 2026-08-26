@@ -138,7 +138,7 @@ const ONGLETS = [
 const QUOTA_GO = 200
 
 export default function Registre() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, pousser, lancer } = useApp()
   const [onglet, setOnglet] = useState('depots')
   const [ouvert, setOuvert] = useState<string | null>('dep-1')
   const [aSupprimer, setASupprimer] = useState<Depot | null>(null)
@@ -676,11 +676,7 @@ docker push registry.abj.synelia.cloud/org-dba/mon-app:v1.0.0`}
           'Toute possibilité de retour arrière vers une version antérieure',
         ]}
         onConfirm={() => {
-          pousser({
-            ton: 'err',
-            titre: `Dépôt ${aSupprimer?.nom} supprimé`,
-            detail: 'Les environnements qui référençaient ces images ne pourront plus redémarrer.',
-          })
+          if (aSupprimer) lancer('registre.repo.delete', aSupprimer.nom)
           setASupprimer(null)
         }}
       />

@@ -42,7 +42,7 @@ const MAPPING_ROLES: Array<{ role: Role; k8s: string; namespaces: string }> = [
 export function VueCluster({ id }: { id: string }) {
   const cluster = K8S_CLUSTERS.find((c) => c.id === id)!
   const espace = espaceById(cluster.espaceId)
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, pousser, lancer } = useApp()
   const [onglet, setOnglet] = useState('apercu')
 
   const noeudsTotal = cluster.pools.reduce((a, p) => a + p.nodes, 0)
@@ -114,7 +114,9 @@ users:
               Télécharger le kubeconfig
             </Button>
             <GatedAction autorise={autorise('espace.quota.update')} message={refus('espace.quota.update')}>
-              <Button variant="ghost">Mettre à jour la version</Button>
+              <Button variant="ghost" onClick={() => lancer('k8s.upgrade', cluster.nom)}>
+                Mettre à jour la version
+              </Button>
             </GatedAction>
           </>
         }
@@ -388,9 +390,15 @@ users:
                   autorise={autorise('espace.quota.update')}
                   message={refus('espace.quota.update')}
                 >
-                  <Button size="sm">Appliquer</Button>
+                  <Button size="sm" onClick={() => lancer('k8s.pool.scale', `${cluster.nom} · ${p.nom}`)}>
+                    Appliquer
+                  </Button>
                 </GatedAction>
-                <Button size="sm" variant="secondary">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => lancer('k8s.pool.roll', `${cluster.nom} · ${p.nom}`)}
+                >
                   Mise à jour progressive
                 </Button>
                 <IconButton label="Supprimer le pool" size="sm">
@@ -455,7 +463,11 @@ users:
                     <Badge tone="ok" dot size="sm">
                       Sain
                     </Badge>
-                    <Button size="sm" variant="ghost">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => lancer('k8s.module.update', `${nom} · ${cluster.nom}`)}
+                    >
                       Mettre à jour
                     </Button>
                   </span>

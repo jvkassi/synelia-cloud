@@ -42,7 +42,7 @@ const PROTOCOLES = [
 ]
 
 export default function Sso() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('etat')
   const [protocole, setProtocole] = useState('oidc')
   const [etape, setEtape] = useState(1)
@@ -472,13 +472,7 @@ export default function Sso() {
                   </Button>
                   <GatedAction autorise={autorise('sso.configure')} message={refus('sso.configure')}>
                     <Button
-                      onClick={() =>
-                        pousser({
-                          ton: 'ok',
-                          titre: 'Fédération enregistrée',
-                          detail: 'Les prochaines connexions passeront par votre annuaire. Votre session actuelle reste valide.',
-                        })
-                      }
+                      onClick={() => lancer('sso.federate', protocole === 'oidc' ? 'OIDC' : 'SAML 2.0')}
                     >
                       Activer la fédération
                     </Button>

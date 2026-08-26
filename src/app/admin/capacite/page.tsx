@@ -31,7 +31,7 @@ const ONGLETS = [
 ]
 
 export default function Capacite() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('socles')
   const [espaceId, setEspaceId] = useState(ESPACES[0]?.id ?? '')
   const [rebalance, setRebalance] = useState(false)
@@ -760,11 +760,7 @@ export default function Capacite() {
           'Le client verra le changement de socle sur chacune de ses machines, et l’opération apparaîtra dans son journal d’audit',
         ]}
         onConfirm={() => {
-          pousser({
-            ton: 'ok',
-            titre: 'Rééquilibrage appliqué',
-            detail: `Le placement de ${espace?.code} est mis à jour. Les migrations à chaud démarrent maintenant ; les autres sont planifiées dans la fenêtre de maintenance du client.`,
-          })
+          lancer('capacite.rebalance', espace?.code ?? '')
           setRebalance(false)
         }}
       />

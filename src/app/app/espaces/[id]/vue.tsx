@@ -43,7 +43,7 @@ const ONGLETS = [
 
 export function VueEspace({ id }: { id: string }) {
   const espace = ESPACES.find((e) => e.id === id)!
-  const { autorise, refus } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('apercu')
 
   const vms = vmsDeLEspace(id)
@@ -75,7 +75,11 @@ export function VueEspace({ id }: { id: string }) {
               autorise={autorise('espace.quota.update')}
               message={refus('espace.quota.update')}
             >
-              <Button variant="secondary" iconBefore={<TrendingUp size={14} />}>
+              <Button
+                variant="secondary"
+                iconBefore={<TrendingUp size={14} />}
+                onClick={() => lancer('espace.extend', espace.code)}
+              >
                 Étendre la capacité
               </Button>
             </GatedAction>

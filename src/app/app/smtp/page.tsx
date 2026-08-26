@@ -37,7 +37,7 @@ const LIBELLE_STATUT: Record<string, string> = {
 }
 
 export default function Smtp() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, pousser, lancer } = useApp()
   const [onglet, setOnglet] = useState('apercu')
   const [nouvelleCle, setNouvelleCle] = useState(false)
 
@@ -311,6 +311,15 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
             <CardHeader
               titre="Authentification du domaine"
               sousTitre="Ces trois mécanismes prouvent que vos courriels viennent bien de vous. Sans eux, ils finissent en indésirables — ou sont utilisés pour usurper votre identité."
+              actions={
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => lancer('smtp.verify', 'dba.africa')}
+                >
+                  Revérifier
+                </Button>
+              }
             />
             <div className="space-y-2">
               {[

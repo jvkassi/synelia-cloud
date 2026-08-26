@@ -26,7 +26,7 @@ const ONGLETS = [
 ]
 
 export default function AuditAdmin() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, pousser, lancer } = useApp()
   const [onglet, setOnglet] = useState('journal')
   const [detail, setDetail] = useState<AuditEvent | null>(null)
 
@@ -684,13 +684,7 @@ export default function AuditAdmin() {
                 <Button
                   className="mt-4"
                   iconBefore={<FileCheck2 size={14} />}
-                  onClick={() =>
-                    pousser({
-                      ton: 'ok',
-                      titre: 'Export en préparation',
-                      detail: 'Le lien de téléchargement arrive par courriel dans quelques minutes, valable 24 heures.',
-                    })
-                  }
+                  onClick={() => lancer('export.plateforme', 'journal d’audit plateforme')}
                 >
                   Générer l’export
                 </Button>

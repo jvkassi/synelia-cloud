@@ -27,7 +27,7 @@ const ONGLETS = [
 ]
 
 export function VueCertificat({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('apercu')
 
   const c = certificatById(id)
@@ -70,13 +70,7 @@ export function VueCertificat({ id }: { id: string }) {
               <Button
                 variant="secondary"
                 iconBefore={<RotateCcw size={14} />}
-                onClick={() =>
-                  pousser({
-                    ton: 'ok',
-                    titre: 'Renouvellement lancé',
-                    detail: `Nouveau certificat en émission pour ${c.hote}.`,
-                  })
-                }
+                onClick={() => lancer('web.ssl.renew', c.hote)}
               >
                 Renouveler maintenant
               </Button>

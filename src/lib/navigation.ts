@@ -107,7 +107,7 @@ export const UNIVERS_FOURNISSEUR: UniversNav[] = [
     nom: 'Pilotage',
     sections: [
       { nom: 'Vue plateforme', href: '/admin' },
-      { nom: 'Santé du parc', href: '/admin/sante' },
+      { nom: 'Santé du parc', href: '/admin/sante', aussi: ['/admin/taches'] },
     ],
   },
   {

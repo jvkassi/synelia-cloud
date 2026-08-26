@@ -70,7 +70,7 @@ const TEINTE_SITE: Record<string, string> = {
 }
 
 export function VueHebergement({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('apercu')
   const [siteOuvert, setSiteOuvert] = useState<SiteWeb | null>(null)
   const [baseOuverte, setBaseOuverte] = useState<BaseHebergement | null>(null)
@@ -618,11 +618,7 @@ export function VueHebergement({ id }: { id: string }) {
             </Button>
             <Button
               onClick={() => {
-                pousser({
-                  ton: 'ok',
-                  titre: 'Réglages appliqués',
-                  detail: `${siteOuvert?.hote} — rechargement d’Apache sans coupure.`,
-                })
+                if (siteOuvert) lancer('web.hebergement.apply', siteOuvert.hote)
                 setSiteOuvert(null)
               }}
             >

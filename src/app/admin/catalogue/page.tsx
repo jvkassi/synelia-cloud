@@ -31,7 +31,7 @@ const LIBELLE_CATEGORIE: Record<Offer['categorie'], string> = {
 }
 
 export default function Catalogue() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, pousser, lancer } = useApp()
   const [onglet, setOnglet] = useState('offres')
   const [edition, setEdition] = useState<Offer | null>(null)
   const [creation, setCreation] = useState(false)
@@ -279,13 +279,7 @@ export default function Catalogue() {
                           <Button
                             size="sm"
                             variant="secondary"
-                            onClick={() =>
-                              pousser({
-                                ton: 'ok',
-                                titre: `${o.nom} publiée`,
-                                detail: 'L’offre apparaît immédiatement sur la vitrine publique et dans le simulateur de coût.',
-                              })
-                            }
+                            onClick={() => lancer('catalogue.publier', o.nom)}
                           >
                             Publier
                           </Button>

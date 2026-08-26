@@ -29,7 +29,7 @@ const ETAPES = [
 ]
 
 export function VueSauvegarde({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('executions')
   const [etape, setEtape] = useState(1)
   const [immuable, setImmuable] = useState(true)
@@ -71,13 +71,7 @@ export function VueSauvegarde({ id }: { id: string }) {
               <Button
                 variant="secondary"
                 iconBefore={<Play size={14} />}
-                onClick={() =>
-                  pousser({
-                    ton: 'ok',
-                    titre: 'Sauvegarde lancée',
-                    detail: `Exécution hors planning sur ${p.serveur}. Suivi dans le centre de tâches.`,
-                  })
-                }
+                onClick={() => lancer('web.backup.run', p.serveur)}
               >
                 Sauvegarder maintenant
               </Button>
@@ -411,13 +405,7 @@ export function VueSauvegarde({ id }: { id: string }) {
                 <GatedAction autorise={autorise('backup.restore')} message={refus('backup.restore')}>
                   <Button
                     className="mt-4"
-                    onClick={() =>
-                      pousser({
-                        ton: 'ok',
-                        titre: 'Restauration lancée',
-                        detail: 'Suivi dans le centre de tâches. Vous serez notifié à la fin.',
-                      })
-                    }
+                    onClick={() => lancer('web.backup.restore', p.serveur)}
                   >
                     Lancer la restauration
                   </Button>

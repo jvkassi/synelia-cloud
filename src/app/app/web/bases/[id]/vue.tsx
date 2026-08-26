@@ -22,7 +22,7 @@ import { EmptyState } from '@/components/composition/states'
 import { useApp } from '@/components/app/contexte'
 
 export function VueServeurBases({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, pousser, lancer } = useApp()
   const [onglet, setOnglet] = useState('bases')
   const [creation, setCreation] = useState(false)
 
@@ -83,11 +83,7 @@ export function VueServeurBases({ id }: { id: string }) {
               <Button
                 iconBefore={<Plus size={14} />}
                 onClick={() =>
-                  pousser({
-                    ton: 'ok',
-                    titre: 'Activation demandée',
-                    detail: `${MOTEUR_WEB_LABEL[s.moteur]} sera installé sur ${s.serveur} dans quelques minutes.`,
-                  })
+                  lancer('web.db.enable', `${MOTEUR_WEB_LABEL[s.moteur]} · ${s.serveur}`)
                 }
               >
                 Activer {MOTEUR_WEB_LABEL[s.moteur]}
@@ -202,7 +198,11 @@ export function VueServeurBases({ id }: { id: string }) {
                         <td className="px-3 py-2.5 text-[12px] text-g-700">{b.utilise}</td>
                         <td className="px-3 py-2.5 text-right">
                           <span className="flex items-center justify-end gap-1">
-                            <IconButton label="Restaurer" size="sm">
+                            <IconButton
+                              label={`Restaurer ${b.nom}`}
+                              size="sm"
+                              onClick={() => lancer('web.db.restore', b.nom)}
+                            >
                               <RotateCcw size={13} />
                             </IconButton>
                             <GatedAction
@@ -383,7 +383,13 @@ export function VueServeurBases({ id }: { id: string }) {
                     <Input defaultValue={`${s.bases[0]?.nom ?? 'base'}_restauree`} />
                   </Field>
                   <GatedAction autorise={autorise('backup.restore')} message={refus('backup.restore')}>
-                    <Button variant="secondary" fullWidth>
+                    <Button
+                      variant="secondary"
+                      fullWidth
+                      onClick={() =>
+                        lancer('web.db.restore', s.bases[0]?.nom ?? s.hoteInterne)
+                      }
+                    >
                       Lancer la restauration
                     </Button>
                   </GatedAction>

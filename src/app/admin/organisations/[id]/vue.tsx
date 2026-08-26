@@ -40,7 +40,7 @@ const ONGLETS = [
 ]
 
 export function VueOrganisation({ id }: { id: string }) {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, pousser, lancer } = useApp()
   const [onglet, setOnglet] = useState('synthese')
   const [elevation, setElevation] = useState(false)
   const [suspension, setSuspension] = useState(false)
@@ -1056,14 +1056,7 @@ export function VueOrganisation({ id }: { id: string }) {
               ]
         }
         onConfirm={() => {
-          pousser({
-            ton: org.statut === 'active' ? 'err' : 'ok',
-            titre:
-              org.statut === 'active'
-                ? `${org.nom} suspendue`
-                : `${org.nom} réactivée`,
-            detail: 'L’opération est journalisée dans l’audit de l’organisation et dans celui de la plateforme.',
-          })
+          lancer(org.statut === 'active' ? 'org.suspend' : 'org.reactivate', org.nom)
           setSuspension(false)
         }}
       />
