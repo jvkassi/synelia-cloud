@@ -35,7 +35,7 @@ import {
 } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
-import { CodeBlock, GatedAction, SolutionLogo, Tabs } from '@/components/ui/display'
+import { CodeBlock, CopyField, GatedAction, SolutionLogo, Tabs } from '@/components/ui/display'
 import { Field, MonoTextarea, Select, Slider, Switch } from '@/components/ui/field'
 import { ConfirmDialog } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
@@ -408,6 +408,48 @@ export default function Agents() {
                     />
                   </div>
                 </Card>
+
+                <Card>
+                  <CardHeader
+                    titre="Stratégie"
+                    sousTitre="Comment l’agent décide d’appeler un outil. Ce choix dépend du modèle autant que de la tâche."
+                  />
+                  <div className="space-y-4">
+                    <Field label="Manière de raisonner">
+                      <Select defaultValue={agent.strategie} disabled={!peutEcrire}>
+                        <option value="function_calling">
+                          Appel de fonction natif — le modèle choisit l’outil lui-même
+                        </option>
+                        <option value="react">
+                          ReAct — pensée, action, observation, à chaque tour
+                        </option>
+                      </Select>
+                    </Field>
+                    <Slider
+                      label="Itérations au plus"
+                      value={agent.maxIterations}
+                      onChange={() => undefined}
+                      min={1}
+                      max={20}
+                      unite="tours"
+                    />
+                  </div>
+                  <Callout
+                    ton={agent.strategie === 'react' ? 'violet' : 'info'}
+                    className="mt-4"
+                    titre={
+                      agent.strategie === 'react'
+                        ? 'ReAct : plus lent, mais lisible'
+                        : 'Appel natif : rapide, mais opaque'
+                    }
+                  >
+                    {agent.strategie === 'react'
+                      ? 'Chaque tour écrit son raisonnement avant d’agir, ce qui coûte des jetons et du temps mais rend la trace exploitable quand la réponse est fausse. C’est le bon choix sur un agent d’analyse, dont on doit pouvoir contester la conclusion.'
+                      : 'Le modèle décide seul quel outil appeler, sans expliciter son raisonnement. Deux fois moins de jetons qu’en ReAct, et une trace qui montre les appels sans montrer le pourquoi. Suffisant quand l’enchaînement est court et vérifiable par son résultat.'}
+                    {' '}Au-delà de {agent.maxIterations} tours, l’agent est interrompu et rend ce
+                    qu’il a : une boucle d’outils qui ne converge pas coûte plus qu’elle ne rapporte.
+                  </Callout>
+                </Card>
               </div>
             </div>
           )}
@@ -542,6 +584,38 @@ export default function Agents() {
                     ]}
                   />
                 </div>
+              </Card>
+
+              <Card className="lg:col-span-2">
+                <CardHeader
+                  titre="Sortie structurée"
+                  sousTitre={
+                    agent.sortieStructuree
+                      ? 'La réponse est contrainte par un schéma : le modèle ne peut pas rendre autre chose. C’est ce qui permet à du code de la relire sans analyse de texte.'
+                      : 'Cet agent répond en texte libre. Un schéma ne se justifie que si sa sortie est consommée par du code plutôt que lue par un humain.'
+                  }
+                  actions={
+                    <Badge tone={agent.sortieStructuree ? 'violet' : 'neutral'} size="sm">
+                      {agent.sortieStructuree ? 'Schéma imposé' : 'Texte libre'}
+                    </Badge>
+                  }
+                />
+                {agent.sortieStructuree ? (
+                  <>
+                    <CodeBlock langue="json" code={agent.sortieStructuree} />
+                    <Callout ton="info" className="mt-4" titre="Ce que le schéma garantit, et ce qu’il ne garantit pas">
+                      Il garantit la forme : les champs sont là, les types sont bons, les valeurs
+                      d’énumération sont valides. Il ne garantit rien sur le fond — un montant peut
+                      être parfaitement typé et parfaitement faux. C’est pourquoi cet agent porte en
+                      plus un contrôle de cohérence, et passe la main quand il ne tombe pas juste.
+                    </Callout>
+                  </>
+                ) : (
+                  <p className="text-[12.5px] leading-relaxed text-g-500">
+                    Imposer un schéma à un agent conversationnel le rendrait inutilisable : ses
+                    réponses sont lues par des personnes, pas analysées par un programme.
+                  </p>
+                )}
               </Card>
             </div>
           )}
@@ -726,6 +800,48 @@ export default function Agents() {
                     et l’agent retrouve le fil.
                   </p>
                 </Card>
+                <Card>
+                  <CardHeader
+                    titre="Exposer l’agent comme outil MCP"
+                    sousTitre="Un agent publié peut devenir un outil pour d’autres systèmes : un autre agent, un assistant de votre poste de travail, ou un flux d’une autre organisation."
+                    actions={
+                      <Badge tone={agent.publieMcp ? 'ok' : 'neutral'} dot size="sm">
+                        {agent.publieMcp ? 'Exposé' : 'Non exposé'}
+                      </Badge>
+                    }
+                  />
+                  {agent.publieMcp ? (
+                    <>
+                      <CopyField
+                        label="Point d’entrée MCP"
+                        value={`https://ia.synelia.cloud/mcp/${agent.slug}/sse`}
+                      />
+                      <div className="mt-3">
+                        <KeyValueList
+                          colonnes={1}
+                          items={[
+                            { cle: 'Outil exposé', valeur: <span className="font-mono text-[12px]">{agent.slug.replace(/-/g, '_')}</span> },
+                            { cle: 'Authentification', valeur: 'Clé d’accès IA, portée limitée à cet agent' },
+                            { cle: 'Quota', valeur: 'Compté sur le budget de l’agent, pas sur celui de l’appelant' },
+                          ]}
+                        />
+                      </div>
+                      <Callout ton="warn" className="mt-4" titre="Un agent exposé est un agent qu’on ne voit plus appeler">
+                        Côté appelant, votre agent devient une ligne dans une liste d’outils. Il sera
+                        invoqué par des systèmes que vous ne contrôlez pas, avec des entrées que vous
+                        n’avez pas prévues. Son budget quotidien et sa classe de données maximale
+                        deviennent alors les seules limites qui tiennent.
+                      </Callout>
+                    </>
+                  ) : (
+                    <p className="text-[12.5px] leading-relaxed text-g-500">
+                      Cet agent n’est pas exposé. Son extracteur rend du JSON dans un format qui n’a
+                      de sens que pour la chaîne comptable : l’ouvrir à d’autres systèmes créerait une
+                      dépendance sans usage.
+                    </p>
+                  )}
+                </Card>
+
                 <Callout ton="info" titre="Publier, c’est engager">
                   Un agent publié répond à de vraies personnes, sur un vrai numéro, au nom de votre
                   organisation. La publication demande le rôle Organisation Admin ou Espace Cloud

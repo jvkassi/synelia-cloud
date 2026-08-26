@@ -1222,6 +1222,13 @@ export interface BaseConnaissance {
   fragments: number
   modeleEmbedding: string
   dimension: number
+  /** Comment le document est découpé — le choix se fige à la création. */
+  modeDecoupage: 'general' | 'parent_enfant' | 'qr'
+  /** Index vectoriel, ou index par mots-clés sans coût de vectorisation. */
+  methodeIndex: 'haute_qualite' | 'economique'
+  modeRecherche: 'vectorielle' | 'plein_texte' | 'hybride'
+  /** Renvoyer le document d'origine avec chaque fragment cité. */
+  citations: boolean
   tailleMo: number
   frequence: 'manuelle' | 'quotidienne' | 'horaire'
   derniereIndexation: string
@@ -1304,6 +1311,14 @@ export interface AgentIA {
   temperature: number
   topP: number
   jetonsMax: number
+  /** Appel de fonction natif, ou boucle ReAct pensée → action → observation. */
+  strategie: 'function_calling' | 'react'
+  /** Garde-fou contre la boucle infinie d'un agent outillé. */
+  maxIterations: number
+  /** Schéma imposé à la sortie, quand le résultat est relu par du code. */
+  sortieStructuree?: string
+  /** Un agent publié peut être exposé comme outil MCP à d'autres systèmes. */
+  publieMcp: boolean
   consigne: string
   variables: VariableAgent[]
   outils: string[]
@@ -1400,39 +1415,79 @@ export interface CanalAgent {
   note: string
 }
 
-/** Nœud d'un flux d'orchestration (FONC-02). */
-export type TypeNoeud =
-  | 'entree'
+/**
+ * Étape d'un flux (FONC-02).
+ *
+ * Le flux est un arbre, pas un plan libre : une étape en suit une autre, un
+ * routeur ouvre des branches, une boucle rejoue un corps. La disposition se
+ * calcule au rendu — elle n'est pas une donnée. C'est ce qui permet d'insérer
+ * une étape entre deux autres sans rien déplacer à la main.
+ */
+export type TypeEtape =
+  | 'declencheur'
   | 'agent'
-  | 'condition'
   | 'outil'
   | 'connaissance'
-  | 'synthese'
+  | 'routeur'
+  | 'boucle'
   | 'humain'
-  | 'sortie'
+  | 'code'
+  | 'reponse'
 
-export interface NoeudFlux {
+export const TYPE_ETAPE_LABEL: Record<TypeEtape, string> = {
+  declencheur: 'Déclencheur',
+  agent: 'Agent',
+  outil: 'Outil',
+  connaissance: 'Recherche',
+  routeur: 'Aiguillage',
+  boucle: 'Boucle',
+  humain: 'Validation humaine',
+  code: 'Code',
+  reponse: 'Réponse',
+}
+
+export interface BrancheFlux {
   id: string
-  type: TypeNoeud
   nom: string
+  condition: string
+  partPct: number
+  /** La branche de repli reçoit ce qu'aucune condition n'a retenu. */
+  parDefaut?: boolean
+  etapes: EtapeFlux[]
+}
+
+export interface EtapeFlux {
+  id: string
+  type: TypeEtape
+  nom: string
+  /** D'où vient l'étape : un agent, un outil, un serveur MCP, la plateforme. */
+  source: string
   detail: string
   agentId?: string
-  /** Position dans la grille du studio, en pixels. */
-  x: number
-  y: number
+  outilId?: string
+  /** Étape conditionnelle : sautée quand la condition n'est pas remplie. */
+  condition?: string
   executions24h: number
   latenceMs: number
   coutPourMille: number
   tauxErreurPct: number
-  tentatives?: number
+  reprise?: { tentatives: number; delaiS: number }
+  /** Routeur : une branche par sortie. */
+  branches?: BrancheFlux[]
+  /** Premier match seulement, ou toutes les branches vraies en parallèle. */
+  modeRoutage?: 'premiere' | 'toutes'
+  /** Boucle : les étapes rejouées pour chaque élément. */
+  corps?: EtapeFlux[]
+  surItems?: string
+  maxIterations?: number
 }
 
-export interface LienFlux {
-  de: string
-  vers: string
-  libelle?: string
-  /** Une branche conditionnelle se dessine autrement qu'un enchaînement simple. */
-  conditionnel?: boolean
+export interface VariableFlux {
+  cle: string
+  portee: 'environnement' | 'conversation' | 'systeme'
+  valeur: string
+  secret?: boolean
+  description: string
 }
 
 export interface FluxOrchestration {
@@ -1441,15 +1496,17 @@ export interface FluxOrchestration {
   description: string
   espaceId: string
   statut: 'publie' | 'brouillon' | 'suspendu'
-  declencheur: string
-  noeuds: NoeudFlux[]
-  liens: LienFlux[]
+  declencheur: {
+    type: 'message' | 'planifie' | 'webhook' | 'fichier' | 'evenement'
+    libelle: string
+    detail: string
+  }
+  etapes: EtapeFlux[]
+  variables: VariableFlux[]
   executions7j: number
   dureeMedianeS: number
   tauxSuccesPct: number
   coutParExecution: number
   memoirePartagee: boolean
   version: string
-  largeur: number
-  hauteur: number
 }

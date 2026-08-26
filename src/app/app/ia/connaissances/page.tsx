@@ -205,6 +205,22 @@ export default function BasesDeConnaissance() {
                             ),
                           },
                           { cle: 'Dimensions', valeur: num(base.dimension) },
+                          {
+                            cle: 'Mode de découpage',
+                            valeur:
+                              base.modeDecoupage === 'parent_enfant'
+                                ? 'Parent-enfant — on cherche sur le petit, on donne le grand'
+                                : base.modeDecoupage === 'qr'
+                                  ? 'Question-réponse — un fragment par échange'
+                                  : 'Général — un fragment par bloc de texte',
+                          },
+                          {
+                            cle: 'Méthode d’index',
+                            valeur:
+                              base.methodeIndex === 'haute_qualite'
+                                ? 'Haute qualité — vecteurs, coût de vectorisation'
+                                : 'Économique — dix mots-clés par fragment, sans coût',
+                          },
                         ]}
                       />
                       <Callout ton="info" className="mt-4" titre="Pas de visionneuse ici">
@@ -405,13 +421,36 @@ curl ${PASSERELLE_IA.base}/chat/completions \\
                       <KeyValueList
                         colonnes={1}
                         items={[
+                          {
+                            cle: 'Mode de recherche',
+                            valeur:
+                              base.modeRecherche === 'hybride'
+                                ? 'Hybride — sens et mots-clés, fusionnés'
+                                : base.modeRecherche === 'plein_texte'
+                                  ? 'Plein texte — mots-clés seulement'
+                                  : 'Vectorielle — sens seulement',
+                          },
                           { cle: 'Fragments remontés', valeur: '8 par requête' },
                           { cle: 'Taille d’un fragment', valeur: '420 jetons, recouvrement de 60' },
                           { cle: 'Reclassement', valeur: 'Actif — synelia/bge-reranker-v2-m3' },
                           { cle: 'Score minimal', valeur: '0,32 — en dessous, rien n’est renvoyé' },
                           { cle: 'Latence médiane', valeur: '64 ms, reclassement compris' },
+                          {
+                            cle: 'Citations',
+                            valeur: base.citations
+                              ? 'Chaque fragment est rendu avec son document d’origine'
+                              : 'Désactivées — les réponses ne citent pas leur source',
+                          },
                         ]}
                       />
+                      {!base.citations && (
+                        <Callout ton="warn" className="mt-4" titre="Sans citation, rien n’est vérifiable">
+                          Une réponse plausible et une réponse inventée se ressemblent. La citation est
+                          ce qui permet à un lecteur de trancher en dix secondes. Elle est désactivée
+                          ici parce que la source est un historique de tickets, dont on ne veut pas
+                          exposer les références aux clients — c’est un arbitrage, pas un oubli.
+                        </Callout>
+                      )}
                     </Card>
                     <Callout ton="info" titre="Quand la base ne sait pas">
                       Sous le score minimal, la recherche renvoie une liste vide et le modèle reçoit

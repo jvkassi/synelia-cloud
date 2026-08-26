@@ -15,7 +15,7 @@ décisions déjà prises.
 |---|---|
 | Paquets | `bun install` — **bun 1.4.0**, `bun.lock` fait foi, pas de npm |
 | Développement | `bun run dev` — Next avec Turbopack |
-| Construction | `bun run build` — Turbopack, ~32 s pour 136 routes |
+| Construction | `bun run build` — Turbopack, ~32 s pour 140 routes |
 | Comparaison | `bun run build:webpack` — ~50 s, gardé pour lever un doute |
 | Types | `bun run typecheck` |
 | Lint | `bun run lint` |
@@ -27,7 +27,7 @@ l'installation locale de la distante. Ne remettez pas de caret.
 
 ### L'audit
 
-`outils/audit.mjs` ouvre les 136 routes de `outils/routes.json` dans Chromium et
+`outils/audit.mjs` ouvre les 140 routes de `outils/routes.json` dans Chromium et
 relève : erreurs console et HTTP, débordement horizontal, contraste sous le seuil
 WCAG AA, boutons sans nom accessible, titres d'onglet laissés par défaut.
 
@@ -87,7 +87,7 @@ Deux barres, pas de barre latérale de navigation. `src/lib/navigation.ts` porte
 modèle ; `topbar.tsx` le rend.
 
 - **Barre 1** : les univers. Client — `Global · Infrastructure · Applications ·
-  IA & Modèles · Web Cloud · IAM & sécurité`. Fournisseur — `Pilotage · Clients ·
+  IA & Agents · Web Cloud · IAM & sécurité`. Fournisseur — `Pilotage · Clients ·
   Infrastructure · Produit · Finance · Exploitation`.
 - **Barre 2** : les sections de l'univers courant.
 
@@ -114,17 +114,19 @@ Elle évite le défaut des portails qui vendent le nom, l'hébergement et la
 messagerie séparément : chez eux le même nom réapparaît dans trois listes et
 aucune page ne dit tout ce qui le concerne.
 
-### IA & Modèles
+### IA & Agents
 
-Sept sections : `Accueil · Catalogue de modèles · Passerelle & clés · Routage &
-garde-fous · Bases de connaissances · Inférence dédiée · Consommation & coûts`.
-Contrepartie fournisseur : `/admin/ia`, dans l'univers Infrastructure. Données
-dans `src/lib/mock/ia.ts`.
+Dix sections : `Accueil · Agents · Orchestration · Outils & canaux · Catalogue de
+modèles · Passerelle & clés · Routage & garde-fous · Bases de connaissances ·
+Inférence dédiée · Consommation & coûts`. Contrepartie fournisseur : `/admin/ia`,
+dans l'univers Infrastructure. Données dans `src/lib/mock/ia.ts`.
 
-L'offre est une **passerelle compatible OpenAI**, pas un modèle : une URL, une
-clé par application, et derrière elle des modèles à poids ouverts servis sur nos
-GPU d'Abidjan et de Grand-Bassam, plus des modèles de fournisseurs étrangers sous
-contrat cadre.
+L'univers répond au cahier des charges MIA (Orange CI, 39 fonctions en 6 modules)
+dont la couverture fonction par fonction est tenue dans `PLAN-AGENTS-MIA.md`.
+
+**Trois couches, dans cet ordre.** Un agent est un rôle, une consigne, un modèle,
+des outils et des limites. Un flux enchaîne plusieurs agents. La passerelle, les
+modèles, les GPU et la facture sont la plomberie sous les deux.
 
 **La résidence est la propriété structurante.** Chaque modèle porte un champ
 `hebergement` (`souverain` ou `externe`) et chaque requête une classe de données
@@ -132,16 +134,30 @@ contrat cadre.
 deux. Un écran qui parle d'un modèle externe doit dire où part la requête — c'est
 la même honnêteté que `/souverainete` pour les socles en sortie.
 
-**Pas d'interface de conversation, pas de banc d'essai.** C'est la règle « ne
-jamais reconstruire l'écran principal d'un produit existant » appliquée ici : le
-portail provisionne les accès, route, plafonne et trace. Il n'affiche pas non plus
-le contenu des bases de connaissances — ni visionneuse, ni recherche plein texte :
-la source reste dans le Drive, le bucket ou le dépôt qui l'héberge.
+**La consigne oriente, la plateforme empêche.** Écrire « ne demande jamais un mot
+de passe » réduit le risque sans le supprimer. Ce qui doit être impossible se règle
+ailleurs : garde-fou en entrée, portée de l'outil vérifiée côté API, classe de
+données. Chaque écran doit rendre cette différence visible — c'est exactement là
+que les plateformes d'agents déçoivent en production.
 
-Le catalogue reste **maître-détail dans la page** (cartes + `Tabs`), pas en
-panneau persistant : on compare des modèles avant d'en ouvrir un, alors que dans
-Web Cloud on travaille sur une ressource choisie une fois pour toutes. L'univers
-garde donc la borne de 1400 px.
+**Le studio d'orchestration suit le patron d'Activepieces**, pas celui d'un canevas
+libre : colonne verticale de haut en bas, cartes de 260 px, bouton `+` entre chaque
+étape, glisser-déposer d'une carte sur un `+` pour la déplacer (déposer ailleurs ne
+fait rien), branches nommées avec leur part de trafic et une branche de repli,
+corps de boucle encadré, panneau de configuration à droite. Le flux est un **arbre**
+(`EtapeFlux` avec `branches` et `corps`) : la disposition se calcule au rendu, elle
+n'est pas une donnée — c'est ce qui permet d'insérer une étape sans rien déplacer.
+Le canevas se recentre au montage, sinon un écran étroit s'ouvre à côté du flux.
+
+**Pas d'interface de conversation.** C'est la règle « ne jamais reconstruire l'écran
+principal d'un produit existant » appliquée ici : un agent se construit, s'observe
+et se borne dans le portail ; il se parle sur son canal publié — widget, WhatsApp,
+SMS, voix, API. Le portail n'affiche pas non plus le contenu des bases de
+connaissances : ni visionneuse, ni recherche plein texte.
+
+Le catalogue de modèles reste **maître-détail dans la page** (cartes + `Tabs`), pas
+en panneau persistant : on compare des modèles avant d'en ouvrir un. L'univers garde
+la borne de 1400 px.
 
 ## Décisions déjà arbitrées
 
