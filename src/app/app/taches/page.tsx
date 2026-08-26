@@ -9,27 +9,13 @@ import { Badge } from '@/components/ui/badge'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable, type Colonne } from '@/components/composition/data-table'
-import { useCollection } from '@/components/app/atelier'
+import { LIBELLE_STATUT_JOB, TON_STATUT_JOB } from '@/lib/workflows'
+import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
-
-const LIBELLE_STATUT: Record<ProvisioningJob['statut'], string> = {
-  queued: 'En file',
-  running: 'En cours',
-  done: 'Terminé',
-  failed: 'Échec',
-  rolled_back: 'Annulé',
-}
-
-const TON_STATUT: Record<ProvisioningJob['statut'], 'ok' | 'err' | 'warn' | 'info'> = {
-  queued: 'info',
-  running: 'info',
-  done: 'ok',
-  failed: 'err',
-  rolled_back: 'warn',
-}
 
 export default function CentreDeTaches() {
   const jobs = useCollection<ProvisioningJob>('jobs', JOBS)
+  const { reprendreJob } = useAtelier()
 
   const avancement = (j: ProvisioningJob) => {
     const faites = j.taches.filter((t) => t.statut === 'ok').length
@@ -53,8 +39,8 @@ export default function CentreDeTaches() {
       entete: 'État',
       cle: (j) => j.statut,
       rendu: (j) => (
-        <Badge tone={TON_STATUT[j.statut]} size="sm">
-          {LIBELLE_STATUT[j.statut]}
+        <Badge tone={TON_STATUT_JOB[j.statut]} size="sm">
+          {LIBELLE_STATUT_JOB[j.statut]}
         </Badge>
       ),
     },
@@ -108,32 +94,15 @@ export default function CentreDeTaches() {
       aligne: 'right',
       rendu: (j) => (
         <span className="flex items-center justify-end gap-1.5">
-          {j.statut === 'failed' && (
+          {(j.statut === 'failed' || j.statut === 'rolled_back') && (
             <BoutonAction
-              libelle="Relancer"
+              libelle="Reprendre"
               icone={<RotateCw size={13} />}
               operation={{
-                titre: `Relance de « ${j.label} »`,
-                effet: () =>
-                  jobs.modifier(j.id, (job) => ({
-                    statut: 'running',
-                    erreur: undefined,
-                    taches: job.taches.map((t, i) => ({
-                      ...t,
-                      statut: i === 0 ? 'running' : 'pending',
-                      message: undefined,
-                    })),
-                  })),
-                job: {
-                  type: j.type,
-                  label: `Reprise · ${j.label}`,
-                  etapes: j.taches.map((t) => t.nom),
-                },
-                effetFinal: () =>
-                  jobs.modifier(j.id, (job) => ({
-                    statut: 'done',
-                    taches: job.taches.map((t) => ({ ...t, statut: 'ok' })),
-                  })),
+                titre: `Reprise de « ${j.label} »`,
+                detail:
+                  'Le job repart de l’étape échouée. Les étapes déjà réussies ne sont pas rejouées.',
+                effet: () => reprendreJob(j.id),
               }}
             />
           )}
@@ -223,9 +192,9 @@ export default function CentreDeTaches() {
           {
             id: 'statut',
             libelle: 'État',
-            options: (Object.keys(LIBELLE_STATUT) as Array<ProvisioningJob['statut']>).map((s) => ({
+            options: (Object.keys(LIBELLE_STATUT_JOB) as Array<ProvisioningJob['statut']>).map((s) => ({
               value: s,
-              label: LIBELLE_STATUT[s],
+              label: LIBELLE_STATUT_JOB[s],
             })),
           },
         ]}

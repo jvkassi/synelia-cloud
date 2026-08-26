@@ -276,18 +276,8 @@ export default function ComposerServeurs() {
                         detail: `${espace.code} · ${SITE_LABEL[espace.site]} — suivi dans le centre de tâches.`,
                       })
                       lancerJob({
-                        type: 'vm.compose',
-                        label: `Livraison de ${machines} machines · ${espace.code}`,
-                        etapes: [
-                          'Réserver le quota de l’espace',
-                          ...lots.map(
-                            (l) =>
-                              `Provisionner le lot ${l.prefixe} (${l.quantite} machine${l.quantite > 1 ? 's' : ''})`,
-                          ),
-                          'Raccorder les réseaux et les groupes de sécurité',
-                          'Installer les logiciels cochés',
-                          'Poser les sondes de supervision',
-                        ],
+                        workflow: 'vm.compose',
+                        cible: `${machines} machines · ${espace.code}`,
                         alFin: () => {
                           parc.modifierPlusieurs(
                             nouvelles.map((v) => v.id),

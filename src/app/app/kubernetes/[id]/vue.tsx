@@ -164,15 +164,7 @@ users:
                 ton: 'info',
                 titre: `Mise à jour vers ${v.version} lancée`,
                 effet: () => grappes.modifier(cluster.id, { statut: 'updating' }),
-                job: {
-                  type: 'k8s.upgrade',
-                  label: `Mise à jour ${cluster.nom} → ${v.version}`,
-                  etapes: [
-                    'Mettre à jour le control plane',
-                    'Drainer et remplacer les nœuds, un par un',
-                    'Vérifier les modules préqualifiés',
-                  ],
-                },
+                job: { workflow: 'k8s.upgrade', cible: `${cluster.nom} → ${v.version}` },
                 effetFinal: () =>
                   grappes.modifier(cluster.id, {
                     statut: 'running',
@@ -539,15 +531,7 @@ users:
                     action: 'espace.quota.update',
                     ton: 'info',
                     titre: `Mise à jour progressive du pool ${p.nom}`,
-                    job: {
-                      type: 'k8s.pool.roll',
-                      label: `Remplacement des nœuds · ${p.nom}`,
-                      etapes: [
-                        'Créer un nœud à la nouvelle image',
-                        'Drainer un ancien nœud',
-                        'Répéter jusqu’au dernier',
-                      ],
-                    },
+                    job: { workflow: 'k8s.pool.roll', cible: `${cluster.nom} · ${p.nom}` },
                   }}
                 />
                 <IconButton

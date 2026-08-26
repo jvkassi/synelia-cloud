@@ -176,12 +176,7 @@ export function VueVm({ id }: { id: string }) {
                 titre: `Redémarrage de ${vm.nom}`,
                 detail: 'La machine sera de nouveau disponible dans environ 40 secondes.',
                 effet: () => parc.modifier(vm.id, { statut: 'creating' }),
-                job: {
-                  type: 'vm.power',
-                  label: `Redémarrage · ${vm.nom}`,
-                  etapes: ['Arrêt propre du système', 'Rallumage', 'Attente des agents'],
-                  dureeEtapeMs: 900,
-                },
+                job: { workflow: 'vm.power.reboot', cible: vm.nom },
                 effetFinal: () => parc.modifier(vm.id, { statut: 'running' }),
               }}
             />
@@ -231,13 +226,8 @@ export function VueVm({ id }: { id: string }) {
                               ? `Arrêt de ${vm.nom} demandé`
                               : `Démarrage de ${vm.nom} demandé`,
                           job: {
-                            type: 'vm.power',
-                            label: `${vm.statut === 'running' ? 'Arrêt' : 'Démarrage'} · ${vm.nom}`,
-                            etapes:
-                              vm.statut === 'running'
-                                ? ['Arrêt propre du système', 'Libération des verrous de stockage']
-                                : ['Allumage', 'Attente des agents'],
-                            dureeEtapeMs: 900,
+                            workflow: vm.statut === 'running' ? 'vm.power.stop' : 'vm.power.start',
+                            cible: vm.nom,
                           },
                           effetFinal: () =>
                             parc.modifier(vm.id, {
@@ -256,16 +246,7 @@ export function VueVm({ id }: { id: string }) {
                           titre: `Migration à chaud de ${vm.nom}`,
                           detail: 'Aucune interruption de service attendue.',
                           effet: () => parc.modifier(vm.id, { statut: 'migrating' }),
-                          job: {
-                            type: 'vm.migrate',
-                            label: `Migration à chaud · ${vm.nom}`,
-                            etapes: [
-                              'Choisir un hôte de destination',
-                              'Copier la mémoire active',
-                              'Basculer l’exécution',
-                              'Libérer l’hôte d’origine',
-                            ],
-                          },
+                          job: { workflow: 'vm.migrate', cible: vm.nom },
                           effetFinal: () => parc.modifier(vm.id, { statut: 'running' }),
                         }),
                     },
@@ -964,16 +945,7 @@ export function VueVm({ id }: { id: string }) {
                     ton: 'info',
                     titre: 'Restauration lancée',
                     detail: `${v.granularite === 'machine' ? 'Machine entière' : v.granularite === 'volume' ? 'Volume' : 'Fichiers'} · ${v.destination === 'origine' ? 'sur place' : 'vers une autre cible'}`,
-                    job: {
-                      type: 'backup.restore',
-                      label: `Restauration · ${vm.nom}`,
-                      etapes: [
-                        'Monter le point de restauration',
-                        'Copier les données',
-                        'Vérifier l’intégrité',
-                        'Remettre le service en ligne',
-                      ],
-                    },
+                    job: { workflow: 'backup.restore', cible: vm.nom },
                   })}
                 />
               }
@@ -1022,16 +994,7 @@ export function VueVm({ id }: { id: string }) {
                               action: 'backup.restore',
                               ton: 'info',
                               titre: `Restauration du ${dateHeure(p.date)}`,
-                              job: {
-                                type: 'backup.restore',
-                                label: `Restauration ${vm.nom} · ${dateCourte(p.date)}`,
-                                etapes: [
-                                  'Monter le point de restauration',
-                                  'Copier les données',
-                                  'Vérifier l’intégrité',
-                                  'Remettre le service en ligne',
-                                ],
-                              },
+                              job: { workflow: 'backup.restore', cible: `${vm.nom} · ${dateCourte(p.date)}` },
                             }}
                           />
                         </td>
@@ -1265,12 +1228,7 @@ function OngletMateriel({ vm }: { vm: VM }) {
         })),
       ...(redemarrageNecessaire
         ? {
-            job: {
-              type: 'vm.hardware.update',
-              label: `Reconfiguration matérielle · ${vm.nom}`,
-              etapes: ['Arrêt propre', 'Reconfigurer le matériel virtuel', 'Rallumage'],
-              dureeEtapeMs: 900,
-            },
+            job: { workflow: 'vm.resize', cible: vm.nom },
           }
         : {}),
     })

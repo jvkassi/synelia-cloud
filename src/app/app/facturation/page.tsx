@@ -1073,15 +1073,7 @@ export default function Facturation() {
                                     titre: `Devis ${d.numero} accepté`,
                                     detail:
                                       'Les souscriptions correspondantes sont créées et le provisionnement démarre.',
-                                    job: {
-                                      type: 'devis.accept',
-                                      label: `Acceptation du devis ${d.numero}`,
-                                      etapes: [
-                                        'Créer les souscriptions',
-                                        'Provisionner les ressources',
-                                        'Émettre la première facture au prorata',
-                                      ],
-                                    },
+                                    job: { workflow: 'devis.accept', cible: d.numero },
                                   })
                                 }
                               >

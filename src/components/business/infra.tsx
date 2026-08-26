@@ -218,15 +218,7 @@ export function PlacementSlider({
           ton: 'info',
           titre: 'Rééquilibrage de charge lancé',
           detail: 'Migration à chaud des machines entre hyperviseurs, transparente pour le client.',
-          job: {
-            type: 'capacite.rebalance',
-            label: 'Rééquilibrage de la répartition entre backends',
-            etapes: [
-              'Calculer le plan de migration',
-              'Migrer les machines à chaud',
-              'Vérifier l’équilibre atteint',
-            ],
-          },
+          job: { workflow: 'capacite.rebalance', cible: 'la répartition entre backends' },
           effetFinal: () => onAppliquer?.(parts),
         }}
       />

@@ -590,16 +590,7 @@ function OngletPoints() {
               ton: 'info',
               titre: `Restauration de ${p.resourceNom}`,
               detail: `Point du ${dateHeure(p.date)} · ${goHumain(p.tailleGo)}`,
-              job: {
-                type: 'backup.restore',
-                label: `Restauration ${p.resourceNom} · ${dateCourte(p.date)}`,
-                etapes: [
-                  'Monter le point de restauration',
-                  'Copier les données',
-                  'Vérifier l’intégrité',
-                  'Remettre le service en ligne',
-                ],
-              },
+              job: { workflow: 'backup.restore', cible: `${p.resourceNom} · ${dateCourte(p.date)}` },
             }}
           />
           <IconButton
@@ -1161,12 +1152,7 @@ function OngletConformite() {
                   titre: 'Rapport de conformité exporté',
                   detail:
                     'PDF horodaté : état de protection, RPO constaté, règle 3-2-1 et dernier test de restauration par ressource.',
-                  job: {
-                    type: 'compliance.export',
-                    label: 'Export du rapport de conformité des sauvegardes',
-                    etapes: ['Collecter l’état par ressource', 'Composer le rapport', 'Horodater et signer'],
-                    dureeEtapeMs: 900,
-                  },
+                  job: { workflow: 'export.plateforme', cible: 'conformité des sauvegardes' },
                 }}
               />
             }

@@ -195,12 +195,7 @@ export function VueService({ id }: { id: string }) {
                   ton: 'info',
                   titre: `Démarrage de ${service.nom}`,
                   effet: () => services.modifier(service.id, { statut: 'building' }),
-                  job: {
-                    type: 'service.start',
-                    label: `Démarrage · ${service.nom}`,
-                    etapes: ['Allouer les ressources', 'Démarrer le conteneur', 'Attendre la sonde de santé'],
-                    dureeEtapeMs: 900,
-                  },
+                  job: { workflow: 'service.start', cible: service.nom },
                   effetFinal: () => services.modifier(service.id, { statut: 'running' }),
                 }}
               />
@@ -223,12 +218,8 @@ export function VueService({ id }: { id: string }) {
                       : 'Déploiement sans coupure : l’ancienne version sert le trafic jusqu’à la bascule.',
                   effet: () => services.modifier(service.id, { statut: 'building' }),
                   job: {
-                    type: service.type === 'base' ? 'service.restart' : 'service.deploy',
-                    label: `${service.type === 'base' ? 'Redémarrage' : 'Redéploiement'} · ${service.nom}`,
-                    etapes:
-                      service.type === 'base'
-                        ? ['Fermer les connexions', 'Redémarrer le moteur', 'Vérifier la réplication']
-                        : ['Construire l’image', 'Démarrer la nouvelle version', 'Basculer le trafic'],
+                    workflow: service.type === 'base' ? 'component.restart' : 'app.deploy',
+                    cible: service.nom,
                   },
                   effetFinal: () =>
                     services.modifier(service.id, { statut: 'running', derniereMaj: MAINTENANT }),
@@ -636,12 +627,7 @@ function Sauvegardes({ service }: { service: ServiceProjet }) {
                     ton: 'info',
                     titre: `Restauration du ${dateHeure(p.date)}`,
                     detail: 'Une nouvelle base est créée : l’originale n’est jamais écrasée.',
-                    job: {
-                      type: 'base.restore',
-                      label: `Restauration · ${service.nom}`,
-                      etapes: ['Créer la base cible', 'Charger la sauvegarde', 'Vérifier l’intégrité'],
-                      dureeEtapeMs: 1100,
-                    },
+                    job: { workflow: 'web.db.restore', cible: service.nom },
                   }}
                 />
               </div>
@@ -1087,12 +1073,7 @@ export function LigneDomaine({
                 ton: 'info',
                 titre: `Vérification DNS de ${d.hote}`,
                 detail: 'Nos résolveurs sont interrogés sans cache.',
-                job: {
-                  type: 'domaine.verify',
-                  label: `Vérification DNS · ${d.hote}`,
-                  etapes: ['Interroger les résolveurs', 'Émettre le certificat'],
-                  dureeEtapeMs: 900,
-                },
+                job: { workflow: 'domaine.verify', cible: d.hote },
               }}
             />
             {d.verification.verifieLe && (
@@ -1972,15 +1953,7 @@ function Versions({ service }: { service: ServiceProjet }) {
                   ? {
                       ton: 'info',
                       titre: `Mise à jour de ${modele.solution} lancée`,
-                      job: {
-                        type: 'modele.update',
-                        label: `Mise à jour ${modele.solution} · ${service.nom}`,
-                        etapes: [
-                          'Snapshot avant opération',
-                          'Appliquer le nouveau chart',
-                          'Vérifier le démarrage',
-                        ],
-                      },
+                      job: { workflow: 'service.update', cible: service.nom },
                       effetFinal: () =>
                         services.modifier(service.id, { derniereMaj: MAINTENANT }),
                     }
@@ -2082,16 +2055,7 @@ function Reversibilite({ service }: { service: ServiceProjet }) {
                 action: 'compliance.export',
                 titre: `Export de ${modele.solution} demandé`,
                 detail: `Format natif documenté · ${modele.sauvegardeParDefaut.inclut.join(' · ')}. Mise à disposition sous 24 h.`,
-                job: {
-                  type: 'service.export',
-                  label: `Export complet · ${service.nom}`,
-                  etapes: [
-                    'Geler une copie cohérente',
-                    'Exporter au format natif',
-                    'Vérifier la réimportation sur une instance vierge',
-                    'Publier le lien de téléchargement',
-                  ],
-                },
+                job: { workflow: 'export.donnees', cible: service.nom },
               }}
             />
           }

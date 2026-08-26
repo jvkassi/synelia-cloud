@@ -80,18 +80,7 @@ export function VueSauvegarde({ id }: { id: string }) {
                 ton: 'info',
                 titre: 'Sauvegarde lancée',
                 detail: `Exécution hors planning sur ${p.serveur}. Suivi dans le centre de tâches.`,
-                job: {
-                  type: 'sauvegarde.run',
-                  label: `Sauvegarde hors planning · ${p.serveur}`,
-                  etapes: [
-                    'Geler les écritures',
-                    'Copier les fichiers',
-                    'Copier les bases',
-                    ...(p.perimetre.messagerie ? ['Copier la messagerie'] : []),
-                    'Vérifier l’empreinte',
-                  ],
-                  dureeEtapeMs: 900,
-                },
+                job: { workflow: 'web.backup.run', cible: p.serveur },
               }}
             />
             {h && (
@@ -197,16 +186,7 @@ export function VueSauvegarde({ id }: { id: string }) {
                             ton: 'info',
                             titre: `Restauration du ${dateHeure(e.ts)}`,
                             detail: e.contenu.join(' · '),
-                            job: {
-                              type: 'sauvegarde.restore',
-                              label: `Restauration · ${dateCourte(e.ts)}`,
-                              etapes: [
-                                'Monter la sauvegarde',
-                                'Restaurer les fichiers',
-                                'Restaurer la base',
-                                'Vider les caches',
-                              ],
-                            },
+                            job: { workflow: 'web.backup.restore', cible: `${perimetre.toLowerCase()}` },
                           }}
                           confirmation={
                             e.statut === 'ok'
@@ -493,18 +473,7 @@ export function VueSauvegarde({ id }: { id: string }) {
                     ton: 'info',
                     titre: 'Restauration lancée',
                     detail: 'Suivi dans le centre de tâches. Vous serez notifié à la fin.',
-                    job: {
-                      type: 'sauvegarde.restore',
-                      label: `Restauration · ${perimetre.toLowerCase()}`,
-                      etapes: [
-                        'Monter le point de restauration',
-                        `Restaurer ${perimetre.toLowerCase()}`,
-                        destination.startsWith('Par-dessus')
-                          ? 'Remplacer les données de production'
-                          : 'Écrire la copie à côté',
-                        'Vérifier le résultat',
-                      ],
-                    },
+                    job: { workflow: 'web.backup.restore', cible: `${perimetre.toLowerCase()}` },
                     effetFinal: () => setEtape(1),
                   }}
                   confirmation={

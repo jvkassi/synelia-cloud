@@ -346,15 +346,8 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
                   detail: 'La VIP est réservée, les health checks démarrent dans une minute.',
                 })
                 lancerJob({
-                  type: 'lb.create',
-                  label: `Création du load balancer ${nom}`,
-                  etapes: [
-                    'Réserver la VIP',
-                    'Créer les écouteurs',
-                    ...(certAuto ? ['Émettre le certificat ACME'] : []),
-                    'Déclarer le pool de backends',
-                    'Attendre les premiers health checks',
-                  ],
+                  workflow: 'lb.create',
+                  cible: nom,
                   alFin: () => {
                     collection.modifier(nouveau.id, (l) => ({
                       pool: l.pool.map((x) => ({ ...x, sante: 'ok' as const })),

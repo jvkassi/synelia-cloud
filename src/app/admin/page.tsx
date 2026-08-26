@@ -36,7 +36,7 @@ import type { ProvisioningJob } from '@/lib/types'
 export default function VuePlateforme() {
   // Le journal vit dans l'atelier : les actions faites pendant la session s'y
   // ajoutent, refus compris. Sans atelier touché, il retombe sur la graine.
-  const { journal: AUDIT } = useAtelier()
+  const { journal: AUDIT, reprendreJob } = useAtelier()
 
   const jobs = useCollection<ProvisioningJob>('jobs-plateforme', JOBS_PLATEFORME)
   const enSortie = BACKENDS.filter((b) => b.enSortie?.actif)
@@ -387,29 +387,7 @@ export default function VuePlateforme() {
                           ton: 'info',
                           titre: `Reprise de « ${j.label} »`,
                           detail: 'La séquence repart à l’étape qui a échoué, pas depuis le début.',
-                          effet: () =>
-                            jobs.modifier(j.id, (x) => ({
-                              statut: 'running',
-                              erreur: undefined,
-                              taches: x.taches.map((t) =>
-                                t.statut === 'failed'
-                                  ? { ...t, statut: 'running', message: undefined }
-                                  : t,
-                              ),
-                            })),
-                          job: {
-                            type: j.type,
-                            label: `Reprise · ${j.label}`,
-                            etapes: j.taches
-                              .filter((t) => t.statut !== 'ok')
-                              .map((t) => t.nom),
-                            dureeEtapeMs: 1100,
-                          },
-                          effetFinal: () =>
-                            jobs.modifier(j.id, (x) => ({
-                              statut: 'done',
-                              taches: x.taches.map((t) => ({ ...t, statut: 'ok' })),
-                            })),
+                          effet: () => reprendreJob(j.id, 'jobs-plateforme', JOBS_PLATEFORME),
                         }}
                       />
                       <BoutonAction

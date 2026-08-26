@@ -132,16 +132,7 @@ export default function ListeBases() {
                       action: 'service.admin',
                       titre: `${MOTEUR_WEB_LABEL[m.moteur]} en cours d’activation`,
                       detail: `Sur ${m.serveur}. Aucun redémarrage du serveur web n’est nécessaire.`,
-                      job: {
-                        type: 'base.activate',
-                        label: `Activation de ${MOTEUR_WEB_LABEL[m.moteur]} · ${m.serveur}`,
-                        etapes: [
-                          'Installer le moteur',
-                          'Ouvrir le port sur la boucle locale',
-                          'Ajouter au plan de sauvegarde',
-                        ],
-                        dureeEtapeMs: 1100,
-                      },
+                      job: { workflow: 'web.db.enable', cible: `${MOTEUR_WEB_LABEL[m.moteur]} · ${m.serveur}` },
                       effetFinal: () => serveurs.modifier(m.id, { actif: true }),
                     }}
                   />

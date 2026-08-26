@@ -166,17 +166,7 @@ export default function ListeMessageries() {
                     operation={(v) => ({
                       titre: `Messagerie de ${m.domaine} en cours d’activation`,
                       detail: `${v.boites} boîte(s) · ${v.palier}`,
-                      job: {
-                        type: 'messagerie.activate',
-                        label: `Activation de la messagerie · ${m.domaine}`,
-                        etapes: [
-                          'Créer l’instance',
-                          'Poser les enregistrements MX, SPF, DKIM et DMARC',
-                          'Créer les boîtes',
-                          'Déclarer le client SSO',
-                          ...(v.import ? ['Préparer l’import depuis l’ancien fournisseur'] : []),
-                        ],
-                      },
+                      job: { workflow: 'web.email.activate', cible: m.domaine },
                       effetFinal: () =>
                         collection.modifier(m.id, {
                           actif: true,

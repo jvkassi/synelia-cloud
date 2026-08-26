@@ -1054,6 +1054,33 @@ export interface ProvisioningJob {
   dureeS?: number
 }
 
+/**
+ * Définition d'une opération longue. Le texte des étapes appartient au
+ * catalogue (`src/lib/mock/workflows.ts`), pas au site d'appel : deux écrans
+ * qui lancent la même opération doivent raconter la même chose, et les durées
+ * annoncées doivent être plausibles plutôt qu'égales à la cadence d'écran.
+ */
+export interface DefinitionWorkflow {
+  id: string
+  /** Libellé du job. `{cible}` est remplacé par la ressource concernée. */
+  libelle: string
+  portee: 'client' | 'fournisseur'
+  /** Ce qui est déjà engagé au lancement — dit dans la notification de départ. */
+  lancement: string
+  /** Ce qui est acquis à la fin. */
+  fin: string
+  etapes: Array<{ nom: string; dureeS: number; message?: string }>
+  /**
+   * Échec écrit, joué au premier essai seulement : la reprise aboutit. Sans
+   * cela, aucune opération lancée depuis un écran ne montrerait jamais le
+   * diagnostic ni le rollback — ces états n'existeraient que dans les données
+   * figées du jeu de démonstration.
+   */
+  echec?: { etape: number; message: string; suggestion: string; rollback: boolean }
+  /** Où mène la ressource produite, quand elle a une page. */
+  href?: string
+}
+
 // ─── Observabilité (formats encadrés §0.3) ────────────────────────────
 
 export interface EvenementSupervision {

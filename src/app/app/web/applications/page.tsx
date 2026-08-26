@@ -117,17 +117,7 @@ export default function ListeApplications() {
                     securite: { waf: true, bruteForce: true, scanMalware: true },
                     statut: 'installation',
                   }),
-                job: {
-                  type: 'site.install',
-                  label: `Installation de ${v.hote}`,
-                  etapes: [
-                    'Créer la racine et les droits',
-                    'Créer la base et son utilisateur',
-                    `Installer ${v.type}`,
-                    'Déclarer le sous-domaine dans la zone',
-                    'Émettre le certificat',
-                  ],
-                },
+                job: { workflow: 'web.app.install', cible: String(v.hote) },
                 effetFinal: () =>
                   tousSites.modifier(idSite, {
                     statut: 'en_ligne',
@@ -307,17 +297,7 @@ export default function ListeApplications() {
                             statut: 'installation',
                           })
                         : undefined,
-                    job: {
-                      type: 'site.install',
-                      label: `Installation de ${c.nom} · ${hote}`,
-                      etapes: [
-                        'Créer la racine et les droits',
-                        'Créer la base et son utilisateur',
-                        `Installer ${c.nom}`,
-                        'Déclarer le sous-domaine',
-                        'Émettre le certificat',
-                      ],
-                    },
+                    job: { workflow: 'web.app.install', cible: `${c.nom} · ${hote}` },
                     effetFinal: () =>
                       tousSites.modifier(idSite, {
                         statut: 'en_ligne',

@@ -28,17 +28,15 @@ export default function ListeVms() {
   const cycleDeVie = (
     ids: string[],
     libelle: string,
-    etapes: string[],
+    workflow: string,
     statutFinal: VM['statut'],
   ) =>
     executer({
       ton: 'info',
       titre: `${libelle} de ${ids.length} machine${ids.length > 1 ? 's' : ''}`,
       job: {
-        type: 'vm.power',
-        label: `${libelle} · ${ids.length} machine${ids.length > 1 ? 's' : ''}`,
-        etapes,
-        dureeEtapeMs: 900,
+        workflow,
+        cible: `${ids.length} machine${ids.length > 1 ? 's' : ''}`,
       },
       effetFinal: () => parc.modifierPlusieurs(ids, { statut: statutFinal }),
     })
@@ -262,7 +260,7 @@ export default function ListeVms() {
                 variant="secondary"
                 iconBefore={<Power size={13} />}
                 onClick={() =>
-                  cycleDeVie(ids, 'Démarrage', ['Allumer la machine', 'Attendre les agents'], 'running')
+                  cycleDeVie(ids, 'Démarrage', 'vm.power.start', 'running')
                 }
               >
                 Démarrer
@@ -274,12 +272,7 @@ export default function ListeVms() {
                 variant="secondary"
                 iconBefore={<Power size={13} />}
                 onClick={() =>
-                  cycleDeVie(
-                    ids,
-                    'Arrêt',
-                    ['Demander un arrêt propre au système', 'Libérer les verrous de stockage'],
-                    'stopped',
-                  )
+                  cycleDeVie(ids, 'Arrêt', 'vm.power.stop', 'stopped')
                 }
               >
                 Arrêter
@@ -291,12 +284,7 @@ export default function ListeVms() {
                 variant="secondary"
                 iconBefore={<RotateCw size={13} />}
                 onClick={() =>
-                  cycleDeVie(
-                    ids,
-                    'Redémarrage',
-                    ['Arrêt propre', 'Rallumage', 'Attendre les agents'],
-                    'running',
-                  )
+                  cycleDeVie(ids, 'Redémarrage', 'vm.power.reboot', 'running')
                 }
               >
                 Redémarrer
@@ -312,12 +300,7 @@ export default function ListeVms() {
                     titre: `Snapshot de ${ids.length} machine${ids.length > 1 ? 's' : ''} demandé`,
                     detail:
                       'Un snapshot n’est pas une sauvegarde : il vit sur le même stockage que la machine.',
-                    job: {
-                      type: 'vm.snapshot',
-                      label: `Snapshot · ${ids.length} machine${ids.length > 1 ? 's' : ''}`,
-                      etapes: ['Geler les écritures', 'Capturer les disques', 'Reprendre les écritures'],
-                      dureeEtapeMs: 900,
-                    },
+                    job: { workflow: 'vm.snapshot', cible: `${ids.length} machine${ids.length > 1 ? 's' : ''}` },
                   })
                 }
               >

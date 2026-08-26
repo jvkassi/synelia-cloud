@@ -1075,16 +1075,7 @@ export function VueOrganisation({ id }: { id: string }) {
                         titre: `Procédure de clôture ouverte pour ${org.nom}`,
                         detail:
                           '30 jours de récupération, 30 jours de conservation en lecture, puis effacement avec attestation. Rien n’est supprimé aujourd’hui.',
-                        job: {
-                          type: 'org.closure',
-                          label: `Clôture de ${org.nom}`,
-                          etapes: [
-                            'Notifier le client',
-                            'Ouvrir la fenêtre de récupération des données',
-                            'Geler les souscriptions à la prochaine échéance',
-                          ],
-                          dureeEtapeMs: 1100,
-                        },
+                        job: { workflow: 'compte.cloture', cible: org.nom },
                       }}
                       confirmation={{
                         ressource: org.nom,

@@ -119,16 +119,7 @@ export function VueDrive({ id }: { id: string }) {
                   action: 'service.admin',
                   titre: `Drive de ${d.domaine} en cours d’activation`,
                   detail: `${money(d.prixSiege)} par siège et par mois.`,
-                  job: {
-                    type: 'drive.activate',
-                    label: `Activation du drive · ${d.domaine}`,
-                    etapes: [
-                      'Créer l’instance',
-                      `Poser le certificat sur ${d.hote}`,
-                      'Déclarer le client SSO',
-                      'Appliquer le plan de sauvegarde',
-                    ],
-                  },
+                  job: { workflow: 'web.drive.activate', cible: d.domaine },
                   effetFinal: () => drives.modifier(d.id, { actif: true }),
                 }}
               />

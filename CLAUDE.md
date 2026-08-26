@@ -201,10 +201,10 @@ fichiers). **Le générique a été retenu à la fusion** : le même mécanisme 
 vitrine, l'espace client et l'espace fournisseur, et une collection ne se
 déclare pas au préalable.
 
-Ce que l'autre faisait de mieux, et qui reste à reprendre : `useActe()` écrivait
-**la trace au journal d'audit** en même temps que la mutation et la
-notification. `useOperation()` ne journalise pas encore. Séparer les trois, c'est
-se garantir qu'un jour l'une des trois manquera — en pratique, la trace.
+Ce que l'autre faisait de mieux a depuis été reprise : `useOperation()` écrit la
+trace au journal d'audit en même temps que la mutation et la notification, et il
+journalise aussi les refus du RBAC — c'est la seule trace qu'un auditeur ne peut
+pas reconstituer autrement.
 
 Deux règles de l'autre atelier restent vraies ici, et sont déjà appliquées :
 
@@ -217,6 +217,44 @@ Deux règles de l'autre atelier restent vraies ici, et sont déjà appliquées :
   trouve pas — `ProjetIntrouvable` pour l'univers Applications. Corollaire : la
   vue relit l'entité dans la collection et tolère son absence, donc pas de `!`
   sur un `find`, et la garde se place **après** tous les hooks.
+
+### Le catalogue des opérations longues
+
+`src/lib/mock/workflows.ts` décrit les opérations qui prennent du temps : les
+étapes, leurs **durées annoncées**, la phrase de départ, celle de fin, et un
+échec facultatif. `src/lib/workflows.ts` porte la mécanique. Un site d'appel
+n'écrit plus la séquence :
+
+```tsx
+job: { workflow: 'backup.restore', cible: `${p.resourceNom} · ${dateCourte(p.date)}` }
+```
+
+Trois raisons, et ce sont trois règles à tenir :
+
+1. **Le texte appartient au catalogue, pas au site d'appel.** La restauration
+   d'un point de sauvegarde se lançait depuis quatre écrans qui recopiaient la
+   même liste d'étapes ; il suffisait d'en corriger trois pour que le portail se
+   contredise.
+2. **Les durées sont plausibles.** Le temps d'écran reste constant (~11 s) mais
+   se répartit entre les étapes **au prorata de leurs durées annoncées** : copier
+   une image système ne s'affiche plus comme durant une seconde, et une étape
+   longue paraît longue.
+3. **Deux workflows échouent volontairement au premier essai** — validation DNS
+   d'un certificat, conversion de disque d'un lot de migration. Sans cela, les
+   états `failed` et `rolled_back` et le champ `erreur` ne se voyaient que sur
+   les jobs figés du jeu de données : aucune opération lancée depuis un écran ne
+   montrait jamais un diagnostic. La reprise, elle, aboutit.
+
+`reprendreJob(id)` reprend **à l'étape échouée**, sur le job lui-même : les
+étapes déjà réussies ne sont pas rejouées. Et `effetFinal` ne s'applique qu'en
+cas de succès — un renouvellement de certificat qui échoue laisse le certificat
+« en émission », il ne le marque pas actif.
+
+La forme sans catalogue (`etapes: string[]` au site d'appel) reste disponible et
+reste juste quand les étapes **dépendent d'un choix de l'utilisateur** : la
+restauration granulaire nomme l'étape « Parcourir l'arborescence » ou « Copier
+les données » selon la granularité choisie. Une cinquantaine de sites sont dans
+ce cas ; ne les forcez pas dans le catalogue, la variation est l'information.
 
 ### Les exports
 

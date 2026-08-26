@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, RotateCcw } from 'lucide-react'
 import { relatif } from '@/lib/format'
 import type { ProvisioningJob } from '@/lib/types'
 import { JOBS, JOBS_PLATEFORME, TACHES_PROVISIONING } from '@/lib/mock'
@@ -10,7 +10,8 @@ import { ButtonLink } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/composition/states'
 import { JobTracker } from '@/components/business/paas'
-import { useCollection } from '@/components/app/atelier'
+import { LIBELLE_STATUT_JOB, TON_STATUT_JOB } from '@/lib/workflows'
+import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
 
 /**
@@ -20,6 +21,7 @@ import { BoutonAction } from '@/components/app/actions'
  */
 export function VueSuiviTache({ id }: { id: string }) {
   const jobs = useCollection<ProvisioningJob>('jobs', JOBS)
+  const { reprendreJob } = useAtelier()
   const job = jobs.items.find((j) => j.id === id) ?? JOBS_PLATEFORME.find((j) => j.id === id)
 
   if (!job) {
@@ -56,33 +58,17 @@ export function VueSuiviTache({ id }: { id: string }) {
         sousTitre="L’orchestrateur exécute les tâches séquentiellement. Vous pouvez quitter cette page à tout moment : le centre de tâches conserve le suivi et une notification signalera la fin."
         actions={
           <>
-            {job.statut === 'failed' && (
+            {(job.statut === 'failed' || job.statut === 'rolled_back') && (
               <BoutonAction
-                libelle="Relancer la tâche"
+                libelle="Reprendre à l’étape échouée"
                 variant="primary"
                 size="md"
+                icone={<RotateCcw size={14} />}
                 operation={{
-                  titre: `Relance de « ${job.label} »`,
-                  effet: () =>
-                    jobs.modifier(job.id, (j) => ({
-                      statut: 'running',
-                      erreur: undefined,
-                      taches: j.taches.map((t, i) => ({
-                        ...t,
-                        statut: i === 0 ? 'running' : 'pending',
-                        message: undefined,
-                      })),
-                    })),
-                  job: {
-                    type: job.type,
-                    label: `Reprise · ${job.label}`,
-                    etapes: job.taches.map((t) => t.nom),
-                  },
-                  effetFinal: () =>
-                    jobs.modifier(job.id, (j) => ({
-                      statut: 'done',
-                      taches: j.taches.map((t) => ({ ...t, statut: 'ok' })),
-                    })),
+                  titre: `Reprise de « ${job.label} »`,
+                  detail:
+                    'Le job repart de l’étape échouée. Les étapes déjà réussies ne sont pas rejouées.',
+                  effet: () => reprendreJob(job.id),
                 }}
               />
             )}
@@ -164,28 +150,8 @@ export function VueSuiviTache({ id }: { id: string }) {
                         </span>
                         <span className="block text-[11px] text-g-500">{relatif(j.startedAt)}</span>
                       </span>
-                      <Badge
-                        size="sm"
-                        tone={
-                          j.statut === 'done'
-                            ? 'ok'
-                            : j.statut === 'failed'
-                              ? 'err'
-                              : j.statut === 'rolled_back'
-                                ? 'warn'
-                                : 'info'
-                        }
-                        className="mt-0.5 shrink-0"
-                      >
-                        {
-                          {
-                            queued: 'En file',
-                            running: 'En cours',
-                            done: 'Prêt',
-                            failed: 'Échec',
-                            rolled_back: 'Restauré',
-                          }[j.statut]
-                        }
+                      <Badge size="sm" tone={TON_STATUT_JOB[j.statut]} className="mt-0.5 shrink-0">
+                        {LIBELLE_STATUT_JOB[j.statut]}
                       </Badge>
                     </Link>
                   </li>

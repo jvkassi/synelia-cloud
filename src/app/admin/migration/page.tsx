@@ -757,20 +757,8 @@ export default function Migration() {
               action: 'capacity.manage',
               ton: 'info',
               titre: `${cible.nom} lancée`,
-              detail:
-                'Les migrations à chaud démarrent immédiatement. Les autres sont réparties dans les fenêtres de maintenance déclarées par chaque client.',
               effet: () => vagues.modifier(cible.id, { statut: 'en_cours', avancement: 4 }),
-              job: {
-                type: 'migration.vague',
-                label: `Migration · ${cible.nom}`,
-                etapes: [
-                  `Préparer ${cible.machines} machines sur ${cible.cible}`,
-                  'Migrer les machines à chaud',
-                  ...(cible.mode === 'chaud' ? [] : ['Migrer à froid les machines restantes']),
-                  'Vérifier la santé sur le socle cible',
-                  'Libérer la capacité du socle source',
-                ],
-              },
+              job: { workflow: 'migration.lot', cible: cible.nom },
               effetFinal: () =>
                 vagues.modifier(cible.id, { statut: 'terminee', avancement: 100 }),
             })

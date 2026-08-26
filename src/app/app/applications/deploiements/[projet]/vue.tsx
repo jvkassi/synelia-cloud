@@ -214,15 +214,7 @@ export function VueDeploiements({ id }: { id: string }) {
                             action: 'app.rollback',
                             titre: 'Retour arrière déclenché',
                             detail: `L’artefact précédent de ${appById(d.appId)?.nom} est repromu. Aucun rebuild : la bascule prend quelques secondes.`,
-                            job: {
-                              type: 'app.rollback',
-                              label: `Retour arrière · ${appById(d.appId)?.nom ?? d.appId} ${d.version}`,
-                              etapes: [
-                                'Repromouvoir l’artefact précédent',
-                                'Basculer le trafic',
-                                'Vérifier les sondes de vivacité',
-                              ],
-                            },
+                            job: { workflow: 'app.rollback', cible: `${appById(d.appId)?.nom ?? d.appId} ${d.version}` },
                             // Le déploiement annulé n'est pas effacé : l'historique
                             // doit dire qu'il a existé, et qu'on est revenu en arrière.
                             effetFinal: () => {

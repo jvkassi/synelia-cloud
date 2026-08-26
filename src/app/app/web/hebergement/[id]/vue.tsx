@@ -181,17 +181,7 @@ export function VueHebergement({ id }: { id: string }) {
                       securite: { waf: true, bruteForce: true, scanMalware: true },
                       statut: 'installation',
                     }),
-                  job: {
-                    type: 'site.install',
-                    label: `Installation de ${v.hote}`,
-                    etapes: [
-                      'Créer la racine et les droits',
-                      ...(v.base ? ['Créer la base et son utilisateur'] : []),
-                      `Installer ${v.type}`,
-                      'Déclarer le sous-domaine dans la zone',
-                      'Émettre le certificat',
-                    ],
-                  },
+                  job: { workflow: 'web.app.install', cible: String(v.hote) },
                   effetFinal: () =>
                     tousSites.modifier(idSite, {
                       statut: 'en_ligne',

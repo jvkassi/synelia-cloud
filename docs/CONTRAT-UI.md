@@ -263,6 +263,38 @@ const espace = useEspace()   // EspaceCloud sélectionné
 d'infobulle. Disponible uniquement dans un composant `'use client'` sous
 `/app` ou `/admin`.
 
+### Agir sur une ressource — `@/components/app/actions`
+
+```tsx
+<BoutonAction operation={{ action, titre, effet, job, effetFinal }} libelle confirmation />
+<BoutonFormulaire champs={[…]} operation={(v) => ({ … })} libelle titre action />
+const executer = useOperation()   // depuis un onClick existant
+```
+`useOperation()` enchaîne RBAC → mutation → notification → job → trace d'audit,
+refus compris. N'écrivez pas cette séquence à la main.
+
+### Opérations longues — le catalogue
+
+**Toute opération qui prend plus de quelques secondes se déclare par son
+identifiant de catalogue**, jamais par une liste d'étapes recopiée :
+
+```tsx
+job: { workflow: 'backup.restore', cible: `${p.resourceNom} · ${dateCourte(p.date)}` }
+```
+
+Le libellé (`{cible}` substitué), les étapes, leurs durées annoncées, les phrases
+de départ et de fin et l'échec éventuel vivent dans `WORKFLOWS`
+(`src/lib/mock/workflows.ts`). Ajouter une opération = une entrée là-bas.
+
+- Le temps d'écran est constant (~11 s) et se répartit entre les étapes au
+  prorata de leurs durées annoncées.
+- `effetFinal` ne s'applique qu'en cas de succès : une opération qui échoue ne
+  doit pas faire apparaître la ressource.
+- `reprendreJob(id)` (de `useAtelier()`) reprend à l'étape échouée, sur le job
+  lui-même.
+- La forme `etapes: string[]` reste juste quand les étapes dépendent d'un choix
+  de l'utilisateur. Sinon, catalogue.
+
 ---
 
 ## 4. Formatage — `@/lib/format`
