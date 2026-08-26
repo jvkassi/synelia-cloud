@@ -71,6 +71,23 @@ export const UNIVERS_CLIENT: UniversNav[] = [
     ],
   },
   {
+    id: 'ia',
+    nom: 'IA & Modèles',
+    sections: [
+      // Même patron que Web Cloud : une entrée de tableau de bord, puis une
+      // section par objet manipulable. La passerelle est le cœur de l'offre —
+      // le catalogue la précède parce qu'on choisit un modèle avant d'ouvrir
+      // un accès pour l'appeler.
+      { nom: 'Accueil', href: '/app/ia' },
+      { nom: 'Catalogue de modèles', href: '/app/ia/modeles' },
+      { nom: 'Passerelle & clés', href: '/app/ia/passerelle' },
+      { nom: 'Routage & garde-fous', href: '/app/ia/routage' },
+      { nom: 'Bases de connaissances', href: '/app/ia/connaissances' },
+      { nom: 'Inférence dédiée', href: '/app/ia/inference' },
+      { nom: 'Consommation & coûts', href: '/app/ia/consommation' },
+    ],
+  },
+  {
     id: 'web',
     nom: 'Web Cloud',
     sections: [
@@ -123,6 +140,9 @@ export const UNIVERS_FOURNISSEUR: UniversNav[] = [
     nom: 'Infrastructure',
     sections: [
       { nom: 'Capacité & backends', href: '/admin/capacite' },
+      // Le parc GPU se pilote à part : sa contrainte n'est pas le vCPU mais la
+      // VRAM, et sa marge dépend autant des contrats fournisseurs que du matériel.
+      { nom: 'Parc GPU & IA', href: '/admin/ia' },
       { nom: 'Sites & zones', href: '/admin/sites' },
       { nom: 'Migration inter-backend', href: '/admin/migration' },
     ],

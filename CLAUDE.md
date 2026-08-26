@@ -15,7 +15,7 @@ décisions déjà prises.
 |---|---|
 | Paquets | `bun install` — **bun 1.4.0**, `bun.lock` fait foi, pas de npm |
 | Développement | `bun run dev` — Next avec Turbopack |
-| Construction | `bun run build` — Turbopack, ~32 s pour 128 routes |
+| Construction | `bun run build` — Turbopack, ~32 s pour 136 routes |
 | Comparaison | `bun run build:webpack` — ~50 s, gardé pour lever un doute |
 | Types | `bun run typecheck` |
 | Lint | `bun run lint` |
@@ -27,7 +27,7 @@ l'installation locale de la distante. Ne remettez pas de caret.
 
 ### L'audit
 
-`outils/audit.mjs` ouvre les 128 routes de `outils/routes.json` dans Chromium et
+`outils/audit.mjs` ouvre les 136 routes de `outils/routes.json` dans Chromium et
 relève : erreurs console et HTTP, débordement horizontal, contraste sous le seuil
 WCAG AA, boutons sans nom accessible, titres d'onglet laissés par défaut.
 
@@ -87,7 +87,7 @@ Deux barres, pas de barre latérale de navigation. `src/lib/navigation.ts` porte
 modèle ; `topbar.tsx` le rend.
 
 - **Barre 1** : les univers. Client — `Global · Infrastructure · Applications ·
-  Web Cloud · IAM & sécurité`. Fournisseur — `Pilotage · Clients ·
+  IA & Modèles · Web Cloud · IAM & sécurité`. Fournisseur — `Pilotage · Clients ·
   Infrastructure · Produit · Finance · Exploitation`.
 - **Barre 2** : les sections de l'univers courant.
 
@@ -113,6 +113,35 @@ paragraphe de 1900 px ne se lit pas.
 Elle évite le défaut des portails qui vendent le nom, l'hébergement et la
 messagerie séparément : chez eux le même nom réapparaît dans trois listes et
 aucune page ne dit tout ce qui le concerne.
+
+### IA & Modèles
+
+Sept sections : `Accueil · Catalogue de modèles · Passerelle & clés · Routage &
+garde-fous · Bases de connaissances · Inférence dédiée · Consommation & coûts`.
+Contrepartie fournisseur : `/admin/ia`, dans l'univers Infrastructure. Données
+dans `src/lib/mock/ia.ts`.
+
+L'offre est une **passerelle compatible OpenAI**, pas un modèle : une URL, une
+clé par application, et derrière elle des modèles à poids ouverts servis sur nos
+GPU d'Abidjan et de Grand-Bassam, plus des modèles de fournisseurs étrangers sous
+contrat cadre.
+
+**La résidence est la propriété structurante.** Chaque modèle porte un champ
+`hebergement` (`souverain` ou `externe`) et chaque requête une classe de données
+(`publique · interne · personnelle · reglementee`). `MATRICE_RESIDENCE` croise les
+deux. Un écran qui parle d'un modèle externe doit dire où part la requête — c'est
+la même honnêteté que `/souverainete` pour les socles en sortie.
+
+**Pas d'interface de conversation, pas de banc d'essai.** C'est la règle « ne
+jamais reconstruire l'écran principal d'un produit existant » appliquée ici : le
+portail provisionne les accès, route, plafonne et trace. Il n'affiche pas non plus
+le contenu des bases de connaissances — ni visionneuse, ni recherche plein texte :
+la source reste dans le Drive, le bucket ou le dépôt qui l'héberge.
+
+Le catalogue reste **maître-détail dans la page** (cartes + `Tabs`), pas en
+panneau persistant : on compare des modèles avant d'en ouvrir un, alors que dans
+Web Cloud on travaille sur une ressource choisie une fois pour toutes. L'univers
+garde donc la borne de 1400 px.
 
 ## Décisions déjà arbitrées
 

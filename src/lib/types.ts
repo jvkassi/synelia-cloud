@@ -1097,3 +1097,157 @@ export interface Incident {
   sites: Site[]
   mises_a_jour: Array<{ ts: string; texte: string }>
 }
+
+// ─── Intelligence artificielle — passerelle et modèles ────────────────
+
+/**
+ * Où le calcul a réellement lieu. C'est la propriété structurante de l'offre :
+ * un modèle « souverain » tourne sur nos GPU, à Abidjan ou à Grand-Bassam, et
+ * la requête ne quitte jamais le territoire ; un modèle « externe » est appelé
+ * chez son éditeur, et cela se dit.
+ */
+export type HebergementModele = 'souverain' | 'externe'
+
+export type FamilleModele =
+  | 'texte'
+  | 'code'
+  | 'embedding'
+  | 'reranker'
+  | 'vision'
+  | 'transcription'
+
+export const FAMILLE_MODELE_LABEL: Record<FamilleModele, string> = {
+  texte: 'Génération de texte',
+  code: 'Assistance au code',
+  embedding: 'Vectorisation',
+  reranker: 'Reclassement',
+  vision: 'Analyse d’image',
+  transcription: 'Transcription audio',
+}
+
+/** Classes de données du client, du plus ouvert au plus contraint. */
+export type ClasseDonnees = 'publique' | 'interne' | 'personnelle' | 'reglementee'
+
+export const CLASSE_DONNEES_LABEL: Record<ClasseDonnees, string> = {
+  publique: 'Publique',
+  interne: 'Interne',
+  personnelle: 'À caractère personnel',
+  reglementee: 'Réglementée',
+}
+
+export interface ModeleIA {
+  id: string
+  /** Identifiant appelé dans l'API, sans espace ni accent. */
+  slug: string
+  nom: string
+  editeur: string
+  famille: FamilleModele
+  hebergement: HebergementModele
+  /** Site physique pour un modèle souverain, juridiction pour un modèle externe. */
+  residence: string
+  site?: Site
+  parametres?: string
+  licence: string
+  contexteJetons: number
+  /** Prix pour un million de jetons, en FCFA. */
+  prixEntree: number
+  prixSortie: number
+  /** Certains modèles se facturent à la minute d'audio, pas au jeton. */
+  unite: 'jeton' | 'minute'
+  latenceP50Ms: number
+  debitJetonsSec: number
+  statut: 'disponible' | 'apercu' | 'degrade' | 'retire'
+  /** Version successeur annoncée, pour les modèles en fin de vie. */
+  remplacePar?: string
+  finDeVie?: string
+  usages: string[]
+  description: string
+}
+
+export interface CleIA {
+  id: string
+  nom: string
+  prefixe: string
+  espaceId: string
+  /** Application ou équipe qui porte la clé — sert au showback. */
+  usage: string
+  modelesAutorises: string[] | 'tous'
+  quotaJetonsMois: number
+  jetonsConsommes: number
+  debitMaxParMinute: number
+  budgetMensuel: number
+  budgetConsomme: number
+  /** Comportement au dépassement : couper, ou laisser passer en alertant. */
+  auDepassement: 'bloquer' | 'alerter'
+  residenceMax: ClasseDonnees
+  statut: 'active' | 'suspendue' | 'revoquee'
+  creeeLe: string
+  creeePar: string
+  derniereUtilisation?: string
+}
+
+export interface RegleRoutage {
+  id: string
+  ordre: number
+  nom: string
+  /** Condition lisible : clé, famille de modèle demandée, classe de données. */
+  quand: string
+  cible: string
+  repli: string[]
+  /** Une règle peut interdire toute sortie du territoire, quoi qu'il arrive. */
+  residenceImposee: boolean
+  actif: boolean
+  requetes24h: number
+  replisDeclenches24h: number
+}
+
+export interface GardeFou {
+  id: string
+  nom: string
+  type: 'pii' | 'secret' | 'injection' | 'toxicite' | 'sujet'
+  sens: 'entree' | 'sortie' | 'les_deux'
+  action: 'bloquer' | 'masquer' | 'journaliser'
+  actif: boolean
+  declenchements24h: number
+  description: string
+}
+
+export interface BaseConnaissance {
+  id: string
+  nom: string
+  espaceId: string
+  /** D'où viennent les documents — nous ne les hébergeons pas en double. */
+  source: { type: 's3' | 'drive' | 'web' | 'git'; libelle: string }
+  documents: number
+  fragments: number
+  modeleEmbedding: string
+  dimension: number
+  tailleMo: number
+  frequence: 'manuelle' | 'quotidienne' | 'horaire'
+  derniereIndexation: string
+  statut: 'a_jour' | 'indexation' | 'erreur' | 'jamais_indexee'
+  clesAutorisees: string[]
+  erreur?: string
+}
+
+export interface PointInference {
+  id: string
+  nom: string
+  modeleId: string
+  espaceId: string
+  site: Site
+  gpu: 'L40S' | 'H100' | 'A100'
+  gpuParReplica: number
+  replicas: number
+  replicasMin: number
+  replicasMax: number
+  /** Une mise à l'échelle jusqu'à zéro économise, au prix d'un démarrage à froid. */
+  veilleAutorisee: boolean
+  demarrageAFroidS: number
+  utilisationGpuPct: number
+  latenceP50Ms: number
+  debitJetonsSec: number
+  coutHeure: number
+  statut: 'en_ligne' | 'demarrage' | 'en_veille' | 'erreur'
+  creeLe: string
+}
