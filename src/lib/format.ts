@@ -68,6 +68,18 @@ export function goHumain(go: number): string {
   return `${groupe(go, go < 10 ? 1 : 0)}${NBSP}Go`
 }
 
+/**
+ * Compteur de jetons : « 612,4 M », « 4,18 Md ». Les volumes d'inférence se
+ * comptent en centaines de millions — les afficher au chiffre près donnerait
+ * une précision que la mesure n'a pas.
+ */
+export function jetons(valeur: number): string {
+  if (valeur >= 1_000_000_000) return `${groupe(valeur / 1_000_000_000, 2)}${NBSP}Md`
+  if (valeur >= 1_000_000) return `${groupe(valeur / 1_000_000, 1)}${NBSP}M`
+  if (valeur >= 1_000) return `${groupe(valeur / 1_000, 0)}${NBSP}k`
+  return groupe(valeur, 0)
+}
+
 /** « 7,1 To » */
 export function toHumain(to: number): string {
   return `${groupe(to, 1)}${NBSP}To`

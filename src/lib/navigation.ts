@@ -158,6 +158,25 @@ export const UNIVERS_CLIENT: UniversNav[] = [
     ],
   },
   {
+    id: 'ia',
+    nom: 'IA & Agents',
+    sections: [
+      // L'ordre suit celui du travail : on construit un agent, on l'orchestre,
+      // on le relie au monde — puis viennent les rouages qui le font tourner,
+      // modèles, passerelle, routage, connaissances, GPU et facture.
+      { nom: 'Accueil', href: '/app/ia' },
+      { nom: 'Agents', href: '/app/ia/agents' },
+      { nom: 'Orchestration', href: '/app/ia/orchestration' },
+      { nom: 'Outils & canaux', href: '/app/ia/outils' },
+      { nom: 'Catalogue de modèles', href: '/app/ia/modeles' },
+      { nom: 'Passerelle & clés', href: '/app/ia/passerelle' },
+      { nom: 'Routage & garde-fous', href: '/app/ia/routage' },
+      { nom: 'Bases de connaissances', href: '/app/ia/connaissances' },
+      { nom: 'Inférence dédiée', href: '/app/ia/inference' },
+      { nom: 'Consommation & coûts', href: '/app/ia/consommation' },
+    ],
+  },
+  {
     id: 'web',
     nom: 'Web Cloud',
     pleineLargeur: true,
@@ -216,6 +235,9 @@ export const UNIVERS_SUPER_ADMIN: UniversNav[] = [
     nom: 'Infrastructure',
     sections: [
       { nom: 'Capacité & backends', href: '/admin/capacite' },
+      // Le parc GPU se pilote à part : sa contrainte n'est pas le vCPU mais la
+      // VRAM, et sa marge dépend autant des contrats fournisseurs que du matériel.
+      { nom: 'Parc GPU & IA', href: '/admin/ia' },
       { nom: 'Sites & zones', href: '/admin/sites' },
       { nom: 'Migration inter-backend', href: '/admin/migration' },
     ],

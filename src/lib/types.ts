@@ -1097,3 +1097,430 @@ export interface Incident {
   sites: Site[]
   mises_a_jour: Array<{ ts: string; texte: string }>
 }
+
+// ─── Intelligence artificielle — passerelle et modèles ────────────────
+
+/**
+ * Où le calcul a réellement lieu. C'est la propriété structurante de l'offre :
+ * un modèle « souverain » tourne sur nos GPU, à Abidjan ou à Grand-Bassam, et
+ * la requête ne quitte jamais le territoire ; un modèle « externe » est appelé
+ * chez son éditeur, et cela se dit.
+ */
+export type HebergementModele = 'souverain' | 'externe'
+
+export type FamilleModele =
+  | 'texte'
+  | 'code'
+  | 'embedding'
+  | 'reranker'
+  | 'vision'
+  | 'transcription'
+
+export const FAMILLE_MODELE_LABEL: Record<FamilleModele, string> = {
+  texte: 'Génération de texte',
+  code: 'Assistance au code',
+  embedding: 'Vectorisation',
+  reranker: 'Reclassement',
+  vision: 'Analyse d’image',
+  transcription: 'Transcription audio',
+}
+
+/** Classes de données du client, du plus ouvert au plus contraint. */
+export type ClasseDonnees = 'publique' | 'interne' | 'personnelle' | 'reglementee'
+
+export const CLASSE_DONNEES_LABEL: Record<ClasseDonnees, string> = {
+  publique: 'Publique',
+  interne: 'Interne',
+  personnelle: 'À caractère personnel',
+  reglementee: 'Réglementée',
+}
+
+export interface ModeleIA {
+  id: string
+  /** Identifiant appelé dans l'API, sans espace ni accent. */
+  slug: string
+  nom: string
+  editeur: string
+  famille: FamilleModele
+  hebergement: HebergementModele
+  /** Site physique pour un modèle souverain, juridiction pour un modèle externe. */
+  residence: string
+  site?: Site
+  parametres?: string
+  licence: string
+  contexteJetons: number
+  /** Prix pour un million de jetons, en FCFA. */
+  prixEntree: number
+  prixSortie: number
+  /** Certains modèles se facturent à la minute d'audio, pas au jeton. */
+  unite: 'jeton' | 'minute'
+  latenceP50Ms: number
+  debitJetonsSec: number
+  statut: 'disponible' | 'apercu' | 'degrade' | 'retire'
+  /** Version successeur annoncée, pour les modèles en fin de vie. */
+  remplacePar?: string
+  finDeVie?: string
+  usages: string[]
+  description: string
+}
+
+export interface CleIA {
+  id: string
+  nom: string
+  prefixe: string
+  espaceId: string
+  /** Application ou équipe qui porte la clé — sert au showback. */
+  usage: string
+  modelesAutorises: string[] | 'tous'
+  quotaJetonsMois: number
+  jetonsConsommes: number
+  debitMaxParMinute: number
+  budgetMensuel: number
+  budgetConsomme: number
+  /** Comportement au dépassement : couper, ou laisser passer en alertant. */
+  auDepassement: 'bloquer' | 'alerter'
+  residenceMax: ClasseDonnees
+  statut: 'active' | 'suspendue' | 'revoquee'
+  creeeLe: string
+  creeePar: string
+  derniereUtilisation?: string
+}
+
+export interface RegleRoutage {
+  id: string
+  ordre: number
+  nom: string
+  /** Condition lisible : clé, famille de modèle demandée, classe de données. */
+  quand: string
+  cible: string
+  repli: string[]
+  /** Une règle peut interdire toute sortie du territoire, quoi qu'il arrive. */
+  residenceImposee: boolean
+  actif: boolean
+  requetes24h: number
+  replisDeclenches24h: number
+}
+
+export interface GardeFou {
+  id: string
+  nom: string
+  type: 'pii' | 'secret' | 'injection' | 'toxicite' | 'sujet'
+  sens: 'entree' | 'sortie' | 'les_deux'
+  action: 'bloquer' | 'masquer' | 'journaliser'
+  actif: boolean
+  declenchements24h: number
+  description: string
+}
+
+export interface BaseConnaissance {
+  id: string
+  nom: string
+  espaceId: string
+  /** D'où viennent les documents — nous ne les hébergeons pas en double. */
+  source: { type: 's3' | 'drive' | 'web' | 'git'; libelle: string }
+  documents: number
+  fragments: number
+  modeleEmbedding: string
+  dimension: number
+  /** Comment le document est découpé — le choix se fige à la création. */
+  modeDecoupage: 'general' | 'parent_enfant' | 'qr'
+  /** Index vectoriel, ou index par mots-clés sans coût de vectorisation. */
+  methodeIndex: 'haute_qualite' | 'economique'
+  modeRecherche: 'vectorielle' | 'plein_texte' | 'hybride'
+  /** Renvoyer le document d'origine avec chaque fragment cité. */
+  citations: boolean
+  tailleMo: number
+  frequence: 'manuelle' | 'quotidienne' | 'horaire'
+  derniereIndexation: string
+  statut: 'a_jour' | 'indexation' | 'erreur' | 'jamais_indexee'
+  clesAutorisees: string[]
+  erreur?: string
+}
+
+export interface PointInference {
+  id: string
+  nom: string
+  modeleId: string
+  espaceId: string
+  site: Site
+  gpu: 'L40S' | 'H100' | 'A100'
+  gpuParReplica: number
+  replicas: number
+  replicasMin: number
+  replicasMax: number
+  /** Une mise à l'échelle jusqu'à zéro économise, au prix d'un démarrage à froid. */
+  veilleAutorisee: boolean
+  demarrageAFroidS: number
+  utilisationGpuPct: number
+  latenceP50Ms: number
+  debitJetonsSec: number
+  coutHeure: number
+  statut: 'en_ligne' | 'demarrage' | 'en_veille' | 'erreur'
+  creeLe: string
+}
+
+// ─── Agents et orchestration (CDC MIA, FONC-01 à FONC-06) ─────────────
+
+/**
+ * Quatre natures d'agent, parce qu'elles n'ont ni les mêmes réglages ni les
+ * mêmes garde-fous : un agent conversationnel garde un fil et parle à un
+ * humain, un extracteur rend du JSON et n'a rien à dire.
+ */
+export type TypeAgent = 'conversationnel' | 'tache' | 'flux' | 'extraction'
+
+export const TYPE_AGENT_LABEL: Record<TypeAgent, string> = {
+  conversationnel: 'Conversationnel',
+  tache: 'Agent de tâche',
+  flux: 'Flux déterministe',
+  extraction: 'Extracteur',
+}
+
+/** Variable injectable dans la consigne, façon `{{nom_client}}` (FONC-01.4). */
+export interface VariableAgent {
+  cle: string
+  libelle: string
+  type: 'texte' | 'nombre' | 'date' | 'liste'
+  /** D'où vient la valeur : l'appelant la fournit, ou la passerelle la calcule. */
+  source: 'appelant' | 'systeme' | 'annuaire'
+  obligatoire: boolean
+  exemple: string
+}
+
+/** Une version d'agent, conservée pour le retour arrière (FONC-01.5). */
+export interface VersionAgent {
+  numero: string
+  date: string
+  auteur: string
+  note: string
+  statut: 'publiee' | 'archivee' | 'brouillon'
+}
+
+export interface AgentIA {
+  id: string
+  slug: string
+  nom: string
+  /** Deux lettres et une teinte tiennent lieu d'icône — pas de téléversement. */
+  initiales: string
+  teinte: string
+  role: string
+  description: string
+  type: TypeAgent
+  espaceId: string
+  statut: 'brouillon' | 'publie' | 'suspendu'
+  modele: string
+  temperature: number
+  topP: number
+  jetonsMax: number
+  /** Appel de fonction natif, ou boucle ReAct pensée → action → observation. */
+  strategie: 'function_calling' | 'react'
+  /** Garde-fou contre la boucle infinie d'un agent outillé. */
+  maxIterations: number
+  /** Schéma imposé à la sortie, quand le résultat est relu par du code. */
+  sortieStructuree?: string
+  /** Un agent publié peut être exposé comme outil MCP à d'autres systèmes. */
+  publieMcp: boolean
+  consigne: string
+  variables: VariableAgent[]
+  outils: string[]
+  connaissances: string[]
+  memoire: {
+    portee: 'aucune' | 'session' | 'longue'
+    dureeJours: number
+    /** Agents avec qui l'espace de contexte est partagé (FONC-02.6). */
+    partageeAvec: string[]
+  }
+  /** Reprise automatique sur échec d'outil ou de modèle (FONC-02.7). */
+  reprise: { tentatives: number; delaiS: number }
+  humainDansLaBoucle: boolean
+  classeDonnees: ClasseDonnees
+  budgetJour: number
+  canaux: string[]
+  versions: VersionAgent[]
+  metriques: {
+    conversations7j: number
+    tauxResolutionPct: number
+    satisfactionPct: number
+    latenceP50Ms: number
+    coutJour: number
+    appelsOutils24h: number
+    tauxEchecOutilPct: number
+  }
+  /** Jeu d'épreuves rejoué avant chaque publication. */
+  epreuves: { cas: number; reussis: number; dernierPassage: string }
+  annotations: number
+}
+
+/** Outil appelable par un agent (FONC-01.7). */
+export type CategorieOutil = 'integre' | 'interne' | 'openapi' | 'mcp'
+
+export const CATEGORIE_OUTIL_LABEL: Record<CategorieOutil, string> = {
+  integre: 'Fourni par la plateforme',
+  interne: 'API interne de l’organisation',
+  openapi: 'Importé depuis un schéma OpenAPI',
+  mcp: 'Serveur MCP',
+}
+
+export interface OutilAgent {
+  id: string
+  nom: string
+  categorie: CategorieOutil
+  fournisseur: string
+  description: string
+  /** Un outil qui écrit ne se traite pas comme un outil qui lit. */
+  effet: 'lecture' | 'ecriture'
+  confirmationRequise: boolean
+  signature: string
+  authentification: string
+  appels24h: number
+  tauxErreurPct: number
+  latenceP50Ms: number
+  statut: 'actif' | 'inactif' | 'erreur'
+  note?: string
+}
+
+/** Canal par lequel un utilisateur atteint un agent (FONC-06). */
+export type TypeCanal =
+  | 'widget'
+  | 'whatsapp'
+  | 'telegram'
+  | 'sms'
+  | 'voix'
+  | 'ivr'
+  | 'rest'
+  | 'websocket'
+
+export const TYPE_CANAL_LABEL: Record<TypeCanal, string> = {
+  widget: 'Widget web',
+  whatsapp: 'WhatsApp Business',
+  telegram: 'Telegram',
+  sms: 'SMS bidirectionnel',
+  voix: 'Voix — transcription et synthèse',
+  ivr: 'Serveur vocal interactif',
+  rest: 'API REST synchrone',
+  websocket: 'WebSocket',
+}
+
+export interface CanalAgent {
+  id: string
+  type: TypeCanal
+  nom: string
+  fournisseur: string
+  identifiant: string
+  etat: 'connecte' | 'a_configurer' | 'erreur' | 'indisponible'
+  messages24h: number
+  latenceMs: number
+  /** Le routeur omnicanal recolle les fils d'un même numéro (FONC-06.9). */
+  contexteOmnicanal: boolean
+  agents: string[]
+  note: string
+}
+
+/**
+ * Étape d'un flux (FONC-02).
+ *
+ * Le flux est un arbre, pas un plan libre : une étape en suit une autre, un
+ * routeur ouvre des branches, une boucle rejoue un corps. La disposition se
+ * calcule au rendu — elle n'est pas une donnée. C'est ce qui permet d'insérer
+ * une étape entre deux autres sans rien déplacer à la main.
+ */
+export type TypeEtape =
+  | 'declencheur'
+  | 'agent'
+  | 'outil'
+  | 'connaissance'
+  | 'routeur'
+  | 'boucle'
+  | 'humain'
+  | 'code'
+  | 'reponse'
+  /** Masquage réversible des données personnelles, en coupure. */
+  | 'anonymisation'
+  /** Portée documentaire dérivée de l'utilisateur final, jamais de l'agent. */
+  | 'habilitation'
+  | 'transfert'
+
+export const TYPE_ETAPE_LABEL: Record<TypeEtape, string> = {
+  declencheur: 'Déclencheur',
+  agent: 'Agent',
+  outil: 'Outil',
+  connaissance: 'Recherche',
+  routeur: 'Aiguillage',
+  boucle: 'Boucle',
+  humain: 'Validation humaine',
+  code: 'Code',
+  reponse: 'Réponse',
+  anonymisation: 'Anonymisation',
+  habilitation: 'Habilitation',
+  transfert: 'Transfert',
+}
+
+export interface BrancheFlux {
+  id: string
+  nom: string
+  condition: string
+  partPct: number
+  /** La branche de repli reçoit ce qu'aucune condition n'a retenu. */
+  parDefaut?: boolean
+  etapes: EtapeFlux[]
+}
+
+export interface EtapeFlux {
+  id: string
+  type: TypeEtape
+  nom: string
+  /** D'où vient l'étape : un agent, un outil, un serveur MCP, la plateforme. */
+  source: string
+  detail: string
+  agentId?: string
+  outilId?: string
+  /** Étape conditionnelle : sautée quand la condition n'est pas remplie. */
+  condition?: string
+  /**
+   * Étape posée par la plateforme, ni déplaçable ni supprimable. Deux étapes le
+   * sont toujours : l'anonymisation et le filtrage par habilitation. Les rendre
+   * facultatives reviendrait à faire dépendre l'étanchéité d'un réglage.
+   */
+  verrouillee?: boolean
+  executions24h: number
+  latenceMs: number
+  coutPourMille: number
+  tauxErreurPct: number
+  reprise?: { tentatives: number; delaiS: number }
+  /** Routeur : une branche par sortie. */
+  branches?: BrancheFlux[]
+  /** Premier match seulement, ou toutes les branches vraies en parallèle. */
+  modeRoutage?: 'premiere' | 'toutes'
+  /** Boucle : les étapes rejouées pour chaque élément. */
+  corps?: EtapeFlux[]
+  surItems?: string
+  maxIterations?: number
+}
+
+export interface VariableFlux {
+  cle: string
+  portee: 'environnement' | 'conversation' | 'systeme'
+  valeur: string
+  secret?: boolean
+  description: string
+}
+
+export interface FluxOrchestration {
+  id: string
+  nom: string
+  description: string
+  espaceId: string
+  statut: 'publie' | 'brouillon' | 'suspendu'
+  declencheur: {
+    type: 'message' | 'planifie' | 'webhook' | 'fichier' | 'evenement'
+    libelle: string
+    detail: string
+  }
+  etapes: EtapeFlux[]
+  variables: VariableFlux[]
+  executions7j: number
+  dureeMedianeS: number
+  tauxSuccesPct: number
+  coutParExecution: number
+  memoirePartagee: boolean
+  version: string
+}

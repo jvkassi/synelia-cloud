@@ -15,7 +15,7 @@ décisions déjà prises.
 |---|---|
 | Paquets | `bun install` — **bun 1.4.0**, `bun.lock` fait foi, pas de npm |
 | Développement | `bun run dev` — Next avec Turbopack |
-| Construction | `bun run build` — Turbopack, ~20 s pour 106 routes |
+| Construction | `bun run build` — Turbopack, ~25 s pour 176 routes |
 | Comparaison | `bun run build:webpack` — ~50 s, gardé pour lever un doute |
 | Types | `bun run typecheck` |
 | Lint | `bun run lint` |
@@ -56,7 +56,7 @@ un écran disparu est pire qu'un contrat incomplet.
 
 ### L'audit
 
-`outils/audit.mjs` ouvre les 160 routes de `outils/routes.json` dans Chromium et
+`outils/audit.mjs` ouvre les 176 routes de `outils/routes.json` dans Chromium et
 relève : erreurs console et HTTP, débordement horizontal, contraste sous le seuil
 WCAG AA, boutons sans nom accessible, titres d'onglet laissés par défaut.
 
@@ -238,7 +238,7 @@ Deux barres, pas de barre latérale de navigation. `src/lib/navigation.ts` porte
 modèle ; `topbar.tsx` le rend.
 
 - **Barre 1** : les univers. Client — `Global · Infrastructure · Applications ·
-  Web Cloud · IAM & sécurité`. Super admin — `Pilotage · Clients ·
+  IA & Agents · Web Cloud · IAM & sécurité`. Super admin — `Pilotage · Clients ·
   Infrastructure · Produit · Finance · Exploitation`.
 - **Barre 2** : les sections de l'univers courant.
 
@@ -350,6 +350,65 @@ Drive · Applications · SSL · Backup · Relais SMTP`.
 Elle évite le défaut des portails qui vendent le nom, l'hébergement et la
 messagerie séparément : chez eux le même nom réapparaît dans trois listes et
 aucune page ne dit tout ce qui le concerne.
+
+### IA & Agents
+
+Dix sections : `Accueil · Agents · Orchestration · Outils & canaux · Catalogue de
+modèles · Passerelle & clés · Routage & garde-fous · Bases de connaissances ·
+Inférence dédiée · Consommation & coûts`. Contrepartie fournisseur : `/admin/ia`,
+dans l'univers Infrastructure. Données dans `src/lib/mock/ia.ts`.
+
+L'univers répond au cahier des charges MIA (Orange CI, 39 fonctions en 6 modules)
+dont la couverture fonction par fonction est tenue dans `PLAN-AGENTS-MIA.md`.
+
+**Trois couches, dans cet ordre.** Un agent est un rôle, une consigne, un modèle,
+des outils et des limites. Un flux enchaîne plusieurs agents. La passerelle, les
+modèles, les GPU et la facture sont la plomberie sous les deux.
+
+**La résidence est la propriété structurante.** Chaque modèle porte un champ
+`hebergement` (`souverain` ou `externe`) et chaque requête une classe de données
+(`publique · interne · personnelle · reglementee`). `MATRICE_RESIDENCE` croise les
+deux. Un écran qui parle d'un modèle externe doit dire où part la requête — c'est
+la même honnêteté que `/souverainete` pour les socles en sortie.
+
+**La consigne oriente, la plateforme empêche.** Écrire « ne demande jamais un mot
+de passe » réduit le risque sans le supprimer. Ce qui doit être impossible se règle
+ailleurs : garde-fou en entrée, portée de l'outil vérifiée côté API, classe de
+données. Chaque écran doit rendre cette différence visible — c'est exactement là
+que les plateformes d'agents déçoivent en production.
+
+**Deux étapes ne se négocient pas dans un flux** : l'anonymisation (Presidio, en
+coupure avant tout appel modèle, masquage réversible, voix comprise) et le filtrage
+par habilitation (portée dérivée de l'utilisateur final — jamais de l'agent —
+appliquée **avant** le calcul de similarité). Elles portent `verrouillee: true` :
+ni déplaçables, ni supprimables, absentes du sélecteur de pièces. Faire dépendre
+l'étanchéité d'un réglage reviendrait à ne pas l'avoir.
+
+**La pile est nommée** dans les flux, pas décrite en générique : Mastra pour les
+agents, LiteLLM pour le routage et les quotas, vLLM pour servir les modèles ouverts,
+Docling pour l'extraction, BGE-M3 et Qdrant pour la connaissance, Whisper et Piper
+pour la voix, Asterisk pour le SIP, Keycloak pour l'identité, Presidio pour
+l'anonymisation, OpenBao pour les secrets, Promptfoo pour le rejeu du corpus,
+Argo CD pour la bascule bleu / vert.
+
+**Le studio d'orchestration suit le patron d'Activepieces**, pas celui d'un canevas
+libre : colonne verticale de haut en bas, cartes de 260 px, bouton `+` entre chaque
+étape, glisser-déposer d'une carte sur un `+` pour la déplacer (déposer ailleurs ne
+fait rien), branches nommées avec leur part de trafic et une branche de repli,
+corps de boucle encadré, panneau de configuration à droite. Le flux est un **arbre**
+(`EtapeFlux` avec `branches` et `corps`) : la disposition se calcule au rendu, elle
+n'est pas une donnée — c'est ce qui permet d'insérer une étape sans rien déplacer.
+Le canevas se recentre au montage, sinon un écran étroit s'ouvre à côté du flux.
+
+**Pas d'interface de conversation.** C'est la règle « ne jamais reconstruire l'écran
+principal d'un produit existant » appliquée ici : un agent se construit, s'observe
+et se borne dans le portail ; il se parle sur son canal publié — widget, WhatsApp,
+SMS, voix, API. Le portail n'affiche pas non plus le contenu des bases de
+connaissances : ni visionneuse, ni recherche plein texte.
+
+Le catalogue de modèles reste **maître-détail dans la page** (cartes + `Tabs`), pas
+en panneau persistant : on compare des modèles avant d'en ouvrir un. L'univers garde
+la borne de 1400 px.
 
 ## Décisions déjà arbitrées
 
