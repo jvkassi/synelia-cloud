@@ -163,5 +163,8 @@
   "/app/applications/parametres/prj-solutions",
   "/app/applications/parametres/prj-outillage",
   "/app/infrastructure",
-  "/labo/heros"
+  "/labo",
+  "/labo/wax",
+  "/labo/ronde",
+  "/labo/electrique"
 ]
