@@ -466,8 +466,8 @@ export default function Accueil() {
                   detail: 'Cocody. Site principal : calcul, stockage bloc, réseau et supervision.',
                 },
                 {
-                  photo: '/photos/grand-bassam.webp',
-                  alt: 'Vue aérienne du littoral de Grand-Bassam, bordé de palmiers et de l’océan Atlantique.',
+                  photo: '/photos/parc-vitib.webp',
+                  alt: 'Vue aérienne d’un campus technologique côtier : bâtiments bas en verre et béton clair, groupes de refroidissement en toiture, végétation tropicale et océan au loin.',
                   titre: 'Grand-Bassam · Parc VITIB',
                   detail: 'Site de réplication : stockage objet, copies immuables, bascule de PRA.',
                 },
@@ -574,6 +574,24 @@ export default function Accueil() {
               }))}
             />
           </div>
+          {/*
+            « Outils de travail » reste abstrait tant qu'on ne montre pas un
+            poste de travail. Celui-ci est à Abidjan, comme les serveurs.
+          */}
+          <figure className="mt-8 overflow-hidden rounded-[14px] border border-g-300">
+            <img
+              src="/photos/espace-de-travail.webp"
+              alt="Poste de travail en bureau ouvert : un grand écran affichant des tableaux de bord, un ordinateur portable, un carnet et une tasse sur un bureau en bois clair, lumière tropicale par de larges fenêtres."
+              width={1376}
+              height={768}
+              loading="lazy"
+              className="h-44 w-full object-cover sm:h-56"
+            />
+            <figcaption className="bg-white px-5 py-3 text-[11.5px] leading-relaxed text-g-500">
+              Vue d’illustration. Les services du marketplace s’ouvrent dans leur propre interface —
+              nous ne la réimplémentons pas, nous vous y menons par une redirection SSO.
+            </figcaption>
+          </figure>
           <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
             {[
               {

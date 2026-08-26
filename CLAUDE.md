@@ -89,8 +89,10 @@ relancez-le. La sortie est déterministe : deux exécutions donnent deux fichier
 identiques.
 
 **`public/photos/*.webp` — génératives.** Produites avec Gemini (Nano Banana),
-redimensionnées à 1600 px et encodées en WebP q76 : 693 Ko pour les sept, contre
-5,5 Mo en JPEG d'origine. Ce ne sont **pas** des photographies de Synertech
+redimensionnées à 1600 px et encodées en WebP q76 : moins de 800 Ko pour les
+neuf, contre 8 Mo en JPEG d'origine. `og.jpg` fait exception et reste en JPEG —
+tous les robots d'indexation ne décodent pas le WebP, et un aperçu de lien sans
+vignette est un aperçu raté. Ce ne sont **pas** des photographies de Synertech
 Vallon ni du parc VITIB. Chaque emplacement le dit — « Vues d'illustration » —
 et il faudra les remplacer par de vraies prises de vue avant tout usage
 commercial.

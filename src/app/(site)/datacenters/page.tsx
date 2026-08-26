@@ -69,9 +69,9 @@ export default function Datacenters() {
                   legende: 'Panneau optique de la liaison inter-site',
                 },
                 {
-                  photo: '/photos/grand-bassam.webp',
-                  alt: 'Vue aérienne du littoral de Grand-Bassam.',
-                  legende: 'Grand-Bassam, site de repli',
+                  photo: '/photos/parc-vitib.webp',
+                  alt: 'Vue aérienne du campus technologique de Grand-Bassam : bâtiments bas, groupes de refroidissement en toiture, océan au loin.',
+                  legende: 'Parc VITIB, site de repli',
                 },
               ].map((c) => (
                 <figure

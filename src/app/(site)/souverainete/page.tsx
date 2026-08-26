@@ -77,6 +77,25 @@ export default function Souverainete() {
             titre="Notre trajectoire de sortie des backends propriétaires"
             chapeau="Nous exploitons encore de la capacité VMware vSphere et Microsoft Hyper-V, héritée de reprises de parcs clients. Nous préférons l’afficher que le taire : un évaluateur technique le découvrirait en une minute, et une trajectoire datée est plus crédible qu’une affirmation invérifiable."
           />
+          {/*
+            Une sortie de socle n'est pas une case à cocher : c'est du matériel
+            qu'on démonte et des données qu'on rebascule. La photo dit l'effort
+            que le tableau de pourcentages ci-dessous ne montre pas.
+          */}
+          <figure className="mt-8 overflow-hidden rounded-[14px] border border-g-300">
+            <img
+              src="/photos/migration.webp"
+              alt="Gros plan sur des mains gantées extrayant une lame de serveur d’une baie, un chariot et un carton d’expédition à côté."
+              width={1376}
+              height={768}
+              loading="lazy"
+              className="h-48 w-full object-cover sm:h-60"
+            />
+            <figcaption className="bg-white px-5 py-3 text-[11.5px] leading-relaxed text-g-500">
+              Vue d’illustration. Chaque bascule de socle est planifiée avec vous, exercée à blanc
+              sur une copie, et réversible jusqu’au basculement final.
+            </figcaption>
+          </figure>
 
           <Card className="mt-8">
             <CardHeader
