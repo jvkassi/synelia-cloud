@@ -480,14 +480,25 @@ export default function Accueil() {
                 Vues d’illustration. Les visites de site se demandent depuis votre espace client.
               </p>
             </div>
-            <figure className="rounded-[28px] bg-creme p-5">
+            {/*
+              Carte générative, mais la géographie ne s'invente pas : la
+              silhouette réelle du pays (Natural Earth) a servi de référence à
+              la génération, sinon le modèle produit une tache qui ne ressemble
+              à rien. Les deux épingles sont sur la côte sud-est, là où sont
+              réellement les deux sites.
+            */}
+            <figure className="rounded-[28px] bg-creme-2 p-4">
               <img
-                src="/illustrations/carte-sites.svg"
-                alt="Carte de la Côte d’Ivoire situant Abidjan et Grand-Bassam, reliés par une liaison de 4 à 6 millisecondes."
-                width={600}
-                height={735}
-                className="w-full"
+                src="/photos/carte-pate.webp"
+                alt="Carte en relief de la Côte d’Ivoire, deux épingles proches sur la côte sud-est reliées par un pointillé : Abidjan et Grand-Bassam."
+                width={900}
+                height={900}
+                className="w-full rounded-[22px]"
               />
+              <figcaption className="px-2 pb-1 pt-3 text-[12px] leading-relaxed text-encre-2/60">
+                Abidjan (Synertech Vallon, Cocody) et Grand-Bassam (parc VITIB),
+                à 4–6 ms l’un de l’autre.
+              </figcaption>
             </figure>
           </div>
         </Container>
