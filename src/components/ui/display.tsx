@@ -374,15 +374,27 @@ export function GatedAction({
   autorise,
   message,
   children,
+  pleineLargeur,
 }: {
   autorise: boolean
   message: string
   children: ReactNode
+  /**
+   * Pour une action qui occupe sa colonne — une tuile de grille, un bouton
+   * `fullWidth`. Sans cela l'enveloppe `inline-flex` se réduit au contenu et
+   * l'action rétrécit dès qu'elle est refusée.
+   */
+  pleineLargeur?: boolean
 }) {
   if (autorise) return <>{children}</>
   return (
     <Tooltip content={message}>
-      <span className="inline-flex cursor-not-allowed opacity-45 [&_*]:pointer-events-none">
+      <span
+        className={cn(
+          'cursor-not-allowed opacity-45 [&_*]:pointer-events-none',
+          pleineLargeur ? 'flex w-full' : 'inline-flex',
+        )}
+      >
         {children}
       </span>
     </Tooltip>

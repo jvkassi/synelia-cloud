@@ -87,11 +87,7 @@ export function VueDrive({ id }: { id: string }) {
           <EmptyState
             titre="Le drive n’est pas activé sur ce domaine"
             phrase={`L’activation crée l’instance, pose le certificat sur ${d.hote}, déclare le client SSO et applique le plan de sauvegarde. Comptez ${money(d.prixSiege)} par siège et par mois.`}
-            action={{
-              libelle: 'Activer le drive',
-              onClick: () => lancer('web.drive.activate', d.hote),
-            }}
-            actionSecondaire={{ libelle: 'Retour aux drives', href: '/app/web/drive' }}
+            action={{ libelle: 'Retour aux drives', href: '/app/web/drive' }}
           />
         </Card>
       ) : (

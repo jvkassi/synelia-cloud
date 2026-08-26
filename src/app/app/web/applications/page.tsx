@@ -53,7 +53,9 @@ export default function ListeApplications() {
         sousTitre="Les sites installés sur vos hébergements, chacun sur son sous-domaine et sa version de PHP. Nous opérons le socle, les mises à jour et les sauvegardes ; le contenu s’édite dans l’application."
         actions={
           <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-            <Button iconBefore={<Plus size={14} />}>Installer une application</Button>
+            <ButtonLink href="#installer" iconBefore={<Plus size={14} />}>
+              Installer une application
+            </ButtonLink>
           </GatedAction>
         }
       />
@@ -190,31 +192,40 @@ export default function ListeApplications() {
         })}
       </div>
 
+      <div id="installer" className="scroll-mt-28">
       <Card>
         <CardHeader
           titre="Installer une application"
-          sousTitre="Nous provisionnons la base, le sous-domaine, le certificat et le plan de sauvegarde. L’installation prend deux à quatre minutes."
+          sousTitre="Nous provisionnons la base, le sous-domaine, le certificat et le plan de sauvegarde. L’installation prend deux à quatre minutes. Le choix d’un logiciel lance l’installation sur le premier hébergement disponible."
         />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {CATALOGUE.map((c) => {
             const surface = surfaceMarque(TEINTE[c.type] ?? '#4B2882')
             return (
-              <button
+              <GatedAction
                 key={c.nom}
-                type="button"
-                onClick={() => lancer('web.app.install', c.nom)}
-                className="rounded-[8px] border border-g-300 bg-white p-3 text-left transition-colors hover:border-p-400 hover:bg-p-050"
+                autorise={autorise('service.admin')}
+                message={refus('service.admin')}
+                pleineLargeur
               >
-                <span
-                  className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[10px] font-bold"
-                  style={{ background: surface.fond, color: surface.texte }}
+                <button
+                  type="button"
+                  onClick={() => lancer('web.app.install', c.nom)}
+                  className="w-full rounded-[8px] border border-g-300 bg-white p-3 text-left transition-colors hover:border-p-400 hover:bg-p-050"
                 >
-                  {c.nom.slice(0, 2).toUpperCase()}
-                </span>
-                <span className="mt-2 block text-[12.5px] font-bold text-ink">{c.nom}</span>
-                <span className="mt-0.5 block text-[11px] leading-snug text-g-500">{c.phrase}</span>
-                <span className="mt-1.5 block text-[10.5px] text-g-500">PHP {c.php}</span>
-              </button>
+                  <span
+                    className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[10px] font-bold"
+                    style={{ background: surface.fond, color: surface.texte }}
+                  >
+                    {c.nom.slice(0, 2).toUpperCase()}
+                  </span>
+                  <span className="mt-2 block text-[12.5px] font-bold text-ink">{c.nom}</span>
+                  <span className="mt-0.5 block text-[11px] leading-snug text-g-500">
+                    {c.phrase}
+                  </span>
+                  <span className="mt-1.5 block text-[10.5px] text-g-500">PHP {c.php}</span>
+                </button>
+              </GatedAction>
             )
           })}
         </div>
@@ -225,6 +236,7 @@ export default function ListeApplications() {
           ouverte.
         </Callout>
       </Card>
+      </div>
     </div>
   )
 }

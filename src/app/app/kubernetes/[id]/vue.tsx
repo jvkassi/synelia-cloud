@@ -394,13 +394,18 @@ users:
                     Appliquer
                   </Button>
                 </GatedAction>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => lancer('k8s.pool.roll', `${cluster.nom} · ${p.nom}`)}
+                <GatedAction
+                  autorise={autorise('espace.quota.update')}
+                  message={refus('espace.quota.update')}
                 >
-                  Mise à jour progressive
-                </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => lancer('k8s.pool.roll', `${cluster.nom} · ${p.nom}`)}
+                  >
+                    Mise à jour progressive
+                  </Button>
+                </GatedAction>
                 <IconButton label="Supprimer le pool" size="sm">
                   <Trash2 size={13} className="text-err" />
                 </IconButton>
@@ -463,13 +468,18 @@ users:
                     <Badge tone="ok" dot size="sm">
                       Sain
                     </Badge>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => lancer('k8s.module.update', `${nom} · ${cluster.nom}`)}
+                    <GatedAction
+                      autorise={autorise('espace.quota.update')}
+                      message={refus('espace.quota.update')}
                     >
-                      Mettre à jour
-                    </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => lancer('k8s.module.update', `${nom} · ${cluster.nom}`)}
+                      >
+                        Mettre à jour
+                      </Button>
+                    </GatedAction>
                   </span>
                 </div>
               )

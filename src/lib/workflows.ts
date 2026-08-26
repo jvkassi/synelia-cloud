@@ -54,28 +54,36 @@ export function jobDepuisTache(tache: TacheSimulee): ProvisioningJob {
 
   const total = def.etapes.reduce((a, e) => a + e.dureeS, 0)
   const echec = tache.essai === 0 ? def.echec : undefined
-  // Une étape qui échoue interrompt la séquence : le temps d'écran se répartit
-  // sur les seules étapes jouées, sinon l'échec attendrait la fin du job.
-  const jouees = echec ? def.etapes.slice(0, echec.etape) : def.etapes
+  // Une étape qui échoue interrompt la séquence, et une reprise repart de
+  // l'étape échouée : le temps d'écran ne se répartit donc que sur les étapes
+  // réellement jouées à cet essai, sinon l'échec attendrait la fin du job et la
+  // reprise rejouerait un transfert déjà terminé.
+  const depuis = Math.min(tache.depuis ?? 0, def.etapes.length - 1)
+  const fin = echec ? echec.etape : def.etapes.length
+  const jouees = def.etapes.slice(depuis, fin)
   const totalJoue = jouees.reduce((a, e) => a + e.dureeS, 0)
 
   const avance = Math.max(0, tache.ecoule - ATTENTE_FILE_MS)
   const enFile = tache.ecoule < ATTENTE_FILE_MS
 
   let curseur = 0
-  let indexCourant = jouees.length
-  const bornes = jouees.map((e) => {
+  const bornes = jouees.map((e, i) => {
     curseur += (e.dureeS / totalJoue) * DUREE_ECRAN_MS
-    return curseur
+    // La dernière borne est posée exactement : l'accumulation de flottants la
+    // ferait dépasser le temps d'écran, et le job resterait « en cours » après
+    // l'arrêt de l'horloge.
+    return i === jouees.length - 1 ? DUREE_ECRAN_MS : curseur
   })
+  let rang = jouees.length
   for (let i = 0; i < bornes.length; i += 1) {
     if (avance < bornes[i]) {
-      indexCourant = i
+      rang = i
       break
     }
   }
 
-  const termine = indexCourant >= jouees.length
+  const termine = rang >= jouees.length
+  const indexCourant = depuis + rang
   const echoue = termine && echec !== undefined
 
   const taches = def.etapes.map((e, i) => {

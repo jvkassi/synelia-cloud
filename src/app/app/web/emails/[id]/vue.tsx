@@ -77,7 +77,12 @@ export function VueMessagerie({ id }: { id: string }) {
             </>
           ) : (
             <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
-              <Button iconBefore={<Plus size={14} />}>Activer la messagerie</Button>
+              <Button
+                iconBefore={<Plus size={14} />}
+                onClick={() => lancer('web.email.activate', m.domaine)}
+              >
+                Activer la messagerie
+              </Button>
             </GatedAction>
           )
         }
@@ -88,11 +93,7 @@ export function VueMessagerie({ id }: { id: string }) {
           <EmptyState
             titre="La messagerie n’est pas activée sur ce domaine"
             phrase={`L’activation crée les boîtes, pose MX, SPF, DKIM et DMARC dans la zone de ${m.domaine}, et déclare le client SSO. Comptez ${money(m.prixSiege)} par boîte et par mois, facturés au prorata.`}
-            action={{
-              libelle: 'Activer la messagerie',
-              onClick: () => lancer('web.email.activate', m.domaine),
-            }}
-            actionSecondaire={{ libelle: 'Retour aux messageries', href: '/app/web/emails' }}
+            action={{ libelle: 'Retour aux messageries', href: '/app/web/emails' }}
           />
         </Card>
       ) : (

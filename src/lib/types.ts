@@ -1082,6 +1082,11 @@ export interface TacheSimulee {
   ecoule: number
   /** 0 au premier essai ; une reprise incrémente et neutralise l'échec écrit. */
   essai: number
+  /**
+   * Index de la première étape à rejouer. Une reprise repart de l'étape
+   * échouée : ce qui est déjà fait n'est pas refait.
+   */
+  depuis?: number
   href?: string
 }
 

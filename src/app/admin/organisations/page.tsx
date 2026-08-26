@@ -36,7 +36,13 @@ export default function Organisations() {
         sousTitre="Chaque organisation est un cloisonnement complet : ses espaces, ses membres, ses données et sa facturation. Aucune donnée ne traverse la frontière entre deux organisations, y compris pour nos propres équipes."
         actions={
           <GatedAction autorise={autorise('reseller.manage')} message={refus('reseller.manage')}>
-            <Button iconBefore={<Plus size={14} />} onClick={() => setCreation(true)}>
+            <Button
+              iconBefore={<Plus size={14} />}
+              onClick={() => {
+                setNomOrg('')
+                setCreation(true)
+              }}
+            >
               Créer une organisation
             </Button>
           </GatedAction>
@@ -346,8 +352,9 @@ export default function Organisations() {
               Annuler
             </Button>
             <Button
+              disabled={!nomOrg.trim()}
               onClick={() => {
-                lancer('org.create', nomOrg.trim() || 'nouvelle organisation')
+                lancer('org.create', nomOrg.trim())
                 setCreation(false)
               }}
             >

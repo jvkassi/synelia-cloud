@@ -118,7 +118,7 @@ Ombres : `shadow-[0_1px_2px_rgba(43,27,77,.06)]` au repos ·
 <CodeBlock code langue copiable />
 <Pagination page total perPage onChange />
 <Skeleton className /> <Spinner size />
-<GatedAction autorise={bool} message="Cette action demande le rôle …">{bouton}</GatedAction>
+<GatedAction autorise={bool} message="Cette action demande le rôle …" pleineLargeur>{bouton}</GatedAction>
 ```
 
 ### `@/components/composition/card`

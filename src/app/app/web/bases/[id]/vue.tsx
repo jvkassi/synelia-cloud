@@ -25,12 +25,15 @@ export function VueServeurBases({ id }: { id: string }) {
   const { autorise, refus, pousser, lancer } = useApp()
   const [onglet, setOnglet] = useState('bases')
   const [creation, setCreation] = useState(false)
+  const [aRestaurer, setARestaurer] = useState('')
 
   const s = serveurBasesById(id)
   if (!s) return null
   const h = hebergementById(s.hebergementId)
   const surface = surfaceMarque(MOTEUR_WEB_TEINTE[s.moteur])
   const cle = s.moteur === 'redis' ? 'index' : 'base'
+  // Le premier élément sert de valeur initiale, sans figer le choix de l'utilisateur.
+  const cible = aRestaurer || (s.bases[0]?.nom ?? '')
 
   const onglets = [
     { id: 'bases', label: s.moteur === 'redis' ? 'Index' : 'Bases' },
@@ -198,13 +201,18 @@ export function VueServeurBases({ id }: { id: string }) {
                         <td className="px-3 py-2.5 text-[12px] text-g-700">{b.utilise}</td>
                         <td className="px-3 py-2.5 text-right">
                           <span className="flex items-center justify-end gap-1">
-                            <IconButton
-                              label={`Restaurer ${b.nom}`}
-                              size="sm"
-                              onClick={() => lancer('web.db.restore', b.nom)}
+                            <GatedAction
+                              autorise={autorise('backup.restore')}
+                              message={refus('backup.restore')}
                             >
-                              <RotateCcw size={13} />
-                            </IconButton>
+                              <IconButton
+                                label={`Restaurer ${b.nom}`}
+                                size="sm"
+                                onClick={() => lancer('web.db.restore', b.nom)}
+                              >
+                                <RotateCcw size={13} />
+                              </IconButton>
+                            </GatedAction>
                             <GatedAction
                               autorise={autorise('service.admin')}
                               message={refus('service.admin')}
@@ -364,7 +372,7 @@ export function VueServeurBases({ id }: { id: string }) {
                 />
                 <div className="space-y-3">
                   <Field label={`${cle === 'base' ? 'Base' : 'Index'} à restaurer`}>
-                    <Select defaultValue={s.bases[0]?.nom}>
+                    <Select value={cible} onChange={(e) => setARestaurer(e.target.value)}>
                       {s.bases.map((b) => (
                         <option key={b.nom} value={b.nom}>
                           {b.nom}
@@ -380,15 +388,14 @@ export function VueServeurBases({ id }: { id: string }) {
                     </Select>
                   </Field>
                   <Field label="Nom de la copie" hint="l’originale reste intacte">
-                    <Input defaultValue={`${s.bases[0]?.nom ?? 'base'}_restauree`} />
+                    <Input key={cible} defaultValue={`${cible || 'base'}_restauree`} />
                   </Field>
                   <GatedAction autorise={autorise('backup.restore')} message={refus('backup.restore')}>
                     <Button
                       variant="secondary"
                       fullWidth
-                      onClick={() =>
-                        lancer('web.db.restore', s.bases[0]?.nom ?? s.hoteInterne)
-                      }
+                      disabled={!cible}
+                      onClick={() => lancer('web.db.restore', cible)}
                     >
                       Lancer la restauration
                     </Button>

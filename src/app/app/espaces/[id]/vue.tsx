@@ -26,6 +26,8 @@ import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Avatar, GatedAction, Tabs } from '@/components/ui/display'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
+import { CostPreview } from '@/components/composition/flow'
+import { Modal } from '@/components/ui/overlay'
 import { HealthBadge, QuotaBar, Sparkline, StatTile } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { EventList, GrilleSparkCharts } from '@/components/business/observabilite'
@@ -45,6 +47,7 @@ export function VueEspace({ id }: { id: string }) {
   const espace = ESPACES.find((e) => e.id === id)!
   const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('apercu')
+  const [extension, setExtension] = useState(false)
 
   const vms = vmsDeLEspace(id)
   const clusters = K8S_CLUSTERS.filter((c) => c.espaceId === id)
@@ -78,7 +81,7 @@ export function VueEspace({ id }: { id: string }) {
               <Button
                 variant="secondary"
                 iconBefore={<TrendingUp size={14} />}
-                onClick={() => lancer('espace.extend', espace.code)}
+                onClick={() => setExtension(true)}
               >
                 Étendre la capacité
               </Button>
@@ -780,6 +783,44 @@ export function VueEspace({ id }: { id: string }) {
           </Callout>
         </Card>
       )}
+
+      {/* L'extension est facturable : le coût passe avant l'engagement. */}
+      <Modal
+        open={extension}
+        onClose={() => setExtension(false)}
+        title={`Étendre la capacité de ${espace.code}`}
+        description="Un palier d’extension ajoute 8 vCPU, 32 Go de mémoire et 2 To de stockage au quota de l’espace. Le nouveau quota est facturé au prorata du mois en cours."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setExtension(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={() => {
+                lancer('espace.extend', espace.code)
+                setExtension(false)
+              }}
+            >
+              Demander l’extension
+            </Button>
+          </>
+        }
+      >
+        <CostPreview
+          lignes={[
+            { libelle: 'vCPU supplémentaires', detail: '8 × 4 200 FCFA', montant: 33600 },
+            { libelle: 'Mémoire supplémentaire', detail: '32 Go × 1 800 FCFA', montant: 57600 },
+            { libelle: 'Stockage supplémentaire', detail: '2 To × 14 000 FCFA', montant: 28000 },
+          ]}
+          periodicite="mensuelle"
+          jourDuMois={19}
+        />
+        <Callout ton="info" className="mt-3" titre="Ce que la demande déclenche">
+          Un devis est émis puis validé automatiquement s’il reste dans l’enveloppe de votre contrat.
+          Le quota est étendu à la fin du job, et le placement rééquilibré ensuite — les machines
+          existantes ne bougent pas pendant l’extension.
+        </Callout>
+      </Modal>
     </div>
   )
 }

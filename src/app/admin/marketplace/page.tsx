@@ -31,7 +31,7 @@ const ONGLETS = [
 ]
 
 export default function MarketplaceAdmin() {
-  const { autorise, refus, pousser, lancer } = useApp()
+  const { autorise, refus, lancer } = useApp()
   const [onglet, setOnglet] = useState('catalogue')
   const [arret, setArret] = useState<CampagneMaj | null>(null)
 

@@ -109,7 +109,17 @@ export function AppProvider({
   const relancer = useCallback(
     (id: string) => {
       setTaches((p) =>
-        p.map((t) => (t.id === id ? { ...t, ecoule: 0, essai: t.essai + 1 } : t)),
+        p.map((t) => {
+          if (t.id !== id) return t
+          // Reprise à l'étape échouée : les précédentes restent acquises.
+          const ratee = jobDepuisTache(t).taches.find((x) => x.statut === 'failed')
+          return {
+            ...t,
+            ecoule: 0,
+            essai: t.essai + 1,
+            depuis: ratee ? ratee.ordre - 1 : 0,
+          }
+        }),
       )
       const t = taches.find((x) => x.id === id)
       const def = t && workflowById(t.workflowId)
