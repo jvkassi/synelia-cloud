@@ -198,7 +198,7 @@ export function DataTable<T extends { id: string }>({
                   .map((c) => (
                     <label
                       key={c.id}
-                      className="flex cursor-pointer items-center gap-2 rounded-[6px] px-2 py-1.5 text-[12.5px] hover:bg-g-050"
+                      className="flex cursor-pointer items-center gap-2 rounded-[6px] px-2 py-1.5 text-[13px] hover:bg-g-050"
                     >
                       <input
                         type="checkbox"
@@ -236,7 +236,7 @@ export function DataTable<T extends { id: string }>({
 
       {actionsGroupees && coches.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-p-300 bg-p-050 px-3.5 py-2.5">
-          <p className="tnum text-[12.5px] font-semibold text-p-700">
+          <p className="tnum text-[13px] font-semibold text-p-700">
             {coches.length} élément{coches.length > 1 ? 's' : ''} sélectionné
             {coches.length > 1 ? 's' : ''}
           </p>
@@ -300,7 +300,11 @@ export function DataTable<T extends { id: string }>({
                           )
                         }
                         className={cn(
-                          'inline-flex items-center gap-1 transition-colors hover:text-p-700',
+                          // `uppercase` explicite : la feuille de style du navigateur pose
+                          // `text-transform: none` sur un bouton, et rien ne la contredit —
+                          // un en-tête triable perdait donc la casse de `type-micro`, si bien
+                          // que « Plan » côtoyait « DESTINATIONS » dans la même ligne.
+                          'inline-flex items-center gap-1 uppercase transition-colors hover:text-p-700',
                           c.aligne === 'right' && 'flex-row-reverse',
                         )}
                       >

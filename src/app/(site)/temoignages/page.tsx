@@ -39,7 +39,7 @@ export default function Temoignages() {
             `Badge` porte `whitespace-nowrap` — correct pour un libellé court —
             et celle-ci débordait de 38 px à 390 px. C'est une légende.
           */
-          <p className="text-[12.5px] font-semibold text-encre-2/60">
+          <p className="text-[13px] font-semibold text-encre-2/60">
             Organisations anonymisées · ordres de grandeur réellement constatés
           </p>
         }
@@ -61,7 +61,7 @@ export default function Temoignages() {
                 <Monogramme initiales={t.initiales} index={i} taille="sm" />
                 <span className="min-w-0">
                   <span className="block text-[12px] font-semibold text-p-700">{t.secteur}</span>
-                  <span className="block text-[12.5px] leading-snug text-g-700">
+                  <span className="block text-[13px] leading-snug text-g-700">
                     {t.organisation}
                   </span>
                   <span className="tnum mt-1.5 block text-[13px] font-bold [font-family:var(--font-display)] text-ink">
@@ -96,7 +96,7 @@ export default function Temoignages() {
                       <Badge tone="violet" size="sm">
                         {t.secteur}
                       </Badge>
-                      <span className="flex items-center gap-1.5 text-[11.5px] text-g-500">
+                      <span className="flex items-center gap-1.5 text-[12px] text-g-500">
                         <MapPin size={11} className="shrink-0" aria-hidden />
                         {t.site}
                       </span>
@@ -104,29 +104,29 @@ export default function Temoignages() {
                     <h3 className="mt-3 text-[17px] font-bold leading-tight [font-family:var(--font-display)] text-ink">
                       {t.organisation}
                     </h3>
-                    <blockquote className="mt-4 border-l-2 border-p-400 pl-4 text-[14.5px] font-medium leading-relaxed [font-family:var(--font-display)] text-ink">
+                    <blockquote className="mt-4 border-l-2 border-p-400 pl-4 text-[15px] font-medium leading-relaxed [font-family:var(--font-display)] text-ink">
                       <span aria-hidden>«&nbsp;</span>
                       {t.citation}
                       <span aria-hidden>&nbsp;»</span>
                     </blockquote>
                     <div className="mt-4 flex items-center gap-2.5">
                       <Monogramme initiales={t.initiales} index={i} taille="sm" />
-                      <span className="text-[12.5px] text-g-700">{t.auteur}</span>
+                      <span className="text-[13px] text-g-700">{t.auteur}</span>
                     </div>
                   </div>
 
                   <dl className="grid grid-cols-1 gap-4 rounded-[10px] bg-g-050 p-5">
                     <div>
                       <dt className="type-micro text-g-500">Avant</dt>
-                      <dd className="mt-1.5 text-[12.5px] leading-relaxed text-g-700">{t.avant}</dd>
+                      <dd className="mt-1.5 text-[13px] leading-relaxed text-g-700">{t.avant}</dd>
                     </div>
                     <div>
                       <dt className="type-micro text-g-500">Ce qui a été fait</dt>
-                      <dd className="mt-1.5 text-[12.5px] leading-relaxed text-g-700">{t.apres}</dd>
+                      <dd className="mt-1.5 text-[13px] leading-relaxed text-g-700">{t.apres}</dd>
                     </div>
                     <div>
                       <dt className="type-micro text-warn">Ce qui a coincé</dt>
-                      <dd className="mt-1.5 text-[12.5px] leading-relaxed text-g-700">
+                      <dd className="mt-1.5 text-[13px] leading-relaxed text-g-700">
                         {t.accroc}
                       </dd>
                     </div>
@@ -138,7 +138,7 @@ export default function Temoignages() {
                     <span className="tnum text-[26px] font-bold leading-none [font-family:var(--font-display)] text-p-700">
                       {t.chiffre}
                     </span>
-                    <span className="text-[12.5px] text-g-700">{t.chiffreLibelle}</span>
+                    <span className="text-[13px] text-g-700">{t.chiffreLibelle}</span>
                   </p>
                   <LienFleche href="/entreprises#contact">
                     Un contexte proche du vôtre ? Parlons-en

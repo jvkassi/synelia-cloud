@@ -126,7 +126,7 @@ export default async function FicheServicePublique({
       <SiteSection>
         <Container>
           <h2 className="type-h2">Ce que vous obtenez</h2>
-          <p className="mt-2 max-w-3xl text-[13.5px] leading-relaxed text-g-700">
+          <p className="mt-2 max-w-3xl text-[14px] leading-relaxed text-g-700">
             L’interface de {s.solutionOSS}, telle que ses auteurs l’ont conçue — avec son écosystème,
             ses applications mobiles et sa documentation. Nous n’en réimplémentons aucun écran.
           </p>
@@ -142,7 +142,7 @@ export default async function FicheServicePublique({
                       <span key={t} className="h-2 w-2 rounded-full" style={{ background: t }} />
                     ))}
                   </span>
-                  <span className="truncate font-mono text-[10px] text-g-500">
+                  <span className="truncate font-mono text-[11px] text-g-500">
                     {s.urlDemo.replace('https://', '')}
                   </span>
                 </div>
@@ -167,7 +167,7 @@ export default async function FicheServicePublique({
           </div>
           <div className="mt-4 flex items-start gap-2.5 rounded-[8px] bg-g-050 px-4 py-3">
             <MonitorPlay size={15} className="mt-0.5 shrink-0 text-g-500" />
-            <p className="text-[12.5px] leading-relaxed text-g-700">
+            <p className="text-[13px] leading-relaxed text-g-700">
               Représentation schématique.{' '}
               <span className="font-semibold">
                 Interface de la solution open source, opérée par Synelia.
@@ -226,7 +226,7 @@ export default async function FicheServicePublique({
       <SiteSection>
         <Container>
           <h2 className="type-h2">Paliers et limites</h2>
-          <p className="mt-2 text-[13.5px] text-g-700">
+          <p className="mt-2 text-[14px] text-g-700">
             {s.modes.length > 1
               ? 'Le mode dédié majore de 20 % le prix affiché. Prix hors taxes, TVA 18 % à la facturation.'
               : 'Ce service n’existe qu’en mode dédié. Prix hors taxes, TVA 18 % à la facturation.'}
@@ -257,7 +257,7 @@ export default async function FicheServicePublique({
                 </p>
                 <ul className="mt-4 flex-1 space-y-1.5 border-t border-g-100 pt-4">
                   {p.limites.map((l) => (
-                    <li key={l} className="flex items-start gap-2 text-[12.5px] text-g-700">
+                    <li key={l} className="flex items-start gap-2 text-[13px] text-g-700">
                       <Check size={13} className="mt-0.5 shrink-0 text-ok" />
                       {l}
                     </li>
@@ -304,7 +304,7 @@ export default async function FicheServicePublique({
                     valeur: (
                       <ul className="space-y-0.5">
                         {s.granulariteRestauration.map((g) => (
-                          <li key={g} className="text-[12.5px]">
+                          <li key={g} className="text-[13px]">
                             · {g}
                           </li>
                         ))}
@@ -359,7 +359,7 @@ export default async function FicheServicePublique({
                   },
                 ]}
               />
-              <p className="mt-2 text-[11.5px] leading-relaxed text-g-500">
+              <p className="mt-2 text-[12px] leading-relaxed text-g-500">
                 Partir doit être possible pour que rester soit un choix.
               </p>
             </Card>
@@ -373,7 +373,7 @@ export default async function FicheServicePublique({
                   </Badge>
                 ))}
               </div>
-              <p className="mt-3 text-[12.5px] leading-relaxed text-g-700">
+              <p className="mt-3 text-[13px] leading-relaxed text-g-700">
                 Menée par l’équipe Synelia à Abidjan : inventaire, pré-synchronisation, bascule sur
                 un créneau que vous choisissez, et retour arrière possible pendant quarante-huit
                 heures. Le chiffrage fait l’objet d’un devis distinct de l’abonnement.

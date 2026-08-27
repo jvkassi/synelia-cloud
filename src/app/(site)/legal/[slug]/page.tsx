@@ -39,8 +39,8 @@ export default async function PageLegale({
                   href={`/legal/${p.slug}`}
                   className={
                     p.slug === slug
-                      ? 'block rounded-[6px] bg-p-050 px-2.5 py-1.5 text-[12.5px] font-semibold text-p-700'
-                      : 'block rounded-[6px] px-2.5 py-1.5 text-[12.5px] text-g-700 transition-colors hover:bg-g-050 hover:text-p-700'
+                      ? 'block rounded-[6px] bg-p-050 px-2.5 py-1.5 text-[13px] font-semibold text-p-700'
+                      : 'block rounded-[6px] px-2.5 py-1.5 text-[13px] text-g-700 transition-colors hover:bg-g-050 hover:text-p-700'
                   }
                 >
                   {p.titre}
@@ -66,7 +66,7 @@ export default async function PageLegale({
 
           <article className="min-w-0 max-w-3xl">
             <h1 className="type-h1">{page.titre}</h1>
-            <p className="mt-2 text-[12.5px] text-g-500">
+            <p className="mt-2 text-[13px] text-g-500">
               Dernière mise à jour : 19 août 2026 · Synelia Group Afrique, Cocody, Abidjan, Côte
               d’Ivoire
             </p>
@@ -91,18 +91,18 @@ export default async function PageLegale({
             </Callout>
 
             <div className="mt-8 border-t border-g-300 pt-5">
-              <p className="text-[12.5px] text-g-500">
+              <p className="text-[13px] text-g-500">
                 Une question sur ce document ?{' '}
                 <Link
                   href="/entreprises#contact"
-                  className="font-semibold text-p-700 hover:text-m-600"
+                  className="font-semibold text-p-700 hover:underline"
                 >
                   Contactez-nous
                 </Link>
                 {' · '}
                 <a
                   href="mailto:avs@synelia.tech"
-                  className="font-semibold text-p-700 hover:text-m-600"
+                  className="font-semibold text-p-700 hover:underline"
                 >
                   avs@synelia.tech
                 </a>

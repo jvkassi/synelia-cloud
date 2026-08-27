@@ -62,7 +62,7 @@ export function SiteHeader() {
             onMouseEnter={() => setMenu('produits')}
             onClick={() => setMenu((m) => (m === 'produits' ? null : 'produits'))}
             className={cn(
-              'flex items-center gap-1 rounded-[6px] px-3 py-2 text-[13.5px] font-semibold transition-colors',
+              'flex items-center gap-1 rounded-[6px] px-3 py-2 text-[14px] font-semibold transition-colors',
               menu === 'produits' ? 'bg-p-050 text-p-700' : 'text-g-700 hover:text-p-700',
             )}
           >
@@ -77,7 +77,7 @@ export function SiteHeader() {
             onMouseEnter={() => setMenu('ressources')}
             onClick={() => setMenu((m) => (m === 'ressources' ? null : 'ressources'))}
             className={cn(
-              'flex items-center gap-1 rounded-[6px] px-3 py-2 text-[13.5px] font-semibold transition-colors',
+              'flex items-center gap-1 rounded-[6px] px-3 py-2 text-[14px] font-semibold transition-colors',
               menu === 'ressources' ? 'bg-p-050 text-p-700' : 'text-g-700 hover:text-p-700',
             )}
           >
@@ -123,7 +123,7 @@ export function SiteHeader() {
                         <span className="block text-[13px] font-semibold text-ink group-hover:text-p-700">
                           {e.nom}
                         </span>
-                        <span className="block text-[11.5px] leading-snug text-g-500">
+                        <span className="block text-[12px] leading-snug text-g-500">
                           {e.resume}
                         </span>
                       </Link>
@@ -135,14 +135,14 @@ export function SiteHeader() {
           </div>
           <div className="border-t border-g-100 bg-g-050">
             <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-3">
-              <p className="text-[12.5px] text-g-700">
+              <p className="text-[13px] text-g-700">
                 Solutions open source, opérées par Synelia, réversibles. Hébergées à Abidjan et
                 Grand-Bassam.
               </p>
               <Link
                 href="/simulateur"
                 onClick={() => setMenu(null)}
-                className="whitespace-nowrap text-[12.5px] font-semibold text-p-700 hover:text-m-600"
+                className="whitespace-nowrap text-[13px] font-semibold text-p-700 hover:underline"
               >
                 Estimer mon budget →
               </Link>
@@ -167,7 +167,7 @@ export function SiteHeader() {
                         <span className="block text-[13px] font-semibold text-ink group-hover:text-p-700">
                           {r.nom}
                         </span>
-                        <span className="block text-[11.5px] leading-snug text-g-500">
+                        <span className="block text-[12px] leading-snug text-g-500">
                           {r.resume}
                         </span>
                       </Link>
@@ -243,7 +243,7 @@ function LienNav({ href, children }: { href: string; children: string }) {
   return (
     <Link
       href={href}
-      className="rounded-[6px] px-3 py-2 text-[13.5px] font-semibold text-g-700 transition-colors hover:text-p-700"
+      className="rounded-[6px] px-3 py-2 text-[14px] font-semibold text-g-700 transition-colors hover:text-p-700"
     >
       {children}
     </Link>

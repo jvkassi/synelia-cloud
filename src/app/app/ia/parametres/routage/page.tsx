@@ -100,7 +100,7 @@ export default function ReglesRoutage() {
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <span className="flex min-w-0 items-start gap-3">
-                        <span className="tnum mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-p-050 text-[11.5px] font-bold text-p-700">
+                        <span className="tnum mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-p-050 text-[12px] font-bold text-p-700">
                           {r.ordre}
                         </span>
                         <span className="min-w-0">
@@ -163,7 +163,7 @@ export default function ReglesRoutage() {
                           )
                         })}
                         {r.repli.length === 0 && (
-                          <span className="text-[11.5px] text-g-500">
+                          <span className="text-[12px] text-g-500">
                             Aucun repli — l’appel échoue en 503 si le modèle est indisponible
                           </span>
                         )}
@@ -171,7 +171,7 @@ export default function ReglesRoutage() {
                     </div>
 
                     <div className="mt-2.5 flex flex-wrap items-center justify-between gap-3">
-                      <span className="tnum text-[11.5px] text-g-500">
+                      <span className="tnum text-[12px] text-g-500">
                         {num(r.requetes24h)} requêtes en 24 h ·{' '}
                         {r.replisDeclenches24h > 0
                           ? `${num(r.replisDeclenches24h)} replis`

@@ -21,8 +21,8 @@ export function Avatar({
   className?: string
 }) {
   const dims = {
-    xs: 'h-5 w-5 text-[9px]',
-    sm: 'h-7 w-7 text-[10.5px]',
+    xs: 'h-5 w-5 text-[11px]',
+    sm: 'h-7 w-7 text-[11px]',
     md: 'h-9 w-9 text-[12px]',
     lg: 'h-12 w-12 text-[15px]',
     xl: 'h-16 w-16 text-[19px]',
@@ -239,11 +239,11 @@ export function CopyField({
 
   return (
     <div className={className}>
-      {label && <p className="mb-1.5 text-[12.5px] font-semibold text-g-700">{label}</p>}
+      {label && <p className="mb-1.5 text-[13px] font-semibold text-g-700">{label}</p>}
       <div className="flex items-stretch overflow-hidden rounded-[6px] border border-g-300 bg-g-050">
         <span
           className={cn(
-            'flex-1 truncate px-3 py-2 text-[12.5px] text-ink',
+            'flex-1 truncate px-3 py-2 text-[13px] text-ink',
             mono && 'font-mono',
           )}
         >
@@ -297,7 +297,7 @@ export function CodeBlock({
                 setCopie(true)
                 setTimeout(() => setCopie(false), 1600)
               }}
-              className="flex items-center gap-1 text-[11.5px] text-p-300 transition-colors hover:text-white"
+              className="flex items-center gap-1 text-[12px] text-p-300 transition-colors hover:text-white"
             >
               {copie ? <Check size={12} /> : <Copy size={12} />}
               {copie ? 'Copié' : 'Copier'}
@@ -306,7 +306,7 @@ export function CodeBlock({
         </div>
       )}
       <pre className="overflow-x-auto px-3 py-2.5">
-        <code className="font-mono text-[12.5px] leading-relaxed text-[#E6E1F5]">{code}</code>
+        <code className="font-mono text-[13px] leading-relaxed text-[#E6E1F5]">{code}</code>
       </pre>
     </div>
   )

@@ -221,7 +221,7 @@ export function VueBackup({ id }: { id: string }) {
                       </span>
                       <Link
                         href={`/app/applications/projets/${projet.id}/${s.id}`}
-                        className="font-mono text-[13.5px] font-bold text-ink hover:text-p-700"
+                        className="font-mono text-[14px] font-bold text-ink hover:text-p-700"
                       >
                         {s.nom}
                       </Link>
@@ -255,7 +255,7 @@ export function VueBackup({ id }: { id: string }) {
                   items={[
                     {
                       cle: 'Fréquence',
-                      valeur: <span className="font-mono text-[12.5px]">{plan.cron}</span>,
+                      valeur: <span className="font-mono text-[13px]">{plan.cron}</span>,
                     },
                     { cle: 'Rétention', valeur: `${plan.retentionJours} jours` },
                     {
@@ -322,7 +322,7 @@ export function VueBackup({ id }: { id: string }) {
             {sansEtat.map((s) => (
               <li key={s.id} className="flex items-center justify-between gap-3 py-2 first:pt-0">
                 <span className="min-w-0">
-                  <span className="block truncate font-mono text-[12.5px] font-semibold text-ink">
+                  <span className="block truncate font-mono text-[13px] font-semibold text-ink">
                     {s.nom}
                   </span>
                   <span className="block text-[11px] text-g-500">
@@ -344,7 +344,7 @@ export function VueBackup({ id }: { id: string }) {
         <Callout ton="violet" titre="Une sauvegarde qu’on n’a jamais relue n’est pas une sauvegarde">
           Chaque point est relu après écriture, et un test de restauration complet est joué
           périodiquement. Le résultat de ces tests, avec sa durée, est dans{' '}
-          <Link href="/app/sauvegarde" className="font-semibold text-p-700 hover:text-m-600">
+          <Link href="/app/sauvegarde" className="font-semibold text-p-700 hover:underline">
             Sauvegardes &amp; PRA
           </Link>
           , avec le tableau de conformité 3-2-1.

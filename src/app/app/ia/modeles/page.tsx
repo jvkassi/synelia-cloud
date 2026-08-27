@@ -68,7 +68,7 @@ export default function CatalogueModeles() {
           {texte.map((m) => (
             <div key={m.id} className="flex flex-wrap items-center gap-3">
               <span className="flex w-full min-w-0 items-center gap-2 sm:w-64">
-                <span className="truncate text-[12.5px] text-ink">{m.nom}</span>
+                <span className="truncate text-[13px] text-ink">{m.nom}</span>
                 <Badge tone={m.hebergement === 'souverain' ? 'ok' : 'warn'} size="sm">
                   {m.hebergement === 'souverain' ? 'Territoire' : 'Hors territoire'}
                 </Badge>

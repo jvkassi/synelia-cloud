@@ -37,7 +37,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
 }
 
 const SIZES: Record<ButtonSize, string> = {
-  sm: 'h-8 px-3 text-[12.5px] gap-1.5',
+  sm: 'h-8 px-3 text-[13px] gap-1.5',
   md: 'h-9 px-4 text-[13px] gap-2',
   lg: 'h-11 px-6 text-[14px] gap-2',
 }

@@ -119,7 +119,7 @@ export function ErrorState({
   className?: string
 }) {
   return (
-    <Card className={cn('border-[#EFC3BD] bg-err-bg', className)}>
+    <Card className={cn('border-err/25 bg-err-bg', className)}>
       <div className="flex items-start gap-3.5">
         <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white text-err">
           <ServerCrash size={17} />
@@ -160,11 +160,11 @@ export function PermissionDenied({
 }) {
   return (
     <div className={cn('space-y-3', className)}>
-      <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-warn bg-warn-bg px-4 py-3">
+      <div className="flex items-start gap-3 rounded-[8px] border border-warn/40 bg-warn-bg px-4 py-3">
         <Lock size={16} className="mt-0.5 shrink-0 text-warn" />
         <div>
           <p className="text-[13px] font-semibold text-ink">{message}</p>
-          <p className="mt-0.5 text-[12.5px] text-g-700">
+          <p className="mt-0.5 text-[13px] text-g-700">
             L’écran reste consultable en lecture. Toute tentative d’action est journalisée dans
             l’audit de votre organisation.
           </p>

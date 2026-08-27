@@ -199,7 +199,7 @@ export default function BasesManagees() {
                   <div className="flex items-start justify-between gap-2">
                     <span className="flex items-center gap-2.5">
                       <span
-                        className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[10px] font-bold"
+                        className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[11px] font-bold"
                         style={{
                           background: surfaceMarque(m.teinte).fond,
                           color: surfaceMarque(m.teinte).texte,
@@ -208,7 +208,7 @@ export default function BasesManagees() {
                         {m.nom.slice(0, 2).toUpperCase()}
                       </span>
                       <span className="min-w-0">
-                        <span className="block truncate font-mono text-[12.5px] font-semibold text-ink">
+                        <span className="block truncate font-mono text-[13px] font-semibold text-ink">
                           {b.nom}
                         </span>
                         <span className="block text-[11px] text-g-500">
@@ -357,7 +357,7 @@ export default function BasesManagees() {
                           className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                         >
                           <span className="min-w-0">
-                            <span className="block font-mono text-[12.5px] font-semibold text-ink">
+                            <span className="block font-mono text-[13px] font-semibold text-ink">
                               {base.nom}-replica-{i + 1}
                             </span>
                             <span className="block font-mono text-[11px] text-g-500">
@@ -368,7 +368,7 @@ export default function BasesManagees() {
                             <Badge tone="ok" dot size="sm">
                               Synchronisé
                             </Badge>
-                            <span className="tnum text-[11.5px] text-g-500">retard 42 ms</span>
+                            <span className="tnum text-[12px] text-g-500">retard 42 ms</span>
                             <BoutonAction
                               libelle="Promouvoir"
                               variant="ghost"
@@ -617,7 +617,7 @@ export default function BasesManagees() {
                           <span className="block font-mono text-[13px] font-semibold text-ink">
                             {moteur.nom} {x.v}
                           </span>
-                          <span className="block text-[11.5px] text-g-500">{x.statut}</span>
+                          <span className="block text-[12px] text-g-500">{x.statut}</span>
                         </span>
                         {x.courante ? (
                           <Badge tone="violet" size="sm">

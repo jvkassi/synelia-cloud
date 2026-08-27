@@ -174,7 +174,7 @@ export function VueVariables({ id }: { id: string }) {
               {projet.variables.map((v, i) => (
                 <tr key={`${v.cle}-${i}`} className="border-b border-g-100 last:border-0">
                   <td className="px-3 py-2.5">
-                    <span className="font-mono text-[12.5px] font-semibold text-ink">{v.cle}</span>
+                    <span className="font-mono text-[13px] font-semibold text-ink">{v.cle}</span>
                   </td>
                   <td className="px-3 py-2.5">
                     {v.secret ? (
@@ -223,7 +223,7 @@ export function VueVariables({ id }: { id: string }) {
                   </td>
                   <td className="px-3 py-2.5 text-right">
                     <span className="flex items-center justify-end gap-1.5">
-                      <span className="text-[11.5px] text-g-500">
+                      <span className="text-[12px] text-g-500">
                         {v.secret ? 'coffre de secrets' : 'clair'}
                       </span>
                       <GatedAction

@@ -249,12 +249,12 @@ export function VueEspace({ id }: { id: string }) {
                     { cle: 'Site', valeur: SITE_LABEL[espace.site] },
                     {
                       cle: 'Plage réseau',
-                      valeur: <span className="font-mono text-[12.5px]">{espace.cidr}</span>,
+                      valeur: <span className="font-mono text-[13px]">{espace.cidr}</span>,
                     },
                     {
                       cle: 'DNS interne',
                       valeur: (
-                        <span className="break-all font-mono text-[11.5px]">
+                        <span className="break-all font-mono text-[12px]">
                           {espace.dnsInterne}
                         </span>
                       ),
@@ -322,7 +322,7 @@ export function VueEspace({ id }: { id: string }) {
                         <span className="min-w-0">
                           <Link
                             href={`/app/vms/${v.id}`}
-                            className="block truncate font-mono text-[12.5px] font-semibold text-ink hover:text-p-700"
+                            className="block truncate font-mono text-[13px] font-semibold text-ink hover:text-p-700"
                           >
                             {v.nom}
                           </Link>
@@ -395,7 +395,7 @@ export function VueEspace({ id }: { id: string }) {
                       <span className="min-w-0">
                         <Link
                           href={`/app/kubernetes/${c.id}`}
-                          className="block truncate font-mono text-[12.5px] font-semibold text-ink hover:text-p-700"
+                          className="block truncate font-mono text-[13px] font-semibold text-ink hover:text-p-700"
                         >
                           {c.nom}
                         </Link>
@@ -487,7 +487,7 @@ export function VueEspace({ id }: { id: string }) {
                           <td className="px-3 py-2.5">
                             <Link
                               href={`/app/vms/${v.id}`}
-                              className="font-mono text-[12.5px] text-ink hover:text-p-700"
+                              className="font-mono text-[13px] text-ink hover:text-p-700"
                             >
                               {v.nom}
                             </Link>
@@ -495,7 +495,7 @@ export function VueEspace({ id }: { id: string }) {
                           <td className="px-3 py-2.5">
                             <Link
                               href={hrefDuService(v.applicationId)}
-                              className="text-[12.5px] text-p-700 hover:text-m-600"
+                              className="text-[13px] text-p-700 hover:underline"
                             >
                               {v.applicationNom}
                             </Link>
@@ -588,7 +588,7 @@ export function VueEspace({ id }: { id: string }) {
                   <tbody>
                     {reseaux.map((r) => (
                       <tr key={r.id} className="border-b border-g-100 last:border-0">
-                        <td className="px-3 py-2.5 text-[12.5px] font-medium text-ink">{r.nom}</td>
+                        <td className="px-3 py-2.5 text-[13px] font-medium text-ink">{r.nom}</td>
                         <td className="px-3 py-2.5 font-mono text-[12px] text-g-700">{r.cidr}</td>
                         <td className="tnum px-3 py-2.5 text-[12px] text-g-700">{r.vlan}</td>
                         <td className="px-3 py-2.5">
@@ -620,7 +620,7 @@ export function VueEspace({ id }: { id: string }) {
                     className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2"
                   >
                     <span className="min-w-0">
-                      <span className="block font-mono text-[12.5px] font-semibold text-ink">
+                      <span className="block font-mono text-[13px] font-semibold text-ink">
                         {ip.adresse}
                       </span>
                       {ip.ptr && (
@@ -688,8 +688,8 @@ export function VueEspace({ id }: { id: string }) {
                 <tbody>
                   {volumes.map((v) => (
                     <tr key={v.id} className="border-b border-g-100 last:border-0">
-                      <td className="px-3 py-2.5 font-mono text-[12.5px] text-ink">{v.nom}</td>
-                      <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">
+                      <td className="px-3 py-2.5 font-mono text-[13px] text-ink">{v.nom}</td>
+                      <td className="tnum px-3 py-2.5 text-[13px] text-g-700">
                         {goHumain(v.tailleGo)}
                       </td>
                       <td className="px-3 py-2.5">
@@ -703,10 +703,10 @@ export function VueEspace({ id }: { id: string }) {
                           {v.chiffre ? 'Oui' : 'Non'}
                         </Badge>
                       </td>
-                      <td className="px-3 py-2.5 text-[12.5px] text-g-700">
+                      <td className="px-3 py-2.5 text-[13px] text-g-700">
                         {v.attachedLabel ?? <span className="text-g-500">détaché</span>}
                       </td>
-                      <td className="px-3 py-2.5 font-mono text-[11.5px] text-g-700">
+                      <td className="px-3 py-2.5 font-mono text-[12px] text-g-700">
                         {v.montage ?? '—'}
                       </td>
                     </tr>
@@ -763,7 +763,7 @@ export function VueEspace({ id }: { id: string }) {
                   className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                 >
                   <span className="min-w-0">
-                    <span className="block text-[12.5px] font-semibold text-ink">{p.nom}</span>
+                    <span className="block text-[13px] font-semibold text-ink">{p.nom}</span>
                     <span className="block text-[11px] text-g-500">
                       {p.frequence} · rétention {p.retentionJours} j · prochaine exécution{' '}
                       {dateHeure(p.prochaineExecution)}
@@ -877,7 +877,7 @@ export function VueEspace({ id }: { id: string }) {
                   <span className="flex min-w-0 items-center gap-2.5">
                     <Avatar nom={u.nom} size="sm" />
                     <span className="min-w-0">
-                      <span className="block truncate text-[12.5px] font-medium text-ink">
+                      <span className="block truncate text-[13px] font-medium text-ink">
                         {u.nom}
                       </span>
                       <span className="block truncate text-[11px] text-g-500">{u.email}</span>

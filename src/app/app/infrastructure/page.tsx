@@ -214,7 +214,7 @@ export default function AccueilInfrastructure() {
             titre="Protection des données"
             sousTitre="Ce que la section Sauvegardes & PRA détaille plan par plan."
           />
-          <dl className="mt-3 space-y-1.5 text-[12.5px]">
+          <dl className="mt-3 space-y-1.5 text-[13px]">
             {[
               ['Machines sans plan de sauvegarde', VMS.filter((v) => !v.backupPlanId).length],
               ['Plans de reprise', DR_PLANS.length],
@@ -229,16 +229,15 @@ export default function AccueilInfrastructure() {
           </dl>
           <Link
             href="/app/sauvegarde"
-            className="mt-3 inline-block text-[12.5px] font-semibold text-p-700 hover:text-m-600"
+            className="mt-3 inline-block text-[13px] font-semibold text-p-700 hover:underline"
           >
             Sauvegardes &amp; PRA →
           </Link>
         </Card>
 
-        <Callout ton="violet" titre="Pourquoi un Espace se choisit à gauche">
+        <Callout ton="violet" titre="Le choix d’Espace vaut pour toutes les sections">
           Une machine, un cluster, un répartiteur, un volume appartiennent à un Espace Cloud : son
-          quota, sa plage réseau, son site. Le choix vaut pour toutes les sections à la fois, plutôt
-          que d’être reposé à chaque écran. Cet accueil est la seule vue qui les traverse tous.
+          quota, sa plage réseau, son site. Cet accueil est la seule vue qui les traverse tous.
         </Callout>
       </div>
     </div>

@@ -21,7 +21,7 @@ export function Label({
 }) {
   return (
     <label htmlFor={htmlFor} className="mb-1.5 block">
-      <span className="text-[12.5px] font-semibold text-g-700">
+      <span className="text-[13px] font-semibold text-g-700">
         {children}
         {required && <span className="ml-0.5 text-m-600">*</span>}
       </span>
@@ -104,7 +104,7 @@ export function MonoTextarea({ className, ...rest }: ComponentProps<'textarea'>)
       spellCheck={false}
       className={cn(
         FIELD,
-        'min-h-40 px-3 py-2 font-mono text-[12.5px] leading-relaxed',
+        'min-h-40 px-3 py-2 font-mono text-[13px] leading-relaxed',
         className,
       )}
       {...rest}
@@ -258,7 +258,7 @@ export function SegmentedControl<T extends string>({
           onClick={() => onChange(o.value)}
           className={cn(
             'rounded-[4px] font-semibold transition-colors',
-            size === 'sm' ? 'px-2 py-1 text-[11.5px]' : 'px-3 py-1.5 text-[12.5px]',
+            size === 'sm' ? 'px-2 py-1 text-[12px]' : 'px-3 py-1.5 text-[13px]',
             value === o.value
               ? 'bg-white text-p-700 shadow-[0_1px_2px_rgba(43,27,77,.08)]'
               : 'text-g-500 hover:text-g-700',
@@ -296,7 +296,7 @@ export function Slider({
     <div className={className}>
       {label && (
         <div className="mb-2 flex items-baseline justify-between">
-          <span className="text-[12.5px] font-semibold text-g-700">{label}</span>
+          <span className="text-[13px] font-semibold text-g-700">{label}</span>
           <span className="tnum text-[13px] font-bold text-p-700">
             {value}
             {unite ? ` ${unite}` : ''}
@@ -356,7 +356,7 @@ export function Combobox({
       {open && (
         <div className="absolute z-30 mt-1 max-h-64 w-full overflow-auto rounded-[8px] border border-g-300 bg-white py-1 shadow-[0_8px_24px_rgba(43,27,77,.14)]">
           {filtered.length === 0 && (
-            <p className="px-3 py-2 text-[12.5px] text-g-500">Aucun résultat</p>
+            <p className="px-3 py-2 text-[13px] text-g-500">Aucun résultat</p>
           )}
           {filtered.map((o) => (
             <button
@@ -371,7 +371,7 @@ export function Combobox({
             >
               <span className="truncate text-ink">{o.label}</span>
               <span className="flex items-center gap-2">
-                {o.meta && <span className="text-[11.5px] text-g-500">{o.meta}</span>}
+                {o.meta && <span className="text-[12px] text-g-500">{o.meta}</span>}
                 {value === o.value && <Check size={13} className="text-p-700" />}
               </span>
             </button>

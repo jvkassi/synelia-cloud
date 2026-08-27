@@ -106,7 +106,7 @@ export function VueObservabilite({ id }: { id: string }) {
                 {e}
                 <span
                   className={cn(
-                    'tnum rounded-full px-1.5 text-[10.5px]',
+                    'tnum rounded-full px-1.5 text-[11px]',
                     e === env ? 'bg-white/20' : 'bg-g-100 text-g-700',
                   )}
                 >
@@ -116,9 +116,9 @@ export function VueObservabilite({ id }: { id: string }) {
             )
           })}
         </div>
-        <span className="text-[11.5px] text-g-500">
+        <span className="text-[12px] text-g-500">
           Les seuils et les canaux d’alerte se règlent dans{' '}
-          <Link href="/app/observabilite" className="font-semibold text-p-700 hover:text-m-600">
+          <Link href="/app/observabilite" className="font-semibold text-p-700 hover:underline">
             Supervision
           </Link>
           , pour toute l’organisation.
@@ -184,7 +184,7 @@ export function VueObservabilite({ id }: { id: string }) {
             sousTitre="L’emplacement réel est affiché : on ne demande pas de faire confiance à vide."
           />
           {servicesEnv.length === 0 ? (
-            <p className="text-[12.5px] text-g-700">
+            <p className="text-[13px] text-g-700">
               Aucun service en {env.toLowerCase()}. Un environnement vide ne facture rien et n’émet
               aucune métrique.
             </p>
@@ -196,7 +196,7 @@ export function VueObservabilite({ id }: { id: string }) {
                     <Link
                       href={`/app/applications/projets/${projet.id}/${s.id}`}
                       className={cn(
-                        'block truncate font-mono text-[12.5px] font-semibold hover:text-p-700',
+                        'block truncate font-mono text-[13px] font-semibold hover:text-p-700',
                         couleurStatut(s.statut),
                       )}
                     >
@@ -222,7 +222,7 @@ export function VueObservabilite({ id }: { id: string }) {
             sousTitre="Les huit derniers signaux qui concernent ce projet. L’historique complet est dans Centreon."
           />
           {evenements.length === 0 ? (
-            <p className="text-[12.5px] text-g-700">
+            <p className="text-[13px] text-g-700">
               Aucun événement sur ce projet. Une supervision silencieuse est le résultat attendu,
               pas une panne de la supervision — la dernière collecte date de moins d’une minute.
             </p>

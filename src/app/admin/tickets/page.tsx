@@ -145,16 +145,14 @@ export default function TicketsAdmin() {
                 `${t.numero} — ${orgNom(t.orgId)} : ${t.sujet}${t.slaRestantMin !== undefined ? ` (${dureeMin(t.slaRestantMin)} restantes)` : ''}`,
             )
             .join(' · ')}
-          . Un ticket critique mobilise l’astreinte quelle que soit l’heure. L’engagement de première
-          réponse est de trente minutes.
+          . L’astreinte est mobilisée quelle que soit l’heure : trente minutes de première réponse.
         </Callout>
       )}
 
       {nonAssignes.length > 0 && (
         <Callout ton="warn" titre={`${nonAssignes.length} ticket sans personne assignée`}>
-          Un ticket non assigné n’a personne qui le porte, et l’horloge de l’engagement tourne quand
-          même. L’assignation devrait être faite dans les minutes qui suivent l’ouverture, quitte à la
-          changer ensuite.
+          L’horloge de l’engagement tourne quand même. Assignez dans les minutes qui suivent
+          l’ouverture, quitte à changer ensuite.
         </Callout>
       )}
 
@@ -253,7 +251,7 @@ export default function TicketsAdmin() {
                   cle: (t) => t.slaRestantMin ?? 99999,
                   rendu: (t) =>
                     t.slaRestantMin === undefined ? (
-                      <span className="text-[11.5px] text-g-500">—</span>
+                      <span className="text-[12px] text-g-500">—</span>
                     ) : (
                       <span
                         className={cn(
@@ -276,8 +274,8 @@ export default function TicketsAdmin() {
                   cle: (t) => `${t.numero} ${t.sujet}`,
                   rendu: (t) => (
                     <span className="block min-w-0">
-                      <span className="block font-mono text-[10.5px] text-g-500">{t.numero}</span>
-                      <span className="block truncate text-[12.5px] font-semibold text-ink">
+                      <span className="block font-mono text-[11px] text-g-500">{t.numero}</span>
+                      <span className="block truncate text-[13px] font-semibold text-ink">
                         {t.sujet}
                       </span>
                     </span>
@@ -324,7 +322,7 @@ export default function TicketsAdmin() {
                     t.assigneA ? (
                       <span className="flex items-center gap-2">
                         <Avatar nom={t.assigneA} size="sm" />
-                        <span className="truncate text-[11.5px] text-ink">{t.assigneA}</span>
+                        <span className="truncate text-[12px] text-ink">{t.assigneA}</span>
                       </span>
                     ) : (
                       <Badge tone="warn" size="sm">
@@ -338,7 +336,7 @@ export default function TicketsAdmin() {
                   cle: (t) => t.service ?? '',
                   masquable: true,
                   rendu: (t) => (
-                    <span className="text-[11.5px] text-g-700">{t.service ?? '—'}</span>
+                    <span className="text-[12px] text-g-700">{t.service ?? '—'}</span>
                   ),
                 },
                 {
@@ -357,7 +355,7 @@ export default function TicketsAdmin() {
                   aligne: 'right',
                   cle: (t) => t.createdAt,
                   rendu: (t) => (
-                    <span className="text-[11.5px] text-g-500">{relatif(t.createdAt)}</span>
+                    <span className="text-[12px] text-g-500">{relatif(t.createdAt)}</span>
                   ),
                 },
                 {
@@ -403,7 +401,7 @@ export default function TicketsAdmin() {
             <div className="border-b border-g-100 px-4 py-3.5">
               <CardHeader
                 titre="Charge par intervenant"
-                sousTitre="Un intervenant qui porte trop de tickets critiques simultanément finit par les traiter tous mal."
+                sousTitre="Charge par intervenant, tickets critiques en tête."
                 className="mb-0"
               />
             </div>
@@ -431,14 +429,14 @@ export default function TicketsAdmin() {
                           <span className="flex items-center gap-2.5">
                             <Avatar nom={m.nom} size="sm" />
                             <span className="min-w-0">
-                              <span className="block text-[12.5px] font-semibold text-ink">
+                              <span className="block text-[13px] font-semibold text-ink">
                                 {m.nom}
                               </span>
-                              <span className="block text-[10.5px] text-g-500">{m.email}</span>
+                              <span className="block text-[11px] text-g-500">{m.email}</span>
                             </span>
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">{m.equipe}</td>
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">{m.equipe}</td>
                         <td className="px-3 py-2.5">
                           <Badge tone={m.privilegie ? 'violet' : 'neutral'} size="sm">
                             {ROLE_LABEL[m.role] ?? m.role}
@@ -453,7 +451,7 @@ export default function TicketsAdmin() {
                               {sesCritiques.length}
                             </Badge>
                           ) : (
-                            <span className="text-[11.5px] text-g-500">0</span>
+                            <span className="text-[12px] text-g-500">0</span>
                           )}
                         </td>
                         <td className="w-40 px-3 py-2.5">
@@ -477,7 +475,7 @@ export default function TicketsAdmin() {
                             </span>
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-500">
+                        <td className="px-3 py-2.5 text-[12px] text-g-500">
                           {relatif(m.dernierAcces)}
                         </td>
                       </tr>
@@ -504,7 +502,7 @@ export default function TicketsAdmin() {
                   />
                 ))}
               </div>
-              <div className="mt-2 flex justify-between text-[10.5px] text-g-500">
+              <div className="mt-2 flex justify-between text-[11px] text-g-500">
                 <span>Il y a 30 jours</span>
                 <span>Aujourd’hui</span>
               </div>
@@ -558,9 +556,8 @@ export default function TicketsAdmin() {
                 })}
               </div>
               <Callout ton="violet" className="mt-4" titre="Trente-sept tickets évitables sur soixante-six">
-                Une documentation clarifiée, un assistant de restauration plus simple, un guide de
-                fédération et une extension de quota en libre-service supprimeraient plus de la moitié
-                de notre volume de tickets. C’est le meilleur investissement possible pour le support.
+                Quatre chantiers les couvrent : documentation, assistant de restauration, guide de
+                fédération, extension de quota en libre-service.
               </Callout>
             </Card>
           </div>
@@ -600,7 +597,7 @@ export default function TicketsAdmin() {
                           {LIBELLE_GRAVITE[x.g]}
                         </Badge>
                       </td>
-                      <td className="tnum px-3 py-2.5 text-[11.5px] text-g-700">
+                      <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
                         {dureeMin(x.re)}
                       </td>
                       <td className="px-3 py-2.5">
@@ -608,7 +605,7 @@ export default function TicketsAdmin() {
                           {dureeMin(x.rc)}
                         </Badge>
                       </td>
-                      <td className="tnum px-3 py-2.5 text-[11.5px] text-g-700">
+                      <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
                         {dureeMin(x.se)}
                       </td>
                       <td className="px-3 py-2.5">
@@ -643,10 +640,9 @@ export default function TicketsAdmin() {
               </table>
             </div>
             <Callout ton="warn" className="mt-4" titre="4 % des tickets critiques ont dépassé l’engagement">
-              Deux tickets sur cinquante-deux, tous les deux ouverts un samedi soir. L’astreinte a
-              répondu en trente-huit et quarante-quatre minutes au lieu de trente. Les avoirs
-              correspondants ont été calculés et appliqués automatiquement — les clients n’ont rien eu
-              à réclamer, et n’ont pas eu à s’apercevoir du dépassement.
+              Deux tickets sur cinquante-deux, ouverts un samedi soir. L’astreinte a répondu en
+              trente-huit et quarante-quatre minutes au lieu de trente. Les avoirs ont été calculés et
+              appliqués sans réclamation du client.
             </Callout>
           </Card>
 
@@ -679,9 +675,9 @@ export default function TicketsAdmin() {
                     d: 'Un client qui demande une escalade l’obtient. Nous ne filtrons pas cette demande, même si nous pensons qu’elle n’est pas nécessaire.',
                   },
                 ].map((x) => (
-                  <div key={x.r} className="rounded-[6px] border border-p-300 bg-p-050 px-3 py-2.5">
-                    <p className="text-[12.5px] font-semibold text-ink">{x.r}</p>
-                    <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">{x.d}</p>
+                  <div key={x.r} className="rounded-[6px] border border-g-300 px-3 py-2.5">
+                    <p className="text-[13px] font-semibold text-ink">{x.r}</p>
+                    <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">{x.d}</p>
                   </div>
                 ))}
               </div>
@@ -690,8 +686,7 @@ export default function TicketsAdmin() {
             <Card>
               <CardHeader
                 titre="Escalades récentes"
-                sousTitre="Une escalade n’est pas un échec : c’est le mécanisme prévu quand un ticket n’avance pas."
-                actions={<ArrowUpRight size={15} className="text-p-700" />}
+                sousTitre="Le mécanisme prévu quand un ticket n’avance pas."
               />
               <Timeline
                 evenements={[
@@ -727,8 +722,7 @@ export default function TicketsAdmin() {
               />
               <Callout ton="violet" className="mt-4" titre="L’escalade automatique à 80 % du délai">
                 Quand un ticket atteint 80 % de son délai d’engagement sans première réponse, il est
-                escaladé automatiquement, sans intervention. C’est le garde-fou qui empêche un ticket de
-                passer à travers les mailles un dimanche soir.
+                escaladé sans intervention.
               </Callout>
             </Card>
           </div>
@@ -752,7 +746,7 @@ export default function TicketsAdmin() {
               </Badge>
               <Link
                 href={`/admin/organisations/${detail.orgId}`}
-                className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+                className="text-[12px] font-semibold text-p-700 hover:underline"
               >
                 {orgNom(detail.orgId)}
               </Link>
@@ -813,7 +807,7 @@ export default function TicketsAdmin() {
                   >
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <span className="text-[12px] font-bold text-ink">{m.auteur}</span>
-                      <span className="text-[10.5px] text-g-500">{dateHeure(m.date)}</span>
+                      <span className="text-[11px] text-g-500">{dateHeure(m.date)}</span>
                     </div>
                     <p className="mt-1 whitespace-pre-line text-[12px] leading-relaxed text-ink">
                       {m.contenu}
@@ -976,7 +970,7 @@ export default function TicketsAdmin() {
         {assignation && (
           <div className="space-y-4">
             <div className="rounded-[6px] border border-g-300 px-3 py-2.5">
-              <p className="text-[12.5px] font-semibold text-ink">{assignation.sujet}</p>
+              <p className="text-[13px] font-semibold text-ink">{assignation.sujet}</p>
               <p className="mt-0.5 text-[11px] text-g-500">
                 {orgNom(assignation.orgId)} · {LIBELLE_GRAVITE[assignation.gravite]} ·{' '}
                 {assignation.slaRestantMin !== undefined

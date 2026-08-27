@@ -41,14 +41,14 @@ export function FormulaireSite({
           <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-ok" />
           <div className="min-w-0">
             <p className="text-[14px] font-bold text-ink">{titreSucces}</p>
-            <p className="mt-1 text-[12.5px] leading-relaxed text-g-700">{phraseSucces}</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-g-700">{phraseSucces}</p>
             <p className="mt-2 font-mono text-[12px] text-p-700">Référence {reference}</p>
           </div>
         </div>
         <ol className="space-y-1.5">
           {suite.map((x, i) => (
             <li key={x} className="flex items-start gap-2.5">
-              <span className="tnum mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-g-100 text-[9.5px] font-bold text-g-700">
+              <span className="tnum mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-g-100 text-[11px] font-bold text-g-700">
                 {i + 1}
               </span>
               <span className="text-[12px] leading-snug text-g-700">{x}</span>

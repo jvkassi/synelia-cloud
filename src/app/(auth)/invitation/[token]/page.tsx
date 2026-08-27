@@ -58,20 +58,20 @@ export default async function PageInvitation({
             {invitation.porteeType} · <span className="font-mono">{invitation.porteeLabel}</span>
           </Badge>
         </div>
-        <p className="mt-2.5 text-[12.5px] leading-relaxed text-g-700">
+        <p className="mt-2.5 text-[13px] leading-relaxed text-g-700">
           Votre rôle s’applique à cette portée uniquement. Vous ne verrez ni les autres applications
           de l’organisation, ni sa facturation, ni son journal d’audit complet.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="rounded-[10px] border border-[#B7E3D0] bg-ok-bg p-4">
+        <div className="rounded-[10px] border border-ok/25 bg-ok-bg p-4">
           <MicroLabel className="text-ok">Ce que vous pourrez faire</MicroLabel>
           <ul className="mt-2.5 space-y-1.5">
             {autorisees.map((a) => (
               <li key={a.id} className="flex items-start gap-2">
                 <Check size={13} className="mt-0.5 shrink-0 text-ok" />
-                <span className="text-[12.5px] leading-snug text-g-700">{a.libelle}</span>
+                <span className="text-[13px] leading-snug text-g-700">{a.libelle}</span>
               </li>
             ))}
           </ul>
@@ -82,7 +82,7 @@ export default async function PageInvitation({
             {interdites.map((a) => (
               <li key={a.id} className="flex items-start gap-2">
                 <Minus size={13} className="mt-0.5 shrink-0 text-g-500" />
-                <span className="text-[12.5px] leading-snug text-g-500">{a.libelle}</span>
+                <span className="text-[13px] leading-snug text-g-500">{a.libelle}</span>
               </li>
             ))}
           </ul>
@@ -98,7 +98,7 @@ export default async function PageInvitation({
         invitantNom={invitation.invitantNom}
       />
 
-      <p className="text-[11.5px] leading-relaxed text-g-500">
+      <p className="text-[12px] leading-relaxed text-g-500">
         L’acceptation ou le refus de cette invitation est journalisé dans le journal d’audit de{' '}
         {invitation.organisation}, avec votre identité, l’horodatage et votre adresse IP. Cette
         invitation expire le {dateCourte(invitation.expiration)} — après quoi{' '}
@@ -108,7 +108,7 @@ export default async function PageInvitation({
       <Callout ton="info" titre="Vous ne connaissez pas cette organisation ?">
         N’acceptez pas l’invitation. Signalez-la en réponse au message que vous avez reçu, ou depuis
         la{' '}
-        <Link href="/statut" className="font-semibold text-p-700 hover:text-m-600">
+        <Link href="/statut" className="font-semibold text-p-700 hover:underline">
           page de contact
         </Link>
         . Le jeton de cette invitation est{' '}

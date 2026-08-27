@@ -175,7 +175,7 @@ export function CarteService({ service }: { service: ServiceProjet }) {
         {service.type === 'base' && service.base && (
           <>
             <Ligne cle="Hôte interne">
-              <span className="font-mono text-[11.5px]">{service.base.hoteInterne}</span>
+              <span className="font-mono text-[12px]">{service.base.hoteInterne}</span>
             </Ligne>
             <Ligne cle="Port">
               <span className="tnum font-mono">{service.base.port}</span>
@@ -195,7 +195,7 @@ export function CarteService({ service }: { service: ServiceProjet }) {
         {service.cron && (
           <>
             <Ligne cle="Planification">
-              <span className="font-mono text-[11.5px]">{service.cron.expression}</span>
+              <span className="font-mono text-[12px]">{service.cron.expression}</span>
             </Ligne>
             <Ligne cle="Dernière exécution">
               <span className={service.cron.statut === 'echec' ? 'text-err' : undefined}>
@@ -226,7 +226,7 @@ export function CarteService({ service }: { service: ServiceProjet }) {
         {(service.type === 'application' || service.type === 'statique') && (
           <>
             <Ligne cle="Source">
-              <span className="truncate font-mono text-[11.5px]">
+              <span className="truncate font-mono text-[12px]">
                 {service.source?.ref}
                 {service.source?.branche && ` · ${service.source.branche}`}
               </span>
@@ -237,7 +237,7 @@ export function CarteService({ service }: { service: ServiceProjet }) {
                   href={`https://${domaines[0].hote}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-semibold text-p-700 hover:text-m-600"
+                  className="inline-flex items-center gap-1 font-semibold text-p-700 hover:underline"
                 >
                   {domaines[0].hote}
                   <ExternalLink size={10} />
@@ -260,7 +260,7 @@ export function CarteService({ service }: { service: ServiceProjet }) {
           </Badge>
           <span className="font-mono text-[11px] text-g-500">{service.emplacement.backend}</span>
         </span>
-        <span className="tnum text-[11.5px] font-semibold text-ink">
+        <span className="tnum text-[12px] font-semibold text-ink">
           {service.coutMensuel === 0 ? 'arrêté · 0 FCFA' : `${money(service.coutMensuel)}/mois`}
         </span>
       </div>
@@ -271,7 +271,7 @@ export function CarteService({ service }: { service: ServiceProjet }) {
 function Ligne({ cle, children }: { cle: string; children: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <dt className="shrink-0 text-[11.5px] text-g-500">{cle}</dt>
+      <dt className="shrink-0 text-[12px] text-g-500">{cle}</dt>
       <dd className="min-w-0 truncate text-[12px] font-medium text-ink">{children}</dd>
     </div>
   )
@@ -290,18 +290,18 @@ export function EmplacementReel({ service }: { service: ServiceProjet }) {
           {service.emplacement.site} · {SITE_COURT[service.emplacement.site]}
         </Ligne>
         <Ligne cle="Socle technique">
-          <span className="font-mono text-[11.5px]">{service.emplacement.backend}</span>
+          <span className="font-mono text-[12px]">{service.emplacement.backend}</span>
         </Ligne>
         {service.emplacement.vms && (
           <Ligne cle="Machines">
-            <span className="font-mono text-[11.5px]">
+            <span className="font-mono text-[12px]">
               {service.emplacement.vms.join(', ')}
             </span>
           </Ligne>
         )}
         {service.emplacement.namespace && (
           <Ligne cle="Namespace Kubernetes">
-            <span className="font-mono text-[11.5px]">{service.emplacement.namespace}</span>
+            <span className="font-mono text-[12px]">{service.emplacement.namespace}</span>
           </Ligne>
         )}
       </dl>

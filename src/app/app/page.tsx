@@ -121,7 +121,7 @@ export default function TableauDeBord() {
             actions={
               <Link
                 href="/app/espaces"
-                className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+                className="text-[12px] font-semibold text-p-700 hover:underline"
               >
                 Détail par espace →
               </Link>
@@ -150,8 +150,8 @@ export default function TableauDeBord() {
             />
           </div>
 
-          <div className="mt-4 rounded-[8px] border-l-4 border-p-600 bg-p-050 px-3.5 py-2.5">
-            <p className="text-[12.5px] leading-relaxed text-g-700">
+          <div className="mt-4 border-l-2 border-p-300 pl-3.5">
+            <p className="text-[13px] leading-relaxed text-g-700">
               Marge disponible : <span className="tnum font-semibold text-ink">{margeVcpu} vCPU</span>{' '}
               et <span className="tnum font-semibold text-ink">{s.quota.ramGo - s.usage.ramGo} Go</span>{' '}
               — de quoi accueillir environ{' '}
@@ -174,7 +174,7 @@ export default function TableauDeBord() {
               hauteur={64}
               couleur="var(--color-p-600)"
             />
-            <div className="mt-1 flex justify-between text-[10.5px] text-g-500">
+            <div className="mt-1 flex justify-between text-[11px] text-g-500">
               <span>-30 j</span>
               <span>-20 j</span>
               <span>-10 j</span>
@@ -203,7 +203,7 @@ export default function TableauDeBord() {
           </dl>
           <Link
             href="/app/support"
-            className="mt-3 inline-flex items-center gap-1 border-t border-g-100 pt-3 text-[12px] font-semibold text-p-700 hover:text-m-600"
+            className="mt-3 inline-flex items-center gap-1 border-t border-g-100 pt-3 text-[12px] font-semibold text-p-700 hover:underline"
           >
             Voir les engagements SLA
             <ArrowUpRight size={12} />
@@ -218,7 +218,7 @@ export default function TableauDeBord() {
           actions={
             <Link
               href="/app/lanceur"
-              className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+              className="text-[12px] font-semibold text-p-700 hover:underline"
             >
               Ouvrir le lanceur →
             </Link>
@@ -249,19 +249,19 @@ export default function TableauDeBord() {
             <CardHeader titre="Facturation" />
             <dl className="space-y-2.5">
               <div className="flex items-baseline justify-between gap-2">
-                <dt className="text-[12.5px] text-g-500">Dépense du mois en cours</dt>
+                <dt className="text-[13px] text-g-500">Dépense du mois en cours</dt>
                 <dd className="tnum text-[16px] font-bold [font-family:var(--font-display)] text-ink">
                   {money(s.depenseMois)}
                 </dd>
               </div>
               <div className="flex items-baseline justify-between gap-2">
-                <dt className="text-[12.5px] text-g-500">Prévision de fin de mois</dt>
+                <dt className="text-[13px] text-g-500">Prévision de fin de mois</dt>
                 <dd className="tnum text-[13px] font-semibold text-warn">
                   {money(s.previsionMois)}
                 </dd>
               </div>
               <div className="flex items-baseline justify-between gap-2">
-                <dt className="text-[12.5px] text-g-500">Mois précédent</dt>
+                <dt className="text-[13px] text-g-500">Mois précédent</dt>
                 <dd className="tnum text-[13px] text-g-700">{money(s.depenseMoisPrecedent)}</dd>
               </div>
             </dl>
@@ -286,14 +286,14 @@ export default function TableauDeBord() {
                 </span>
                 <Link
                   href="/app/facturation"
-                  className="text-[11.5px] font-semibold text-p-700 hover:text-m-600"
+                  className="text-[12px] font-semibold text-p-700 hover:underline"
                 >
                   Ouvrir
                 </Link>
               </div>
             )}
             {s.facturesEnAttente > 0 && (
-              <p className="mt-2 rounded-[6px] bg-err-bg px-2.5 py-2 text-[11.5px] text-err">
+              <p className="mt-2 rounded-[6px] bg-err-bg px-2.5 py-2 text-[12px] text-err">
                 {s.facturesEnAttente} facture impayée · INV-1962, échue depuis le 10 juin
               </p>
             )}
@@ -329,7 +329,7 @@ export default function TableauDeBord() {
                           {t.sujet}
                         </span>
                         {t.slaRestantMin !== undefined && (
-                          <span className="tnum block text-[10.5px] text-g-500">
+                          <span className="tnum block text-[11px] text-g-500">
                             SLA restant : {Math.floor(t.slaRestantMin / 60)} h{' '}
                             {String(t.slaRestantMin % 60).padStart(2, '0')}
                           </span>
@@ -340,13 +340,13 @@ export default function TableauDeBord() {
                 </li>
               ))}
             </ul>
-            <div className="mt-3 flex items-center gap-2 border-t border-g-100 pt-3 text-[11.5px] text-g-700">
+            <div className="mt-3 flex items-center gap-2 border-t border-g-100 pt-3 text-[12px] text-g-700">
               <CalendarClock size={13} className="shrink-0 text-p-700" />
               Prochain point d’exploitation : {dateHeure(s.prochainRdv)}
             </div>
             <Link
               href="/app/support"
-              className="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-p-700 hover:text-m-600"
+              className="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-p-700 hover:underline"
             >
               <LifeBuoy size={12} />
               Ouvrir un ticket
@@ -363,7 +363,7 @@ export default function TableauDeBord() {
           actions={
             <Link
               href="/app/securite"
-              className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+              className="text-[12px] font-semibold text-p-700 hover:underline"
             >
               Journal d’audit complet →
             </Link>
@@ -412,7 +412,7 @@ export default function TableauDeBord() {
             <p className="mt-1.5 text-[13px] font-semibold text-ink group-hover:text-p-700">
               {c.nom}
             </p>
-            <p className="mt-0.5 text-[11.5px] leading-snug text-g-500">{c.phrase}</p>
+            <p className="mt-0.5 text-[12px] leading-snug text-g-500">{c.phrase}</p>
           </Link>
         ))}
       </div>
@@ -435,12 +435,12 @@ function Ligne({
       <dd
         className={
           ton === 'err'
-            ? 'tnum text-[12.5px] font-semibold text-err'
+            ? 'tnum text-[13px] font-semibold text-err'
             : ton === 'warn'
-              ? 'tnum text-[12.5px] font-semibold text-warn'
+              ? 'tnum text-[13px] font-semibold text-warn'
               : ton === 'ok'
-                ? 'tnum text-[12.5px] font-semibold text-ok'
-                : 'tnum text-[12.5px] font-semibold text-ink'
+                ? 'tnum text-[13px] font-semibold text-ok'
+                : 'tnum text-[13px] font-semibold text-ink'
         }
       >
         {valeur}
@@ -464,7 +464,7 @@ function Compteur({
       <p className={`tnum text-[18px] font-bold leading-none [font-family:var(--font-display)] ${couleurs}`}>
         {valeur}
       </p>
-      <p className="mt-1 text-[10.5px] leading-tight text-g-500">{libelle}</p>
+      <p className="mt-1 text-[11px] leading-tight text-g-500">{libelle}</p>
     </div>
   )
 }

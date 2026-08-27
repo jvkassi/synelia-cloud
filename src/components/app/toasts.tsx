@@ -23,10 +23,10 @@ export function ToastHost() {
           className={cn(
             'pointer-events-auto flex animate-fade-in items-start gap-2.5 rounded-[10px] border bg-white px-3.5 py-3 shadow-[0_8px_28px_rgba(43,27,77,.16)]',
             {
-              ok: 'border-[#B7E3D0]',
-              info: 'border-[#BFD6EE]',
-              warn: 'border-[#EED9B0]',
-              err: 'border-[#EFC3BD]',
+              ok: 'border-ok/25',
+              info: 'border-info/25',
+              warn: 'border-warn/25',
+              err: 'border-err/25',
             }[t.ton],
           )}
         >

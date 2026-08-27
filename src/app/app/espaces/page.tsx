@@ -111,7 +111,7 @@ const colonnesEspaces = (vms: VM[]): Array<Colonne<EspaceCloud>> => [
     rendu: (e) => (
       <Link
         href={`/app/espaces/${e.id}`}
-        className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+        className="text-[12px] font-semibold text-p-700 hover:underline"
       >
         Ouvrir →
       </Link>

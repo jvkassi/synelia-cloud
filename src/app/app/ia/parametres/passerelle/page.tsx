@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Ban, Lock, Plus, RotateCw } from 'lucide-react'
+import { Ban, Plus, RotateCw } from 'lucide-react'
 import { dateCourte, jetons, money, num, relatif } from '@/lib/format'
 import { CLASSE_DONNEES_LABEL, type CleIA } from '@/lib/types'
 import { CLES_IA, COFFRE_CLES_FOURNISSEURS, MODELES_IA, PASSERELLE_IA } from '@/lib/mock'
@@ -39,7 +39,7 @@ export default function Passerelle() {
       cle: (c) => c.nom,
       rendu: (c) => (
         <span className="block">
-          <span className="block text-[12.5px] font-semibold text-ink">{c.nom}</span>
+          <span className="block text-[13px] font-semibold text-ink">{c.nom}</span>
           <span className="block font-mono text-[11px] text-g-500">{c.prefixe}…</span>
         </span>
       ),
@@ -88,7 +88,7 @@ export default function Passerelle() {
       cle: (c) => c.budgetConsomme,
       rendu: (c) => (
         <span className="block">
-          <span className="tnum block text-[12.5px] font-semibold text-ink">
+          <span className="tnum block text-[13px] font-semibold text-ink">
             {money(c.budgetConsomme)}
           </span>
           <span className="tnum block text-[11px] text-g-500">plafond {money(c.budgetMensuel)}</span>
@@ -191,7 +191,7 @@ export default function Passerelle() {
           </div>
           <div className="mt-4 border-t border-g-100 pt-4">
             <MicroLabel className="mb-2">Points d’API servis</MicroLabel>
-            <p className="font-mono text-[11.5px] leading-relaxed text-g-700">
+            <p className="font-mono text-[12px] leading-relaxed text-g-700">
               {PASSERELLE_IA.compatible}
             </p>
           </div>
@@ -373,7 +373,7 @@ curl ${PASSERELLE_IA.base}/models \\
                 />
               ))}
             </div>
-            <p className="mt-1.5 text-[11.5px] text-g-500">
+            <p className="mt-1.5 text-[12px] text-g-500">
               Restreindre la liste vaut mieux que tout ouvrir : une clé qui ne peut appeler que deux
               modèles ne peut pas dériver vers le plus cher du catalogue.
             </p>

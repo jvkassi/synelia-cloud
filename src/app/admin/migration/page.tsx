@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowRight, CalendarClock, MoveRight, PlayCircle } from 'lucide-react'
+import { ArrowRight, MoveRight, PlayCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateCourte, dateHeure, dureeMin, money, num, pct } from '@/lib/format'
 import { BACKENDS, TRAJECTOIRE_SORTIE, VMS } from '@/lib/mock'
@@ -166,12 +166,10 @@ export default function Migration() {
         }
       />
 
-      <Callout ton="violet" titre="Pourquoi nous publions cette page plutôt que de la cacher">
-        Un fournisseur qui se dit souverain tout en exploitant du VMware sans le dire se fait prendre
-        au premier audit sérieux, et perd bien plus que ce qu’il a gagné. Nous préférons annoncer que
-        50 % de notre capacité est déjà sur des socles libres, que le reste sort d’ici juin 2027, et
-        publier l’avancement trimestre par trimestre. Un client qui a une contrainte réglementaire
-        stricte peut d’ailleurs demander dès aujourd’hui un placement exclusivement souverain.
+      <Callout ton="violet" titre="Trajectoire publiée, trimestre par trimestre">
+        50 % de la capacité est déjà sur des socles libres, le reste sort d’ici juin 2027, et
+        l’avancement est publié côté vitrine. Un client sous contrainte réglementaire stricte peut
+        demander dès aujourd’hui un placement exclusivement souverain.
       </Callout>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
@@ -220,7 +218,7 @@ export default function Migration() {
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="min-w-0">
                       <span className="block text-[13px] font-bold text-ink">{t.backend}</span>
-                      <span className="block text-[11.5px] text-g-500">{t.part}</span>
+                      <span className="block text-[12px] text-g-500">{t.part}</span>
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
                       <Badge tone={t.avancement === 100 ? 'ok' : 'warn'} size="sm">
@@ -296,7 +294,7 @@ export default function Migration() {
                   ]}
                 />
                 <MicroLabel className="mt-4 mb-2">Raison de la sortie</MicroLabel>
-                <p className="text-[11.5px] leading-relaxed text-g-700">
+                <p className="text-[12px] leading-relaxed text-g-700">
                   {b.type === 'vsphere'
                     ? 'Coût de licence multiplié par 2,8 après le changement de propriétaire de l’éditeur, sans contrepartie fonctionnelle. Marge du socle tombée à 31 %, contre 55 % sur nos socles libres. La décision est autant économique que stratégique.'
                     : 'Licences par cœur difficilement prévisibles, et dépendance à un éditeur unique pour la couche de virtualisation. Marge de 24 %, la plus faible de nos socles.'}
@@ -309,7 +307,6 @@ export default function Migration() {
             <CardHeader
               titre="Calendrier"
               sousTitre="Les dates sont fermes pour les vagues planifiées, indicatives pour celles à planifier."
-              actions={<CalendarClock size={15} className="text-p-700" />}
             />
             <Timeline
               evenements={vagues.items.map((v) => ({
@@ -548,14 +545,14 @@ export default function Migration() {
                         <td className="px-3 py-2.5 font-mono text-[12px] font-semibold text-ink">
                           {v.nom}
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">{v.os}</td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">{v.os}</td>
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">
                           {v.vcpu} vCPU / {v.ramGo} Go / {v.diskGo} Go
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-[11.5px] text-warn">
+                        <td className="px-3 py-2.5 font-mono text-[12px] text-warn">
                           {i % 2 === 0 ? 'HV-RBX-01' : 'CL-GRA-01'}
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-[11.5px] text-ok">
+                        <td className="px-3 py-2.5 font-mono text-[12px] text-ok">
                           {i % 2 === 0 ? 'OS-ABJ-01' : 'CS-ABJ-03'}
                         </td>
                         <td className="px-3 py-2.5">
@@ -566,9 +563,9 @@ export default function Migration() {
                         <td className="px-3 py-2.5 text-[11px] text-g-500">{vague.nom.split('—')[0].trim()}</td>
                         <td className="px-3 py-2.5">
                           {chaud ? (
-                            <span className="text-[11.5px] font-semibold text-ok">Aucune</span>
+                            <span className="text-[12px] font-semibold text-ok">Aucune</span>
                           ) : (
-                            <span className="tnum text-[11.5px] font-semibold text-warn">
+                            <span className="tnum text-[12px] font-semibold text-warn">
                               ~{Math.max(4, Math.round(v.diskGo / 12))} min
                             </span>
                           )}
@@ -606,8 +603,8 @@ export default function Migration() {
                 },
               ].map((x) => (
                 <div key={x.r} className="rounded-[6px] border border-g-300 px-3 py-2.5">
-                  <p className="text-[12.5px] font-semibold text-ink">{x.r}</p>
-                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">{x.d}</p>
+                  <p className="text-[13px] font-semibold text-ink">{x.r}</p>
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">{x.d}</p>
                 </div>
               ))}
             </div>
@@ -725,11 +722,10 @@ export default function Migration() {
                   { cle: 'Écart au calendrier', valeur: 'Vague 2 avancée de 3 semaines' },
                 ]}
               />
-              <Callout ton="ok" className="mt-4" titre="Le retour arrière a servi une fois, et c’est rassurant">
-                Sur la vague 2, une machine n’a pas retrouvé son réseau après bascule : un pilote
-                spécifique au socle source. Le retour arrière a pris quatre minutes, la machine est
-                repartie sur son socle d’origine, et elle a été migrée deux semaines plus tard après
-                mise à jour du pilote. C’est exactement le rôle du filet de sécurité.
+              <Callout ton="ok" className="mt-4" titre="Le retour arrière a servi une fois">
+                Sur la vague 2, une machine n’a pas retrouvé son réseau après bascule — un pilote
+                spécifique au socle source. Retour arrière en quatre minutes, migration réussie deux
+                semaines plus tard après mise à jour du pilote.
               </Callout>
             </Card>
           </div>

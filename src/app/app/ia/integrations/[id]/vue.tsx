@@ -121,9 +121,8 @@ function VueCanal({ canal }: { canal: CanalAgent }) {
             </Callout>
           )}
           {canal.etat === 'a_configurer' && (
-            <Callout ton="info" className="mt-4" titre="Canal à moitié branché, et affiché comme tel">
-              Le raccordement est ouvert mais rien ne passe encore. Un canal incomplet est montré
-              plutôt que masqué : c’est la seule façon que quelqu’un s’en occupe.
+            <Callout ton="info" className="mt-4" titre="Raccordement ouvert, rien ne passe encore">
+              Le canal reste listé tant qu’il est incomplet, avec l’étape qui manque.
             </Callout>
           )}
         </Card>
@@ -135,7 +134,7 @@ function VueCanal({ canal }: { canal: CanalAgent }) {
               sousTitre="Un canal sans agent est un numéro qui sonne dans le vide."
             />
             {agents.length === 0 ? (
-              <p className="text-[12.5px] leading-relaxed text-g-500">
+              <p className="text-[13px] leading-relaxed text-g-500">
                 Aucun agent n’écoute ce canal.
               </p>
             ) : (
@@ -147,7 +146,7 @@ function VueCanal({ canal }: { canal: CanalAgent }) {
                     className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2.5 transition-colors hover:border-p-400"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-[12.5px] font-semibold text-ink">
+                      <span className="block truncate text-[13px] font-semibold text-ink">
                         {a.nom}
                       </span>
                       <span className="block truncate text-[11px] text-g-500">{a.role}</span>
@@ -274,7 +273,7 @@ function VueOutil({ outil }: { outil: OutilAgent }) {
               sousTitre="Un outil déclaré n’est pas accessible pour autant : il faut encore l’attribuer."
             />
             {agents.length === 0 ? (
-              <p className="text-[12.5px] leading-relaxed text-g-500">
+              <p className="text-[13px] leading-relaxed text-g-500">
                 Aucun agent n’a cet outil dans sa liste. Il est déclaré, donc prêt, mais personne ne
                 peut l’appeler.
               </p>
@@ -286,7 +285,7 @@ function VueOutil({ outil }: { outil: OutilAgent }) {
                     href={`/app/ia/agents/${a.id}`}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2.5 transition-colors hover:border-p-400"
                   >
-                    <span className="min-w-0 truncate text-[12.5px] font-semibold text-ink">
+                    <span className="min-w-0 truncate text-[13px] font-semibold text-ink">
                       {a.nom}
                     </span>
                     <span className="tnum shrink-0 text-[11px] text-g-500">

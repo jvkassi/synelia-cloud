@@ -144,10 +144,10 @@ export default function Smtp() {
                   formateur={(v) => num(v)}
                 />
               </div>
-              <Callout ton="info" className="mt-4" titre="Pourquoi une limite par minute">
+              <Callout ton="info" className="mt-4" titre="La limite par minute">
                 Une boucle de code qui part en vrille peut envoyer dix mille courriels en quelques
-                secondes et brûler la réputation de votre adresse IP pour des semaines. La limite par
-                minute est le garde-fou qui vous laisse le temps de vous en apercevoir.
+                secondes et brûler la réputation de votre adresse IP pour des semaines. La limite
+                borne les dégâts le temps que vous vous en aperceviez.
               </Callout>
             </Card>
 
@@ -282,7 +282,7 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                         <Key size={13} />
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-[12.5px] font-semibold text-ink">{c.nom}</span>
+                        <span className="block text-[13px] font-semibold text-ink">{c.nom}</span>
                         <span className="block text-[11px] text-g-500">
                           Créée le {dateCourte(c.creee)} · dernier envoi {relatif(c.derniereUtilisation)}
                         </span>
@@ -376,7 +376,7 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                 <div key={a.nom} className="rounded-[6px] border border-g-300 px-3 py-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <span className="flex items-center gap-2">
-                      <span className="font-mono text-[12.5px] font-bold text-ink">{a.nom}</span>
+                      <span className="font-mono text-[13px] font-bold text-ink">{a.nom}</span>
                       <Badge tone={a.etat === 'valide' ? 'ok' : 'violet'} size="sm">
                         {a.etat === 'valide' ? 'Valide' : a.etat}
                       </Badge>
@@ -385,8 +385,8 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                       Voir dans la zone DNS
                     </ButtonLink>
                   </div>
-                  <p className="mt-1 text-[11.5px] leading-relaxed text-g-500">{a.quoi}</p>
-                  <p className="mt-1.5 break-all rounded-[4px] bg-g-050 px-2 py-1 font-mono text-[10.5px] text-ink">
+                  <p className="mt-1 text-[12px] leading-relaxed text-g-500">{a.quoi}</p>
+                  <p className="mt-1.5 break-all rounded-[4px] bg-g-050 px-2 py-1 font-mono text-[11px] text-ink">
                     {a.valeur}
                   </p>
                 </div>
@@ -416,7 +416,7 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                   { src: '41.207.x.x (inconnu)', envois: 24, conformes: 0, pct: 0 },
                 ].map((r) => (
                   <div key={r.src} className="flex items-center gap-3">
-                    <span className="w-40 shrink-0 truncate font-mono text-[11.5px] text-ink">
+                    <span className="w-40 shrink-0 truncate font-mono text-[12px] text-ink">
                       {r.src}
                     </span>
                     <span className="relative h-2 flex-1 overflow-hidden rounded-full bg-g-100">
@@ -428,12 +428,12 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                         style={{ width: `${Math.max(3, r.pct)}%` }}
                       />
                     </span>
-                    <span className="tnum w-12 shrink-0 text-right text-[11.5px] text-g-700">
+                    <span className="tnum w-12 shrink-0 text-right text-[12px] text-g-700">
                       {num(r.envois)}
                     </span>
                     <span
                       className={cn(
-                        'tnum w-14 shrink-0 text-right text-[11.5px] font-semibold',
+                        'tnum w-14 shrink-0 text-right text-[12px] font-semibold',
                         r.pct === 100 ? 'text-ok' : r.pct > 50 ? 'text-warn' : 'text-err',
                       )}
                     >
@@ -446,7 +446,7 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                 Une adresse au Nigéria a envoyé 24 courriels prétendant venir de{' '}
                 <span className="font-mono text-[12px]">dba.africa</span> sans passer par notre
                 relais. Ils ont tous échoué SPF et DKIM, et ont donc été mis en quarantaine chez les
-                destinataires. C’est exactement ce que DMARC est censé faire.
+                destinataires.
               </Callout>
             </Card>
 
@@ -533,7 +533,7 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                     <td className="px-3 py-2 font-mono text-[11px] text-g-500">
                       {j.ts.slice(11, 19)}
                     </td>
-                    <td className="px-3 py-2 font-mono text-[11.5px] text-ink">{j.destinataire}</td>
+                    <td className="px-3 py-2 font-mono text-[12px] text-ink">{j.destinataire}</td>
                     <td className="max-w-[28ch] truncate px-3 py-2 text-[12px] text-g-700">
                       {j.sujet}
                     </td>
@@ -549,7 +549,7 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
             </table>
           </div>
           <div className="border-t border-g-100 px-4 py-3">
-            <p className="text-[11.5px] leading-relaxed text-g-500">
+            <p className="text-[12px] leading-relaxed text-g-500">
               Un <span className="font-mono">451 4.7.1</span> est un différé, pas un échec : le
               serveur destinataire vous demande de réessayer plus tard, et nous le faisons
               automatiquement pendant 48 heures. Un <span className="font-mono">550 5.1.1</span> est
@@ -607,7 +607,7 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <span className="flex min-w-0 items-start gap-2">
                       <Webhook size={13} className="mt-0.5 shrink-0 text-p-700" />
-                      <span className="min-w-0 break-all font-mono text-[11.5px] text-ink">
+                      <span className="min-w-0 break-all font-mono text-[12px] text-ink">
                         {w.url}
                       </span>
                     </span>

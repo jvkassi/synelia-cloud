@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Building2, Globe, Palette, Terminal, Trash2 } from 'lucide-react'
+import { Building2, Globe, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MAINTENANT, dateCourte, money } from '@/lib/format'
 import { ESPACES, MES_ORGANISATIONS, ORG_COURANTE } from '@/lib/mock'
@@ -176,7 +176,7 @@ export default function Parametres() {
                     <span className="flex min-w-0 items-center gap-2">
                       <Building2 size={13} className="shrink-0 text-p-700" />
                       <span className="min-w-0">
-                        <span className="block truncate text-[12.5px] font-semibold text-ink">
+                        <span className="block truncate text-[13px] font-semibold text-ink">
                           {org.nom}
                         </span>
                         <span className="block text-[11px] text-g-500">{ROLE_LABEL[role]}</span>
@@ -336,7 +336,6 @@ export default function Parametres() {
               <CardHeader
                 titre="Personnalisation visuelle"
                 sousTitre="Logo et couleur affichés dans votre espace client."
-                actions={<Palette size={15} className="text-p-700" />}
               />
               <div className="space-y-4">
                 <Field label="Logo de l’organisation" hint="PNG ou SVG, fond transparent, 200 × 60 px minimum">
@@ -370,7 +369,7 @@ export default function Parametres() {
                   <div key={j.id} className="rounded-[6px] border border-g-300 px-3 py-2.5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <span className="min-w-0">
-                        <span className="block font-mono text-[12.5px] font-semibold text-ink">
+                        <span className="block font-mono text-[13px] font-semibold text-ink">
                           {j.nom}
                         </span>
                         <span className="block text-[11px] text-g-500">
@@ -465,7 +464,6 @@ export default function Parametres() {
               <CardHeader
                 titre="Utiliser l’interface programmatique"
                 sousTitre="API REST documentée, plus une interface en ligne de commande."
-                actions={<Terminal size={15} className="text-p-700" />}
               />
               <div className="space-y-3">
                 <CopyField label="Adresse de l’API" value="https://api.synelia.cloud/v1" />
@@ -506,7 +504,7 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
               <StatTile libelle="Actions destructives" valeur="10" unite="/min" detail="Par organisation" ton="warn" />
               <StatTile libelle="Appels aujourd’hui" valeur="8 412" detail="Sur 3 jetons" />
             </div>
-            <p className="mt-3.5 text-[11.5px] leading-relaxed text-g-500">
+            <p className="mt-3.5 text-[12px] leading-relaxed text-g-500">
               Un dépassement renvoie un code 429 avec un en-tête indiquant le délai d’attente. Les
               actions destructives sont plus limitées que les autres : une boucle qui supprime est
               plus coûteuse à réparer qu’une boucle qui lit.
@@ -520,7 +518,7 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
           <Card>
             <CardHeader
               titre="Ce que nous vous envoyons"
-              sousTitre="Nous préférons une alerte utile à dix notifications ignorées. Chaque catégorie est réglable séparément."
+              sousTitre="Chaque catégorie est réglable séparément, par canal."
             />
             <div className="space-y-3.5">
               {[
@@ -665,7 +663,7 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
           <Card>
             <CardHeader
               titre="Réversibilité"
-              sousTitre="Ce que vous pouvez récupérer, et par quel moyen. Nous préférons écrire cette page franchement plutôt que la rendre introuvable."
+              sousTitre="Ce que vous pouvez récupérer, dans quel format et par quel moyen."
             />
             <div className="overflow-x-auto rounded-[8px] border border-g-300">
               <table className="w-full min-w-max border-collapse">
@@ -695,8 +693,8 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
                     <tr key={x.d} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2 text-[12px] font-semibold text-ink">{x.d}</td>
                       <td className="px-3 py-2 font-mono text-[11px] text-g-700">{x.f}</td>
-                      <td className="px-3 py-2 text-[11.5px] text-g-700">{x.m}</td>
-                      <td className="px-3 py-2 text-[11.5px] text-g-500">{x.t}</td>
+                      <td className="px-3 py-2 text-[12px] text-g-700">{x.m}</td>
+                      <td className="px-3 py-2 text-[12px] text-g-500">{x.t}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -704,8 +702,7 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
             </div>
             <Callout ton="violet" className="mt-4" titre="Aucun format propriétaire">
               Rien de ce que nous stockons pour vous n’est enfermé dans un format que nous serions
-              seuls à savoir lire. C’est un choix d’architecture, pas une faveur : nous préférons vous
-              garder parce que le service est bon, pas parce que partir serait coûteux.
+              seuls à savoir lire : chaque export utilise le format natif de l’outil d’origine.
             </Callout>
           </Card>
 
@@ -744,7 +741,7 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
                   job: { workflow: 'export.donnees', cible: 'données de l’organisation' },
                 }}
               />
-              <p className="mt-3 text-[11.5px] leading-relaxed text-g-500">
+              <p className="mt-3 text-[12px] leading-relaxed text-g-500">
                 Un export complet est gratuit une fois par an, et à la clôture du contrat. Au-delà,
                 seul le coût du transfert sortant est facturé, au tarif du catalogue.
               </p>
@@ -765,7 +762,7 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
                 ].map((e) => (
                   <div key={e.j} className="rounded-[6px] border border-g-300 px-3 py-2">
                     <p className="text-[12px] font-bold text-ink">{e.j}</p>
-                    <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">{e.d}</p>
+                    <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">{e.d}</p>
                   </div>
                 ))}
               </div>
@@ -779,7 +776,7 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
                   Demander la clôture
                 </Button>
               </GatedAction>
-              <p className="mt-3 text-[11.5px] leading-relaxed text-g-500">
+              <p className="mt-3 text-[12px] leading-relaxed text-g-500">
                 Aucune pénalité de sortie, aucun préavis contractuel au-delà du mois en cours. Le
                 prorata du mois entamé reste dû, rien de plus.
               </p>

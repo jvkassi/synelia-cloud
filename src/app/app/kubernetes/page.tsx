@@ -28,7 +28,7 @@ export default function ListeClusters() {
       cle: (c) => c.nom,
       rendu: (c) => (
         <span className="block">
-          <span className="block font-mono text-[12.5px] font-semibold text-ink">{c.nom}</span>
+          <span className="block font-mono text-[13px] font-semibold text-ink">{c.nom}</span>
           <span className="block text-[11px] text-g-500">
             {c.applicationId ? `rattaché à ${c.applicationId}` : 'autonome'}
           </span>
@@ -118,7 +118,7 @@ export default function ListeClusters() {
       rendu: (c) => (
         <Link
           href={`/app/kubernetes/${c.id}`}
-          className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+          className="text-[12px] font-semibold text-p-700 hover:underline"
         >
           Ouvrir →
         </Link>
@@ -196,10 +196,10 @@ export default function ListeClusters() {
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Callout ton="violet" titre="Mono-master ou haute disponibilité : le vrai arbitrage">
-          Un control plane mono-master coûte trois fois moins cher, et pour un cluster de recette ou
-          de développement c’est le choix rationnel : une indisponibilité de l’API pendant une
-          maintenance n’arrête pas les pods déjà en cours d’exécution. En production, la haute
+        <Callout ton="violet" titre="Mono-master ou haute disponibilité">
+          Un control plane mono-master coûte trois fois moins cher, et une indisponibilité de l’API
+          pendant une maintenance n’arrête pas les pods déjà en cours d’exécution. En production, la
+          haute
           disponibilité devient nécessaire dès lors que vous dépendez de l’API pour l’autoscaling,
           les déploiements automatiques ou les sondes d’un opérateur.
         </Callout>

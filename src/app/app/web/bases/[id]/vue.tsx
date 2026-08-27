@@ -232,7 +232,7 @@ export function VueServeurBases({ id }: { id: string }) {
                   <tbody>
                     {s.bases.map((b) => (
                       <tr key={b.nom} className="border-b border-g-100 last:border-0">
-                        <td className="px-3 py-2.5 font-mono text-[12.5px] font-semibold text-ink">
+                        <td className="px-3 py-2.5 font-mono text-[13px] font-semibold text-ink">
                           {b.nom}
                         </td>
                         <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
@@ -244,7 +244,7 @@ export function VueServeurBases({ id }: { id: string }) {
                           {num(b.tables ?? b.cles ?? 0)}
                         </td>
                         {s.moteur !== 'redis' && (
-                          <td className="px-3 py-2.5 font-mono text-[11.5px] text-g-500">
+                          <td className="px-3 py-2.5 font-mono text-[12px] text-g-500">
                             {b.collation}
                           </td>
                         )}
@@ -351,7 +351,7 @@ export function VueServeurBases({ id }: { id: string }) {
                     className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate font-mono text-[12.5px] font-semibold text-ink">
+                      <span className="block truncate font-mono text-[13px] font-semibold text-ink">
                         {u.nom}
                       </span>
                       <span className="block text-[11px] text-g-500">sur {u.base}</span>
@@ -427,11 +427,11 @@ export function VueServeurBases({ id }: { id: string }) {
 
               <Card>
                 <CardHeader titre="Depuis l’extérieur" />
-                <Callout ton="warn" titre="Ce n’est pas possible, et c’est voulu">
-                  Le moteur est lié à la boucle locale du serveur. Aucune règle de pare-feu ne
-                  l’ouvrira : c’est une propriété de l’offre mutualisée, pas un réglage. Pour
-                  administrer vos tables, passez par Adminer, servi sur votre propre domaine et
-                  derrière votre authentification.
+                <Callout ton="warn" titre="Aucun accès distant sur une base mutualisée">
+                  Le moteur est lié à la boucle locale du serveur ; aucune règle de pare-feu ne
+                  l’ouvrira, c’est une propriété de l’offre et non un réglage. Pour administrer vos
+                  tables, passez par Adminer, servi sur votre domaine et derrière votre
+                  authentification.
                 </Callout>
                 <KeyValueList
                   className="mt-3"

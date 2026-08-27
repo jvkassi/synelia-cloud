@@ -47,7 +47,7 @@ export default function Histoire() {
             5 000 km. Le support répond en anglais, sur un autre fuseau, à des heures où notre
             client dort. Trois jours plus tard le service revient, sans explication écrite.
           </p>
-          <p className="mt-5 text-[14.5px] leading-relaxed text-g-700">
+          <p className="mt-5 text-[15px] leading-relaxed text-g-700">
             Nous n’avions rien à offrir que de la patience — et une facture à défendre. Ce n’était
             pas un problème de qualité : le fournisseur était compétent. C’était un problème de
             distance, de fuseau et de droits. Personne de joignable ne connaissait ce parc, et
@@ -77,7 +77,7 @@ export default function Histoire() {
                 <h3 className="mt-1.5 text-[17px] font-bold leading-tight [font-family:var(--font-display)] text-ink sm:text-[19px]">
                   {h.titre}
                 </h3>
-                <p className="mt-2 max-w-3xl text-[13.5px] leading-relaxed text-g-700">{h.texte}</p>
+                <p className="mt-2 max-w-3xl text-[14px] leading-relaxed text-g-700">{h.texte}</p>
               </li>
             ))}
           </ol>
@@ -105,7 +105,7 @@ export default function Histoire() {
                 <h3 className="mt-2 text-[18px] font-bold leading-tight [font-family:var(--font-display)] text-ink">
                   {v.titre}
                 </h3>
-                <p className="mt-3 flex-1 text-[13.5px] leading-relaxed text-g-700">{v.texte}</p>
+                <p className="mt-3 flex-1 text-[14px] leading-relaxed text-g-700">{v.texte}</p>
                 <div className="mt-5 border-t border-g-100 pt-4">
                   <LienFleche href={v.lien.href}>{v.lien.libelle}</LienFleche>
                 </div>

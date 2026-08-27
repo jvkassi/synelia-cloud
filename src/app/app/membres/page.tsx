@@ -208,10 +208,10 @@ export default function Membres() {
                     <span className="flex items-center gap-2.5">
                       <Avatar nom={l.nom} size="sm" />
                       <span className="min-w-0">
-                        <span className="block truncate text-[12.5px] font-semibold text-ink">
+                        <span className="block truncate text-[13px] font-semibold text-ink">
                           {l.nom}
                           {l.email === UTILISATEUR_COURANT.email && (
-                            <span className="ml-1.5 text-[10.5px] font-normal text-g-500">(vous)</span>
+                            <span className="ml-1.5 text-[11px] font-normal text-g-500">(vous)</span>
                           )}
                         </span>
                         <span className="block truncate text-[11px] text-g-500">{l.email}</span>
@@ -237,7 +237,7 @@ export default function Membres() {
                   id: 'portee',
                   entete: 'Portée',
                   cle: (l) => l.portee,
-                  rendu: (l) => <span className="text-[11.5px] text-g-700">{l.portee}</span>,
+                  rendu: (l) => <span className="text-[12px] text-g-700">{l.portee}</span>,
                 },
                 {
                   id: 'mfa',
@@ -261,7 +261,7 @@ export default function Membres() {
                   cle: (l) => l.source,
                   masquable: true,
                   rendu: (l) => (
-                    <span className="text-[11.5px] text-g-700">
+                    <span className="text-[12px] text-g-700">
                       {l.source === 'local'
                         ? 'Compte Synelia'
                         : l.source === 'oidc'
@@ -278,7 +278,7 @@ export default function Membres() {
                   aligne: 'right',
                   cle: (l) => l.dernier ?? '',
                   rendu: (l) => (
-                    <span className="text-[11.5px] text-g-500">
+                    <span className="text-[12px] text-g-500">
                       {l.dernier ? relatif(l.dernier) : 'Jamais connecté'}
                     </span>
                   ),
@@ -329,7 +329,7 @@ export default function Membres() {
                   className="flex flex-wrap items-start justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                 >
                   <span className="min-w-0">
-                    <span className="flex items-center gap-1.5 text-[12.5px] font-semibold text-ink">
+                    <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
                       <Mail size={12} className="shrink-0 text-g-500" />
                       {i.email}
                     </span>
@@ -389,7 +389,7 @@ export default function Membres() {
                   className="flex flex-wrap items-baseline justify-between gap-2 border-b border-g-100 pb-1.5 last:border-0"
                 >
                   <span className="min-w-0 text-[12px] text-ink">{i.email}</span>
-                  <span className="shrink-0 text-[10.5px] text-g-500">
+                  <span className="shrink-0 text-[11px] text-g-500">
                     {ROLE_LABEL[i.role]} · {dateCourte(i.quand)}
                   </span>
                 </div>
@@ -457,12 +457,12 @@ export default function Membres() {
                 ].map((x) => (
                   <div key={x.r} className="rounded-[6px] border border-g-300 px-3 py-2.5">
                     <div className="flex items-center justify-between gap-3">
-                      <span className="text-[12.5px] font-bold text-ink">{ROLE_LABEL[x.r]}</span>
+                      <span className="text-[13px] font-bold text-ink">{ROLE_LABEL[x.r]}</span>
                       <Badge tone="neutral" size="sm">
                         {MATRICE_RBAC.filter((a) => can(x.r, a.id) === 'full').length} actions
                       </Badge>
                     </div>
-                    <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{x.quand}</p>
+                    <p className="mt-1 text-[12px] leading-relaxed text-g-700">{x.quand}</p>
                   </div>
                 ))}
               </div>
@@ -481,7 +481,7 @@ export default function Membres() {
                     const roles = rolesRequis(id).filter((r) => ROLES_CLIENT.includes(r))
                     return (
                       <div key={id} className="rounded-[6px] border border-g-300 px-3 py-2.5">
-                        <p className="text-[12.5px] font-semibold text-ink">{a.libelle}</p>
+                        <p className="text-[13px] font-semibold text-ink">{a.libelle}</p>
                         <p className="mt-1 flex flex-wrap gap-1">
                           {roles.length === 0 ? (
                             <Badge tone="neutral" size="sm">
@@ -559,7 +559,7 @@ export default function Membres() {
                         </Badge>
                       </td>
                       <td className="px-3 py-2.5 text-[12px] text-ink">{x.c}</td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-500">{x.u}</td>
+                      <td className="px-3 py-2.5 text-[12px] text-g-500">{x.u}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -579,13 +579,13 @@ export default function Membres() {
                       className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                     >
                       <span className="min-w-0">
-                        <span className="block font-mono text-[12.5px] font-semibold text-ink">
+                        <span className="block font-mono text-[13px] font-semibold text-ink">
                           {e.code}
                         </span>
                         <span className="block text-[11px] text-g-500">{e.offreNom}</span>
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
-                        <span className="flex items-center gap-1 text-[11.5px] text-g-700">
+                        <span className="flex items-center gap-1 text-[12px] text-g-700">
                           <Users size={12} />
                           {membresEspace.length} attribution{membresEspace.length > 1 ? 's' : ''}
                         </span>
@@ -802,7 +802,7 @@ export default function Membres() {
                       key={a.id}
                       className="flex items-center justify-between gap-3 rounded-[5px] bg-g-050 px-2.5 py-1.5"
                     >
-                      <span className="min-w-0 truncate text-[11.5px] text-ink">{a.libelle}</span>
+                      <span className="min-w-0 truncate text-[12px] text-ink">{a.libelle}</span>
                       <Badge
                         tone={can(membreDetail.role, a.id) === 'full' ? 'ok' : 'neutral'}
                         size="sm"

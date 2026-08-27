@@ -243,7 +243,7 @@ export function RechercheGlobale({ portee = 'client' }: { portee?: Portee }) {
                 placeholder="Rechercher…"
                 className="flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-g-500"
               />
-              <kbd className="shrink-0 rounded border border-g-300 bg-g-050 px-1.5 py-0.5 font-mono text-[10px] text-g-500">
+              <kbd className="shrink-0 rounded border border-g-300 bg-g-050 px-1.5 py-0.5 font-mono text-[11px] text-g-500">
                 esc
               </kbd>
             </div>
@@ -269,7 +269,7 @@ export function RechercheGlobale({ portee = 'client' }: { portee?: Portee }) {
                     >
                       <span className="min-w-0 truncate text-[13px] text-ink">{it.label}</span>
                       {it.meta && (
-                        <span className="shrink-0 truncate text-[11.5px] text-g-500">{it.meta}</span>
+                        <span className="shrink-0 truncate text-[12px] text-g-500">{it.meta}</span>
                       )}
                     </button>
                   ))}

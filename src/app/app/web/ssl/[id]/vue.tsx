@@ -327,7 +327,7 @@ export function VueCertificat({ id }: { id: string }) {
             />
             {c.validationDomaine === 'dns' ? (
               <>
-                <p className="text-[12.5px] leading-relaxed text-g-700">
+                <p className="text-[13px] leading-relaxed text-g-700">
                   Un enregistrement TXT est posé dans la zone, vérifié par l’autorité, puis retiré.
                   C’est la seule méthode possible pour un joker.
                 </p>
@@ -339,7 +339,7 @@ export function VueCertificat({ id }: { id: string }) {
               </>
             ) : (
               <>
-                <p className="text-[12.5px] leading-relaxed text-g-700">
+                <p className="text-[13px] leading-relaxed text-g-700">
                   Un fichier est déposé sur le serveur et lu par l’autorité en HTTP. Rapide, mais
                   impossible pour un joker et bloqué si le site force une redirection.
                 </p>

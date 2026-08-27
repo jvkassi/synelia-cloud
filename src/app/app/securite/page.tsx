@@ -251,8 +251,8 @@ export default function Securite() {
                     cle: (a) => a.ts,
                     rendu: (a) => (
                       <span className="block">
-                        <span className="block text-[11.5px] text-ink">{dateHeure(a.ts)}</span>
-                        <span className="block text-[10px] text-g-500">{relatif(a.ts)}</span>
+                        <span className="block text-[12px] text-ink">{dateHeure(a.ts)}</span>
+                        <span className="block text-[11px] text-g-500">{relatif(a.ts)}</span>
                       </span>
                     ),
                   },
@@ -262,10 +262,10 @@ export default function Securite() {
                     cle: (a) => `${a.actor.nom} ${a.actor.email}`,
                     rendu: (a) => (
                       <span className="block">
-                        <span className="block text-[11.5px] font-semibold text-ink">
+                        <span className="block text-[12px] font-semibold text-ink">
                           {a.actor.nom}
                         </span>
-                        <span className="block text-[10px] text-g-500">
+                        <span className="block text-[11px] text-g-500">
                           {ROLE_LABEL[a.role] ?? a.role}
                           {a.actor.type !== 'user' ? ` · ${a.actor.type}` : ''}
                         </span>
@@ -310,7 +310,7 @@ export default function Securite() {
                     cle: (a) => a.ip ?? '',
                     masquable: true,
                     rendu: (a) => (
-                      <span className="font-mono text-[10.5px] text-g-500">{a.ip ?? '—'}</span>
+                      <span className="font-mono text-[11px] text-g-500">{a.ip ?? '—'}</span>
                     ),
                   },
                   {
@@ -341,11 +341,10 @@ export default function Securite() {
             </div>
           </Card>
 
-          <Callout ton="violet" titre="Pourquoi le journal ne peut pas être modifié">
+          <Callout ton="violet" titre="Le journal est en ajout seul">
             Chaque entrée est écrite une seule fois, avec une empreinte cryptographique chaînée à la
-            précédente. Modifier ou supprimer une ligne casserait la chaîne, ce qui serait
-            immédiatement détectable. Personne ne peut réécrire l’histoire — ni vous, ni nous. C’est
-            la seule façon de rendre un journal d’audit utile pour une certification ou un litige.
+            précédente : modifier ou supprimer une ligne casse la chaîne et se détecte. Ni vous, ni
+            nous ne pouvons y revenir.
           </Callout>
         </div>
       )}
@@ -399,7 +398,7 @@ export default function Securite() {
                   {
                     t: 'Clés d’accès sans rotation',
                     etat: 'warn' as const,
-                    d: 'Deux clés d’accès au stockage objet ont plus de douze mois. Une clé qui ne tourne jamais finit par se retrouver dans un dépôt Git.',
+                    d: 'Deux clés d’accès au stockage objet ont plus de douze mois et n’ont jamais été renouvelées.',
                     action: { l: 'Voir le stockage objet', h: '/app/objet' },
                   },
                   {
@@ -416,12 +415,12 @@ export default function Securite() {
                       c.etat === 'ok'
                         ? 'border-g-300'
                         : c.etat === 'warn'
-                          ? 'border-warn/40 bg-warn-bg'
+                          ? 'border-warn/40'
                           : 'border-g-300 bg-g-050',
                     )}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-[12.5px] font-semibold text-ink">{c.t}</span>
+                      <span className="text-[13px] font-semibold text-ink">{c.t}</span>
                       <span className="flex items-center gap-1.5">
                         <Badge tone={c.etat} size="sm">
                           {c.etat === 'ok' ? 'Conforme' : c.etat === 'warn' ? 'À traiter' : 'Optionnel'}
@@ -431,7 +430,7 @@ export default function Securite() {
                         </ButtonLink>
                       </span>
                     </div>
-                    <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{c.d}</p>
+                    <p className="mt-1 text-[12px] leading-relaxed text-g-700">{c.d}</p>
                   </div>
                 ))}
               </div>
@@ -499,12 +498,12 @@ export default function Securite() {
 
               <Card>
                 <CardHeader titre="Élévations de privilège actives" sousTitre="Y compris celles de nos équipes." />
-                <div className="rounded-[6px] border border-info/40 bg-info-bg px-3 py-2.5">
-                  <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-ink">
+                <div className="rounded-[6px] border border-g-300 bg-g-050 px-3 py-2.5">
+                  <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
                     <Fingerprint size={13} className="shrink-0 text-info" />
                     Aucune élévation active sur votre organisation
                   </p>
-                  <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">
+                  <p className="mt-1 text-[12px] leading-relaxed text-g-700">
                     Quand un membre de nos équipes a besoin d’un accès étendu à vos ressources — pour
                     traiter un ticket, par exemple — cet accès est demandé, limité dans le temps,
                     visible ici, et journalisé de bout en bout. Vous savez qui est intervenu, quand,
@@ -601,7 +600,7 @@ export default function Securite() {
                         </Badge>
                       )}
                     </div>
-                    <p className="mt-1 text-[11.5px] text-g-500">
+                    <p className="mt-1 text-[12px] text-g-500">
                       <span className="font-mono">{x.ip}</span> · {x.lieu} · ouverte{' '}
                       {relatif(x.ouverte)} · dernière activité {relatif(x.derniereActivite)}
                     </p>
@@ -677,10 +676,10 @@ export default function Securite() {
                 <tbody>
                   {CONFORMITE.map((c) => (
                     <tr key={c.ressourceId} className="border-b border-g-100 last:border-0">
-                      <td className="px-3 py-2 font-mono text-[11.5px] font-semibold text-ink">
+                      <td className="px-3 py-2 font-mono text-[12px] font-semibold text-ink">
                         {c.ressourceNom}
                       </td>
-                      <td className="px-3 py-2 text-[11.5px] text-g-700">{c.type}</td>
+                      <td className="px-3 py-2 text-[12px] text-g-700">{c.type}</td>
                       <td className="px-3 py-2">
                         <Badge tone={c.regle321.copies ? 'ok' : 'err'} size="sm">
                           {c.regle321.copies ? '3 copies' : 'Moins de 3'}
@@ -696,7 +695,7 @@ export default function Securite() {
                           {c.regle321.horsSite ? 'Oui' : 'Non'}
                         </Badge>
                       </td>
-                      <td className="px-3 py-2 text-[11.5px] text-g-500">
+                      <td className="px-3 py-2 text-[12px] text-g-500">
                         {c.dernierSucces ? relatif(c.dernierSucces) : 'Jamais'}
                       </td>
                       <td className="px-3 py-2">
@@ -830,7 +829,7 @@ synelia-audit verify audit-org-dba-2026-07-19_2026-08-19.csv \\
 # chaîne intacte du 2026-07-19T00:00:00Z au 2026-08-19T15:20:00Z
 # aucune insertion, modification ni suppression détectée`}
               />
-              <p className="mt-3 text-[11.5px] leading-relaxed text-g-500">
+              <p className="mt-3 text-[12px] leading-relaxed text-g-500">
                 L’outil de vérification est libre et son code est publié. Vous n’avez pas à nous croire
                 sur parole : n’importe qui peut recalculer la chaîne à partir de l’export.
               </p>

@@ -146,7 +146,7 @@ export default function BudgetEtAlertes() {
             {QUOTAS_DEPARTEMENT.map((d) => (
               <div key={d.departement}>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <span className="text-[12.5px] font-semibold text-ink">{d.departement}</span>
+                  <span className="text-[13px] font-semibold text-ink">{d.departement}</span>
                   <span className="tnum text-[11px] text-g-500">
                     {d.utilisateurs} utilisateurs · {d.cles} clé{d.cles > 1 ? 's' : ''}
                   </span>
@@ -173,7 +173,7 @@ export default function BudgetEtAlertes() {
           <div className="border-b border-g-100 px-4 py-3">
             <CardHeader
               titre="Alertes de seuil"
-              sousTitre="Ce qui déclenche une notification, et vers qui. Une alerte qui n’arrive à personne ne sert à rien."
+              sousTitre="Ce qui déclenche une notification, et vers qui."
               className="mb-0"
             />
           </div>
@@ -182,8 +182,8 @@ export default function BudgetEtAlertes() {
               <div key={a.id} className="px-4 py-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <span className="min-w-0">
-                    <span className="block text-[12.5px] font-semibold text-ink">{a.metrique}</span>
-                    <span className="block text-[11.5px] text-g-500">
+                    <span className="block text-[13px] font-semibold text-ink">{a.metrique}</span>
+                    <span className="block text-[12px] text-g-500">
                       {a.cible} · seuil : {a.seuil}
                     </span>
                   </span>
@@ -206,7 +206,7 @@ export default function BudgetEtAlertes() {
                   <span className="text-[11px] text-g-500">· {a.plage}</span>
                 </div>
                 {a.escalade && (
-                  <p className="mt-1.5 text-[11.5px] text-g-500">Escalade : {a.escalade}</p>
+                  <p className="mt-1.5 text-[12px] text-g-500">Escalade : {a.escalade}</p>
                 )}
               </div>
             ))}

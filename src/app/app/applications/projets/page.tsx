@@ -122,7 +122,7 @@ export default function Projets() {
         <span className="font-mono text-[12px]">{ZONE_APPLICATIVE.wildcard}</span>, certificat
         compris. Votre première mise en ligne ne dépend donc d’aucun achat de domaine. Vous
         brancherez le vôtre quand vous voudrez, depuis{' '}
-        <Link href="/app/applications/routage" className="font-semibold text-p-700 hover:text-m-600">
+        <Link href="/app/applications/routage" className="font-semibold text-p-700 hover:underline">
           Domaines &amp; routage
         </Link>
         .
@@ -176,7 +176,7 @@ export default function Projets() {
                   .map((t) => (
                     <span
                       key={t}
-                      className="inline-flex items-center gap-1.5 rounded-[6px] border border-g-300 bg-g-050 px-2 py-1 text-[11.5px] font-semibold text-g-700"
+                      className="inline-flex items-center gap-1.5 rounded-[6px] border border-g-300 bg-g-050 px-2 py-1 text-[12px] font-semibold text-g-700"
                     >
                       <span className="text-p-700">{ICONE_TYPE[t]}</span>
                       {s.parType[t]} {TYPE_SERVICE_LABEL[t].toLowerCase()}
@@ -226,7 +226,7 @@ export default function Projets() {
                   </li>
                 ))}
                 {services.length > 4 && (
-                  <li className="pt-0.5 text-[11.5px] text-g-500">
+                  <li className="pt-0.5 text-[12px] text-g-500">
                     et {services.length - 4} autre{services.length - 4 > 1 ? 's' : ''} service
                     {services.length - 4 > 1 ? 's' : ''}
                   </li>
@@ -234,7 +234,7 @@ export default function Projets() {
               </ul>
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-g-100 pt-3">
-                <span className="flex items-center gap-3 text-[11.5px] text-g-500">
+                <span className="flex items-center gap-3 text-[12px] text-g-500">
                   <span className="inline-flex items-center gap-1">
                     <Globe size={12} />
                     {s.domaines} domaine{s.domaines > 1 ? 's' : ''}
@@ -305,7 +305,7 @@ export default function Projets() {
           <div className="rounded-[8px] border border-g-300 bg-g-050 p-3">
             <MicroLabel>Adresse offerte pour ce projet</MicroLabel>
             <CopyField value={`<service>-<env>.${ZONE_APPLICATIVE.zone}`} className="mt-1.5" />
-            <p className="mt-2 text-[11.5px] leading-relaxed text-g-500">
+            <p className="mt-2 text-[12px] leading-relaxed text-g-500">
               Chaque service recevra son adresse dans cette zone, avec certificat automatique. Rien
               à acheter, rien à configurer.
             </p>
@@ -351,19 +351,19 @@ export default function Projets() {
                 <span className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-p-050 text-p-700">
                   {ICONE_TYPE[t.type]}
                 </span>
-                <span className="text-[12.5px] font-bold text-ink">
+                <span className="text-[13px] font-bold text-ink">
                   {TYPE_SERVICE_LABEL[t.type]}
                 </span>
               </span>
-              <p className="mt-2 text-[11.5px] leading-relaxed text-g-700">{t.phrase}</p>
+              <p className="mt-2 text-[12px] leading-relaxed text-g-700">{t.phrase}</p>
             </div>
           ))}
           <div className="flex flex-col justify-center rounded-[8px] border border-dashed border-p-300 bg-p-050 p-3">
-            <span className="flex items-center gap-2 text-[12.5px] font-bold text-p-700">
+            <span className="flex items-center gap-2 text-[13px] font-bold text-p-700">
               <Layers size={14} />
               Composer plusieurs briques
             </span>
-            <p className="mt-2 text-[11.5px] leading-relaxed text-g-700">
+            <p className="mt-2 text-[12px] leading-relaxed text-g-700">
               L’assistant de création propose aussi un canvas : on pose les briques, on relie les
               dépendances, la plateforme génère le tout.
             </p>

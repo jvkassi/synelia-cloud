@@ -66,13 +66,13 @@ export default function ConnexionSso() {
       <div>
         <Link
           href="/login"
-          className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-g-500 transition-colors hover:text-p-700"
+          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-g-500 transition-colors hover:text-p-700"
         >
           <ArrowLeft size={13} />
           Retour aux modes de connexion
         </Link>
         <h1 className="type-h1 mt-3">SSO de mon entreprise</h1>
-        <p className="mt-2 text-[13.5px] leading-relaxed text-g-500">
+        <p className="mt-2 text-[14px] leading-relaxed text-g-500">
           Saisissez le domaine de votre organisation. Nous résolvons le fournisseur d’identité
           déclaré, puis vous redirigeons vers lui.
         </p>
@@ -108,7 +108,7 @@ export default function ConnexionSso() {
       </div>
 
       {etat === 'trouve' && resultat && (
-        <div className="space-y-3.5 rounded-[10px] border border-[#B7E3D0] bg-ok-bg p-5">
+        <div className="space-y-3.5 rounded-[10px] border border-ok/25 bg-ok-bg p-5">
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="ok" dot>
               Fournisseur trouvé
@@ -125,14 +125,14 @@ export default function ConnexionSso() {
               { cle: 'Utilisateurs fédérés', valeur: `${resultat.utilisateurs} comptes synchronisés` },
               {
                 cle: 'Issuer',
-                valeur: <span className="break-all font-mono text-[11.5px]">{resultat.issuer}</span>,
+                valeur: <span className="break-all font-mono text-[12px]">{resultat.issuer}</span>,
               },
             ]}
           />
           <ButtonLink href="/callback" fullWidth iconAfter={<ArrowRight size={14} />}>
             Continuer vers {resultat.domaine}
           </ButtonLink>
-          <p className="text-[11.5px] leading-relaxed text-g-700">
+          <p className="text-[12px] leading-relaxed text-g-700">
             Vous allez être redirigé vers l’écran d’authentification de votre organisation. Vos
             groupes d’annuaire déterminent vos rôles dans Synelia Cloud.
           </p>

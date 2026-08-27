@@ -117,7 +117,7 @@ export default function Docs() {
               onChange={(e) => setQ(e.target.value)}
               className="w-full sm:w-80"
             />
-            <p className="tnum text-[12.5px] text-g-500">
+            <p className="tnum text-[13px] text-g-500">
               {total} article{total > 1 ? 's' : ''}
               {q.trim() && ' correspondant à votre recherche'}
             </p>
@@ -143,7 +143,7 @@ export default function Docs() {
                       <li key={a}>
                         <a
                           href="#"
-                          className="group flex items-start gap-2 text-[12.5px] leading-snug text-g-700 transition-colors hover:text-p-700"
+                          className="group flex items-start gap-2 text-[13px] leading-snug text-g-700 transition-colors hover:text-p-700"
                         >
                           <FileText
                             size={13}
@@ -185,9 +185,9 @@ export default function Docs() {
           <Callout ton="info" className="mt-6" titre="Limites de débit et idempotence">
             L’API accepte 600 requêtes par minute et par clé, 60 pour les opérations de création.
             Toutes les opérations de création acceptent un en-tête{' '}
-            <span className="font-mono text-[11.5px]">Idempotency-Key</span> : rejouer la même
+            <span className="font-mono text-[12px]">Idempotency-Key</span> : rejouer la même
             requête avec la même clé ne crée pas de doublon. Les opérations longues renvoient un{' '}
-            <span className="font-mono text-[11.5px]">202 Accepted</span> avec un identifiant de job
+            <span className="font-mono text-[12px]">202 Accepted</span> avec un identifiant de job
             à suivre.
           </Callout>
         </Container>
@@ -210,7 +210,7 @@ export default function Docs() {
                   'Parcours de formation administrateur et exploitant, avec suivi de complétion',
                   'Accès à un environnement de bac à sable pour la formation',
                 ].map((x) => (
-                  <li key={x} className="flex items-start gap-2 text-[12.5px] text-g-700">
+                  <li key={x} className="flex items-start gap-2 text-[13px] text-g-700">
                     <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-p-600" />
                     {x}
                   </li>
@@ -218,7 +218,7 @@ export default function Docs() {
               </ul>
               <Link
                 href="/app/docs"
-                className="mt-4 inline-flex items-center gap-1.5 border-t border-g-100 pt-3.5 text-[12.5px] font-semibold text-p-700 hover:text-m-600"
+                className="mt-4 inline-flex items-center gap-1.5 border-t border-g-100 pt-3.5 text-[13px] font-semibold text-p-700 hover:underline"
               >
                 Ouvrir l’espace documentaire client
                 <ArrowUpRight size={13} />

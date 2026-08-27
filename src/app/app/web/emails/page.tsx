@@ -134,7 +134,7 @@ export default function ListeMessageries() {
                 </>
               ) : (
                 <>
-                  <p className="text-[12.5px] leading-relaxed text-g-700">
+                  <p className="text-[13px] leading-relaxed text-g-700">
                     L’activation crée les boîtes, pose les enregistrements MX, SPF, DKIM et DMARC
                     dans la zone, et déclare le client SSO. Aucun courrier existant n’est touché :
                     si vous migrez d’un autre fournisseur, l’import se fait après vérification.
@@ -191,9 +191,9 @@ export default function ListeMessageries() {
           <div className="rounded-[8px] border border-g-300 bg-g-050 p-3">
             <p className="flex items-center gap-1.5 text-p-700">
               <ShieldCheck size={14} />
-              <span className="text-[12.5px] font-bold text-ink">Ici, dans le portail</span>
+              <span className="text-[13px] font-bold text-ink">Ici, dans le portail</span>
             </p>
-            <ul className="mt-2 space-y-1 text-[11.5px] leading-relaxed text-g-700">
+            <ul className="mt-2 space-y-1 text-[12px] leading-relaxed text-g-700">
               {[
                 'Créer, suspendre et supprimer des boîtes',
                 'Quotas, alias, redirections, attrape-tout',
@@ -208,9 +208,9 @@ export default function ListeMessageries() {
           <div className="rounded-[8px] border border-g-300 bg-white p-3">
             <p className="flex items-center gap-1.5 text-m-600">
               <Mail size={14} />
-              <span className="text-[12.5px] font-bold text-ink">Là-bas, dans le webmail</span>
+              <span className="text-[13px] font-bold text-ink">Là-bas, dans le webmail</span>
             </p>
-            <ul className="mt-2 space-y-1 text-[11.5px] leading-relaxed text-g-700">
+            <ul className="mt-2 space-y-1 text-[12px] leading-relaxed text-g-700">
               {[
                 'Lire, écrire et classer son courrier',
                 'Agenda, contacts, tâches partagées',

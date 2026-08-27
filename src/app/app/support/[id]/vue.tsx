@@ -220,7 +220,7 @@ export function VueTicket({ id }: { id: string }) {
                   <span className="flex min-w-0 items-center gap-2.5">
                     <Avatar nom={m.auteur} size="sm" />
                     <span className="min-w-0">
-                      <span className="block text-[12.5px] font-bold text-ink">{m.auteur}</span>
+                      <span className="block text-[13px] font-bold text-ink">{m.auteur}</span>
                       <span className="block text-[11px] text-g-500">
                         {m.role === 'synelia' ? 'Équipe Synelia Cloud' : ORG_LABEL}
                       </span>
@@ -228,7 +228,7 @@ export function VueTicket({ id }: { id: string }) {
                   </span>
                   <span className="shrink-0 text-right">
                     <span className="block text-[11px] text-g-700">{dateHeure(m.date)}</span>
-                    <span className="block text-[10px] text-g-500">{relatif(m.date)}</span>
+                    <span className="block text-[11px] text-g-500">{relatif(m.date)}</span>
                   </span>
                 </div>
                 <p className="mt-3 whitespace-pre-line text-[13px] leading-relaxed text-ink">
@@ -239,7 +239,7 @@ export function VueTicket({ id }: { id: string }) {
                     {m.pieces.map((p) => (
                       <span
                         key={p}
-                        className="flex items-center gap-1.5 rounded-[5px] border border-g-300 bg-white px-2 py-1 font-mono text-[10.5px] text-ink"
+                        className="flex items-center gap-1.5 rounded-[5px] border border-g-300 bg-white px-2 py-1 font-mono text-[11px] text-ink"
                       >
                         <Paperclip size={10} className="text-g-500" />
                         {p}
@@ -322,7 +322,7 @@ export function VueTicket({ id }: { id: string }) {
                     <p className="text-[13px] font-semibold text-ink">
                       Ce ticket est {t.statut === 'resolu' ? 'résolu' : 'fermé'}
                     </p>
-                    <p className="text-[11.5px] text-g-500">
+                    <p className="text-[12px] text-g-500">
                       Il reste consultable indéfiniment. Une réouverture est possible pendant sept
                       jours ; au-delà, ouvrez un nouveau ticket en le référençant.
                     </p>
@@ -368,7 +368,7 @@ export function VueTicket({ id }: { id: string }) {
                       key={r}
                       className="flex items-center justify-between gap-2 rounded-[5px] border border-g-300 px-2.5 py-1.5"
                     >
-                      <span className="min-w-0 truncate font-mono text-[11.5px] text-ink">{r}</span>
+                      <span className="min-w-0 truncate font-mono text-[12px] text-ink">{r}</span>
                       <Button size="sm" variant="ghost" onClick={() => setOnglet('contexte')}>
                         Voir
                       </Button>
@@ -514,14 +514,14 @@ export function VueTicket({ id }: { id: string }) {
                 <tbody>
                   {t.ressourcesLiees.map((r, i) => (
                     <tr key={r} className="border-b border-g-100 last:border-0">
-                      <td className="px-3 py-2 font-mono text-[11.5px] font-semibold text-ink">{r}</td>
-                      <td className="px-3 py-2 text-[11.5px] text-g-700">
+                      <td className="px-3 py-2 font-mono text-[12px] font-semibold text-ink">{r}</td>
+                      <td className="px-3 py-2 text-[12px] text-g-700">
                         {i % 2 === 0 ? 'OpenStack · OS-ABJ-01' : 'Kubernetes · k8s-dba-prod'}
                       </td>
                       <td className="px-3 py-2 font-mono text-[11px] text-g-500">
                         {i % 2 === 0 ? `hv-abj-0${(i % 4) + 1}` : `ns/org-dba-prod`}
                       </td>
-                      <td className="px-3 py-2 text-[11.5px] text-g-700">Abidjan · ABJ-1</td>
+                      <td className="px-3 py-2 text-[12px] text-g-700">Abidjan · ABJ-1</td>
                       <td className="px-3 py-2">
                         <Badge tone={i === 0 ? 'warn' : 'ok'} dot size="sm">
                           {i === 0 ? 'Dégradé' : 'Sain'}
@@ -610,12 +610,12 @@ export function VueTicket({ id }: { id: string }) {
                     'rounded-[6px] border px-3 py-2.5',
                     delaiPremiereReponse !== undefined &&
                       delaiPremiereReponse <= t.slaCible.premiereReponseMin
-                      ? 'border-ok/40 bg-ok-bg'
-                      : 'border-warn/40 bg-warn-bg',
+                      ? 'border-ok/40'
+                      : 'border-warn/40',
                   )}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[12.5px] font-semibold text-ink">Première réponse</span>
+                    <span className="text-[13px] font-semibold text-ink">Première réponse</span>
                     <Badge
                       tone={
                         delaiPremiereReponse !== undefined &&
@@ -630,7 +630,7 @@ export function VueTicket({ id }: { id: string }) {
                         : 'En attente'}
                     </Badge>
                   </div>
-                  <p className="mt-0.5 text-[11.5px] text-g-700">
+                  <p className="mt-0.5 text-[12px] text-g-700">
                     Le délai est mesuré entre l’ouverture du ticket et le premier message de nos
                     équipes qui n’est pas un accusé de réception automatique.
                   </p>
@@ -638,7 +638,7 @@ export function VueTicket({ id }: { id: string }) {
 
                 <div className="rounded-[6px] border border-g-300 px-3 py-2.5">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="flex items-center gap-1.5 text-[12.5px] font-semibold text-ink">
+                    <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
                       <Clock size={12} className="text-g-500" />
                       Résolution
                     </span>
@@ -648,7 +648,7 @@ export function VueTicket({ id }: { id: string }) {
                         : 'Tenue'}
                     </Badge>
                   </div>
-                  <p className="mt-0.5 text-[11.5px] text-g-700">
+                  <p className="mt-0.5 text-[12px] text-g-700">
                     L’horloge est suspendue pendant les périodes d’attente de votre réponse. Elle
                     reprend dès que vous répondez.
                   </p>
@@ -687,7 +687,7 @@ export function VueTicket({ id }: { id: string }) {
                           {LIBELLE_STATUT[x.statut]}
                         </Badge>
                       </div>
-                      <p className="mt-0.5 font-mono text-[10.5px] text-g-500">
+                      <p className="mt-0.5 font-mono text-[11px] text-g-500">
                         {x.numero} · {relatif(x.createdAt)}
                       </p>
                     </Link>

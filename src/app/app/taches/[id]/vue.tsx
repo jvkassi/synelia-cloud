@@ -120,14 +120,14 @@ export function VueSuiviTache({ id }: { id: string }) {
             <ol className="space-y-1.5">
               {TACHES_PROVISIONING.map((t, i) => (
                 <li key={t} className="flex items-start gap-2.5">
-                  <span className="tnum mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-g-100 text-[9.5px] font-bold text-g-700">
+                  <span className="tnum mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-g-100 text-[11px] font-bold text-g-700">
                     {i + 1}
                   </span>
                   <span className="text-[12px] leading-snug text-g-700">{t}</span>
                 </li>
               ))}
             </ol>
-            <p className="mt-3 border-t border-g-100 pt-3 text-[11.5px] leading-relaxed text-g-500">
+            <p className="mt-3 border-t border-g-100 pt-3 text-[12px] leading-relaxed text-g-500">
               États possibles : En file → En cours → Prêt. En cas d’échec, un diagnostic lisible est
               produit — jamais une trace brute — et un rollback automatique libère les ressources
               réservées.
@@ -145,7 +145,7 @@ export function VueSuiviTache({ id }: { id: string }) {
                       className="group flex items-start justify-between gap-2"
                     >
                       <span className="min-w-0">
-                        <span className="block truncate text-[12.5px] text-ink group-hover:text-p-700">
+                        <span className="block truncate text-[13px] text-ink group-hover:text-p-700">
                           {j.label}
                         </span>
                         <span className="block text-[11px] text-g-500">{relatif(j.startedAt)}</span>

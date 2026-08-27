@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import {
-  Activity,
   Clock,
   Database,
   Download,
@@ -14,9 +13,6 @@ import {
   KeyRound,
   Plus,
   RefreshCw,
-  Server,
-  ShieldCheck,
-  ShoppingBag,
   Terminal,
   Trash2,
 } from 'lucide-react'
@@ -303,7 +299,7 @@ export function VueHebergement({ id }: { id: string }) {
                 Créez un enregistrement <span className="font-mono">A</span> vers{' '}
                 <span className="font-mono">{h.serveur.ip}</span> et un{' '}
                 <span className="font-mono">AAAA</span> vers{' '}
-                <span className="font-mono text-[11.5px]">{h.serveur.ipv6}</span>. Si votre zone est
+                <span className="font-mono text-[12px]">{h.serveur.ipv6}</span>. Si votre zone est
                 gérée chez nous, l’onglet DNS le fait en une action.
               </Callout>
             </Card>
@@ -324,7 +320,7 @@ export function VueHebergement({ id }: { id: string }) {
                     <li key={st.id} className="flex flex-wrap items-center gap-3 py-2.5 first:pt-0">
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-[12.5px] font-semibold text-ink">
+                          <span className="font-mono text-[13px] font-semibold text-ink">
                             {st.hote}
                           </span>
                           <Badge tone="neutral" size="sm">
@@ -359,7 +355,7 @@ export function VueHebergement({ id }: { id: string }) {
                             </Badge>
                           )}
                         </span>
-                        <span className="mt-1 block text-[11.5px] text-g-500">
+                        <span className="mt-1 block text-[12px] text-g-500">
                           <span className="font-mono">{st.racine}</span> ·{' '}
                           {(st.espaceMo / 1024).toFixed(2)} Go · {num(st.visitesMois)} visites ce mois
                         </span>
@@ -450,7 +446,7 @@ export function VueHebergement({ id }: { id: string }) {
                     <Link
                       key={a.l}
                       href={a.href}
-                      className="flex w-full items-center gap-2.5 rounded-[6px] border border-g-300 px-2.5 py-2 text-left text-[12.5px] font-semibold text-g-700 transition-colors hover:border-p-400 hover:bg-p-050 hover:text-p-700"
+                      className="flex w-full items-center gap-2.5 rounded-[6px] border border-g-300 px-2.5 py-2 text-left text-[13px] font-semibold text-g-700 transition-colors hover:border-p-400 hover:bg-p-050 hover:text-p-700"
                     >
                       <span className="text-p-700">{a.i}</span>
                       {a.l}
@@ -460,7 +456,7 @@ export function VueHebergement({ id }: { id: string }) {
                       key={a.l}
                       type="button"
                       onClick={() => setOnglet(a.o as string)}
-                      className="flex w-full items-center gap-2.5 rounded-[6px] border border-g-300 px-2.5 py-2 text-left text-[12.5px] font-semibold text-g-700 transition-colors hover:border-p-400 hover:bg-p-050 hover:text-p-700"
+                      className="flex w-full items-center gap-2.5 rounded-[6px] border border-g-300 px-2.5 py-2 text-left text-[13px] font-semibold text-g-700 transition-colors hover:border-p-400 hover:bg-p-050 hover:text-p-700"
                     >
                       <span className="text-p-700">{a.i}</span>
                       {a.l}
@@ -560,7 +556,7 @@ export function VueHebergement({ id }: { id: string }) {
                   <li key={c.id} className="flex flex-wrap items-start gap-3 py-2.5 first:pt-0">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-[12.5px] font-semibold text-ink">
+                        <span className="font-mono text-[13px] font-semibold text-ink">
                           {c.utilisateur}
                         </span>
                         {c.protocoles.map((p) => (
@@ -577,7 +573,7 @@ export function VueHebergement({ id }: { id: string }) {
                           {c.statut === 'actif' ? 'Actif' : 'Suspendu'}
                         </Badge>
                       </div>
-                      <p className="mt-1 text-[11.5px] text-g-500">
+                      <p className="mt-1 text-[12px] text-g-500">
                         <span className="font-mono">{c.racine}</span> ·{' '}
                         {c.quotaGo === null
                           ? `${c.utiliseGo.toFixed(1)} Go, sans quota`
@@ -807,7 +803,7 @@ export function VueHebergement({ id }: { id: string }) {
                         {e.nom}
                       </span>
                       {e.requisePar && (
-                        <span className="block text-[10.5px] text-g-500">requise par {e.requisePar}</span>
+                        <span className="block text-[11px] text-g-500">requise par {e.requisePar}</span>
                       )}
                     </span>
                     {e.requisePar && e.active ? (
@@ -923,7 +919,7 @@ export function VueHebergement({ id }: { id: string }) {
                         <Badge tone="neutral" size="sm">
                           <span className="font-mono">{t.expression}</span>
                         </Badge>
-                        <span className="text-[11.5px] text-g-500">{t.lisible}</span>
+                        <span className="text-[12px] text-g-500">{t.lisible}</span>
                         <Badge tone={t.statut === 'ok' ? 'ok' : 'err'} size="sm" dot>
                           {t.statut === 'ok' ? 'Dernière exécution réussie' : 'Dernière exécution en échec'}
                         </Badge>
@@ -1185,7 +1181,7 @@ export function VueHebergement({ id }: { id: string }) {
                 }
                 mono
               />
-              <p className="mt-1.5 text-[11.5px] text-g-500">
+              <p className="mt-1.5 text-[12px] text-g-500">
                 La base n’écoute pas sur l’extérieur. Vos sites l’atteignent en local ; pour un accès
                 distant, il faut ouvrir un tunnel SSH.
               </p>

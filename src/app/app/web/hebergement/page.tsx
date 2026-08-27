@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { FolderTree, Plus, Server, Terminal } from 'lucide-react'
+import { FolderTree, Plus, Terminal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money, num, relatif } from '@/lib/format'
 import { SITE_LABEL } from '@/lib/types'
@@ -192,7 +192,7 @@ export default function ListeHebergements() {
               <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-[12px]">
                 <div>
                   <dt className="type-micro text-g-500">Adresse IPv4</dt>
-                  <dd className="mt-0.5 font-mono text-[11.5px] text-ink">{h.serveur.ip}</dd>
+                  <dd className="mt-0.5 font-mono text-[12px] text-ink">{h.serveur.ip}</dd>
                 </div>
                 <div>
                   <dt className="type-micro text-g-500">Site physique</dt>
@@ -225,7 +225,7 @@ export default function ListeHebergements() {
               <Badge tone={h.sauvegarde.statut === 'ok' ? 'ok' : 'err'} size="sm">
                 Sauvegarde {relatif(h.sauvegarde.derniere)}
               </Badge>
-              <span className="tnum ml-auto text-[12.5px] font-bold text-ink">
+              <span className="tnum ml-auto text-[13px] font-bold text-ink">
                 {money(PRIX_PALIER[h.palier] ?? 0)} / mois
               </span>
             </div>
@@ -259,9 +259,9 @@ export default function ListeHebergements() {
                 {money(PRIX_PALIER[p.nom] ?? 0)}
                 <span className="text-[11px] font-semibold text-g-500"> / mois</span>
               </p>
-              <p className="mt-2 font-mono text-[11.5px] text-g-700">{p.specs}</p>
-              <p className="mt-0.5 text-[11.5px] text-g-700">{p.sites}</p>
-              <p className="mt-2 text-[11.5px] leading-relaxed text-g-500">{p.pour}</p>
+              <p className="mt-2 font-mono text-[12px] text-g-700">{p.specs}</p>
+              <p className="mt-0.5 text-[12px] text-g-700">{p.sites}</p>
+              <p className="mt-2 text-[12px] leading-relaxed text-g-500">{p.pour}</p>
             </div>
           ))}
         </div>

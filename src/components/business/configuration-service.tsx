@@ -99,7 +99,7 @@ export function ConfigurationServicePanel({
         <ul className="space-y-2">
           {config.horsPerimetre.map((h) => (
             <li key={h.quoi} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <span className="text-[12.5px] font-semibold text-ink">{h.quoi}</span>
+              <span className="text-[13px] font-semibold text-ink">{h.quoi}</span>
               <span className="text-[12px] text-g-500">→ {h.ou}</span>
             </li>
           ))}
@@ -111,11 +111,11 @@ export function ConfigurationServicePanel({
         <div className="sticky bottom-0 z-10 rounded-[10px] border border-p-300 bg-white p-3 shadow-[0_-4px_16px_rgba(43,27,77,.1)]">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[12.5px] font-bold text-ink">
+              <p className="text-[13px] font-bold text-ink">
                 {modifies.length} réglage{modifies.length > 1 ? 's' : ''} modifié
                 {modifies.length > 1 ? 's' : ''}
               </p>
-              <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">
+              <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">
                 {resumeEffets(modifies, definitions)}
               </p>
             </div>
@@ -171,7 +171,7 @@ function LigneChamp({
             <span className="text-[13px] font-semibold text-ink">{champ.libelle}</span>
             {verrouille && (
               <Tooltip content={champ.verrouille!}>
-                <span className="inline-flex items-center gap-1 rounded-[4px] bg-g-100 px-1.5 py-0.5 text-[10.5px] font-semibold text-g-700">
+                <span className="inline-flex items-center gap-1 rounded-[4px] bg-g-100 px-1.5 py-0.5 text-[11px] font-semibold text-g-700">
                   <Lock size={9} />
                   Verrouillé
                 </span>
@@ -188,7 +188,7 @@ function LigneChamp({
               </Badge>
             )}
           </div>
-          <p className="mt-1 max-w-2xl text-[11.5px] leading-relaxed text-g-700">{champ.aide}</p>
+          <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-g-700">{champ.aide}</p>
           {champ.impactFacture && (
             <p className="mt-1 flex items-start gap-1.5 text-[11px] leading-relaxed text-warn">
               <Info size={11} className="mt-0.5 shrink-0" />
@@ -334,12 +334,12 @@ function ChampListe({
     <div>
       <div className="flex flex-wrap gap-1.5">
         {valeurs.length === 0 && (
-          <span className="text-[11.5px] text-g-500">aucune valeur déclarée</span>
+          <span className="text-[12px] text-g-500">aucune valeur déclarée</span>
         )}
         {valeurs.map((v) => (
           <span
             key={v}
-            className="inline-flex items-center gap-1 rounded-[5px] border border-g-300 bg-g-050 px-1.5 py-0.5 text-[11.5px] font-medium text-ink"
+            className="inline-flex items-center gap-1 rounded-[5px] border border-g-300 bg-g-050 px-1.5 py-0.5 text-[12px] font-medium text-ink"
           >
             <span className="font-mono">{v}</span>
             {modifiable && (
@@ -393,7 +393,7 @@ function ChampEtat({ champ }: { champ: Extract<ChampConfig, { type: 'etat' }> })
           className={champ.etat === 'ok' ? 'text-ok' : champ.etat === 'attention' ? 'text-warn' : 'text-err'}
         />
       </div>
-      <p className="mt-1.5 text-[11.5px] leading-relaxed text-g-700">{champ.detail}</p>
+      <p className="mt-1.5 text-[12px] leading-relaxed text-g-700">{champ.detail}</p>
       {champ.action && (
         <BoutonAction
           libelle={champ.action}

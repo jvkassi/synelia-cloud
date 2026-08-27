@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowRightLeft, Plus, Scale, TrendingUp } from 'lucide-react'
+import { ArrowRightLeft, Plus } from 'lucide-react'
 import { cn, seededSeries, trendSeries } from '@/lib/utils'
 import { dateCourte, money, num, pct } from '@/lib/format'
 import {
@@ -171,8 +171,8 @@ export default function Capacite() {
             .map((b) => `${b.code} (${pct(b.saturation!.j30)} projeté à 30 jours)`)
             .join(' · ')}
           . Deux leviers : rééquilibrer le placement des espaces vers un socle moins chargé, ou ajouter
-          des hôtes. Le rééquilibrage est immédiat pour les nouvelles créations et progressif pour
-          l’existant, machine par machine, à froid ou en migration à chaud selon le socle.
+          des hôtes. Le rééquilibrage est immédiat pour les nouvelles créations, progressif pour
+          l’existant — machine par machine, à froid ou à chaud selon le socle.
         </Callout>
       )}
 
@@ -245,15 +245,15 @@ export default function Capacite() {
                           {b.code}
                         </span>
                         {b.enSortie?.actif && (
-                          <span className="mt-0.5 block text-[10px] text-warn">
+                          <span className="mt-0.5 block text-[11px] text-warn">
                             Sortie vers {b.enSortie.cibleMigration}
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                      <td className="px-3 py-2.5 text-[12px] text-g-700">
                         {BACKEND_LABEL[b.type]}
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-700">{SITE_COURT[b.site]}</td>
+                      <td className="px-3 py-2.5 text-[12px] text-g-700">{SITE_COURT[b.site]}</td>
                       <td className="tnum px-3 py-2.5 text-[12px] text-g-700">{b.hosts}</td>
                       <td className="w-40 px-3 py-2.5">
                         <QuotaBar
@@ -366,7 +366,7 @@ export default function Capacite() {
             <Card>
               <CardHeader
                 titre="Socles en trajectoire de sortie"
-                sousTitre="Nous ne prétendons pas être déjà entièrement libres. Le calendrier est publié, y compris côté vitrine."
+                sousTitre="Le calendrier de sortie est publié, y compris côté vitrine."
               />
               <AvertissementMigration
                 lots={enSortie.length}
@@ -376,10 +376,10 @@ export default function Capacite() {
                 {enSortie.map((b) => (
                   <div
                     key={b.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-warn/40 bg-warn-bg px-3 py-2.5"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                   >
                     <span className="min-w-0">
-                      <span className="block font-mono text-[12.5px] font-semibold text-ink">
+                      <span className="block font-mono text-[13px] font-semibold text-ink">
                         {b.code} · {BACKEND_LABEL[b.type]}
                       </span>
                       <span className="block text-[11px] text-g-700">
@@ -402,7 +402,7 @@ export default function Capacite() {
           <Card>
             <CardHeader
               titre="Placement d’un Espace Cloud"
-              sousTitre="Un espace peut être réparti entre plusieurs socles. La somme des pourcentages est forcée à 100 : il n’existe pas de capacité fantôme."
+              sousTitre="Un espace peut être réparti entre plusieurs socles ; la somme des pourcentages est forcée à 100."
               actions={
                 <Select
                   value={espaceId}
@@ -472,7 +472,7 @@ export default function Capacite() {
                       detail: `${placementsEspace.length} socle(s) concerné(s) : migration à chaud possible pour la majorité des machines, redémarrage nécessaire pour celles dont le socle cible change de famille d’hyperviseur. Rien n’a été déplacé.`,
                     }}
                   />
-                  <span className="text-[11.5px] text-g-500">
+                  <span className="text-[12px] text-g-500">
                     La simulation liste les machines à déplacer et le mode de migration disponible pour
                     chacune.
                   </span>
@@ -508,13 +508,13 @@ export default function Capacite() {
                         <td className="px-3 py-2.5 font-mono text-[12px] font-semibold text-ink">
                           {e.code}
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">{e.offreNom}</td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">{e.offreNom}</td>
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">
                           {SITE_COURT[e.site]}
                         </td>
                         <td className="px-3 py-2.5">
                           {pls.length === 0 ? (
-                            <span className="text-[11.5px] text-g-500">Placement automatique</span>
+                            <span className="text-[12px] text-g-500">Placement automatique</span>
                           ) : (
                             <span className="flex flex-wrap gap-1">
                               {pls.map((p) => {
@@ -532,7 +532,7 @@ export default function Capacite() {
                             </span>
                           )}
                         </td>
-                        <td className="tnum px-3 py-2.5 text-[11.5px] text-g-700">
+                        <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
                           {VMS.filter((v) => v.espaceId === e.id).length}
                         </td>
                         <td className="px-3 py-2.5">
@@ -548,12 +548,9 @@ export default function Capacite() {
             </div>
           </Card>
 
-          <Callout ton="violet" titre="Pourquoi nous montrons le socle au client">
-            La plupart des plateformes masquent l’hyperviseur, au motif que c’est un détail
-            d’implémentation. Dans les faits, un client qui doit prouver la localisation de ses données
-            à un régulateur, ou comprendre pourquoi une migration à chaud est possible sur une machine
-            et pas sur une autre, a besoin de cette information. Nous préférons l’exposer et
-            l’expliquer.
+          <Callout ton="violet" titre="Le socle est visible côté client">
+            Un client qui doit prouver la localisation de ses données, ou savoir si une migration à
+            chaud est possible sur telle machine, a besoin de cette information.
           </Callout>
         </div>
       )}
@@ -563,7 +560,7 @@ export default function Capacite() {
           <Card>
             <CardHeader
               titre="Projection de saturation"
-              sousTitre="Extrapolation de la croissance observée sur 90 jours, socle par socle. Une projection n’est pas une prédiction : elle indique quand agir, pas ce qui va arriver."
+              sousTitre="Extrapolation de la croissance observée sur 90 jours, socle par socle. Elle indique quand agir, pas ce qui va arriver."
             />
             <div className="overflow-x-auto rounded-[8px] border border-g-300">
               <table className="w-full min-w-max border-collapse">
@@ -587,7 +584,7 @@ export default function Capacite() {
                           <span className="block font-mono text-[12px] font-semibold text-ink">
                             {b.code}
                           </span>
-                          <span className="block text-[10.5px] text-g-500">
+                          <span className="block text-[11px] text-g-500">
                             {BACKEND_LABEL[b.type]} · {SITE_COURT[b.site]}
                           </span>
                         </td>
@@ -601,7 +598,7 @@ export default function Capacite() {
                             </Badge>
                           </td>
                         ))}
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">
                           {s.j30 > 90
                             ? 'Ajouter des hôtes ou drainer maintenant'
                             : s.j60 > 90
@@ -637,7 +634,7 @@ export default function Capacite() {
                   />
                 ))}
               </div>
-              <div className="mt-2 flex justify-between text-[10.5px] text-g-500">
+              <div className="mt-2 flex justify-between text-[11px] text-g-500">
                 <span>Il y a 90 jours</span>
                 <span>Aujourd’hui</span>
               </div>
@@ -659,8 +656,7 @@ export default function Capacite() {
             <Card>
               <CardHeader
                 titre="Plan d’extension"
-                sousTitre="Ce qu’il faudrait commander, et quand, pour ne pas se retrouver au pied du mur."
-                actions={<TrendingUp size={15} className="text-p-700" />}
+                sousTitre="Ce qu’il faut commander, et à quelle date au plus tard."
               />
               <div className="space-y-2">
                 {[
@@ -690,11 +686,11 @@ export default function Capacite() {
                     key={x.quoi}
                     className={cn(
                       'rounded-[6px] border px-3 py-2.5',
-                      x.urgent ? 'border-warn/40 bg-warn-bg' : 'border-g-300',
+                      x.urgent ? 'border-warn/40' : 'border-g-300',
                     )}
                   >
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="min-w-0 text-[12.5px] font-semibold text-ink">{x.quoi}</span>
+                      <span className="min-w-0 text-[13px] font-semibold text-ink">{x.quoi}</span>
                       <span className="flex shrink-0 items-center gap-2">
                         <Badge tone={x.urgent ? 'warn' : 'neutral'} size="sm">
                           {x.q}
@@ -702,7 +698,7 @@ export default function Capacite() {
                         <span className="tnum text-[12px] font-bold text-ink">{money(x.cout)}</span>
                       </span>
                     </div>
-                    <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{x.d}</p>
+                    <p className="mt-1 text-[12px] leading-relaxed text-g-700">{x.d}</p>
                   </div>
                 ))}
               </div>
@@ -722,7 +718,7 @@ export default function Capacite() {
             <div className="border-b border-g-100 px-4 py-3.5">
               <CardHeader
                 titre="Marge par socle"
-                sousTitre="Coût d’infrastructure — matériel amorti, licences, énergie, hébergement — face au revenu qu’il porte. C’est cette lecture qui justifie économiquement la sortie des socles propriétaires."
+                sousTitre="Coût d’infrastructure — matériel amorti, licences, énergie, hébergement — face au revenu qu’il porte."
                 className="mb-0"
                 actions={
                   <Badge tone={margeMoyenne > 40 ? 'ok' : 'warn'} size="sm">
@@ -761,11 +757,11 @@ export default function Capacite() {
                               </Badge>
                             )}
                           </td>
-                          <td className="px-3 py-2.5 text-[11.5px] text-g-700">{m.type}</td>
-                          <td className="tnum px-3 py-2.5 text-[11.5px] text-g-700">
+                          <td className="px-3 py-2.5 text-[12px] text-g-700">{m.type}</td>
+                          <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
                             {money(m.coutInfra)}
                           </td>
-                          <td className="tnum px-3 py-2.5 text-[11.5px] text-g-700">
+                          <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
                             {money(m.revenu)}
                           </td>
                           <td className="px-3 py-2.5">
@@ -802,13 +798,13 @@ export default function Capacite() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-g-300 bg-p-050">
-                    <td colSpan={2} className="px-3 py-2.5 text-right text-[12.5px] font-bold text-ink">
+                    <td colSpan={2} className="px-3 py-2.5 text-right text-[13px] font-bold text-ink">
                       Total
                     </td>
-                    <td className="tnum px-3 py-2.5 text-[12.5px] font-bold text-ink">
+                    <td className="tnum px-3 py-2.5 text-[13px] font-bold text-ink">
                       {money(MARGE_BACKENDS.reduce((a, m) => a + m.coutInfra, 0))}
                     </td>
-                    <td className="tnum px-3 py-2.5 text-[12.5px] font-bold text-ink">
+                    <td className="tnum px-3 py-2.5 text-[13px] font-bold text-ink">
                       {money(MARGE_BACKENDS.reduce((a, m) => a + m.revenu, 0))}
                     </td>
                     <td className="px-3 py-2.5">
@@ -832,11 +828,9 @@ export default function Capacite() {
           </Card>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <Callout ton="violet" titre="La souveraineté a aussi un intérêt économique">
-              Les socles libres affichent des marges de 49 à 57 %, les socles propriétaires de 24 à
-              31 %. La différence, c’est le coût des licences. La trajectoire de sortie n’est donc pas
-              un sacrifice commercial fait au nom d’un principe : elle améliore la marge tout en
-              réduisant la dépendance. Ces deux raisons se renforcent, elles ne s’opposent pas.
+            <Callout ton="violet" titre="Marge par famille de socle">
+              Socles libres : 49 à 57 %. Socles propriétaires : 24 à 31 %. L’écart correspond au coût
+              des licences.
             </Callout>
             <Card>
               <CardHeader

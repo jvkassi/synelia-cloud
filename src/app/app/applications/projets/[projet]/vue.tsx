@@ -79,7 +79,7 @@ export function VueProjet({ id }: { id: string }) {
             <Badge tone="neutral">
               Espace <span className="font-mono">{projet.espaceId.toUpperCase()}</span>
             </Badge>
-            <span className="text-[11.5px] text-g-500">
+            <span className="text-[12px] text-g-500">
               créé le {dateCourte(projet.cree)} · dernière activité {relatif(synthese.derniereMaj)}
             </span>
           </>
@@ -115,7 +115,7 @@ export function VueProjet({ id }: { id: string }) {
                 {e}
                 <span
                   className={cn(
-                    'tnum rounded-full px-1.5 text-[10.5px]',
+                    'tnum rounded-full px-1.5 text-[11px]',
                     e === env ? 'bg-white/20' : 'bg-g-100 text-g-700',
                   )}
                 >
@@ -125,7 +125,7 @@ export function VueProjet({ id }: { id: string }) {
             )
           })}
         </div>
-        <span className="text-[11.5px] text-g-500">
+        <span className="text-[12px] text-g-500">
           Chaque environnement porte ses propres services et ses propres variables.
         </span>
       </div>
@@ -242,7 +242,7 @@ function NouveauService({
                 {ICONE_TYPE[t.type]}
               </span>
               <span className="min-w-0">
-                <span className="block text-[12.5px] font-semibold text-ink">
+                <span className="block text-[13px] font-semibold text-ink">
                   {TYPE_SERVICE_LABEL[t.type]}
                 </span>
                 <span className="block text-[11px] leading-snug text-g-500">{t.phrase}</span>
@@ -400,7 +400,7 @@ function TiroirCreation({
     >
       <div className="space-y-4">
         {(type === 'application' || type === 'statique') && (
-          <Callout ton="info" titre="Cinq étapes, pas un formulaire">
+          <Callout ton="info" titre="Le déploiement depuis un dépôt passe par l’assistant">
             Déployer depuis un dépôt passe par l’assistant : lecture du code, architecture, cible et
             ressources, environnements. Il pré-remplit ce projet et cet environnement.
           </Callout>
@@ -499,7 +499,7 @@ function TiroirCreation({
           <div className="rounded-[8px] border border-g-300 bg-g-050 p-3">
             <MicroLabel>Adresse attribuée automatiquement</MicroLabel>
             <CopyField value={sousDomaine} className="mt-1.5" />
-            <p className="mt-2 text-[11.5px] leading-relaxed text-g-500">
+            <p className="mt-2 text-[12px] leading-relaxed text-g-500">
               Certificat émis dès le premier déploiement. Vous pourrez brancher votre propre domaine
               ensuite, sans changer cette adresse.
             </p>

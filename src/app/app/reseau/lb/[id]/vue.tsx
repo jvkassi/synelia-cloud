@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Download, Plus, ShieldAlert, Trash2 } from 'lucide-react'
+import { Download, Plus, Trash2 } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { dateCourte, num, pct } from '@/lib/format'
 import { LOAD_BALANCERS, LOGS_EXECUTION, VMS, espaceById } from '@/lib/mock'
@@ -198,7 +198,7 @@ export function VueLb({ id }: { id: string }) {
                 )}
               </div>
               {lb.rateLimit && (
-                <p className="mt-3 border-t border-g-100 pt-3 text-[11.5px] leading-relaxed text-g-500">
+                <p className="mt-3 border-t border-g-100 pt-3 text-[12px] leading-relaxed text-g-500">
                   Limitation de débit active : {num(lb.rateLimit.requetesParMin)} requêtes par minute
                   et par adresse IP. Au-delà, le load balancer répond 429 sans solliciter les
                   backends.
@@ -306,7 +306,7 @@ export function VueLb({ id }: { id: string }) {
                         )}
                       >
                         <td className="px-3 py-2.5">
-                          <span className="block font-mono text-[12.5px] font-medium text-ink">
+                          <span className="block font-mono text-[13px] font-medium text-ink">
                             {p.targetLabel}
                           </span>
                           <span className="block text-[11px] text-g-500">{p.targetId}</span>
@@ -339,7 +339,7 @@ export function VueLb({ id }: { id: string }) {
                             {enDrain ? 'En drain' : p.sante === 'ok' ? 'Sain' : 'Défaillant'}
                           </Badge>
                         </td>
-                        <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">
+                        <td className="tnum px-3 py-2.5 text-[13px] text-g-700">
                           {enDrain || p.sante !== 'ok'
                             ? '0'
                             : num(Math.round((lb.metriques.rps * p.poids) / poidsTotal))}
@@ -435,7 +435,7 @@ export function VueLb({ id }: { id: string }) {
                 <Input type="number" defaultValue={lb.healthCheck.seuilOk} />
               </Field>
             </div>
-            <p className="mt-3 text-[11.5px] text-g-500">
+            <p className="mt-3 text-[12px] text-g-500">
               Une cible défaillante est retirée du pool en{' '}
               {lb.healthCheck.intervalleS * lb.healthCheck.seuilKo} secondes au pire.
             </p>
@@ -517,12 +517,12 @@ export function VueLb({ id }: { id: string }) {
                 <tbody>
                   {lb.listeners.map((l) => (
                     <tr key={`${l.protocole}-${l.port}`} className="border-b border-g-100 last:border-0">
-                      <td className="px-3 py-2.5 font-mono text-[12.5px] text-ink">{l.protocole}</td>
-                      <td className="tnum px-3 py-2.5 text-[12.5px] text-ink">{l.port}</td>
-                      <td className="px-3 py-2.5 font-mono text-[11.5px] text-g-700">
+                      <td className="px-3 py-2.5 font-mono text-[13px] text-ink">{l.protocole}</td>
+                      <td className="tnum px-3 py-2.5 text-[13px] text-ink">{l.port}</td>
+                      <td className="px-3 py-2.5 font-mono text-[12px] text-g-700">
                         {l.certId ?? <span className="text-g-500">aucun</span>}
                       </td>
-                      <td className="px-3 py-2.5 text-[12.5px] text-g-700">{l.tlsMin ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-[13px] text-g-700">{l.tlsMin ?? '—'}</td>
                       <td className="px-3 py-2.5">
                         <Badge tone="ok" dot size="sm">
                           Actif
@@ -672,7 +672,7 @@ export function VueLb({ id }: { id: string }) {
                         <td className="px-3 py-2.5 font-mono text-[12px] text-ink">
                           {r.chemin ?? '/*'}
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-[11.5px] text-g-700">
+                        <td className="px-3 py-2.5 font-mono text-[12px] text-g-700">
                           {r.entete ?? '—'}
                         </td>
                         <td className="px-3 py-2.5">
@@ -722,7 +722,7 @@ export function VueLb({ id }: { id: string }) {
                   <Input defaultValue="/v1/$1" className="font-mono" />
                 </Field>
               </div>
-              <p className="mt-2.5 text-[11.5px] leading-relaxed text-g-500">
+              <p className="mt-2.5 text-[12px] leading-relaxed text-g-500">
                 La réécriture s’applique après le routage : la règle de destination est choisie sur
                 l’URL d’origine, puis l’URL est réécrite avant transmission au backend.
               </p>
@@ -751,7 +751,7 @@ export function VueLb({ id }: { id: string }) {
                   </div>
                 ))}
               </div>
-              <p className="mt-3 text-[11.5px] leading-relaxed text-g-500">
+              <p className="mt-3 text-[12px] leading-relaxed text-g-500">
                 Sans page personnalisée, le load balancer sert une page neutre aux couleurs Synelia
                 plutôt qu’une réponse vide — ce qui reste préférable à un écran blanc pour vos
                 utilisateurs.
@@ -885,7 +885,7 @@ export function VueLb({ id }: { id: string }) {
               step={60}
               unite="req/min"
             />
-            <p className="mt-2.5 text-[11.5px] leading-relaxed text-g-500">
+            <p className="mt-2.5 text-[12px] leading-relaxed text-g-500">
               Au-delà du seuil, le load balancer répond 429 sans solliciter les backends. Attention
               derrière un NAT d’entreprise : plusieurs centaines d’utilisateurs peuvent partager une
               même adresse source. Prévoyez une liste d’adresses exemptées pour vos sites clients

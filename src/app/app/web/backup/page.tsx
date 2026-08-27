@@ -27,10 +27,9 @@ export default function ListeSauvegardes() {
         sousTitre="Un plan par hébergement, qui prend les fichiers, les bases, la configuration et la messagerie dans la même exécution. Les copies sont immuables et vivent sur l’autre site."
       />
 
-      <Callout ton="info" titre="Immuable veut dire immuable">
-        Une copie écrite ne peut plus être modifiée ni supprimée avant la fin de sa rétention — ni
-        par vous, ni par nous, ni par un rançongiciel qui aurait pris la main sur le serveur. C’est
-        la seule protection qui résiste à une compromission du compte administrateur.
+      <Callout ton="info" titre="Ce que la rétention interdit">
+        Une copie écrite ne peut plus être modifiée ni supprimée avant la fin de sa rétention — ni par
+        vous, ni par nous, ni par un rançongiciel qui aurait pris la main sur le serveur.
       </Callout>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -131,10 +130,10 @@ export default function ListeSauvegardes() {
                     <td className="px-3 py-2.5 text-[12px] text-g-700">{dateHeure(e.ts)}</td>
                     <td className="tnum px-3 py-2.5 text-[12px] text-g-700">{e.taille}</td>
                     <td className="tnum px-3 py-2.5 text-[12px] text-g-700">{e.dureeMin} min</td>
-                    <td className="px-3 py-2.5 text-[11.5px] text-g-500">
+                    <td className="px-3 py-2.5 text-[12px] text-g-500">
                       {e.contenu.join(' · ')}
                     </td>
-                    <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                    <td className="px-3 py-2.5 text-[12px] text-g-700">
                       {e.immuableJusqua ?? '—'}
                     </td>
                     <td className="px-3 py-2.5">
@@ -178,8 +177,8 @@ export default function ListeSauvegardes() {
           ].map((c) => (
             <div key={c.t} className="rounded-[8px] border border-g-300 bg-g-050 p-3">
               <p className="flex items-center gap-1.5 text-p-700">{c.i}</p>
-              <p className="mt-1.5 text-[12.5px] font-bold text-ink">{c.t}</p>
-              <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{c.d}</p>
+              <p className="mt-1.5 text-[13px] font-bold text-ink">{c.t}</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-g-700">{c.d}</p>
             </div>
           ))}
         </div>

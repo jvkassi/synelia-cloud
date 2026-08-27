@@ -28,7 +28,7 @@ export default function ListePra() {
       <PageHeader
         fil={[{ label: 'Espace client', href: '/app' }, { label: 'Plan de reprise (PRA)' }]}
         titre="Plan de reprise"
-        sousTitre="Un plan de reprise qui n’a jamais été exercé n’est pas un plan, c’est une intention. Nous affichons systématiquement la cible et le constaté côte à côte, et nous exerçons vos plans trimestriellement en réseau isolé."
+        sousTitre="Cible et constaté côte à côte pour chaque plan. Les exercices ont lieu chaque trimestre, en réseau isolé."
         actions={
           <ButtonLink href="/app/pra" iconBefore={<Plus size={14} />}>
             Nouveau plan de reprise
@@ -71,7 +71,7 @@ export default function ListePra() {
               </span>
               <Link
                 href={`/app/pra/${plan.id}`}
-                className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-p-700 hover:text-m-600"
+                className="inline-flex items-center gap-1 text-[13px] font-semibold text-p-700 hover:underline"
               >
                 Ouvrir le plan
                 <ArrowRight size={13} />
@@ -106,24 +106,24 @@ export default function ListePra() {
                 .sort((a, b) => b.date.localeCompare(a.date))
                 .map((e) => (
                   <tr key={`${e.plan}-${e.date}`} className="border-b border-g-100 last:border-0">
-                    <td className="px-3 py-2.5 text-[12.5px] text-ink">{dateCourte(e.date)}</td>
+                    <td className="px-3 py-2.5 text-[13px] text-ink">{dateCourte(e.date)}</td>
                     <td className="px-3 py-2.5 font-mono text-[12px] text-g-700">{e.plan}</td>
                     <td className="px-3 py-2.5">
                       <Badge tone={e.type === 'reel' ? 'err' : 'info'} size="sm">
                         {e.type === 'reel' ? 'Bascule réelle' : 'Bascule de test'}
                       </Badge>
                     </td>
-                    <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">
+                    <td className="tnum px-3 py-2.5 text-[13px] text-g-700">
                       {dureeMin(e.dureeMin)}
                     </td>
-                    <td className="tnum px-3 py-2.5 text-[12.5px] font-semibold">
+                    <td className="tnum px-3 py-2.5 text-[13px] font-semibold">
                       <span
                         className={e.rtoConstateMin <= e.cible ? 'text-ok' : 'text-err'}
                       >
                         {dureeMin(e.rtoConstateMin)}
                       </span>
                     </td>
-                    <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">
+                    <td className="tnum px-3 py-2.5 text-[13px] text-g-700">
                       {dureeMin(e.cible)}
                     </td>
                     <td className="px-3 py-2.5">
@@ -134,7 +134,7 @@ export default function ListePra() {
                     <td className="px-3 py-2.5">
                       <a
                         href={e.rapportUrl}
-                        className="inline-flex items-center gap-1 text-[12px] font-semibold text-p-700 hover:text-m-600"
+                        className="inline-flex items-center gap-1 text-[12px] font-semibold text-p-700 hover:underline"
                       >
                         <FileDown size={12} />
                         Télécharger
@@ -148,7 +148,7 @@ export default function ListePra() {
       </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Callout ton="ok" titre="PRA-DBA-PROD : les chiffres tiennent">
+        <Callout ton="ok" titre="PRA-DBA-PROD : objectifs tenus aux deux derniers exercices">
           RPO constaté de 11 minutes pour une cible de 15, RTO constaté de 3 h 12 pour une cible de
           4 h. La progression est nette depuis l’exercice de janvier, qui avait échoué sur un groupe
           de sécurité de repli absent et un ordre de démarrage incorrect. Ces deux points ont été
@@ -157,8 +157,7 @@ export default function ListePra() {
         <Callout ton="warn" titre="PRA-DBA-COLLAB n’a jamais été exercé">
           Le plan est configuré, la réplication fonctionne avec un retard de 48 minutes, mais aucune
           bascule de test n’a été menée. Le RTO de 8 heures affiché est donc théorique. Une bascule de
-          test en réseau isolé n’a aucun impact sur votre production — c’est précisément ce qui permet
-          de l’exercer souvent.
+          test se fait en réseau isolé, sans impact sur votre production.
         </Callout>
       </div>
     </div>

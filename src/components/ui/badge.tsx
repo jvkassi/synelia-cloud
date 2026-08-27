@@ -6,11 +6,11 @@ export type Tone = 'neutral' | 'violet' | 'accent' | 'ok' | 'warn' | 'err' | 'in
 const TONES: Record<Tone, string> = {
   neutral: 'bg-g-100 text-g-700 border-g-300',
   violet: 'bg-p-100 text-p-700 border-p-300',
-  accent: 'bg-m-050 text-m-600 border-[#F0C4DC]',
-  ok: 'bg-ok-bg text-ok border-[#B7E3D0]',
-  warn: 'bg-warn-bg text-warn border-[#EED9B0]',
-  err: 'bg-err-bg text-err border-[#EFC3BD]',
-  info: 'bg-info-bg text-info border-[#BFD6EE]',
+  accent: 'bg-m-050 text-m-600 border-m-600/25',
+  ok: 'bg-ok-bg text-ok border-ok/25',
+  warn: 'bg-warn-bg text-warn border-warn/25',
+  err: 'bg-err-bg text-err border-err/25',
+  info: 'bg-info-bg text-info border-info/25',
 }
 
 const DOTS: Record<Tone, string> = {
@@ -40,7 +40,7 @@ export function Badge({
     <span
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full border font-semibold whitespace-nowrap',
-        size === 'sm' ? 'px-1.5 py-0.5 text-[10.5px]' : 'px-2.5 py-[3px] text-[11.5px]',
+        size === 'sm' ? 'px-1.5 py-0.5 text-[11px]' : 'px-2.5 py-[3px] text-[12px]',
         TONES[tone],
         className,
       )}
