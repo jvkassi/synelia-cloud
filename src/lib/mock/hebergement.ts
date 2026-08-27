@@ -705,10 +705,19 @@ function etatEntree(
   return { etat: 'Actif', ton: 'ok' }
 }
 
-/** Entrées Web Cloud d'une organisation, domaines et hébergements confondus. */
-export function entreesWebCloud(orgId: string = ORG_COURANTE.id): EntreeWebCloud[] {
-  const domaines = DOMAINES.filter((d) => d.orgId === orgId)
-  const hebergements = HEBERGEMENTS.filter((h) => h.orgId === orgId)
+/**
+ * Entrées Web Cloud d'une organisation, domaines et hébergements confondus.
+ *
+ * `source` permet de composer les entrées depuis l'atelier plutôt que depuis la
+ * graine : le panneau de la section doit montrer un domaine acheté pendant la
+ * session, et l'hébergement qu'on vient de lui attacher.
+ */
+export function entreesWebCloud(
+  orgId: string = ORG_COURANTE.id,
+  source?: { domaines?: Domaine[]; hebergements?: WebHosting[] },
+): EntreeWebCloud[] {
+  const domaines = (source?.domaines ?? DOMAINES).filter((d) => d.orgId === orgId)
+  const hebergements = (source?.hebergements ?? HEBERGEMENTS).filter((h) => h.orgId === orgId)
 
   const depuisDomaines = domaines.map<EntreeWebCloud>((d) => {
     const hebergement = hebergements.find((h) => h.domaine === d.nom)

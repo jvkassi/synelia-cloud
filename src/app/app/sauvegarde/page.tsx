@@ -1152,7 +1152,7 @@ function OngletConformite() {
                   titre: 'Rapport de conformité exporté',
                   detail:
                     'PDF horodaté : état de protection, RPO constaté, règle 3-2-1 et dernier test de restauration par ressource.',
-                  job: { workflow: 'export.plateforme', cible: 'conformité des sauvegardes' },
+                  job: { workflow: 'export.conformite', cible: 'conformité des sauvegardes' },
                 }}
               />
             }

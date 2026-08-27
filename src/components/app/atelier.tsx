@@ -12,7 +12,7 @@ import {
 import { MAINTENANT } from '@/lib/format'
 import { correlationId } from '@/lib/utils'
 import type { AuditEvent, DefinitionWorkflow, ProvisioningJob } from '@/lib/types'
-import { AUDIT, JOBS } from '@/lib/mock/ops'
+import { AUDIT, JOBS, JOBS_PLATEFORME } from '@/lib/mock/ops'
 import {
   etapeEnEchec,
   libelleWorkflow,
@@ -92,11 +92,12 @@ interface CtxAtelier {
   jobs: ProvisioningJob[]
   lancerJob: (spec: SpecJob) => string
   /**
-   * Reprend un job échoué à son étape échouée. L'espace fournisseur garde ses
-   * jobs dans une autre collection, d'où les deux paramètres facultatifs.
-   * Faux si le job est inconnu ou si son type n'est pas au catalogue.
+   * Reprend un job échoué à son étape échouée. La collection se déduit de la
+   * portée du workflow : le site d'appel n'a pas à savoir dans laquelle des deux
+   * le job est rangé. Faux si le job est inconnu ou si son type n'est pas au
+   * catalogue — auquel cas le bouton de reprise ne doit pas être proposé.
    */
-  reprendreJob: (id: string, nom?: string, graine?: readonly ProvisioningJob[]) => boolean
+  reprendreJob: (id: string) => boolean
   /**
    * Écrit une entrée au journal d'audit. La vitrine promet un journal « qui
    * enregistre aussi les refus » : c'est ici que la promesse se tient, y compris
@@ -112,7 +113,22 @@ interface CtxAtelier {
 const Ctx = createContext<CtxAtelier | null>(null)
 
 const NOM_JOBS = 'jobs'
+const NOM_JOBS_PLATEFORME = 'jobs-plateforme'
 const NOM_AUDIT = 'audit'
+
+/**
+ * Où ranger le job d'un workflow. Les deux espaces ont leur propre collection —
+ * le centre de tâches du client lit `jobs`, celui du fournisseur
+ * `jobs-plateforme`. La portée déclarée au catalogue tranche, sans que chaque
+ * site d'appel ait à le redire : un rééquilibrage de capacité lancé depuis
+ * l'espace fournisseur atterrissait sinon dans le centre de tâches du client,
+ * invisible là où on venait de le déclencher.
+ */
+function collectionDe(def: DefinitionWorkflow) {
+  return def.portee === 'fournisseur'
+    ? ([NOM_JOBS_PLATEFORME, JOBS_PLATEFORME] as const)
+    : ([NOM_JOBS, JOBS] as const)
+}
 
 export function AtelierProvider({ children }: { children: ReactNode }) {
   const [collections, setCollections] = useState<Record<string, Entite[]>>({})
@@ -282,8 +298,9 @@ export function AtelierProvider({ children }: { children: ReactNode }) {
       const def = spec.workflow ? workflowById(spec.workflow) : undefined
 
       if (def) {
+        const [nom, graine] = collectionDe(def)
         const label = spec.label ?? libelleWorkflow(def, spec.cible ?? '')
-        creer(NOM_JOBS, JOBS, {
+        creer(nom, graine, {
           id,
           orgId: 'org-dba',
           type: def.id,
@@ -301,7 +318,7 @@ export function AtelierProvider({ children }: { children: ReactNode }) {
         if (spec.alFin) effetsDiferes.current.set(id, spec.alFin)
         if (spec.alEchec) alertesEchec.current.set(id, spec.alEchec)
         essais.current.set(id, 0)
-        jouer(id, def, 0, 0)
+        jouer(id, def, 0, 0, nom, graine)
         return id
       }
 
@@ -355,10 +372,28 @@ export function AtelierProvider({ children }: { children: ReactNode }) {
    * précédentes restent acquises, et l'essai suivant aboutit. Sans cela un
    * échec resterait un cul-de-sac, ou obligerait à lancer un second job qui
    * raconterait deux fois la même opération.
+   *
+   * Le jeu de données du fournisseur reprend celui du client (`JOBS_PLATEFORME`
+   * commence par `...JOBS`) : une souscription en échec est donc visible des
+   * deux côtés, et une reprise déclenchée d'un côté doit avancer de l'autre.
+   * D'où l'avancement joué sur chaque collection qui porte ce job.
    */
   const reprendreJob = useCallback<CtxAtelier['reprendreJob']>(
-    (id, nom = NOM_JOBS, graine = JOBS) => {
-      const job = lire<ProvisioningJob>(nom, graine).find((j) => j.id === id)
+    (id) => {
+      const porteuses = (
+        [
+          [NOM_JOBS, JOBS],
+          [NOM_JOBS_PLATEFORME, JOBS_PLATEFORME],
+        ] as const
+      )
+        .map(([nom, graine]) => ({
+          nom,
+          graine,
+          job: lire<ProvisioningJob>(nom, graine).find((j) => j.id === id),
+        }))
+        .filter((x) => x.job)
+
+      const job = porteuses[0]?.job
       const def = job && workflowById(job.type)
       if (!job || !def) return false
 
@@ -367,15 +402,17 @@ export function AtelierProvider({ children }: { children: ReactNode }) {
       const essai = (essais.current.get(id) ?? 0) + 1
       essais.current.set(id, essai)
 
-      modifier<ProvisioningJob>(nom, graine, id, (j) => ({
-        statut: 'running',
-        erreur: undefined,
-        dureeS: undefined,
-        taches: j.taches.map((t) =>
-          t.ordre === depuis + 1 ? { ...t, statut: 'running', message: undefined } : t,
-        ),
-      }))
-      jouer(id, def, essai, depuis, nom, graine)
+      for (const { nom, graine } of porteuses) {
+        modifier<ProvisioningJob>(nom, graine, id, (j) => ({
+          statut: 'running',
+          erreur: undefined,
+          dureeS: undefined,
+          taches: j.taches.map((t) =>
+            t.ordre === depuis + 1 ? { ...t, statut: 'running', message: undefined } : t,
+          ),
+        }))
+        jouer(id, def, essai, depuis, nom, graine)
+      }
       return true
     },
     [jouer, lire, modifier],

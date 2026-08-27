@@ -135,7 +135,7 @@ export default function ListeMessageries() {
               ) : (
                 <>
                   <p className="text-[12.5px] leading-relaxed text-g-700">
-                    L’activation crée les boîtes, pose les enregistrements MX, SPF, DKIM et DMARC
+                    L’activation réserve les boîtes, pose les enregistrements MX, SPF, DKIM et DMARC
                     dans la zone, et déclare le client SSO. Aucun courrier existant n’est touché :
                     si vous migrez d’un autre fournisseur, l’import se fait après vérification.
                   </p>
@@ -147,7 +147,7 @@ export default function ListeMessageries() {
                     titre={`Activer la messagerie de ${m.domaine}`}
                     description="L’activation pose les enregistrements MX, SPF, DKIM et DMARC dans la zone et déclare le client SSO. Aucun courrier existant n’est touché."
                     champs={[
-                      { id: 'boites', label: 'Boîtes à créer', type: 'nombre', demi: true, min: 1, max: 200 },
+                      { id: 'boites', label: 'Boîtes incluses', type: 'nombre', demi: true, min: 1, max: 200 },
                       {
                         id: 'palier',
                         label: 'Palier',
@@ -165,7 +165,7 @@ export default function ListeMessageries() {
                     libelleValider="Activer"
                     operation={(v) => ({
                       titre: `Messagerie de ${m.domaine} en cours d’activation`,
-                      detail: `${v.boites} boîte(s) · ${v.palier}`,
+                      detail: `${v.boites} boîte(s) incluses · ${v.palier}`,
                       job: { workflow: 'web.email.activate', cible: m.domaine },
                       effetFinal: () =>
                         collection.modifier(m.id, {

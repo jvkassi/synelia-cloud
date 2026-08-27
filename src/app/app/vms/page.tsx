@@ -30,16 +30,20 @@ export default function ListeVms() {
     libelle: string,
     workflow: string,
     statutFinal: VM['statut'],
-  ) =>
-    executer({
+  ) => {
+    // Sur une seule machine, la nommer : « Démarrage de 1 machine » se lit mal
+    // dans le centre de tâches, et le nom est l'information utile.
+    const cible =
+      ids.length === 1
+        ? (vms.find((v) => v.id === ids[0])?.nom ?? '1 machine')
+        : `${ids.length} machines`
+    return executer({
       ton: 'info',
-      titre: `${libelle} de ${ids.length} machine${ids.length > 1 ? 's' : ''}`,
-      job: {
-        workflow,
-        cible: `${ids.length} machine${ids.length > 1 ? 's' : ''}`,
-      },
+      titre: `${libelle} de ${cible}`,
+      job: { workflow, cible },
       effetFinal: () => parc.modifierPlusieurs(ids, { statut: statutFinal }),
     })
+  }
 
   const colonnes: Array<Colonne<VM>> = [
     {

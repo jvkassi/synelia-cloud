@@ -421,7 +421,12 @@ function CentreDeTaches({ superAdmin }: { superAdmin: boolean }) {
               return (
                 <Link
                   key={j.id}
-                  href={superAdmin ? '/admin' : `/app/taches/${j.id}`}
+                  // L'espace fournisseur suit ses provisionnements depuis
+                  // l'onglet du même nom de la santé plateforme : il n'a pas de
+                  // page par job, mais l'écran qui les porte tous vaut mieux que
+                  // le tableau de bord, où l'on ne retrouve pas celui qu'on
+                  // vient de cliquer.
+                  href={superAdmin ? '/admin/sante' : `/app/taches/${j.id}`}
                   onClick={close}
                   className="block px-3 py-2 transition-colors hover:bg-p-050"
                 >
