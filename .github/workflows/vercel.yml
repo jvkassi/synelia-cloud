@@ -1,0 +1,106 @@
+# Déploiement Vercel — `main` en production, toute autre branche en prévisualisation.
+#
+# L'intégration Git de Vercel sait faire cela toute seule. Elle est pourtant
+# désactivée dans `vercel.json` (`git.deploymentEnabled: false`) et ce workflow
+# la remplace : deux mécanismes qui déploient le même commit produisent deux
+# déploiements pour rien, et on ne sait plus lequel a servi. Un seul chemin.
+#
+# Ce workflow ne construit pas le projet lui-même. `vercel deploy` envoie la
+# source et Vercel construit de son côté, exactement comme avant. C'est ce qui
+# évite d'avoir à installer la bonne version de bun dans le runner : `bun.lock`
+# est en version 2, le bun de Vercel ne sait pas le lire et résout à neuf — un
+# `vercel build` local n'aurait pas la même résolution que le distant.
+
+name: Déploiement Vercel
+
+on:
+  push:
+    branches: ['**']
+  # Permet de relancer un déploiement à la main depuis l'onglet Actions, sans
+  # avoir à pousser un commit vide.
+  workflow_dispatch:
+
+# Un déploiement par branche à la fois : une correction poussée trois minutes
+# après annule le déploiement précédent au lieu de courir avec lui.
+concurrency:
+  group: vercel-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Identifiants du projet, pas des secrets — et `.vercel/` est dans
+  # `.gitignore`, donc la CLI ne peut pas les lire depuis le dépôt.
+  VERCEL_ORG_ID: team_OK32u0Kw0W0VTHna9v2r5LnQ
+  VERCEL_PROJECT_ID: prj_53cyLREuPg0BjZK0vO0hRyPWfqgr
+
+jobs:
+  deployer:
+    name: ${{ github.ref_name == 'main' && 'Production' || 'Prévisualisation' }}
+    runs-on: ubuntu-latest
+    # `production` sur main, `preview` ailleurs : les URL apparaissent dans
+    # l'onglet Environments et l'historique de déploiement est lisible par
+    # environnement.
+    environment:
+      name: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+      url: ${{ steps.deployer.outputs.url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Déployer
+        id: deployer
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            cible="--prod"
+          else
+            cible=""
+          fi
+          # `--archive=tgz` : l'archive part en un seul envoi. Sans elle, un
+          # projet de cette taille multiplie les requêtes et échoue plus souvent.
+          url=$(npx --yes vercel@latest deploy $cible \
+            --yes --archive=tgz --token "$VERCEL_TOKEN")
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Déploiement ${{ github.ref_name == 'main' && 'de production' || 'de prévisualisation' }}"
+            echo
+            echo "- Branche : \`${{ github.ref_name }}\`"
+            echo "- URL : $url"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commenter la prévisualisation sur la pull request
+        # Sur une branche, l'URL n'est utile que si elle arrive là où la
+        # relecture se passe. Rien à commenter pour un push sur main.
+        if: github.ref_name != 'main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deployer.outputs.url }}'
+            const { owner, repo } = context.repo
+            const prs = await github.rest.pulls.list({
+              owner, repo, state: 'open', head: `${owner}:${context.ref.replace('refs/heads/', '')}`,
+            })
+            const marqueur = '<!-- previsualisation-vercel -->'
+            const corps = `${marqueur}\n**Prévisualisation déployée** — ${url}\n\nBranche \`${context.ref.replace('refs/heads/', '')}\`, commit ${context.sha.slice(0, 7)}.`
+            for (const pr of prs.data) {
+              // Un seul commentaire par pull request, mis à jour : une file de
+              // vingt URL périmées n'aide personne.
+              const existants = await github.rest.issues.listComments({
+                owner, repo, issue_number: pr.number, per_page: 100,
+              })
+              const precedent = existants.data.find((c) => c.body?.includes(marqueur))
+              if (precedent) {
+                await github.rest.issues.updateComment({
+                  owner, repo, comment_id: precedent.id, body: corps,
+                })
+              } else {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: pr.number, body: corps,
+                })
+              }
+            }

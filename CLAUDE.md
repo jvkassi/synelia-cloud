@@ -593,8 +593,30 @@ règles apprises à cette occasion :
 Après la fusion, rejouez `typecheck`, `lint`, `build` **et** l'audit du rendu :
 c'est la fusion, pas la branche, qui casse.
 
-Déploiement, depuis `main` :
-`bunx vercel@latest --prod --yes --archive=tgz --token "$VERCEL_TOKEN"` — un
+## Déploiement
+
+**Il est automatique et vous n'avez rien à lancer.**
+`.github/workflows/vercel.yml` déploie chaque push : `main` en production,
+toute autre branche en prévisualisation, avec l'URL commentée sur la pull
+request s'il y en a une.
+
+L'intégration Git de Vercel savait déjà faire cela, mais elle est désactivée —
+`vercel.json` porte `git.deploymentEnabled: false`. **Deux mécanismes qui
+déploient le même commit produisent deux déploiements et on ne sait plus lequel
+a servi.** Si vous réactivez l'un, retirez l'autre.
+
+Le workflow ne construit pas le projet dans le runner : `vercel deploy` envoie
+la source et Vercel construit de son côté. C'est délibéré — `bun.lock` est en
+version 2, le bun de Vercel ne sait pas le lire et résout à neuf, donc un
+`vercel build` local n'aurait pas la même résolution que le distant.
+
+Il n'a besoin que du secret de dépôt **`VERCEL_TOKEN`**. Les identifiants de
+projet et d'organisation sont en clair dans le workflow : ce ne sont pas des
+secrets, et `.vercel/` est dans `.gitignore`, donc la CLI ne peut pas les lire
+depuis le dépôt.
+
+Pour déployer à la main malgré tout — un correctif urgent, un essai :
+`bunx vercel@latest --prod --yes --archive=tgz --token "$VERCEL_TOKEN"`. Un
 `fetch failed` est fréquent et ne dit rien de la construction : le déploiement
 est créé côté Vercel et continue. Vérifiez avec
 `bunx vercel@latest inspect <url> --token "$VERCEL_TOKEN"` plutôt que de
