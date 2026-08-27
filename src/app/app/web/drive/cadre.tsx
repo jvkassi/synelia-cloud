@@ -1,22 +1,33 @@
 'use client'
 
-import { drivesDeLOrg } from '@/lib/mock'
+import { DRIVES, drivesDeLOrg, type DriveDomaine } from '@/lib/mock'
+
 import type { Tone } from '@/components/ui/badge'
 import { CadreSection } from '@/components/app/cadre-section'
+import { useCollection } from '@/components/app/atelier'
 
-/** Panneau de la section — liste les drives de l'organisation. */
+/**
+ * Panneau de la section — liste les drives de l'organisation. Le sélecteur donne
+ * le périmètre, l'atelier donne l'état : un drive activé ou des sièges
+ * attribués pendant la session se lisent ici aussi.
+ */
 export function CadreDrive({ children }: { children: React.ReactNode }) {
-  const entrees = drivesDeLOrg().map((d) => ({
-    id: d.id,
-    nom: d.domaine,
-    sousTitre: d.actif
-      ? `${d.sieges.attribues}/${d.sieges.souscrits} sièges · ${d.palier}`
-      : 'Drive non activé',
-    etat: d.actif ? 'Actif' : 'À activer',
-    ton: (d.actif ? 'ok' : 'neutral') as Tone,
-    href: `/app/web/drive/${d.id}`,
-    motsCles: [d.solutionOSS, d.hote],
-  }))
+  const drives = useCollection<DriveDomaine>('drives', DRIVES)
+  const perimetre = new Set(drivesDeLOrg().map((d) => d.id))
+
+  const entrees = drives.items
+    .filter((d) => perimetre.has(d.id))
+    .map((d) => ({
+      id: d.id,
+      nom: d.domaine,
+      sousTitre: d.actif
+        ? `${d.sieges.attribues}/${d.sieges.souscrits} sièges · ${d.palier}`
+        : 'Drive non activé',
+      etat: d.actif ? 'Actif' : 'À activer',
+      ton: (d.actif ? 'ok' : 'neutral') as Tone,
+      href: `/app/web/drive/${d.id}`,
+      motsCles: [d.solutionOSS, d.hote],
+    }))
 
   return (
     <CadreSection

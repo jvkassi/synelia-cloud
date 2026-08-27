@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable, type Colonne } from '@/components/composition/data-table'
-import { LIBELLE_STATUT_JOB, TON_STATUT_JOB } from '@/lib/workflows'
+import { LIBELLE_STATUT_JOB, TON_STATUT_JOB, workflowById } from '@/lib/workflows'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
 
@@ -60,7 +60,9 @@ export default function CentreDeTaches() {
                 className={
                   j.statut === 'failed'
                     ? 'block h-full rounded-full bg-err'
-                    : 'block h-full rounded-full bg-p-600'
+                    : j.statut === 'rolled_back'
+                      ? 'block h-full rounded-full bg-warn'
+                      : 'block h-full rounded-full bg-p-600'
                 }
                 style={{ width: `${a.pct}%` }}
               />
@@ -94,7 +96,7 @@ export default function CentreDeTaches() {
       aligne: 'right',
       rendu: (j) => (
         <span className="flex items-center justify-end gap-1.5">
-          {(j.statut === 'failed' || j.statut === 'rolled_back') && (
+          {(j.statut === 'failed' || j.statut === 'rolled_back') && workflowById(j.type) && (
             <BoutonAction
               libelle="Reprendre"
               icone={<RotateCw size={13} />}
@@ -139,7 +141,10 @@ export default function CentreDeTaches() {
   ]
 
   const enCours = jobs.items.filter((j) => j.statut === 'running' || j.statut === 'queued')
-  const echecs = jobs.items.filter((j) => j.statut === 'failed')
+  // Un job annulé après échec compte parmi les interrompues : il est reprenable
+  // et il porte un diagnostic. Sinon la somme des trois tuiles ne faisait plus
+  // le total affiché juste à côté.
+  const echecs = jobs.items.filter((j) => j.statut === 'failed' || j.statut === 'rolled_back')
   const terminees = jobs.items.filter((j) => j.statut === 'done')
 
   return (
@@ -168,7 +173,7 @@ export default function CentreDeTaches() {
         <StatTile libelle="En cours" valeur={enCours.length} ton={enCours.length ? 'info' : 'neutral'} />
         <StatTile libelle="Terminées" valeur={terminees.length} ton="ok" />
         <StatTile
-          libelle="En échec"
+          libelle="Interrompues"
           valeur={echecs.length}
           ton={echecs.length ? 'err' : 'ok'}
           detail={echecs.length ? 'Rollback automatique effectué' : undefined}

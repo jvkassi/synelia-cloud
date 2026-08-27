@@ -1,7 +1,9 @@
 'use client'
 
 import { ORGANISATIONS } from '@/lib/mock/orgs'
+import type { Organisation } from '@/lib/types'
 import { CadreSection } from '@/components/app/cadre-section'
+import { useCollection } from '@/components/app/atelier'
 import { money } from '@/lib/format'
 
 /**
@@ -15,9 +17,14 @@ import { money } from '@/lib/format'
  *
  * Toutes les organisations sont clientes en direct : il n'y a pas de niveau
  * revendeur à distinguer dans la liste, seulement l'état du compte.
+ *
+ * La liste vient de l'atelier : une organisation créée depuis l'écran de droite
+ * doit apparaître ici, faute de quoi on ne peut pas ouvrir sa fiche.
  */
 export function CadreOrganisations({ children }: { children: React.ReactNode }) {
-  const entrees = ORGANISATIONS.map((o) => ({
+  const orgs = useCollection<Organisation>('organisations', ORGANISATIONS)
+
+  const entrees = orgs.items.map((o) => ({
     id: o.id,
     nom: o.nom,
     // Sans « /mois » : la colonne est étroite et le suffixe suffit à faire

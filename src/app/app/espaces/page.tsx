@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { num, pct, toHumain } from '@/lib/format'
 import { SITE_COURT, type EspaceCloud, type VM } from '@/lib/types'
-import { ESPACES, SYNTHESE_CLIENT, VMS } from '@/lib/mock'
+import { ESPACES, VMS } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -123,7 +123,13 @@ export default function ListeEspaces() {
   const { autorise, refus } = useApp()
   const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
   const parc = useCollection<VM>('vms', VMS)
-  const s = SYNTHESE_CLIENT
+
+  // Les tuiles se somment depuis les espaces affichés, pas depuis la synthèse
+  // figée : créer un Espace de 48 vCPU sans bouger le plafond annoncé juste
+  // au-dessus de la liste se voit tout de suite.
+  const total = (cle: 'vcpu' | 'ramGo' | 'stockageTo', champ: 'usage' | 'quota') =>
+    Math.round(espaces.items.reduce((a, e) => a + e[champ][cle], 0) * 10) / 10
+  const sites = new Set(espaces.items.map((e) => e.site)).size
 
   return (
     <div className="space-y-6">
@@ -141,21 +147,25 @@ export default function ListeEspaces() {
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile libelle="Espaces Cloud" valeur={espaces.items.length} detail="Répartis sur 2 sites" />
+        <StatTile
+          libelle="Espaces Cloud"
+          valeur={espaces.items.length}
+          detail={`Répartis sur ${sites} site${sites > 1 ? 's' : ''}`}
+        />
         <StatTile
           libelle="vCPU consommés"
-          valeur={`${s.usage.vcpu}/${s.quota.vcpu}`}
-          detail={pct(Math.round((s.usage.vcpu / s.quota.vcpu) * 100))}
+          valeur={`${total('vcpu', 'usage')}/${total('vcpu', 'quota')}`}
+          detail={pct(Math.round((total('vcpu', 'usage') / total('vcpu', 'quota')) * 100))}
         />
         <StatTile
           libelle="Mémoire consommée"
-          valeur={`${num(s.usage.ramGo)}/${num(s.quota.ramGo)}`}
+          valeur={`${num(total('ramGo', 'usage'))}/${num(total('ramGo', 'quota'))}`}
           unite="Go"
-          detail={pct(Math.round((s.usage.ramGo / s.quota.ramGo) * 100))}
+          detail={pct(Math.round((total('ramGo', 'usage') / total('ramGo', 'quota')) * 100))}
         />
         <StatTile
           libelle="Stockage consommé"
-          valeur={`${s.usage.stockageTo}/${s.quota.stockageTo}`}
+          valeur={`${total('stockageTo', 'usage')}/${total('stockageTo', 'quota')}`}
           unite="To"
           ton="warn"
           detail="Premier facteur limitant"

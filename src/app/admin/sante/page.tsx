@@ -64,8 +64,10 @@ export default function SantePlateforme() {
     (['ABJ', 'GBM'] as const).some((x) => s.etats[x] !== 'operationnel')
   const degrades = STATUT_SERVICES.filter(nonOperationnel)
   const incidentsOuverts = incidents.items.filter((i) => i.statut !== 'resolu')
-  const jobsEchec = jobs.items.filter((j) => j.statut === 'failed')
-  const jobsEnCours = JOBS_PLATEFORME.filter((j) => j.statut === 'running' || j.statut === 'queued')
+  // Un job annulé après échec est reprenable comme un échec sec : la migration
+  // inter-backend fait un rollback, elle se retrouverait sinon sans reprise.
+  const jobsEchec = jobs.items.filter((j) => j.statut === 'failed' || j.statut === 'rolled_back')
+  const jobsEnCours = jobs.items.filter((j) => j.statut === 'running' || j.statut === 'queued')
   const soclesHs = BACKENDS.filter((b) => b.statut !== 'en_ligne')
 
   return (
@@ -482,9 +484,9 @@ export default function SantePlateforme() {
       {onglet === 'jobs' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-            <StatTile libelle="En file" valeur={JOBS_PLATEFORME.filter((j) => j.statut === 'queued').length} ton="info" />
-            <StatTile libelle="En cours" valeur={JOBS_PLATEFORME.filter((j) => j.statut === 'running').length} ton="info" />
-            <StatTile libelle="Terminés" valeur={JOBS_PLATEFORME.filter((j) => j.statut === 'done').length} ton="ok" />
+            <StatTile libelle="En file" valeur={jobs.items.filter((j) => j.statut === 'queued').length} ton="info" />
+            <StatTile libelle="En cours" valeur={jobs.items.filter((j) => j.statut === 'running').length} ton="info" />
+            <StatTile libelle="Terminés" valeur={jobs.items.filter((j) => j.statut === 'done').length} ton="ok" />
             <StatTile
               libelle="En échec"
               valeur={jobsEchec.length}
@@ -518,8 +520,7 @@ export default function SantePlateforme() {
                               titre: 'Reprise déclenchée',
                               detail:
                                 'Le provisionnement repart de l’étape échouée. Aucune ressource déjà créée n’est recréée.',
-                              effet: () =>
-                                reprendreJob(j.id, 'jobs-plateforme', JOBS_PLATEFORME),
+                              effet: () => reprendreJob(j.id),
                             })
                           }
                         >
@@ -588,7 +589,7 @@ export default function SantePlateforme() {
                   </tr>
                 </thead>
                 <tbody>
-                  {JOBS_PLATEFORME.map((j) => (
+                  {jobs.items.map((j) => (
                     <tr key={j.id} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2 text-[12px] font-semibold text-ink">{j.type}</td>
                       <td className="px-3 py-2 font-mono text-[11px] text-g-700">{j.label}</td>

@@ -93,7 +93,9 @@ export const WORKFLOWS: DefinitionWorkflow[] = [
     portee: 'client',
     libelle: 'Démarrage de {cible}',
     lancement: 'L’ordre est passé à l’hyperviseur.',
-    fin: 'Les machines sont en ligne.',
+    // Formulations sans nombre : l'action groupée porte sur une machine nommée
+    // comme sur un lot, et le même texte sert les deux.
+    fin: 'Le démarrage est terminé : les sondes répondent.',
     href: '/app/vms',
     etapes: [
       { nom: 'Passer l’ordre à l’hyperviseur', dureeS: 4 },
@@ -106,7 +108,7 @@ export const WORKFLOWS: DefinitionWorkflow[] = [
     portee: 'client',
     libelle: 'Arrêt de {cible}',
     lancement: 'Extinction propre demandée au système invité.',
-    fin: 'Les machines sont arrêtées. Le stockage reste facturé.',
+    fin: 'L’extinction est terminée. Le stockage reste facturé.',
     href: '/app/vms',
     etapes: [
       { nom: 'Demander l’extinction au système invité', dureeS: 24 },
@@ -117,8 +119,8 @@ export const WORKFLOWS: DefinitionWorkflow[] = [
     id: 'vm.power.reboot',
     portee: 'client',
     libelle: 'Redémarrage de {cible}',
-    lancement: 'La machine sera de nouveau disponible dans environ 40 secondes.',
-    fin: 'La machine a redémarré et répond aux sondes.',
+    lancement: 'Le service sera de nouveau disponible dans environ 40 secondes.',
+    fin: 'Le redémarrage est terminé : les sondes répondent.',
     href: '/app/vms',
     etapes: [
       { nom: 'Demander l’arrêt au système invité', dureeS: 14 },
@@ -549,20 +551,33 @@ export const WORKFLOWS: DefinitionWorkflow[] = [
     ],
   },
   {
-    id: 'compte.cloture',
+    id: 'export.conformite',
     portee: 'client',
-    libelle: 'Demande de clôture · {cible}',
-    lancement: 'Rien n’est supprimé aujourd’hui : 30 jours pour récupérer vos données, autant pour annuler.',
-    fin: 'La demande est enregistrée. La suppression effective est planifiée dans 30 jours.',
-    href: '/app/parametres',
+    libelle: 'Export · {cible}',
+    lancement: 'Le lien de téléchargement arrivera par courriel, valable 24 heures.',
+    fin: 'L’export est prêt : le lien vient d’être envoyé.',
+    href: '/app/sauvegarde',
     etapes: [
-      { nom: 'Enregistrer la demande', dureeS: 4 },
-      { nom: 'Préparer l’export complet des données', dureeS: 186 },
-      { nom: 'Planifier la suppression à 30 jours', dureeS: 6 },
+      { nom: 'Rassembler l’état de protection par ressource', dureeS: 42 },
+      { nom: 'Relever le RPO constaté et le dernier test', dureeS: 68 },
+      { nom: 'Composer et signer le document', dureeS: 18 },
     ],
   },
 
   // ─── Espace fournisseur (§8) ─────────────────────────────────────────
+  {
+    id: 'compte.cloture',
+    portee: 'fournisseur',
+    libelle: 'Demande de clôture · {cible}',
+    lancement: 'Rien n’est supprimé aujourd’hui : le client garde 30 jours pour récupérer ses données, autant pour annuler.',
+    fin: 'La demande est enregistrée. La suppression effective est planifiée dans 30 jours.',
+    href: '/admin/organisations',
+    etapes: [
+      { nom: 'Enregistrer la demande et notifier le client', dureeS: 4 },
+      { nom: 'Préparer l’export complet des données', dureeS: 186 },
+      { nom: 'Planifier la suppression à 30 jours', dureeS: 6 },
+    ],
+  },
   {
     id: 'capacite.rebalance',
     portee: 'fournisseur',
@@ -615,16 +630,49 @@ export const WORKFLOWS: DefinitionWorkflow[] = [
     ],
   },
   {
-    id: 'export.plateforme',
+    id: 'espace.migrate',
     portee: 'fournisseur',
-    libelle: 'Export · {cible}',
-    lancement: 'Le lien de téléchargement arrivera par courriel, valable 24 heures.',
-    fin: 'L’export est prêt : le lien vient d’être envoyé.',
-    href: '/admin/audit',
+    libelle: 'Migration inter-backend · {cible}',
+    lancement: 'Les machines sont migrées lot par lot, avec bascule réseau en fin de lot.',
+    fin: 'L’espace tourne entièrement sur le backend cible.',
+    href: '/admin/migration',
     etapes: [
-      { nom: 'Rassembler les enregistrements', dureeS: 86 },
-      { nom: 'Calculer l’empreinte de chaînage', dureeS: 42 },
-      { nom: 'Chiffrer et publier le lien', dureeS: 18 },
+      { nom: 'Inventaire des ressources', dureeS: 24 },
+      { nom: 'Migrer le lot 1', dureeS: 986 },
+      { nom: 'Migrer le lot 2', dureeS: 832 },
+      { nom: 'Basculer le réseau', dureeS: 46 },
+      { nom: 'Retirer les ressources source', dureeS: 62 },
+    ],
+  },
+
+  // ─── Souscriptions du marketplace (§6.4) ─────────────────────────────
+  //
+  // L'univers Marketplace a été retiré du portail, mais ses souscriptions
+  // restent dans le jeu de données — dont celle en échec sur laquelle porte
+  // le bouton « Reprendre » du centre de tâches. Sans ces deux entrées,
+  // `workflowById` ne trouvait rien et la reprise ne faisait rien du tout :
+  // le bouton notifiait une reprise qui n'avait pas lieu.
+  {
+    id: 'marketplace.provision',
+    portee: 'client',
+    libelle: 'Souscription · {cible}',
+    lancement: 'La capacité est réservée le temps du provisionnement.',
+    fin: 'Le service est opérationnel. Son bouton Ouvrir vous y conduit en SSO.',
+    href: '/app',
+    etapes: ETAPES_MARKETPLACE,
+  },
+  {
+    id: 'marketplace.update',
+    portee: 'fournisseur',
+    libelle: 'Campagne de mise à jour · {cible}',
+    lancement: 'Un instantané est pris avant chaque instance : la campagne est réversible.',
+    fin: 'Toutes les instances de la vague tournent sur la nouvelle version.',
+    href: '/admin/marketplace',
+    etapes: [
+      { nom: 'Snapshot pré-mise à jour', dureeS: 142 },
+      { nom: 'Appliquer la mise à jour', dureeS: 386 },
+      { nom: 'Vérifier les services', dureeS: 64 },
+      { nom: 'Purger le snapshot', dureeS: 18 },
     ],
   },
 ]

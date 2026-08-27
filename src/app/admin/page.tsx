@@ -35,7 +35,7 @@ export default function VuePlateforme() {
   const enSortie = BACKENDS.filter((b) => b.enSortie?.actif)
   const satures = BACKENDS.filter((b) => (b.saturation?.j30 ?? 0) > 85)
   const incidentsOuverts = INCIDENTS.filter((i) => i.statut !== 'resolu')
-  const jobsEchec = jobs.items.filter((j) => j.statut === 'failed')
+  const jobsEchec = jobs.items.filter((j) => j.statut === 'failed' || j.statut === 'rolled_back')
   const slaRisque = TICKETS_PLATEFORME.filter(
     (t) => (t.slaRestantMin ?? 9999) < 120 && !['resolu', 'ferme'].includes(t.statut),
   )
@@ -380,7 +380,7 @@ export default function VuePlateforme() {
                           ton: 'info',
                           titre: `Reprise de « ${j.label} »`,
                           detail: 'La séquence repart à l’étape qui a échoué, pas depuis le début.',
-                          effet: () => reprendreJob(j.id, 'jobs-plateforme', JOBS_PLATEFORME),
+                          effet: () => reprendreJob(j.id),
                         }}
                       />
                       <BoutonAction
