@@ -154,10 +154,9 @@ export default function ParcGpuEtIA() {
             </table>
           </div>
           <Callout ton="info" className="mt-4" titre="Pixtral sature à 88 % sur un nœud unique">
-            Le modèle est en aperçu, donc sans engagement — mais trois organisations l’appellent déjà
-            en production. Soit on l’élargit à deux réplicas et on le passe en disponibilité
-            générale, soit on l’annonce comme non tenu. Le laisser tel quel est le seul choix qui ne
-            se défend pas.
+            Le modèle est en aperçu, donc sans engagement, mais trois organisations l’appellent déjà
+            en production. Deux issues : l’élargir à deux réplicas et le passer en disponibilité
+            générale, ou l’annoncer comme non tenu.
           </Callout>
         </Card>
       </div>
