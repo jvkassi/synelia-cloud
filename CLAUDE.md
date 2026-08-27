@@ -21,6 +21,8 @@ décisions déjà prises.
 | Lint | `bun run lint` |
 | Audit du rendu | `bun run build && bun run start` puis `node outils/audit.mjs` |
 | Contrat d'API | `bun run api:spec` — régénère `docs/api/openapi.json` |
+| Catalogue de workflows | `bun run outils/verifier-workflows.ts` — cohérence statique des 41 entrées |
+| Moteur de workflows | `bun run build && bun run start` puis `node outils/test-workflows.mjs` — parcours réels dans Chromium |
 
 **Tout passe par bun** — `bun install`, `bun run`, `bunx`. Jamais npm, yarn ni
 pnpm, pas même pour un essai : chacun écrit son propre fichier de verrouillage et
@@ -75,6 +77,34 @@ Deux pièges déjà rencontrés :
   faux positifs. Tuez-le (`pkill -f next-server`) avant de reconstruire.
 - Le harnais ne substitue pas d'identifiants : `routes.json` contient les vrais
   (`dba.africa`, `heb-dba`, `db-dba-maria`…). Ajoutez-y les nouvelles routes.
+
+### Les tests du moteur de workflows
+
+Le catalogue de `src/lib/mock/workflows.ts` (41 entrées, voir « Le catalogue des
+opérations longues » plus bas) a deux filets, pour deux échelles différentes.
+
+`outils/verifier-workflows.ts` (`bun run outils/verifier-workflows.ts`, pas de
+navigateur) relit les 41 entrées : identifiants uniques, étapes et durées
+valides, `echec.etape` borné, `href` qui existe dans `routes.json`, et
+concordance à double sens avec les `workflow: '…'` écrits dans les écrans — un
+identifiant catalogué mais jamais appelé, ou appelé mais absent du catalogue,
+est une erreur. C'est le seul contrôle qui couvre les 41 d'un coup.
+
+`outils/test-workflows.mjs` (même famille que l'audit — Playwright, pas une
+dépendance persistée) rejoue trois parcours réels dans Chromium : un succès en
+plusieurs étapes (`vm.power.reboot` depuis `/app/vms/vm-web-01`), un échec écrit
+suivi d'un rollback puis d'une reprise réussie (`web.ssl.renew` depuis
+`/app/web/ssl/crt-www`), et le rendu de base du centre de tâches. Rejouer les
+41 sites d'appel au clic testerait 41 fois le même mécanisme partagé
+(`src/lib/workflows.ts` + l'atelier) : trois parcours suffisent à le mettre à
+l'épreuve, le contrôle statique ci-dessus couvrant déjà l'exhaustivité du
+catalogue.
+
+```
+bun add -d playwright          # une fois, si absent
+bun run build && bun run start -- -p 3111
+BASE=http://127.0.0.1:3111 node outils/test-workflows.mjs
+```
 
 ## Les images de la vitrine
 
