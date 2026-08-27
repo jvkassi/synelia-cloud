@@ -26,6 +26,13 @@ concurrency:
   group: vercel-${{ github.ref }}
   cancel-in-progress: true
 
+# Le jeton du workflow est en lecture seule par défaut sur ce dépôt : sans cette
+# déclaration, l'étape de commentaire échoue en « Resource not accessible by
+# integration » alors que le déploiement, lui, a réussi.
+permissions:
+  contents: read
+  pull-requests: write
+
 env:
   # Identifiants du projet, pas des secrets — et `.vercel/` est dans
   # `.gitignore`, donc la CLI ne peut pas les lire depuis le dépôt.
