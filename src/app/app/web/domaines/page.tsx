@@ -252,7 +252,7 @@ export default function PortefeuilleWebCloud() {
                     <td className="px-3 py-2.5">
                       <Link
                         href={`/app/web/domaines/${encodeURIComponent(e.id)}`}
-                        className="block font-mono text-[12.5px] font-semibold text-ink hover:text-p-700"
+                        className="block font-mono text-[13px] font-semibold text-ink hover:text-p-700"
                       >
                         {e.nom}
                       </Link>
@@ -267,7 +267,7 @@ export default function PortefeuilleWebCloud() {
                           <span className="text-[12px] font-semibold text-ink">
                             {e.hebergement.palier}
                           </span>
-                          <span className="text-[11.5px] text-g-500">
+                          <span className="text-[12px] text-g-500">
                             {SITE_LABEL[e.hebergement.serveur.site]}
                           </span>
                         </span>
@@ -308,7 +308,7 @@ export default function PortefeuilleWebCloud() {
                     <td className="px-3 py-2.5 text-right">
                       <Link
                         href={`/app/web/domaines/${encodeURIComponent(e.id)}`}
-                        className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+                        className="text-[12px] font-semibold text-p-700 hover:underline"
                       >
                         Gérer →
                       </Link>
@@ -365,12 +365,12 @@ export default function PortefeuilleWebCloud() {
             {EXTENSIONS.map((x) => (
               <li key={x.ext} className="flex items-center justify-between gap-3 py-2">
                 <span className="min-w-0">
-                  <span className="font-mono text-[12.5px] font-bold text-ink">{x.ext}</span>
+                  <span className="font-mono text-[13px] font-bold text-ink">{x.ext}</span>
                   {x.note && (
-                    <span className="ml-2 text-[11.5px] text-g-500">{x.note}</span>
+                    <span className="ml-2 text-[12px] text-g-500">{x.note}</span>
                   )}
                 </span>
-                <span className="tnum shrink-0 text-[12.5px] font-semibold text-ink">
+                <span className="tnum shrink-0 text-[13px] font-semibold text-ink">
                   {money(x.prix)} / an
                 </span>
               </li>
@@ -394,7 +394,7 @@ export default function PortefeuilleWebCloud() {
                 <span className="tnum mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-p-100 text-[11px] font-bold text-p-700">
                   {i + 1}
                 </span>
-                <span className="text-[12.5px] leading-relaxed text-g-700">{t}</span>
+                <span className="text-[13px] leading-relaxed text-g-700">{t}</span>
               </li>
             ))}
           </ol>
@@ -453,14 +453,14 @@ export default function PortefeuilleWebCloud() {
           ].map((c) => (
             <div key={c.t} className="rounded-[8px] border border-g-300 bg-g-050 p-3">
               <p className="flex items-center gap-1.5 text-p-700">{c.i}</p>
-              <p className="mt-1.5 text-[12.5px] font-bold text-ink">{c.t}</p>
-              <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{c.d}</p>
+              <p className="mt-1.5 text-[13px] font-bold text-ink">{c.t}</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-g-700">{c.d}</p>
             </div>
           ))}
         </div>
         <p className="mt-3 text-[12px] text-g-500">
           Besoin d’isolation stricte, de conteneurs ou d’une base managée à part ?{' '}
-          <Link href="/app/applications/projets" className="font-semibold text-p-700 hover:text-m-600">
+          <Link href="/app/applications/projets" className="font-semibold text-p-700 hover:underline">
             Les projets applicatifs
           </Link>{' '}
           répondent à ce besoin — {num(SITES_WEB.length)} sites mutualisés ne remplacent pas une

@@ -81,7 +81,7 @@ export default function ParametresTousProjets() {
                     <td className="px-3 py-2.5">
                       <Link
                         href={`/app/applications/parametres/${p.id}`}
-                        className="block max-w-[32ch] truncate text-[12.5px] font-semibold text-ink hover:text-p-700"
+                        className="block max-w-[32ch] truncate text-[13px] font-semibold text-ink hover:text-p-700"
                       >
                         {p.nom}
                       </Link>

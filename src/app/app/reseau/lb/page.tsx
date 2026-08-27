@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { Plus, ShieldCheck } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money, num, pct } from '@/lib/format'
 import type { LoadBalancer } from '@/lib/types'
@@ -34,7 +34,7 @@ export default function LoadBalancers() {
       cle: (l) => l.nom,
       rendu: (l) => (
         <span className="block">
-          <span className="block font-mono text-[12.5px] font-semibold text-ink">{l.nom}</span>
+          <span className="block font-mono text-[13px] font-semibold text-ink">{l.nom}</span>
           <span className="block text-[11px] text-g-500">
             {l.exposure === 'public' ? 'Exposé sur Internet' : 'Interne'}
           </span>
@@ -128,7 +128,7 @@ export default function LoadBalancers() {
       rendu: (l) => (
         <Link
           href={`/app/reseau/lb/${l.id}`}
-          className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+          className="text-[12px] font-semibold text-p-700 hover:underline"
         >
           Ouvrir →
         </Link>
@@ -206,11 +206,10 @@ export default function LoadBalancers() {
         }}
       />
 
-      <Callout ton="violet" titre="Le mode drain, sous-estimé et essentiel">
-        Retirer brutalement une cible du pool coupe les connexions en cours. Le mode drain arrête de
-        lui envoyer de nouvelles requêtes tout en laissant finir celles en cours : c’est ce qui rend
-        un déploiement réellement sans coupure. Vous le trouverez sur chaque cible, dans l’onglet
-        Backends du détail d’un load balancer.
+      <Callout ton="violet" titre="Le mode drain">
+        Il arrête l’envoi de nouvelles requêtes à une cible tout en laissant finir celles en cours,
+        là où un retrait du pool les coupe. Sur chaque cible, onglet Backends du détail d’un load
+        balancer.
       </Callout>
     </div>
   )
@@ -394,7 +393,7 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
                   )}
                 >
                   <span className="type-h3 block">{t}</span>
-                  <span className="mt-1.5 block text-[12.5px] leading-relaxed text-g-700">{d}</span>
+                  <span className="mt-1.5 block text-[13px] leading-relaxed text-g-700">{d}</span>
                 </button>
               ))}
             </div>
@@ -419,7 +418,7 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
                   )}
                 >
                   <span className="type-h3 block">{t}</span>
-                  <span className="mt-1.5 block text-[12.5px] leading-relaxed text-g-700">{d}</span>
+                  <span className="mt-1.5 block text-[13px] leading-relaxed text-g-700">{d}</span>
                 </button>
               ))}
             </div>
@@ -439,7 +438,7 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
               <Field label="Adresse proposée">
                 <Input value="10.0.2.100" readOnly className="font-mono" />
               </Field>
-              <p className="mt-2 text-[11.5px] text-g-500">
+              <p className="mt-2 text-[12px] text-g-500">
                 L’adresse est réservée dans {espace.cidr} et résolvable par le DNS interne sous{' '}
                 <span className="font-mono">{nom}.{espace.code.toLowerCase()}.interne.synelia.cloud</span>.
                 Aucune IP publique n’est consommée.
@@ -601,7 +600,7 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
                     className="h-3.5 w-3.5 accent-[#4B2882]"
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="block font-mono text-[12.5px] font-medium text-ink">
+                    <span className="block font-mono text-[13px] font-medium text-ink">
                       {v.nom}
                     </span>
                     <span className="block text-[11px] text-g-500">
@@ -800,9 +799,9 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
 function Petit({ cle, valeur, mono }: { cle: string; valeur: string; mono?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
-      <dt className="shrink-0 text-[11.5px] text-g-500">{cle}</dt>
+      <dt className="shrink-0 text-[12px] text-g-500">{cle}</dt>
       <dd
-        className={cn('truncate text-right text-[11.5px] font-semibold text-ink', mono && 'font-mono')}
+        className={cn('truncate text-right text-[12px] font-semibold text-ink', mono && 'font-mono')}
       >
         {valeur}
       </dd>

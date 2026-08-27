@@ -164,8 +164,8 @@ export function VueSauvegarde({ id }: { id: string }) {
                     </td>
                     <td className="tnum px-3 py-2.5 text-[12px] text-g-700">{e.taille}</td>
                     <td className="tnum px-3 py-2.5 text-[12px] text-g-700">{e.dureeMin} min</td>
-                    <td className="px-3 py-2.5 text-[11.5px] text-g-500">{e.contenu.join(' · ')}</td>
-                    <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                    <td className="px-3 py-2.5 text-[12px] text-g-500">{e.contenu.join(' · ')}</td>
+                    <td className="px-3 py-2.5 text-[12px] text-g-700">
                       {e.immuableJusqua ? (
                         <span className="flex items-center gap-1">
                           <Lock size={11} className="text-ok" />
@@ -270,7 +270,7 @@ export function VueSauvegarde({ id }: { id: string }) {
                   key={l}
                   className="flex items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2"
                 >
-                  <span className="text-[12.5px] text-g-700">{l}</span>
+                  <span className="text-[13px] text-g-700">{l}</span>
                   <Badge tone={actif ? 'ok' : 'neutral'} size="sm">
                     {actif ? 'Inclus' : 'Exclu'}
                   </Badge>
@@ -337,8 +337,8 @@ export function VueSauvegarde({ id }: { id: string }) {
                     >
                       <ShieldCheck size={14} className="mt-0.5 shrink-0 text-p-700" />
                       <span>
-                        <span className="block text-[12.5px] font-semibold text-ink">{x.l}</span>
-                        <span className="block text-[11.5px] text-g-500">{x.d}</span>
+                        <span className="block text-[13px] font-semibold text-ink">{x.l}</span>
+                        <span className="block text-[12px] text-g-500">{x.d}</span>
                       </span>
                     </button>
                   ))}
@@ -369,10 +369,10 @@ export function VueSauvegarde({ id }: { id: string }) {
                       )}
                     >
                       <span>
-                        <span className="block text-[12.5px] font-semibold text-ink">
+                        <span className="block text-[13px] font-semibold text-ink">
                           {dateHeure(e.ts)}
                         </span>
-                        <span className="block text-[11.5px] text-g-500">
+                        <span className="block text-[12px] text-g-500">
                           {e.taille} · {e.contenu.join(' · ')}
                         </span>
                       </span>
@@ -431,8 +431,8 @@ export function VueSauvegarde({ id }: { id: string }) {
                       )}
                     >
                       <span>
-                        <span className="block text-[12.5px] font-semibold text-ink">{x.l}</span>
-                        <span className="block text-[11.5px] text-g-500">{x.d}</span>
+                        <span className="block text-[13px] font-semibold text-ink">{x.l}</span>
+                        <span className="block text-[12px] text-g-500">{x.d}</span>
                       </span>
                       {x.ton === 'err' && (
                         <Badge tone="err" size="sm">

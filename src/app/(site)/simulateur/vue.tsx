@@ -344,7 +344,7 @@ function Configurateur() {
           </div>
           <div className="max-h-80 overflow-y-auto px-4 py-3">
             {toutes.length === 0 ? (
-              <p className="py-6 text-center text-[12.5px] text-g-500">
+              <p className="py-6 text-center text-[13px] text-g-500">
                 Ajustez les curseurs pour construire votre configuration.
               </p>
             ) : (
@@ -352,10 +352,10 @@ function Configurateur() {
                 {toutes.map((l) => (
                   <li key={l.libelle} className="flex items-baseline justify-between gap-3">
                     <span className="min-w-0">
-                      <span className="block text-[12.5px] text-g-700">{l.libelle}</span>
+                      <span className="block text-[13px] text-g-700">{l.libelle}</span>
                       {l.detail && <span className="block text-[11px] text-g-500">{l.detail}</span>}
                     </span>
-                    <span className="tnum shrink-0 text-[12.5px] font-semibold text-ink">
+                    <span className="tnum shrink-0 text-[13px] font-semibold text-ink">
                       {money(l.montant)}
                     </span>
                   </li>
@@ -438,8 +438,8 @@ function TotalLigne({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <span className="text-[12.5px] text-g-700">{libelle}</span>
-      <span className={cn('tnum text-[12.5px] font-semibold', ton === 'ok' ? 'text-ok' : 'text-ink')}>
+      <span className="text-[13px] text-g-700">{libelle}</span>
+      <span className={cn('tnum text-[13px] font-semibold', ton === 'ok' ? 'text-ok' : 'text-ink')}>
         {valeur}
       </span>
     </div>
@@ -496,7 +496,7 @@ function Comparateur() {
                 ))}
               </Select>
             </Field>
-            <p className="rounded-[6px] bg-g-050 px-3 py-2 text-[11.5px] leading-relaxed text-g-700">
+            <p className="rounded-[6px] bg-g-050 px-3 py-2 text-[12px] leading-relaxed text-g-700">
               {reference.note}
             </p>
             <Field label={`Nombre de ${reference.unite}`}>
@@ -524,7 +524,7 @@ function Comparateur() {
                 suffix="FCFA"
               />
             </Field>
-            <p className="text-[11.5px] leading-relaxed text-g-500">
+            <p className="text-[12px] leading-relaxed text-g-500">
               Le montant est prérempli à partir d’un tarif public indicatif de{' '}
               {money(reference.prixUnitaireIndicatif)} par {reference.unite.replace(/s$/, '')} et par
               mois. Remplacez-le par votre montant réel pour une comparaison fidèle.
@@ -563,7 +563,7 @@ function Comparateur() {
 
           <Card
             className={cn(
-              favorable ? 'border-[#B7E3D0] bg-ok-bg' : 'border-[#EED9B0] bg-warn-bg',
+              favorable ? 'border-ok/25 bg-ok-bg' : 'border-warn/25 bg-warn-bg',
             )}
           >
             <div className="flex items-start gap-3.5">
@@ -585,7 +585,7 @@ function Comparateur() {
                   Soit {pct(Math.abs(ecartPct))} {favorable ? "d'économie" : 'de surcoût'} · {' '}
                   <span className="font-semibold">{money(Math.abs(ecart) * 36)}</span> sur trois ans.
                 </p>
-                <p className="mt-2 text-[12.5px] leading-relaxed text-g-700">
+                <p className="mt-2 text-[13px] leading-relaxed text-g-700">
                   {favorable
                     ? 'Cet écart s’explique principalement par l’absence de licence propriétaire, par la localisation du calcul en Côte d’Ivoire — qui supprime les coûts de transit international — et par des quotas de trafic sortant inclus plutôt que facturés à l’usage.'
                     : 'Sur ce dimensionnement, la comparaison n’est pas à notre avantage. C’est souvent le cas sur les très petites configurations, où l’effet d’échelle joue contre nous. Un architecte peut affiner : le socle, le plan de sauvegarde et le niveau de service ne sont pas comparables à l’identique.'}
@@ -594,7 +594,7 @@ function Comparateur() {
             </div>
           </Card>
 
-          <Card className="border-[#BFD6EE] bg-info-bg">
+          <Card className="border-info/25 bg-info-bg">
             <div className="flex items-start gap-3">
               <Info size={16} className="mt-0.5 shrink-0 text-info" />
               <div className="min-w-0">
@@ -632,7 +632,7 @@ function Comparateur() {
 function Comp({ cle, valeur }: { cle: string; valeur: string }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
-      <dt className="text-[11.5px] text-g-500">{cle}</dt>
+      <dt className="text-[12px] text-g-500">{cle}</dt>
       <dd className="tnum text-[12px] font-semibold text-ink">{valeur}</dd>
     </div>
   )

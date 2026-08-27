@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Archive, Eye, FileEdit, Plus, Tag } from 'lucide-react'
+import { Archive, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money, moneyPerMonth, num, pct } from '@/lib/format'
 import { OFFRES, SOUSCRIPTIONS } from '@/lib/mock'
@@ -235,7 +235,7 @@ export default function Catalogue() {
                   <span className="tnum mt-1 block text-[18px] font-bold leading-none [font-family:var(--font-display)] text-p-700">
                     {lot.length}
                   </span>
-                  <span className="mt-1 block text-[10.5px] leading-snug text-g-500">
+                  <span className="mt-1 block text-[11px] leading-snug text-g-500">
                     {publiees} publiée{publiees > 1 ? 's' : ''}
                   </span>
                 </button>
@@ -282,14 +282,14 @@ export default function Catalogue() {
                   rendu: (o) => (
                     <span className="block min-w-0">
                       <span className="flex items-center gap-1.5">
-                        <span className="truncate text-[12.5px] font-semibold text-ink">{o.nom}</span>
+                        <span className="truncate text-[13px] font-semibold text-ink">{o.nom}</span>
                         {o.populaire && (
-                          <Badge tone="accent" size="sm">
+                          <Badge tone="violet" size="sm">
                             Populaire
                           </Badge>
                         )}
                       </span>
-                      <span className="block font-mono text-[10.5px] text-g-500">{o.code}</span>
+                      <span className="block font-mono text-[11px] text-g-500">{o.code}</span>
                     </span>
                   ),
                 },
@@ -308,7 +308,7 @@ export default function Catalogue() {
                   entete: 'Caractéristiques',
                   cle: (o) => o.specs,
                   rendu: (o) => (
-                    <span className="block max-w-[28ch] truncate text-[11.5px] text-g-700">
+                    <span className="block max-w-[28ch] truncate text-[12px] text-g-700">
                       {o.specs}
                     </span>
                   ),
@@ -319,7 +319,7 @@ export default function Catalogue() {
                   aligne: 'right',
                   cle: (o) => o.prix,
                   rendu: (o) => (
-                    <span className="tnum text-[12.5px] font-bold text-ink">
+                    <span className="tnum text-[13px] font-bold text-ink">
                       {o.surDevis ? 'Sur devis' : moneyPerMonth(o.prix)}
                     </span>
                   ),
@@ -330,7 +330,7 @@ export default function Catalogue() {
                   cle: (o) => o.sla ?? '',
                   masquable: true,
                   rendu: (o) => (
-                    <span className="text-[11.5px] text-g-700">{o.sla ?? '—'}</span>
+                    <span className="text-[12px] text-g-700">{o.sla ?? '—'}</span>
                   ),
                 },
                 {
@@ -467,12 +467,12 @@ export default function Catalogue() {
                     .map((o) => (
                       <tr key={o.id} className="border-b border-g-100 last:border-0">
                         <td className="px-3 py-2.5">
-                          <span className="block text-[12.5px] font-semibold text-ink">
+                          <span className="block text-[13px] font-semibold text-ink">
                             {o.nom}
                           </span>
-                          <span className="block font-mono text-[10.5px] text-g-500">{o.code}</span>
+                          <span className="block font-mono text-[11px] text-g-500">{o.code}</span>
                         </td>
-                        <td className="tnum px-3 py-2.5 text-[12.5px] font-bold text-ink">
+                        <td className="tnum px-3 py-2.5 text-[13px] font-bold text-ink">
                           {moneyPerMonth(o.prix)}
                         </td>
                         <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
@@ -517,9 +517,9 @@ export default function Catalogue() {
                     d: 'La dépréciation retire l’offre de la vente. Elle ne résilie personne, et son prix reste garanti jusqu’à ce que le client décide de migrer.',
                   },
                 ].map((x) => (
-                  <div key={x.r} className="rounded-[6px] border border-p-300 bg-p-050 px-3 py-2.5">
-                    <p className="text-[12.5px] font-semibold text-ink">{x.r}</p>
-                    <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">{x.d}</p>
+                  <div key={x.r} className="rounded-[6px] border border-g-300 px-3 py-2.5">
+                    <p className="text-[13px] font-semibold text-ink">{x.r}</p>
+                    <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">{x.d}</p>
                   </div>
                 ))}
               </div>
@@ -580,7 +580,7 @@ export default function Catalogue() {
 
           {depreciees.length === 0 ? (
             <Card>
-              <p className="rounded-[8px] border border-dashed border-g-300 px-4 py-10 text-center text-[12.5px] text-g-500">
+              <p className="rounded-[8px] border border-dashed border-g-300 px-4 py-10 text-center text-[13px] text-g-500">
                 Aucune offre dépréciée actuellement.
               </p>
             </Card>
@@ -634,7 +634,7 @@ export default function Catalogue() {
                   className="flex flex-wrap items-baseline justify-between gap-2 border-b border-g-100 pb-1.5 last:border-0"
                 >
                   <span className="min-w-0 text-[12px] text-ink">{x.d}</span>
-                  <span className="shrink-0 text-[10.5px] text-g-500">
+                  <span className="shrink-0 text-[11px] text-g-500">
                     {x.qui} · {x.q}
                   </span>
                 </div>

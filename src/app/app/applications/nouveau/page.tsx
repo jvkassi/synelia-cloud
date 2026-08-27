@@ -6,7 +6,6 @@ import {
   Boxes,
   Check,
   Container as ContainerIcon,
-  FileCode2,
   GitBranch,
   Info,
   LayoutTemplate,
@@ -305,7 +304,7 @@ export default function NouvelleApplication() {
                   <span className="text-p-700">{s.icone}</span>
                   <span className="type-h3">{s.titre}</span>
                 </span>
-                <span className="mt-2 text-[12.5px] leading-relaxed text-g-700">{s.texte}</span>
+                <span className="mt-2 text-[13px] leading-relaxed text-g-700">{s.texte}</span>
               </button>
             ))}
           </div>
@@ -344,7 +343,7 @@ export default function NouvelleApplication() {
                 <Badge tone="ok" dot size="sm">
                   Connexion GitHub active
                 </Badge>
-                <span className="text-[11.5px] text-g-500">
+                <span className="text-[12px] text-g-500">
                   Accès en lecture aux dépôts de l’organisation dba-africa · révocable depuis les
                   paramètres
                 </span>
@@ -397,14 +396,14 @@ export default function NouvelleApplication() {
                   >
                     <span
                       aria-hidden
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[10px] font-bold text-white"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[11px] font-bold text-white"
                       style={{ background: m.logoTeinte }}
                     >
                       {m.logoInitiales}
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate text-[13px] font-bold text-ink">{m.nom}</span>
-                      <span className="block truncate text-[11.5px] text-g-500">
+                      <span className="block truncate text-[12px] text-g-500">
                         {m.solution} {m.version} · {CATEGORIE_MODELE_LABEL[m.categorie]}
                       </span>
                     </span>
@@ -414,7 +413,7 @@ export default function NouvelleApplication() {
 
               <div className="mt-4 border-t border-g-100 pt-4">
                 <p className="text-[13px] font-bold text-ink">{modeleChoisi.nom}</p>
-                <p className="mt-1 text-[12.5px] leading-relaxed text-g-700">
+                <p className="mt-1 text-[13px] leading-relaxed text-g-700">
                   {modeleChoisi.description}
                 </p>
                 <KeyValueList
@@ -422,11 +421,11 @@ export default function NouvelleApplication() {
                   items={[
                     {
                       cle: 'Version qualifiée',
-                      valeur: <span className="font-mono text-[12.5px]">{modeleChoisi.version}</span>,
+                      valeur: <span className="font-mono text-[13px]">{modeleChoisi.version}</span>,
                     },
                     {
                       cle: 'Chart',
-                      valeur: <span className="font-mono text-[12.5px]">{modeleChoisi.chart}</span>,
+                      valeur: <span className="font-mono text-[13px]">{modeleChoisi.chart}</span>,
                     },
                     {
                       cle: 'Ressources',
@@ -468,12 +467,12 @@ export default function NouvelleApplication() {
                 <div
                   key={`${c.fichier}-${c.titre}`}
                   className={cn(
-                    'flex items-start gap-3 rounded-[8px] border-l-4 px-3.5 py-3',
+                    'flex items-start gap-3 rounded-[8px] border px-3.5 py-3',
                     c.niveau === 'ok'
-                      ? 'border-ok bg-ok-bg'
+                      ? 'border-ok/30 bg-ok-bg'
                       : c.niveau === 'attention'
-                        ? 'border-warn bg-warn-bg'
-                        : 'border-info bg-info-bg',
+                        ? 'border-warn/40 bg-warn-bg'
+                        : 'border-g-300 bg-g-050',
                   )}
                 >
                   <span className="mt-0.5 shrink-0">
@@ -488,11 +487,11 @@ export default function NouvelleApplication() {
                   <div className="min-w-0">
                     <p className="flex flex-wrap items-center gap-2">
                       <span className="text-[13px] font-semibold text-ink">{c.titre}</span>
-                      <span className="rounded bg-white px-1.5 py-0.5 font-mono text-[10.5px] text-g-700">
+                      <span className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px] text-g-700">
                         {c.fichier}
                       </span>
                     </p>
-                    <p className="mt-1 text-[12.5px] leading-relaxed text-g-700">{c.detail}</p>
+                    <p className="mt-1 text-[13px] leading-relaxed text-g-700">{c.detail}</p>
                   </div>
                 </div>
               ))}
@@ -545,14 +544,14 @@ export default function NouvelleApplication() {
                   className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="font-mono text-[12.5px] font-semibold text-ink">{v.cle}</span>
+                    <span className="font-mono text-[13px] font-semibold text-ink">{v.cle}</span>
                     {v.secret && (
                       <Badge tone="warn" size="sm">
                         Secret
                       </Badge>
                     )}
                   </span>
-                  <span className="text-[11.5px] text-g-500">{v.source}</span>
+                  <span className="text-[12px] text-g-500">{v.source}</span>
                 </div>
               ))}
             </div>
@@ -607,7 +606,7 @@ export default function NouvelleApplication() {
                   )}
                   <span className="type-h3">{t}</span>
                 </span>
-                <span className="mt-2 block text-[12.5px] leading-relaxed text-g-700">{d}</span>
+                <span className="mt-2 block text-[13px] leading-relaxed text-g-700">{d}</span>
               </button>
             ))}
           </div>
@@ -668,7 +667,7 @@ export default function NouvelleApplication() {
                       }
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block font-mono text-[12.5px] text-ink">{v.nom}</span>
+                      <span className="block font-mono text-[13px] text-ink">{v.nom}</span>
                       <span className="block text-[11px] text-g-500">
                         {v.vcpu} vCPU · {v.ramGo} Go · {v.os}
                       </span>
@@ -700,7 +699,7 @@ export default function NouvelleApplication() {
                 <tbody>
                   {composants.map((c, ligne) => (
                     <tr key={c.nom} className="border-b border-g-100 last:border-0">
-                      <td className="px-3 py-2 font-mono text-[12.5px] text-ink">{c.nom}</td>
+                      <td className="px-3 py-2 font-mono text-[13px] text-ink">{c.nom}</td>
                       <td className="px-3 py-2 text-[12px] text-g-700">{c.role}</td>
                       {(['cpu', 'ram', 'disk', 'rep'] as const).map((champ) => (
                         <td key={champ} className="px-3 py-2">
@@ -826,7 +825,7 @@ export default function NouvelleApplication() {
                       ).map((opt) => (
                         <label
                           key={opt.cle}
-                          className="flex items-center gap-2 text-[11.5px] text-g-700"
+                          className="flex items-center gap-2 text-[12px] text-g-700"
                         >
                           <input
                             type="checkbox"
@@ -861,7 +860,7 @@ export default function NouvelleApplication() {
               />
               {previewPr && (
                 <div className="mt-3 rounded-[6px] bg-g-050 px-3 py-2.5">
-                  <p className="font-mono text-[11.5px] text-g-700">
+                  <p className="font-mono text-[12px] text-g-700">
                     https://pr-&lt;numéro&gt;-{nomApp}.preview.synelia.cloud
                   </p>
                 </div>
@@ -919,9 +918,9 @@ export default function NouvelleApplication() {
 function Petit({ cle, valeur, mono }: { cle: string; valeur: string; mono?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
-      <dt className="shrink-0 text-[11.5px] text-g-500">{cle}</dt>
+      <dt className="shrink-0 text-[12px] text-g-500">{cle}</dt>
       <dd
-        className={cn('truncate text-right text-[11.5px] font-semibold text-ink', mono && 'font-mono')}
+        className={cn('truncate text-right text-[12px] font-semibold text-ink', mono && 'font-mono')}
       >
         {valeur}
       </dd>

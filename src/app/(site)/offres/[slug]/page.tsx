@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { ArrowDown, Check, ChevronDown } from 'lucide-react'
+import { ArrowDown, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money } from '@/lib/format'
 import { FICHES_PRODUIT } from '@/lib/mock'
@@ -63,7 +63,7 @@ export default async function FicheProduit({
           <p className="mt-3 max-w-2xl text-[18px] font-bold leading-snug text-m-600 sm:text-[22px]">
             {f.accroche}
           </p>
-          <p className="mt-4 max-w-2xl text-[14.5px] leading-relaxed text-encre-2/70">{f.resume}</p>
+          <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-encre-2/70">{f.resume}</p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <ButtonLink href="/signup" size="lg" variant="primary">
               Créer un compte
@@ -84,7 +84,7 @@ export default async function FicheProduit({
                 <span className="tnum mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-p-100 text-[12px] font-bold text-p-700">
                   {i + 1}
                 </span>
-                <p className="text-[13.5px] leading-relaxed text-g-700">{p}</p>
+                <p className="text-[14px] leading-relaxed text-g-700">{p}</p>
               </div>
             ))}
           </div>
@@ -95,7 +95,7 @@ export default async function FicheProduit({
       <SiteSection fond="clair">
         <Container>
           <h2 className="type-h2">Paliers et tarifs</h2>
-          <p className="mt-2 text-[13.5px] text-g-700">
+          <p className="mt-2 text-[14px] text-g-700">
             Prix mensuels hors taxes, en francs CFA. TVA 18 % appliquée à la facturation. Facturation
             au prorata journalier sur toute création ou suppression en cours de mois.
           </p>
@@ -182,7 +182,7 @@ export default async function FicheProduit({
       <SiteSection fond="clair">
         <Container>
           <h2 className="type-h2">Niveau de service associé</h2>
-          <p className="mt-2 max-w-3xl text-[13.5px] leading-relaxed text-g-700">
+          <p className="mt-2 max-w-3xl text-[14px] leading-relaxed text-g-700">
             La disponibilité est mesurée par nos sondes avec un pas d’une minute et publiée
             mensuellement dans votre espace client. Les fenêtres de maintenance annoncées au moins
             sept jours à l’avance sont exclues du calcul.
@@ -200,7 +200,7 @@ export default async function FicheProduit({
       <SiteSection>
         <Container>
           <h2 className="type-h2">{f.architecture.titre}</h2>
-          <p className="mt-2 text-[13.5px] text-g-700">
+          <p className="mt-2 text-[14px] text-g-700">
             Configuration que nous déployons le plus souvent sur cette offre. Elle sert de point de
             départ à l’atelier de cadrage, pas de contrainte.
           </p>
@@ -225,7 +225,7 @@ export default async function FicheProduit({
                       {c.elements.map((e) => (
                         <span
                           key={e}
-                          className="rounded-full border border-g-300 bg-white px-2.5 py-1 text-[11.5px] font-medium text-g-700"
+                          className="rounded-full border border-g-300 bg-white px-2.5 py-1 text-[12px] font-medium text-g-700"
                         >
                           {e}
                         </span>

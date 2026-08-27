@@ -85,7 +85,7 @@ export function VueParametres({ id }: { id: string }) {
               </Select>
             </Field>
             {espaceId !== projet.espaceId && (
-              <p className="text-[11.5px] leading-relaxed text-warn">
+              <p className="text-[12px] leading-relaxed text-warn">
                 Changer d’Espace Cloud déplace le quota consommé par ce projet, mais ne déplace
                 aucune machine : les services en marche restent sur leur socle jusqu’à leur prochain
                 redéploiement.
@@ -128,7 +128,7 @@ export function VueParametres({ id }: { id: string }) {
                   className="flex items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                 >
                   <span className="min-w-0">
-                    <span className="block text-[12.5px] font-semibold text-ink">{e}</span>
+                    <span className="block text-[13px] font-semibold text-ink">{e}</span>
                     <span className="block text-[11px] text-g-500">
                       {services.filter((s) => s.environnement === e).length} service(s) ·{' '}
                       {money(

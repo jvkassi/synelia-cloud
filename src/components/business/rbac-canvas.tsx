@@ -41,7 +41,7 @@ export function RoleMatrix({
           type="button"
           onClick={() => setGroupe('tous')}
           className={cn(
-            'rounded-full border px-2.5 py-1 text-[11.5px] font-semibold transition-colors',
+            'rounded-full border px-2.5 py-1 text-[12px] font-semibold transition-colors',
             groupe === 'tous'
               ? 'border-p-700 bg-p-700 text-white'
               : 'border-g-300 text-g-700 hover:bg-g-050',
@@ -55,7 +55,7 @@ export function RoleMatrix({
             type="button"
             onClick={() => setGroupe(g)}
             className={cn(
-              'rounded-full border px-2.5 py-1 text-[11.5px] font-semibold transition-colors',
+              'rounded-full border px-2.5 py-1 text-[12px] font-semibold transition-colors',
               groupe === g
                 ? 'border-p-700 bg-p-700 text-white'
                 : 'border-g-300 text-g-700 hover:bg-g-050',
@@ -91,7 +91,7 @@ export function RoleMatrix({
           <tbody>
             {lignes.map((a) => (
               <tr key={a.id} className="border-b border-g-100 last:border-0 hover:bg-p-050/50">
-                <td className="sticky left-0 z-10 bg-white px-3 py-2 text-[12.5px] text-ink">
+                <td className="sticky left-0 z-10 bg-white px-3 py-2 text-[13px] text-ink">
                   {a.libelle}
                 </td>
                 {roles.map((r) => {
@@ -116,7 +116,7 @@ export function RoleMatrix({
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 text-[11.5px] text-g-500">
+      <div className="flex flex-wrap items-center gap-4 text-[12px] text-g-500">
         <span className="flex items-center gap-1.5">
           <span className="text-[14px] font-bold text-ok">●</span> autorisé
         </span>
@@ -230,8 +230,8 @@ export function TopologyCanvas({
                 aria-hidden
               />
               <span className="min-w-0">
-                <span className="block truncate text-[12.5px] font-semibold text-ink">{b.nom}</span>
-                <span className="block truncate text-[10.5px] text-g-500">{b.categorie}</span>
+                <span className="block truncate text-[13px] font-semibold text-ink">{b.nom}</span>
+                <span className="block truncate text-[11px] text-g-500">{b.categorie}</span>
               </span>
             </button>
           ))}
@@ -252,7 +252,7 @@ export function TopologyCanvas({
               { value: 'lier', label: 'Créer une dépendance' },
             ]}
           />
-          <p className="text-[11.5px] text-g-500">
+          <p className="text-[12px] text-g-500">
             {mode === 'lier'
               ? 'Cliquez deux composants pour créer une dépendance.'
               : 'Faites glisser un composant pour le repositionner.'}
@@ -313,7 +313,7 @@ export function TopologyCanvas({
                 )}
               >
                 <span
-                  className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[10px] font-bold"
+                  className="flex h-7 w-7 items-center justify-center rounded-[6px] text-[11px] font-bold"
                   style={{
                     background: surfaceMarque(b?.teinte ?? '#4B2882').fond,
                     color: surfaceMarque(b?.teinte ?? '#4B2882').texte,
@@ -359,7 +359,7 @@ export function TopologyCanvas({
           </Card>
         )}
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] text-g-500">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-g-500">
           <span className="flex items-center gap-1.5">
             <Link2 size={12} /> {liens.length} dépendances déclarées
           </span>
@@ -409,10 +409,10 @@ export function Copilote({ className }: { className?: string }) {
         <div className="mb-3.5 space-y-3">
           {echanges.map((e, i) => (
             <div key={i} className="space-y-1.5">
-              <p className="rounded-[8px] bg-p-050 px-3 py-2 text-[12.5px] font-semibold text-p-700">
+              <p className="rounded-[8px] bg-p-050 px-3 py-2 text-[13px] font-semibold text-p-700">
                 {e.q}
               </p>
-              <p className="px-3 text-[12.5px] leading-relaxed text-g-700">{e.r}</p>
+              <p className="px-3 text-[13px] leading-relaxed text-g-700">{e.r}</p>
             </div>
           ))}
         </div>
@@ -443,7 +443,7 @@ export function Copilote({ className }: { className?: string }) {
               key={s}
               type="button"
               onClick={() => repondre(s)}
-              className="rounded-full border border-g-300 px-2.5 py-1 text-[11.5px] text-g-700 transition-colors hover:border-p-400 hover:bg-p-050 hover:text-p-700"
+              className="rounded-full border border-g-300 px-2.5 py-1 text-[12px] text-g-700 transition-colors hover:border-p-400 hover:bg-p-050 hover:text-p-700"
             >
               {s}
             </button>

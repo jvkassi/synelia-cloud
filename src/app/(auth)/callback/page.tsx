@@ -38,7 +38,7 @@ export default function Callback() {
     <div className="space-y-6 pt-8">
       <div>
         <h1 className="type-h1">Finalisation de votre connexion</h1>
-        <p className="mt-2 text-[13.5px] leading-relaxed text-g-500">
+        <p className="mt-2 text-[14px] leading-relaxed text-g-500">
           Quelques secondes le temps d’établir votre session. Ne fermez pas cette fenêtre.
         </p>
       </div>
@@ -53,7 +53,7 @@ export default function Callback() {
               className={cn(
                 'flex items-start gap-3 rounded-[10px] border px-4 py-3.5 transition-colors',
                 faite
-                  ? 'border-[#B7E3D0] bg-ok-bg'
+                  ? 'border-ok/25 bg-ok-bg'
                   : encours
                     ? 'border-p-300 bg-p-050'
                     : 'border-g-300 bg-white',
@@ -95,7 +95,7 @@ export default function Callback() {
           Cela prend plus de temps que prévu ?{' '}
           <Link
             href="/select-organisation"
-            className="font-semibold text-p-700 hover:text-m-600"
+            className="font-semibold text-p-700 hover:underline"
           >
             Continuer manuellement
           </Link>

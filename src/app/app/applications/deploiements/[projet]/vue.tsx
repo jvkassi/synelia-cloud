@@ -157,11 +157,11 @@ export function VueDeploiements({ id }: { id: string }) {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="flex flex-wrap items-baseline gap-x-2">
-                        <span className="font-mono text-[12.5px] font-semibold text-ink">
+                        <span className="font-mono text-[13px] font-semibold text-ink">
                           {appById(d.appId)?.nom ?? d.appId}
                         </span>
                         <span className="font-mono text-[12px] text-g-700">{d.version}</span>
-                        <span className="text-[11.5px] text-g-500">
+                        <span className="text-[12px] text-g-500">
                           {envById(d.envId)?.nom ?? d.envId}
                         </span>
                       </p>
@@ -279,7 +279,7 @@ export function VueDeploiements({ id }: { id: string }) {
         tous les projets est dans{' '}
         <Link
           href="/app/applications/deploiements"
-          className="font-semibold text-p-700 hover:text-m-600"
+          className="font-semibold text-p-700 hover:underline"
         >
           la racine de cette section
         </Link>

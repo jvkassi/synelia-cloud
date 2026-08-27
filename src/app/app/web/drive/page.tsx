@@ -123,7 +123,7 @@ export default function ListeDrives() {
               </>
             ) : (
               <>
-                <p className="text-[12.5px] leading-relaxed text-g-700">
+                <p className="text-[13px] leading-relaxed text-g-700">
                   L’activation crée l’instance, pose le certificat sur{' '}
                   <span className="font-mono">{d.hote}</span>, déclare le client SSO et applique le
                   plan de sauvegarde. Les sièges s’attribuent ensuite depuis cette page.
@@ -163,8 +163,8 @@ export default function ListeDrives() {
 
       <Card>
         <CardHeader
-          titre="Le partage externe est le vrai sujet"
-          sousTitre="C’est par là que les fichiers d’une organisation sortent, presque toujours sans intention de nuire."
+          titre="Le partage externe"
+          sousTitre="Les trois garde-fous qui bornent la sortie de fichiers hors de l’organisation."
         />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
@@ -186,14 +186,14 @@ export default function ListeDrives() {
           ].map((c) => (
             <div key={c.t} className="rounded-[8px] border border-g-300 bg-g-050 p-3">
               <p className="flex items-center gap-1.5 text-p-700">{c.i}</p>
-              <p className="mt-1.5 text-[12.5px] font-bold text-ink">{c.t}</p>
-              <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{c.d}</p>
+              <p className="mt-1.5 text-[13px] font-bold text-ink">{c.t}</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-g-700">{c.d}</p>
             </div>
           ))}
         </div>
         <Callout ton="info" className="mt-3" titre="Ce que le portail ne fera pas">
-          Pas de navigateur de fichiers ici. Parcourir, téléverser, partager, éditer un document : ce
-          sont les gestes du Drive, et son interface les fait mieux que ce que nous écririons.
+          Pas de navigateur de fichiers ici : parcourir, téléverser, partager et éditer un document
+          sont les gestes du Drive, dans son interface.
         </Callout>
       </Card>
     </div>

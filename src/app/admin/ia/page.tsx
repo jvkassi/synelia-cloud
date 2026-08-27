@@ -38,7 +38,7 @@ export default function ParcGpuEtIA() {
       <PageHeader
         fil={[{ label: 'Espace fournisseur', href: '/admin' }, { label: 'Parc GPU & IA' }]}
         titre="Parc GPU & intelligence artificielle"
-        sousTitre="Le calcul IA ne se pilote pas comme le reste de la capacité : la contrainte est la mémoire vidéo, pas le vCPU, et une carte libre ne sert à rien si aucun modèle n’y tient. S’y ajoutent les contrats d’achat chez les fournisseurs étrangers, revendus au jeton."
+        sousTitre="La contrainte du calcul IA est la mémoire vidéo, pas le vCPU : une carte libre ne sert que si le modèle y tient. S’y ajoutent les contrats d’achat chez les fournisseurs étrangers, revendus au jeton."
         actions={<LiensSortie centreon grafana />}
       />
 
@@ -79,13 +79,13 @@ export default function ParcGpuEtIA() {
               <div key={`${g.site}-${g.gpu}`}>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="flex items-center gap-2">
-                    <span className="text-[12.5px] font-semibold text-ink">{g.gpu}</span>
+                    <span className="text-[13px] font-semibold text-ink">{g.gpu}</span>
                     <Badge tone="neutral" size="sm">
                       {SITE_LABEL[g.site]}
                     </Badge>
                     <span className="text-[11px] text-g-500">{g.vram}</span>
                   </span>
-                  <span className="tnum text-[11.5px] text-g-500">
+                  <span className="tnum text-[12px] text-g-500">
                     {g.libres} libre{g.libres > 1 ? 's' : ''}
                     {g.indisponibles > 0 && ` · ${g.indisponibles} hors service`}
                   </span>
@@ -128,16 +128,16 @@ export default function ParcGpuEtIA() {
                 {FLOTTE_MODELES.map((m) => (
                   <tr key={m.slug} className="border-b border-g-100 last:border-0">
                     <td className="py-2.5">
-                      <span className="block text-[12.5px] text-ink">
+                      <span className="block text-[13px] text-ink">
                         {modeleParSlug(m.slug)?.nom ?? m.slug}
                       </span>
                       <span className="block text-[11px] text-g-500">
                         {m.replicas} réplica{m.replicas > 1 ? 's' : ''}
                       </span>
                     </td>
-                    <td className="py-2.5 font-mono text-[11.5px] text-g-700">{m.gpu}</td>
-                    <td className="tnum py-2.5 text-right text-[12.5px] text-g-700">{m.orgs}</td>
-                    <td className="tnum py-2.5 text-right text-[12.5px] text-g-700">
+                    <td className="py-2.5 font-mono text-[12px] text-g-700">{m.gpu}</td>
+                    <td className="tnum py-2.5 text-right text-[13px] text-g-700">{m.orgs}</td>
+                    <td className="tnum py-2.5 text-right text-[13px] text-g-700">
                       {m.jetons30j > 0 ? jetons(m.jetons30j) : '—'}
                     </td>
                     <td className="py-2.5 text-right">
@@ -205,14 +205,14 @@ export default function ParcGpuEtIA() {
             <tbody>
               {AGENTS_PLATEFORME.map((o) => (
                 <tr key={o.org} className="border-b border-g-100 last:border-0">
-                  <td className="px-3 py-3 text-[12.5px] font-semibold text-ink">{o.org}</td>
-                  <td className="tnum px-3 py-3 text-right text-[12.5px] text-g-700">{o.agents}</td>
-                  <td className="tnum px-3 py-3 text-right text-[12.5px] text-g-700">{o.publies}</td>
-                  <td className="tnum px-3 py-3 text-right text-[12.5px] text-g-700">{o.flux}</td>
-                  <td className="tnum px-3 py-3 text-right text-[12.5px] font-semibold text-ink">
+                  <td className="px-3 py-3 text-[13px] font-semibold text-ink">{o.org}</td>
+                  <td className="tnum px-3 py-3 text-right text-[13px] text-g-700">{o.agents}</td>
+                  <td className="tnum px-3 py-3 text-right text-[13px] text-g-700">{o.publies}</td>
+                  <td className="tnum px-3 py-3 text-right text-[13px] text-g-700">{o.flux}</td>
+                  <td className="tnum px-3 py-3 text-right text-[13px] font-semibold text-ink">
                     {num(o.executions30j)}
                   </td>
-                  <td className="px-3 py-3 text-[11.5px] text-g-500">{o.canaux}</td>
+                  <td className="px-3 py-3 text-[12px] text-g-500">{o.canaux}</td>
                 </tr>
               ))}
             </tbody>
@@ -249,7 +249,7 @@ export default function ParcGpuEtIA() {
               {CONTRATS_FOURNISSEURS.map((c) => (
                 <tr key={c.id} className="border-b border-g-100 last:border-0">
                   <td className="px-3 py-3">
-                    <span className="block text-[12.5px] font-semibold text-ink">{c.fournisseur}</span>
+                    <span className="block text-[13px] font-semibold text-ink">{c.fournisseur}</span>
                     <span className="block text-[11px] text-g-500">
                       Échéance {dateCourte(c.echeance)}
                     </span>
@@ -259,24 +259,24 @@ export default function ParcGpuEtIA() {
                       {c.residence}
                     </Badge>
                   </td>
-                  <td className="tnum px-3 py-3 text-right text-[12.5px] text-g-700">
+                  <td className="tnum px-3 py-3 text-right text-[13px] text-g-700">
                     {money(c.engagementMensuel)}
                   </td>
                   <td
                     className={cn(
-                      'tnum px-3 py-3 text-right text-[12.5px]',
+                      'tnum px-3 py-3 text-right text-[13px]',
                       c.consommeMois > c.engagementMensuel ? 'font-semibold text-warn' : 'text-g-700',
                     )}
                   >
                     {money(c.consommeMois)}
                   </td>
-                  <td className="tnum px-3 py-3 text-right text-[12.5px] text-g-700">
+                  <td className="tnum px-3 py-3 text-right text-[13px] text-g-700">
                     {money(c.prixAchatMoyen)}
                   </td>
-                  <td className="tnum px-3 py-3 text-right text-[12.5px] text-g-700">
+                  <td className="tnum px-3 py-3 text-right text-[13px] text-g-700">
                     {money(c.prixReventeMoyen)}
                   </td>
-                  <td className="tnum px-3 py-3 text-right text-[12.5px] font-semibold text-ink">
+                  <td className="tnum px-3 py-3 text-right text-[13px] font-semibold text-ink">
                     {pct(c.margePct, 1)}
                   </td>
                   <td className="px-3 py-3">

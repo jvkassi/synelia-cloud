@@ -214,7 +214,7 @@ export default function AccueilApplications() {
               <p className="tnum mt-2 text-[24px] font-bold leading-none [font-family:var(--font-display)] text-ink">
                 {num(s.valeur)}
               </p>
-              <p className="mt-1 text-[11.5px] text-g-500">{s.detail}</p>
+              <p className="mt-1 text-[12px] text-g-500">{s.detail}</p>
             </Link>
           ))}
         </div>
@@ -237,11 +237,11 @@ export default function AccueilApplications() {
                     <span className="min-w-0">
                       <Link
                         href={`/app/applications/projets/${p.id}`}
-                        className="block truncate text-[13.5px] font-bold text-ink hover:text-p-700"
+                        className="block truncate text-[14px] font-bold text-ink hover:text-p-700"
                       >
                         {p.nom}
                       </Link>
-                      <span className="block text-[11.5px] text-g-500">
+                      <span className="block text-[12px] text-g-500">
                         {s.services} service{s.services > 1 ? 's' : ''} ·{' '}
                         {p.environnements.join(', ')} · {money(s.coutMensuel)}/mois
                       </span>
@@ -347,7 +347,7 @@ export default function AccueilApplications() {
             sousTitre="Ceux qui ne sont ni en marche ni arrêtés volontairement."
           />
           {enEchec.length + degrades.length === 0 ? (
-            <p className="text-[12.5px] text-g-700">
+            <p className="text-[13px] text-g-700">
               Tous les services sont dans leur état attendu.
             </p>
           ) : (

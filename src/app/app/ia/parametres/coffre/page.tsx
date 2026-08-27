@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Ban, Lock, Plus, RotateCw } from 'lucide-react'
+import { Lock } from 'lucide-react'
 import { dateCourte, jetons, money, num, relatif } from '@/lib/format'
 import { CLASSE_DONNEES_LABEL, type CleIA } from '@/lib/types'
 import { CLES_IA, COFFRE_CLES_FOURNISSEURS, MODELES_IA, PASSERELLE_IA } from '@/lib/mock'
@@ -60,8 +60,8 @@ export default function CoffreCles() {
             <tbody>
               {COFFRE_CLES_FOURNISSEURS.map((c) => (
                 <tr key={c.fournisseur} className="border-b border-g-100 last:border-0">
-                  <td className="px-3 py-3 text-[12.5px] font-semibold text-ink">{c.fournisseur}</td>
-                  <td className="px-3 py-3 font-mono text-[11.5px] text-g-500">{c.empreinte}</td>
+                  <td className="px-3 py-3 text-[13px] font-semibold text-ink">{c.fournisseur}</td>
+                  <td className="px-3 py-3 font-mono text-[12px] text-g-500">{c.empreinte}</td>
                   <td className="px-3 py-3 text-[12px] text-g-700">{c.portee}</td>
                   <td className="px-3 py-3 text-[12px] text-g-500">{dateCourte(c.ajoutee)}</td>
                   <td className="px-3 py-3 text-[12px] text-g-500">{dateCourte(c.rotation)}</td>
@@ -75,11 +75,10 @@ export default function CoffreCles() {
             </tbody>
           </table>
         </div>
-        <Callout ton="info" className="mt-4" titre="Pourquoi ces clés ne sont pas les vôtres">
-          Mutualiser les contrats cadres vous évite d’ouvrir un compte chez chaque éditeur, de
-          négocier quatre engagements et d’exposer quatre secrets de plus. La contrepartie est
-          assumée : vous ne voyez pas ces clés, et vous dépendez de nous pour leur rotation. Les
-          deux échéances de septembre et d’août sont suivies par l’exploitation, pas par vous.
+        <Callout ton="info" className="mt-4" titre="Ces clés sont les nôtres, pas les vôtres">
+          Les contrats cadres sont mutualisés : pas de compte à ouvrir chez chaque éditeur, pas de
+          secret supplémentaire à garder. En échange, vous ne voyez pas ces clés et leur rotation
+          dépend de nous. Les échéances de septembre et d’août sont suivies par l’exploitation.
         </Callout>
       </Card>
     </div>

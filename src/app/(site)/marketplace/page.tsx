@@ -63,7 +63,7 @@ export default function MarketplacePublic() {
                 <p className="tnum text-[22px] font-black leading-none [font-family:var(--font-display)] text-p-600">
                   {x.v}
                 </p>
-                <p className="mt-1.5 text-[11.5px] text-encre-2/65">{x.l}</p>
+                <p className="mt-1.5 text-[12px] text-encre-2/65">{x.l}</p>
               </div>
             ))}
           </div>
@@ -91,7 +91,7 @@ export default function MarketplacePublic() {
                 ]}
               />
             </div>
-            <p className="tnum text-[12.5px] text-g-500">
+            <p className="tnum text-[13px] text-g-500">
               {resultats.length} service{resultats.length > 1 ? 's' : ''}
             </p>
           </div>
@@ -122,7 +122,7 @@ export default function MarketplacePublic() {
                 )}
               >
                 {CATEGORIE_LABEL[c]}
-                <span className="ml-1.5 text-[10px] opacity-70">
+                <span className="ml-1.5 text-[11px] opacity-70">
                   {CATALOGUE.filter((s) => s.categorie === c).length}
                 </span>
               </button>
@@ -160,8 +160,8 @@ export default function MarketplacePublic() {
                   {c.num}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[13.5px] font-semibold leading-snug text-ink">{c.capacite}</p>
-                  <p className="mt-0.5 text-[11.5px] text-g-500">{c.ecran}</p>
+                  <p className="text-[14px] font-semibold leading-snug text-ink">{c.capacite}</p>
+                  <p className="mt-0.5 text-[12px] text-g-500">{c.ecran}</p>
                 </div>
               </li>
             ))}
@@ -217,11 +217,11 @@ export default function MarketplacePublic() {
               ].map((x) => (
                 <div key={x.cat} className="rounded-[10px] border border-g-300 bg-white p-4">
                   <p className="text-[13px] font-bold text-ink">{x.cat}</p>
-                  <p className="mt-2 flex items-start gap-2 text-[12.5px] leading-snug text-g-700">
+                  <p className="mt-2 flex items-start gap-2 text-[13px] leading-snug text-g-700">
                     <Check size={13} className="mt-0.5 shrink-0 text-ok" />
                     Le portail : {x.fait}
                   </p>
-                  <p className="mt-1.5 flex items-start gap-2 text-[12.5px] leading-snug text-g-500">
+                  <p className="mt-1.5 flex items-start gap-2 text-[13px] leading-snug text-g-500">
                     <span className="mt-0.5 shrink-0 font-bold text-g-500">—</span>
                     Le portail ne fait pas : {x.pas}
                   </p>

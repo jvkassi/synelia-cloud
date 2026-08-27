@@ -198,7 +198,7 @@ export default function AccueilWebCloud() {
               <p className="tnum mt-2 text-[24px] font-bold leading-none [font-family:var(--font-display)] text-ink">
                 {num(s.valeur)}
               </p>
-              <p className="mt-1 text-[11.5px] text-g-500">{s.detail}</p>
+              <p className="mt-1 text-[12px] text-g-500">{s.detail}</p>
             </Link>
           ))}
         </div>
@@ -223,7 +223,7 @@ export default function AccueilWebCloud() {
                       >
                         {h.domaine ?? h.domaineProvisoire}
                       </Link>
-                      <span className="block text-[11.5px] text-g-500">
+                      <span className="block text-[12px] text-g-500">
                         {h.palier} · {h.serveur.nom} · {sitesDuServeur.length} site
                         {sitesDuServeur.length > 1 ? 's' : ''}
                       </span>

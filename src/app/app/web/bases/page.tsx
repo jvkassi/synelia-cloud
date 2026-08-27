@@ -74,7 +74,7 @@ export default function ListeBases() {
                 titre={
                   <span className="flex items-center gap-2.5">
                     <span
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[10px] font-bold"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[11px] font-bold"
                       style={{ background: surface.fond, color: surface.texte }}
                     >
                       {MOTEUR_WEB_LABEL[m.moteur].slice(0, 2).toUpperCase()}
@@ -112,7 +112,7 @@ export default function ListeBases() {
                     {m.utilisateurs.length > 0 &&
                       ` · ${m.utilisateurs.length} utilisateur${m.utilisateurs.length > 1 ? 's' : ''}`}
                   </p>
-                  <p className="mt-1 text-[11.5px] text-g-500">
+                  <p className="mt-1 text-[12px] text-g-500">
                     {m.sauvegarde.derniere === '—'
                       ? m.sauvegarde.frequence
                       : `Sauvegarde ${relatif(m.sauvegarde.derniere)}`}
@@ -120,7 +120,7 @@ export default function ListeBases() {
                 </>
               ) : (
                 <>
-                  <p className="text-[12.5px] leading-relaxed text-g-700">
+                  <p className="text-[13px] leading-relaxed text-g-700">
                     Le moteur est disponible sur ce serveur mais n’est pas installé. L’activer crée
                     le service, ouvre son port local et l’ajoute au plan de sauvegarde.
                   </p>
@@ -167,15 +167,15 @@ export default function ListeBases() {
               <p className="flex items-center gap-1.5 text-p-700">
                 <Database size={14} />
               </p>
-              <p className="mt-1.5 text-[12.5px] font-bold text-ink">{c.t}</p>
-              <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{c.d}</p>
+              <p className="mt-1.5 text-[13px] font-bold text-ink">{c.t}</p>
+              <p className="mt-1 text-[12px] leading-relaxed text-g-700">{c.d}</p>
             </div>
           ))}
         </div>
         <p className="mt-3 text-[12px] text-g-500">
           Besoin de {num(3)} répliques, d’une bascule automatique ou d’une restauration à l’instant
           près ?{' '}
-          <Link href="/app/bases" className="font-semibold text-p-700 hover:text-m-600">
+          <Link href="/app/bases" className="font-semibold text-p-700 hover:underline">
             Les bases managées
           </Link>{' '}
           répondent à ce besoin.

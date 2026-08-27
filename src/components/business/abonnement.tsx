@@ -54,7 +54,7 @@ export function CarteAbonnement({
       <div
         className={cn(
           'rounded-[8px] border p-3',
-          urgent ? 'border-err bg-err-bg' : attention ? 'border-warn bg-warn-bg' : 'border-g-300 bg-g-050',
+          urgent ? 'border-err/40' : attention ? 'border-warn/40' : 'border-g-300 bg-g-050',
         )}
       >
         <p className="flex items-baseline gap-1.5">
@@ -66,7 +66,7 @@ export function CarteAbonnement({
           >
             {joursRestants}
           </span>
-          <span className="text-[12.5px] font-semibold text-g-700">
+          <span className="text-[13px] font-semibold text-g-700">
             jour{joursRestants > 1 ? 's' : ''} avant échéance
           </span>
         </p>
@@ -84,17 +84,17 @@ export function CarteAbonnement({
             style={{ width: `${pctEcoule}%` }}
           />
         </div>
-        <p className="tnum mt-1.5 text-[11.5px] text-g-700">{pctEcoule} % de la période écoulée</p>
+        <p className="tnum mt-1.5 text-[12px] text-g-700">{pctEcoule} % de la période écoulée</p>
 
         {urgent && (
-          <p className="mt-2 flex items-start gap-1.5 text-[11.5px] font-semibold leading-snug text-err">
+          <p className="mt-2 flex items-start gap-1.5 text-[12px] font-semibold leading-snug text-err">
             <AlertTriangle size={13} className="mt-px shrink-0" />
             Renouvellement automatique désactivé — le service s’arrêtera à l’échéance.
           </p>
         )}
       </div>
 
-      <dl className="mt-3 space-y-2 text-[12.5px]">
+      <dl className="mt-3 space-y-2 text-[13px]">
         <Ligne cle="Offre" valeur={offre} />
         {prixMensuel !== undefined && (
           <Ligne cle="Tarif" valeur={`${money(prixMensuel)} / mois`} />
@@ -115,7 +115,7 @@ export function CarteAbonnement({
       <div className="mt-3 space-y-1.5 border-t border-g-100 pt-3">
         <Link
           href="/app/facturation"
-          className="block text-[12px] font-semibold text-p-700 hover:text-m-600"
+          className="block text-[12px] font-semibold text-p-700 hover:underline"
         >
           Gérer le renouvellement →
         </Link>

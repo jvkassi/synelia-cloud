@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Ban, KeyRound, Pause, Play, ShieldAlert, UserCog } from 'lucide-react'
+import { Ban, KeyRound, Pause, Play, UserCog } from 'lucide-react'
 import { cn, trendSeries } from '@/lib/utils'
 import { dateCourte, dateHeure, goHumain, MAINTENANT, money, num, pct, relatif } from '@/lib/format'
 import {
@@ -153,9 +153,8 @@ export function VueOrganisation({ id }: { id: string }) {
         <Callout ton="err" titre={`Impayé de ${money(impayeReleve.montant)}`}>
           Facture {impayeReleve.facture}, {impayeReleve.retardJours} jours de retard,{' '}
           {impayeReleve.relances} relance{impayeReleve.relances > 1 ? 's' : ''} envoyée
-          {impayeReleve.relances > 1 ? 's' : ''}. Avant d’envisager une suspension, un appel et une
-          proposition d’échelonnement sont la marche à suivre — c’est notre engagement, et c’est aussi
-          ce qui récupère le plus de créances.
+          {impayeReleve.relances > 1 ? 's' : ''}. Avant d’envisager une suspension : un appel, puis
+          une proposition d’échelonnement.
         </Callout>
       )}
 
@@ -265,7 +264,7 @@ export function VueOrganisation({ id }: { id: string }) {
                       <span className="min-w-0 truncate text-[12px] text-ink">{s.cible.label}</span>
                       <span className="tnum shrink-0 text-[12px] font-semibold text-ink">
                         {money(s.quantite * s.prixApplique)}
-                        <span className="ml-1.5 text-[10px] font-normal text-g-500">
+                        <span className="ml-1.5 text-[11px] font-normal text-g-500">
                           {s.periodicite === 'annuelle' ? 'annuel' : 'mensuel'}
                         </span>
                       </span>
@@ -289,7 +288,7 @@ export function VueOrganisation({ id }: { id: string }) {
               />
             </div>
             {espaces.length === 0 ? (
-              <p className="px-4 py-8 text-center text-[12.5px] text-g-500">
+              <p className="px-4 py-8 text-center text-[13px] text-g-500">
                 Aucun Espace Cloud chargé pour cette organisation dans cette vue de démonstration.
               </p>
             ) : (
@@ -312,19 +311,19 @@ export function VueOrganisation({ id }: { id: string }) {
                         <td className="px-3 py-2.5 font-mono text-[12px] font-semibold text-ink">
                           {e.code}
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">{e.offreNom}</td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">{SITE_COURT[e.site]}</td>
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">{e.offreNom}</td>
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">{SITE_COURT[e.site]}</td>
                         <td className="px-3 py-2.5 font-mono text-[11px] text-g-500">{e.cidr}</td>
-                        <td className="tnum px-3 py-2.5 text-[11.5px] text-g-700">
+                        <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
                           {e.usage.vcpu}/{e.quota.vcpu}
                         </td>
-                        <td className="tnum px-3 py-2.5 text-[11.5px] text-g-700">
+                        <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
                           {e.usage.ramGo}/{e.quota.ramGo} Go
                         </td>
-                        <td className="tnum px-3 py-2.5 text-[11.5px] text-g-700">
+                        <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
                           {e.usage.stockageTo}/{e.quota.stockageTo} To
                         </td>
-                        <td className="tnum px-3 py-2.5 text-[11.5px] text-g-700">{e.projets}</td>
+                        <td className="tnum px-3 py-2.5 text-[12px] text-g-700">{e.projets}</td>
                         <td className="px-3 py-2.5">
                           <Badge tone={e.statut === 'active' ? 'ok' : 'warn'} dot size="sm">
                             {e.statut === 'active'
@@ -366,8 +365,8 @@ export function VueOrganisation({ id }: { id: string }) {
                     {services.map((s) => (
                       <tr key={s.id} className="border-b border-g-100 last:border-0">
                         <td className="px-3 py-2.5">
-                          <span className="block text-[12.5px] font-semibold text-ink">{s.nom}</span>
-                          <span className="block font-mono text-[10.5px] text-g-500">
+                          <span className="block text-[13px] font-semibold text-ink">{s.nom}</span>
+                          <span className="block font-mono text-[11px] text-g-500">
                             {s.domaine}
                           </span>
                         </td>
@@ -379,15 +378,15 @@ export function VueOrganisation({ id }: { id: string }) {
                         <td className="px-3 py-2.5 font-mono text-[11px] text-g-700">
                           {s.version}
                           {s.versionDisponible && (
-                            <Badge tone="accent" size="sm" className="ml-1.5">
+                            <Badge tone="info" size="sm" className="ml-1.5">
                               {s.versionDisponible} dispo
                             </Badge>
                           )}
                         </td>
-                        <td className="tnum px-3 py-2.5 text-[11.5px] text-g-700">
+                        <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
                           {s.siegesUtilises}/{s.siegesSouscrits}
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">{SITE_COURT[s.site]}</td>
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">{SITE_COURT[s.site]}</td>
                         <td className="px-3 py-2.5">
                           <Badge tone={s.sso.actif ? 'accent' : 'warn'} size="sm">
                             {s.sso.actif ? 'Actif' : 'Absent'}
@@ -428,7 +427,7 @@ export function VueOrganisation({ id }: { id: string }) {
             />
           </div>
           {membres.length === 0 ? (
-            <p className="px-4 py-8 text-center text-[12.5px] text-g-500">
+            <p className="px-4 py-8 text-center text-[13px] text-g-500">
               Aucun membre chargé pour cette organisation dans cette vue de démonstration.
             </p>
           ) : (
@@ -452,10 +451,10 @@ export function VueOrganisation({ id }: { id: string }) {
                         <span className="flex items-center gap-2.5">
                           <Avatar nom={u.nom} size="sm" />
                           <span className="min-w-0">
-                            <span className="block text-[12.5px] font-semibold text-ink">
+                            <span className="block text-[13px] font-semibold text-ink">
                               {u.nom}
                             </span>
-                            <span className="block text-[10.5px] text-g-500">{u.email}</span>
+                            <span className="block text-[11px] text-g-500">{u.email}</span>
                           </span>
                         </span>
                       </td>
@@ -464,10 +463,10 @@ export function VueOrganisation({ id }: { id: string }) {
                           {ROLE_LABEL[m.role]}
                         </Badge>
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                      <td className="px-3 py-2.5 text-[12px] text-g-700">
                         {m.scopeLabel ?? 'Toute l’organisation'}
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                      <td className="px-3 py-2.5 text-[12px] text-g-700">
                         {u.idpSource === 'local' ? 'Compte Synelia' : u.idpSource.toUpperCase()}
                       </td>
                       <td className="px-3 py-2.5">
@@ -475,7 +474,7 @@ export function VueOrganisation({ id }: { id: string }) {
                           {u.mfaEnabled ? 'Actif' : 'Absent'}
                         </Badge>
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-500">
+                      <td className="px-3 py-2.5 text-[12px] text-g-500">
                         {u.lastLoginAt ? relatif(u.lastLoginAt) : 'Jamais'}
                       </td>
                     </tr>
@@ -485,7 +484,7 @@ export function VueOrganisation({ id }: { id: string }) {
             </div>
           )}
           <div className="border-t border-g-100 px-4 py-3">
-            <p className="text-[11.5px] leading-relaxed text-g-500">
+            <p className="text-[12px] leading-relaxed text-g-500">
               Nous ne modifions jamais les rôles d’une organisation à sa place. Si un client perd
               l’accès de son dernier administrateur, la procédure de récupération exige une
               vérification d’identité auprès du signataire du contrat, et l’opération est journalisée
@@ -529,7 +528,7 @@ export function VueOrganisation({ id }: { id: string }) {
               <CardHeader titre="Factures" className="mb-0" />
             </div>
             {factures.length === 0 ? (
-              <p className="px-4 py-8 text-center text-[12.5px] text-g-500">
+              <p className="px-4 py-8 text-center text-[13px] text-g-500">
                 Aucune facture pour cette organisation.
               </p>
             ) : (
@@ -552,17 +551,17 @@ export function VueOrganisation({ id }: { id: string }) {
                         <td className="px-3 py-2.5 font-mono text-[12px] font-semibold text-ink">
                           {f.numero}
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">{f.periode}</td>
-                        <td className="tnum px-3 py-2.5 text-[11.5px] text-g-700">
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">{f.periode}</td>
+                        <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
                           {money(f.sousTotal, f.devise)}
                         </td>
                         <td className="tnum px-3 py-2.5 text-[12px] font-bold text-ink">
                           {money(f.total, f.devise)}
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">
                           {f.echeance ? dateCourte(f.echeance) : '—'}
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">
                           {f.moyen ? MOYEN_LABEL[f.moyen] : '—'}
                         </td>
                         <td className="px-3 py-2.5">
@@ -750,7 +749,7 @@ export function VueOrganisation({ id }: { id: string }) {
             />
           </div>
           {tickets.length === 0 ? (
-            <p className="px-4 py-8 text-center text-[12.5px] text-g-500">
+            <p className="px-4 py-8 text-center text-[13px] text-g-500">
               Aucun ticket pour cette organisation.
             </p>
           ) : (
@@ -769,7 +768,7 @@ export function VueOrganisation({ id }: { id: string }) {
                   {tickets.map((t) => (
                     <tr key={t.id} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2.5">
-                        <span className="block font-mono text-[10.5px] text-g-500">{t.numero}</span>
+                        <span className="block font-mono text-[11px] text-g-500">{t.numero}</span>
                         <span className="block text-[12px] font-semibold text-ink">{t.sujet}</span>
                       </td>
                       <td className="px-3 py-2.5">
@@ -801,24 +800,24 @@ export function VueOrganisation({ id }: { id: string }) {
                           {t.statut.replace('_', ' ')}
                         </Badge>
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                      <td className="px-3 py-2.5 text-[12px] text-g-700">
                         {t.assigneA ?? 'Non assigné'}
                       </td>
                       <td className="px-3 py-2.5">
                         {t.slaRestantMin !== undefined ? (
                           <span
                             className={cn(
-                              'tnum text-[11.5px] font-semibold',
+                              'tnum text-[12px] font-semibold',
                               t.slaRestantMin < 120 ? 'text-err' : 'text-g-700',
                             )}
                           >
                             {t.slaRestantMin} min
                           </span>
                         ) : (
-                          <span className="text-[11.5px] text-g-500">—</span>
+                          <span className="text-[12px] text-g-500">—</span>
                         )}
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-500">
+                      <td className="px-3 py-2.5 text-[12px] text-g-500">
                         {relatif(t.createdAt)}
                       </td>
                     </tr>
@@ -833,9 +832,8 @@ export function VueOrganisation({ id }: { id: string }) {
       {onglet === 'audit' && (
         <div className="space-y-4">
           <Callout ton="violet" titre="Ce journal est celui du client">
-            Les mêmes lignes apparaissent dans son propre écran de sécurité. Nos actions y figurent au
-            même titre que les siennes, avec le nom de l’intervenant — c’est ce qui rend l’élévation de
-            privilège vérifiable plutôt que déclarative.
+            Les mêmes lignes apparaissent dans son écran de sécurité, nos actions au même titre que les
+            siennes, avec le nom de l’intervenant.
           </Callout>
 
           <Card padding={false}>
@@ -857,10 +855,10 @@ export function VueOrganisation({ id }: { id: string }) {
                     <tr key={a.id} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2 text-[11px] text-g-700">{dateHeure(a.ts)}</td>
                       <td className="px-3 py-2">
-                        <span className="block text-[11.5px] font-semibold text-ink">
+                        <span className="block text-[12px] font-semibold text-ink">
                           {a.actor.nom}
                         </span>
-                        <span className="block text-[10px] text-g-500">{a.actor.type}</span>
+                        <span className="block text-[11px] text-g-500">{a.actor.type}</span>
                       </td>
                       <td className="px-3 py-2 text-[11px] text-g-700">
                         {ROLE_LABEL[a.role] ?? a.role}
@@ -879,7 +877,7 @@ export function VueOrganisation({ id }: { id: string }) {
                           {a.result === 'ok' ? 'Succès' : a.result === 'refuse' ? 'Refusé' : 'Erreur'}
                         </Badge>
                       </td>
-                      <td className="px-3 py-2 font-mono text-[10px] text-g-500">{a.ip ?? '—'}</td>
+                      <td className="px-3 py-2 font-mono text-[11px] text-g-500">{a.ip ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -985,11 +983,11 @@ export function VueOrganisation({ id }: { id: string }) {
                     key={e.id}
                     className={cn(
                       'rounded-[6px] border px-3 py-2.5',
-                      e.actif ? 'border-warn/40 bg-warn-bg' : 'border-g-300',
+                      e.actif ? 'border-warn/40' : 'border-g-300',
                     )}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="flex items-center gap-1.5 text-[12.5px] font-semibold text-ink">
+                      <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
                         <KeyRound size={12} className="shrink-0 text-g-500" />
                         {e.qui}
                       </span>
@@ -997,8 +995,8 @@ export function VueOrganisation({ id }: { id: string }) {
                         {e.actif ? 'Active' : 'Expirée'}
                       </Badge>
                     </div>
-                    <p className="mt-0.5 text-[11.5px] text-g-700">{e.motif}</p>
-                    <p className="mt-0.5 text-[10.5px] text-g-500">
+                    <p className="mt-0.5 text-[12px] text-g-700">{e.motif}</p>
+                    <p className="mt-0.5 text-[11px] text-g-500">
                       {dateHeure(e.quand)} · durée {e.duree}
                     </p>
                     {e.actif && (
@@ -1028,10 +1026,10 @@ export function VueOrganisation({ id }: { id: string }) {
               />
               <div className="space-y-2">
                 <div className="rounded-[6px] border border-g-300 px-3 py-2.5">
-                  <p className="text-[12.5px] font-semibold text-ink">
+                  <p className="text-[13px] font-semibold text-ink">
                     Suspendre l’organisation
                   </p>
-                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">
                     Les accès sont coupés, les ressources continuent de tourner et de facturer. Une
                     suspension arrête l’activité d’une entreprise : elle exige un motif écrit et reste
                     visible dans son journal d’audit.
@@ -1051,12 +1049,12 @@ export function VueOrganisation({ id }: { id: string }) {
                     </Button>
                   </GatedAction>
                 </div>
-                <div className="rounded-[6px] border border-err/40 bg-err-bg px-3 py-2.5">
-                  <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-ink">
+                <div className="rounded-[6px] border border-g-300 px-3 py-2.5">
+                  <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
                     <Ban size={12} className="shrink-0 text-err" />
                     Clôturer l’organisation
                   </p>
-                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">
                     Réservé au cas où le client le demande, ou après résiliation contractuelle.
                     Déclenche le calendrier de réversibilité : 30 jours de récupération, 30 jours de
                     conservation en lecture, puis effacement avec attestation.

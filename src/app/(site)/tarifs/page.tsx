@@ -96,7 +96,7 @@ export default function Tarifs() {
                 <Badge tone="ok">15 % d’économie · engagement de douze mois</Badge>
               )}
             </div>
-            <p className="text-[12.5px] text-g-500">
+            <p className="text-[13px] text-g-500">
               Prix hors taxes · TVA {TVA_PCT} % · facturation au prorata journalier
             </p>
           </div>
@@ -141,7 +141,7 @@ export default function Tarifs() {
                         ) : (
                           <>
                             {money(Math.round((c.prix ?? 0) * remise))}
-                            <span className="block text-[10.5px] font-semibold text-g-500">
+                            <span className="block text-[11px] font-semibold text-g-500">
                               {c.unite}
                             </span>
                           </>
@@ -159,7 +159,7 @@ export default function Tarifs() {
                   >
                     <th
                       className={cn(
-                        'sticky left-0 z-10 px-4 py-2.5 text-left text-[12.5px] font-medium text-g-700',
+                        'sticky left-0 z-10 px-4 py-2.5 text-left text-[13px] font-medium text-g-700',
                         li % 2 === 1 ? 'bg-[#FBFBFD]' : 'bg-white',
                       )}
                     >
@@ -169,7 +169,7 @@ export default function Tarifs() {
                       <td
                         key={i}
                         className={cn(
-                          'px-4 py-2.5 text-center text-[12.5px]',
+                          'px-4 py-2.5 text-center text-[13px]',
                           active.colonnes[i]?.recommande && 'border-x-2 border-p-700 bg-p-050',
                         )}
                       >
@@ -213,7 +213,7 @@ export default function Tarifs() {
           <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-[10px] border border-g-300 bg-g-050 px-4 py-3.5">
             <div>
               <MicroLabel>À retenir</MicroLabel>
-              <p className="mt-1 max-w-2xl text-[12.5px] leading-relaxed text-g-700">
+              <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-g-700">
                 Les colonnes « Sur devis » correspondent aux configurations dimensionnées sur mesure,
                 avec hôtes dédiés possibles et SLA renforcé. Le devis est établi après un atelier de
                 cadrage d’une demi-journée, sans frais.

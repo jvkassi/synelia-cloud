@@ -132,6 +132,36 @@ plus les liens de sortie vers Centreon, Grafana et VictoriaLogs.
 **Le magenta `#C0297A` est réservé à trois usages** : le mot d'accroche d'un
 héros de la vitrine, le bouton `Ouvrir` d'un service managé, les libellés de flux
 SSO. Sur fond violet foncé, utiliser `m-400` — `m-600` n'y tient pas le contraste.
+Le survol d'un lien souligne (`hover:underline`), il ne passe pas au magenta :
+c'était le quatrième usage, non prévu, et il était partout.
+
+**La couleur d'un pavé se paie.** Trois niveaux de bruit, pas cinq :
+
+| Ton | Rendu | Pour quoi |
+|---|---|---|
+| `violet` | filet `border-l-2 border-p-300`, aucun fond | un aparté, une règle du produit |
+| `info` · `ok` | bordure 1 px, fond `g-050` / `ok-bg` | un fait qui compte |
+| `warn` · `err` | bordure 1 px, fond teinté | ce qui demande une action |
+
+Jamais de liséré de 4 px, jamais de fond teinté sur chaque élément d'une liste :
+dans une liste, la couleur va au chiffre ou au badge, la ligne reste neutre. Un
+`bg-*-bg` répété vingt fois ne hiérarchise plus rien — il reste une planche de
+surligneurs. Les pastels de bordure passent par les jetons (`border-ok/25`), pas
+par un hexadécimal en dur.
+
+**Pas de texte qui plaide.** Un pavé dit un fait, un seuil, un mécanisme, puis
+s'arrête. Les titres rhétoriques (« Pourquoi nous publions… », « Une sauvegarde
+jamais restaurée est une hypothèse ») et la phrase de morale finale — celle qui
+explique que l'inverse serait malhonnête — ont été retirés de l'espace
+fournisseur : ils disaient du bien de la maquette, pas de l'état de la
+plateforme. Aucune icône décorative dans l'emplacement `actions` d'un
+`CardHeader` : cet emplacement est celui d'un bouton.
+
+**Cinq corps pour le petit texte** : 11, 12, 13, 14, 15 px, et rien entre. Il y
+en avait onze, demi-pixels compris — `text-[11.5px]` voisinait `text-[12px]` et
+`text-[12.5px]` dans la même carte, ce qui ne se décide pas, ça s'accumule. Les
+corps d'affichage (16 px et au-delà) restent libres, ils sont peu nombreux et
+chacun a une raison.
 
 **Cinq états par écran** : chargement en squelettes, vide avec une phrase qui
 explique la valeur, erreur avec identifiant de corrélation copiable, droits
@@ -511,6 +541,12 @@ page hors de l'écran. 293 grilles avaient ce défaut.
 **Liens imbriqués.** `DataTable` enveloppe la première colonne visible dans le
 lien de la ligne quand `href` est fourni : son `rendu` ne doit pas contenir de
 lien, deux ancres imbriquées étant du HTML que React refuse d'hydrater.
+
+**Casse et boutons.** La feuille de style du navigateur pose
+`text-transform: none` sur un bouton, et rien dans la base ne la contredit : un
+en-tête de tableau triable perdait l'uppercase de `type-micro` et « Plan »
+côtoyait « DESTINATIONS » dans la même ligne. Un bouton placé dans un conteneur
+qui transforme la casse doit la redéclarer.
 
 **Hooks.** Jamais de `useState` après un retour anticipé.
 

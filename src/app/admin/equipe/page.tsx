@@ -246,14 +246,14 @@ export default function Equipe() {
                           <span className="flex items-center gap-2.5">
                             <Avatar nom={m.nom} size="sm" />
                             <span className="min-w-0">
-                              <span className="block text-[12.5px] font-semibold text-ink">
+                              <span className="block text-[13px] font-semibold text-ink">
                                 {m.nom}
                               </span>
-                              <span className="block text-[10.5px] text-g-500">{m.email}</span>
+                              <span className="block text-[11px] text-g-500">{m.email}</span>
                             </span>
                           </span>
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">{m.equipe}</td>
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">{m.equipe}</td>
                         <td className="px-3 py-2.5">
                           <Badge tone={m.privilegie ? 'violet' : 'neutral'} size="sm">
                             {ROLE_LABEL[m.role] ?? m.role}
@@ -265,7 +265,7 @@ export default function Equipe() {
                               Oui
                             </Badge>
                           ) : (
-                            <span className="text-[11.5px] text-g-500">Non</span>
+                            <span className="text-[12px] text-g-500">Non</span>
                           )}
                         </td>
                         <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
@@ -282,10 +282,10 @@ export default function Equipe() {
                               Active
                             </Badge>
                           ) : (
-                            <span className="text-[11.5px] text-g-500">—</span>
+                            <span className="text-[12px] text-g-500">—</span>
                           )}
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-500">
+                        <td className="px-3 py-2.5 text-[12px] text-g-500">
                           {relatif(m.dernierAcces)}
                         </td>
                         <td className="px-3 py-2.5 text-right">
@@ -328,8 +328,8 @@ export default function Equipe() {
                       className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                     >
                       <span className="min-w-0">
-                        <span className="block text-[12.5px] font-semibold text-ink">{e}</span>
-                        <span className="block text-[10.5px] text-g-500">
+                        <span className="block text-[13px] font-semibold text-ink">{e}</span>
+                        <span className="block text-[11px] text-g-500">
                           {membres.map((m) => m.nom.split(' ')[0]).join(', ')}
                         </span>
                       </span>
@@ -365,7 +365,7 @@ export default function Equipe() {
                       <span className="min-w-0">
                         <span className="text-[12px] font-semibold text-ink">{a.actor.nom}</span>
                         <span className="ml-2 font-mono text-[11px] text-p-700">{a.action}</span>
-                        <span className="block text-[10.5px] text-g-500">
+                        <span className="block text-[11px] text-g-500">
                           {a.orgNom ?? 'Plateforme'} · {a.scope.label}
                         </span>
                       </span>
@@ -376,7 +376,7 @@ export default function Equipe() {
                         >
                           {a.result === 'ok' ? 'Succès' : a.result === 'refuse' ? 'Refusé' : 'Erreur'}
                         </Badge>
-                        <span className="text-[10.5px] text-g-500">{relatif(a.ts)}</span>
+                        <span className="text-[11px] text-g-500">{relatif(a.ts)}</span>
                       </span>
                     </div>
                   ))}
@@ -423,7 +423,7 @@ export default function Equipe() {
                           </Badge>
                         </span>
                       </div>
-                      <p className="mt-1.5 text-[11.5px] leading-relaxed text-g-700">
+                      <p className="mt-1.5 text-[12px] leading-relaxed text-g-700">
                         {r === 'super_admin'
                           ? 'Pilotage complet de la plateforme : capacité, catalogue, organisations clientes, finance. Le rôle le plus étendu, réservé à deux ou trois personnes.'
                           : 'Exploitation quotidienne : capacité, provisionnements, tickets, supervision. Ne peut ni modifier le catalogue et la tarification, ni créer ou suspendre une organisation cliente.'}
@@ -466,12 +466,12 @@ export default function Equipe() {
                     d: 'Aucun rôle ne le permet, y compris l’administrateur de plateforme. Le chaînage cryptographique rend l’opération techniquement impossible.',
                   },
                 ].map((x) => (
-                  <div key={x.r} className="rounded-[6px] border border-p-300 bg-p-050 px-3 py-2.5">
-                    <p className="flex items-start gap-1.5 text-[12.5px] font-semibold text-ink">
+                  <div key={x.r} className="rounded-[6px] border border-g-300 px-3 py-2.5">
+                    <p className="flex items-start gap-1.5 text-[13px] font-semibold text-ink">
                       <ShieldCheck size={12} className="mt-0.5 shrink-0 text-p-700" />
                       {x.r}
                     </p>
-                    <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">{x.d}</p>
+                    <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">{x.d}</p>
                   </div>
                 ))}
               </div>
@@ -509,7 +509,7 @@ export default function Equipe() {
                     { s: '3 – 9 août', n1: 'Cheick Coulibaly', n2: 'Marina Gbagbo', n: 1, statut: 'terminée' },
                   ].map((x) => (
                     <tr key={x.s} className="border-b border-g-100 last:border-0">
-                      <td className="px-3 py-2.5 text-[12.5px] font-semibold text-ink">{x.s}</td>
+                      <td className="px-3 py-2.5 text-[13px] font-semibold text-ink">{x.s}</td>
                       <td className="px-3 py-2.5">
                         <span className="flex items-center gap-2">
                           <Avatar nom={x.n1} size="sm" />
@@ -528,7 +528,7 @@ export default function Equipe() {
                             {x.n} appel{x.n > 1 ? 's' : ''}
                           </Badge>
                         ) : (
-                          <span className="text-[11.5px] text-g-500">—</span>
+                          <span className="text-[12px] text-g-500">—</span>
                         )}
                       </td>
                       <td className="px-3 py-2.5">
@@ -548,10 +548,8 @@ export default function Equipe() {
               </table>
             </div>
             <Callout ton="warn" className="mt-4" titre="Quatre sollicitations en une semaine">
-              La semaine du 10 août, l’astreinte a été appelée quatre fois, dont deux la même nuit.
-              C’est le signe d’un problème de fond, pas d’une malchance : deux de ces appels
-              concernaient la même alerte mal calibrée. Une astreinte trop sollicitée finit par ne plus
-              répondre, ou par démissionner.
+              La semaine du 10 août, l’astreinte a été appelée quatre fois, dont deux la même nuit
+              pour la même alerte mal calibrée.
             </Callout>
           </Card>
 
@@ -585,8 +583,8 @@ export default function Equipe() {
                   },
                 ].map((x) => (
                   <div key={x.r} className="rounded-[6px] border border-g-300 px-3 py-2.5">
-                    <p className="text-[12.5px] font-semibold text-ink">{x.r}</p>
-                    <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">{x.d}</p>
+                    <p className="text-[13px] font-semibold text-ink">{x.r}</p>
+                    <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">{x.d}</p>
                   </div>
                 ))}
               </div>
@@ -628,7 +626,7 @@ export default function Equipe() {
                     key={x.q}
                     className={cn(
                       'rounded-[6px] border px-3 py-2.5',
-                      x.j ? 'border-g-300' : 'border-warn/40 bg-warn-bg',
+                      x.j ? 'border-g-300' : 'border-warn/40',
                     )}
                   >
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -637,7 +635,7 @@ export default function Equipe() {
                         {x.j ? 'Justifiée' : 'Non justifiée'}
                       </Badge>
                     </div>
-                    <p className="mt-0.5 text-[10.5px] text-g-500">
+                    <p className="mt-0.5 text-[11px] text-g-500">
                       {x.qui} · {dateHeure(x.q)}
                     </p>
                   </div>
@@ -694,13 +692,13 @@ export default function Equipe() {
                 {privilegies.map((m) => (
                   <div
                     key={m.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-p-300 bg-p-050 px-3 py-2.5"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                   >
                     <span className="flex min-w-0 items-center gap-2.5">
                       <Avatar nom={m.nom} size="sm" />
                       <span className="min-w-0">
-                        <span className="block text-[12.5px] font-semibold text-ink">{m.nom}</span>
-                        <span className="block text-[10.5px] text-g-500">
+                        <span className="block text-[13px] font-semibold text-ink">{m.nom}</span>
+                        <span className="block text-[11px] text-g-500">
                           {m.equipe} · {ROLE_LABEL[m.role] ?? m.role}
                         </span>
                       </span>
@@ -778,10 +776,10 @@ export default function Equipe() {
                   'Consignation dans le journal d’audit, avec la date et l’auteur de l’opération',
                 ].map((x, i) => (
                   <li key={x} className="flex gap-2.5">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-p-050 text-[10px] font-bold text-p-700">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-p-050 text-[11px] font-bold text-p-700">
                       {i + 1}
                     </span>
-                    <span className="text-[11.5px] leading-relaxed text-ink">{x}</span>
+                    <span className="text-[12px] leading-relaxed text-ink">{x}</span>
                   </li>
                 ))}
               </ol>
@@ -866,7 +864,7 @@ export default function Equipe() {
                       key={a.id}
                       className="flex items-center justify-between gap-3 rounded-[5px] bg-g-050 px-2.5 py-1.5"
                     >
-                      <span className="min-w-0 truncate text-[11.5px] text-ink">{a.libelle}</span>
+                      <span className="min-w-0 truncate text-[12px] text-ink">{a.libelle}</span>
                       <Badge
                         tone={can(detail.role, a.id) === 'full' ? 'ok' : 'neutral'}
                         size="sm"

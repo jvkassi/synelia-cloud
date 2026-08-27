@@ -94,7 +94,7 @@ export function SelecteurRessource({
           onChange={(e) => setQ(e.target.value)}
           placeholder={placeholderRecherche}
           aria-label={placeholderRecherche}
-          className="h-8 w-full rounded-[6px] border border-g-300 bg-white pl-7 pr-2 text-[12.5px] text-ink outline-none transition-colors placeholder:text-g-500 focus:border-p-400"
+          className="h-8 w-full rounded-[6px] border border-g-300 bg-white pl-7 pr-2 text-[13px] text-ink outline-none transition-colors placeholder:text-g-500 focus:border-p-400"
         />
       </div>
 
@@ -143,7 +143,7 @@ export function SelecteurRessource({
                   <span className="min-w-0 flex-1">
                     <span
                       className={cn(
-                        'block truncate text-[12.5px]',
+                        'block truncate text-[13px]',
                         actif ? 'font-bold text-p-700' : 'font-semibold text-ink',
                       )}
                     >
@@ -176,7 +176,7 @@ export function SelecteurRessource({
         {lienBas && (
           <Link
             href={lienBas.href}
-            className="mt-0.5 block text-[11.5px] font-semibold text-p-700 hover:text-m-600"
+            className="mt-0.5 block text-[12px] font-semibold text-p-700 hover:underline"
           >
             {lienBas.libelle} →
           </Link>

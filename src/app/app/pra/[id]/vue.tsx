@@ -208,10 +208,10 @@ export function VuePra({ id }: { id: string }) {
                         </button>
                         <span className="min-w-0">
                           <span className="flex items-center gap-2">
-                            <span className="tnum flex h-5 w-5 items-center justify-center rounded-full bg-p-700 text-[10.5px] font-bold text-white">
+                            <span className="tnum flex h-5 w-5 items-center justify-center rounded-full bg-p-700 text-[11px] font-bold text-white">
                               {i + 1}
                             </span>
-                            <span className="text-[13.5px] font-bold text-ink">{g.nom}</span>
+                            <span className="text-[14px] font-bold text-ink">{g.nom}</span>
                           </span>
                           <span className="mt-1.5 flex flex-wrap gap-1">
                             {g.ressources.map((r) => (
@@ -221,7 +221,7 @@ export function VuePra({ id }: { id: string }) {
                             ))}
                           </span>
                           {g.dependances.length > 0 && (
-                            <span className="mt-1.5 block text-[11.5px] text-g-500">
+                            <span className="mt-1.5 block text-[12px] text-g-500">
                               Dépend de : {g.dependances.join(', ')}
                             </span>
                           )}
@@ -247,7 +247,7 @@ export function VuePra({ id }: { id: string }) {
                 </div>
               ))}
             </div>
-            <p className="mt-4 border-t border-g-100 pt-3 text-[11.5px] leading-relaxed text-g-500">
+            <p className="mt-4 border-t border-g-100 pt-3 text-[12px] leading-relaxed text-g-500">
               L’exercice de janvier 2026 avait échoué précisément sur cet ordre : sessions-redis
               démarrait avant la base, ce qui provoquait une avalanche d’erreurs de connexion. La
               correction est vérifiée depuis avril.
@@ -310,14 +310,14 @@ export function VuePra({ id }: { id: string }) {
                       const critique = retard > plan.rpoCibleMin * 60
                       return (
                         <tr key={`${g.nom}-${r}`} className="border-b border-g-100 last:border-0">
-                          <td className="px-3 py-2.5 font-mono text-[12.5px] text-ink">{r}</td>
-                          <td className="px-3 py-2.5 text-[12.5px] text-g-700">{g.nom}</td>
+                          <td className="px-3 py-2.5 font-mono text-[13px] text-ink">{r}</td>
+                          <td className="px-3 py-2.5 text-[13px] text-g-700">{g.nom}</td>
                           <td className="px-3 py-2.5">
                             <Badge tone="neutral" size="sm">
                               {plan.replication.mode === 'continu' ? 'Continu' : 'Planifié'}
                             </Badge>
                           </td>
-                          <td className="tnum px-3 py-2.5 text-[12.5px]">
+                          <td className="tnum px-3 py-2.5 text-[13px]">
                             <span className={critique ? 'font-semibold text-err' : 'text-g-700'}>
                               {retard < 120 ? `${retard} s` : `${Math.round(retard / 60)} min`}
                             </span>
@@ -351,14 +351,14 @@ export function VuePra({ id }: { id: string }) {
       {onglet === 'bascule' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <Card className="border-2 border-[#BFD6EE]">
+            <Card className="border-info/40">
               <div className="flex items-start gap-3">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-info-bg text-info">
                   <FlaskConical size={20} />
                 </span>
                 <div className="min-w-0">
                   <h3 className="type-h3">Bascule de test</h3>
-                  <p className="mt-1.5 text-[12.5px] leading-relaxed text-g-700">
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-g-700">
                     Démarre les ressources répliquées dans un <strong>réseau isolé</strong>, sans
                     conflit d’adressage et sans toucher au DNS public. Votre production continue de
                     tourner normalement pendant tout l’exercice. C’est précisément cette isolation
@@ -392,14 +392,14 @@ export function VuePra({ id }: { id: string }) {
               </div>
             </Card>
 
-            <Card className="border-2 border-[#EFC3BD]">
+            <Card className="border-err/40">
               <div className="flex items-start gap-3">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-err-bg text-err">
                   <Zap size={20} />
                 </span>
                 <div className="min-w-0">
                   <h3 className="type-h3">Bascule réelle</h3>
-                  <p className="mt-1.5 text-[12.5px] leading-relaxed text-g-700">
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-g-700">
                     Arrête la production sur {SITE_LABEL[plan.siteSource]}, démarre les ressources sur{' '}
                     {SITE_LABEL[plan.siteRepli]}, et bascule le DNS public. C’est l’opération de
                     sinistre. Elle exige une <strong>double confirmation</strong> et n’est accessible
@@ -451,7 +451,7 @@ export function VuePra({ id }: { id: string }) {
                   </span>
                   <span>
                     <span className="block text-[13px] font-semibold text-ink">{t}</span>
-                    <span className="block text-[12.5px] leading-relaxed text-g-700">{d}</span>
+                    <span className="block text-[13px] leading-relaxed text-g-700">{d}</span>
                   </span>
                 </li>
               ))}
@@ -589,7 +589,7 @@ export function VuePra({ id }: { id: string }) {
                         const conforme = e.rtoConstateMin <= plan.rtoCibleMin
                         return (
                           <tr key={e.date} className="border-b border-g-100 last:border-0">
-                            <td className="px-3 py-2.5 text-[12.5px] text-ink">
+                            <td className="px-3 py-2.5 text-[13px] text-ink">
                               {dateCourte(e.date)}
                             </td>
                             <td className="px-3 py-2.5">
@@ -597,15 +597,15 @@ export function VuePra({ id }: { id: string }) {
                                 {e.type === 'reel' ? 'Réelle' : 'Test'}
                               </Badge>
                             </td>
-                            <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">
+                            <td className="tnum px-3 py-2.5 text-[13px] text-g-700">
                               {dureeMin(e.dureeMin)}
                             </td>
-                            <td className="tnum px-3 py-2.5 text-[12.5px] font-semibold">
+                            <td className="tnum px-3 py-2.5 text-[13px] font-semibold">
                               <span className={conforme ? 'text-ok' : 'text-err'}>
                                 {dureeMin(e.rtoConstateMin)}
                               </span>
                             </td>
-                            <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">
+                            <td className="tnum px-3 py-2.5 text-[13px] text-g-700">
                               {conforme ? '−' : '+'}
                               {dureeMin(Math.abs(plan.rtoCibleMin - e.rtoConstateMin))}
                             </td>
@@ -617,7 +617,7 @@ export function VuePra({ id }: { id: string }) {
                             <td className="px-3 py-2.5">
                               <a
                                 href={e.rapportUrl}
-                                className="inline-flex items-center gap-1 text-[12px] font-semibold text-p-700 hover:text-m-600"
+                                className="inline-flex items-center gap-1 text-[12px] font-semibold text-p-700 hover:underline"
                               >
                                 <FileDown size={12} />
                                 Télécharger
@@ -641,7 +641,7 @@ export function VuePra({ id }: { id: string }) {
                     .filter((e) => e.incidents && e.incidents.length > 0)
                     .map((e) => (
                       <div key={e.date} className="border-l-2 border-p-300 pl-3.5">
-                        <p className="flex flex-wrap items-center gap-2 text-[12.5px] font-semibold text-ink">
+                        <p className="flex flex-wrap items-center gap-2 text-[13px] font-semibold text-ink">
                           Exercice du {dateCourte(e.date)}
                           <Badge tone={e.succes ? 'ok' : 'err'} size="sm">
                             {e.succes ? 'Réussi' : 'Échoué'}
@@ -649,7 +649,7 @@ export function VuePra({ id }: { id: string }) {
                         </p>
                         <ul className="mt-1.5 space-y-1">
                           {e.incidents!.map((inc) => (
-                            <li key={inc} className="text-[12.5px] leading-relaxed text-g-700">
+                            <li key={inc} className="text-[13px] leading-relaxed text-g-700">
                               · {inc}
                             </li>
                           ))}

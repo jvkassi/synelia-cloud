@@ -6,10 +6,8 @@ import {
   Copy,
   Database,
   GripVertical,
-  HardDrive,
   Layers,
   Network,
-  Plus,
   Server,
   Shield,
   Terminal,
@@ -312,7 +310,7 @@ export function ComposeurServeurs({
                         <Icone size={13} className="mt-0.5 shrink-0 text-p-700" />
                         <span className="min-w-0">
                           <span className="block text-[12px] font-semibold text-ink">{r.nom}</span>
-                          <span className="block text-[10.5px] leading-snug text-g-500">
+                          <span className="block text-[11px] leading-snug text-g-500">
                             {r.gabarit.cpu} vCPU · {r.gabarit.ramGo} Go
                           </span>
                         </span>
@@ -348,8 +346,8 @@ export function ComposeurServeurs({
           {lots.length === 0 ? (
             <div className="py-10 text-center">
               <Layers size={22} className="mx-auto text-g-500" />
-              <p className="mt-2 text-[13.5px] font-semibold text-ink">Le plan est vide</p>
-              <p className="mx-auto mt-1 max-w-md text-[12.5px] leading-relaxed text-g-500">
+              <p className="mt-2 text-[14px] font-semibold text-ink">Le plan est vide</p>
+              <p className="mx-auto mt-1 max-w-md text-[13px] leading-relaxed text-g-500">
                 Tirez un rôle depuis la palette. Un lot regroupe des machines identiques : deux
                 frontaux, trois nœuds, une base. Vous ajustez ensuite le gabarit, le réseau et ce
                 qui doit être installé.
@@ -394,7 +392,7 @@ export function ComposeurServeurs({
                           {l.nics > 1 ? 's' : ''}
                         </p>
                       </div>
-                      <span className="tnum shrink-0 text-[12.5px] font-bold text-p-700">
+                      <span className="tnum shrink-0 text-[13px] font-bold text-p-700">
                         {money(coutLot(l))}
                       </span>
                       <div className="flex shrink-0 items-center gap-1">

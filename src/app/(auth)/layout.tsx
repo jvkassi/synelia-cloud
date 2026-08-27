@@ -21,7 +21,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <div className="w-full max-w-md">{children}</div>
         </main>
         <footer className="shrink-0 border-t border-g-100 px-6 py-4">
-          <p className="text-[11.5px] text-g-500">
+          <p className="text-[12px] text-g-500">
             Synelia Group Afrique · Abidjan, Côte d’Ivoire ·{' '}
             <Link href="/legal/confidentialite" className="hover:text-p-700">
               Confidentialité
@@ -46,7 +46,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <h2 className="mt-3 max-w-sm text-[26px] font-bold leading-tight [font-family:var(--font-display)] text-white">
               Votre mot de passe ne transite jamais par ce portail.
             </h2>
-            <p className="mt-4 max-w-sm text-[13.5px] leading-relaxed text-p-300">
+            <p className="mt-4 max-w-sm text-[14px] leading-relaxed text-p-300">
               L’authentification est déléguée à Keycloak. Synelia Cloud ne stocke aucun mot de
               passe et n’affiche aucun champ de mot de passe — nous construisons les écrans autour
               de l’identité, pas l’identité elle-même.

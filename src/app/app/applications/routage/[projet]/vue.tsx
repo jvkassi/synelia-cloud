@@ -123,7 +123,7 @@ export function VueRoutage({ id }: { id: string }) {
                     {cert.label}
                   </Badge>
                   {d.certificat.expire && (
-                    <span className="text-[11.5px] text-g-500">
+                    <span className="text-[12px] text-g-500">
                       renouvellement le {dateCourte(d.certificat.expire)}
                     </span>
                   )}
@@ -179,7 +179,7 @@ export function VueRoutage({ id }: { id: string }) {
           confondus, est dans{' '}
           <Link
             href="/app/applications/routage"
-            className="font-semibold text-p-700 hover:text-m-600"
+            className="font-semibold text-p-700 hover:underline"
           >
             la racine de cette section
           </Link>

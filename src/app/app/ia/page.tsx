@@ -181,7 +181,7 @@ export default function AccueilIA() {
           }
         />
         {agentsPublies.length === 0 ? (
-          <p className="text-[12.5px] leading-relaxed text-g-500">
+          <p className="text-[13px] leading-relaxed text-g-500">
             Aucun agent publié sur cet espace. La passerelle est utilisable telle quelle depuis vos
             applications, mais rien ne tourne pour vous.
           </p>
@@ -196,7 +196,7 @@ export default function AccueilIA() {
                 <span className="flex items-center gap-2.5">
                   <SolutionLogo initiales={a.initiales} teinte={a.teinte} size="sm" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12.5px] font-semibold text-ink">
+                    <span className="block truncate text-[13px] font-semibold text-ink">
                       {a.nom}
                     </span>
                     <span className="block truncate text-[11px] text-g-500">
@@ -239,7 +239,7 @@ export default function AccueilIA() {
                   className="flex flex-wrap items-center justify-between gap-2 border-b border-g-100 pb-1.5 last:border-0"
                 >
                   <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate text-[12.5px] text-ink">{m?.nom ?? c.slug}</span>
+                    <span className="truncate text-[13px] text-ink">{m?.nom ?? c.slug}</span>
                     <Badge tone={m?.hebergement === 'souverain' ? 'ok' : 'warn'} size="sm">
                       {m?.hebergement === 'souverain' ? 'Territoire' : 'Hors territoire'}
                     </Badge>
@@ -268,7 +268,7 @@ export default function AccueilIA() {
           <Card>
             <CardHeader titre="Points d’inférence dédiés" sousTitre={`Espace ${espace.code}`} />
             {points.length === 0 ? (
-              <p className="text-[12.5px] leading-relaxed text-g-500">
+              <p className="text-[13px] leading-relaxed text-g-500">
                 Aucun GPU réservé sur cet espace : tout passe par la file mutualisée, ce qui suffit
                 tant que la latence p95 reste sous la seconde.
               </p>
@@ -280,7 +280,7 @@ export default function AccueilIA() {
                     className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2"
                   >
                     <span className="min-w-0">
-                      <span className="block truncate font-mono text-[12.5px] font-semibold text-ink">
+                      <span className="block truncate font-mono text-[13px] font-semibold text-ink">
                         {p.nom}
                       </span>
                       <span className="block text-[11px] text-g-500">

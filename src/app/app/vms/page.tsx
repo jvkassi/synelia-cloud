@@ -48,7 +48,7 @@ export default function ListeVms() {
       cle: (v) => v.nom,
       rendu: (v) => (
         <span className="block">
-          <span className="block font-mono text-[12.5px] font-semibold text-ink">{v.nom}</span>
+          <span className="block font-mono text-[13px] font-semibold text-ink">{v.nom}</span>
           {v.applicationNom && (
             <span className="block text-[11px] text-g-500">{v.applicationNom}</span>
           )}
@@ -83,7 +83,7 @@ export default function ListeVms() {
         <span className="block space-y-0.5">
           {v.ips.map((i) => (
             <span key={i.adresse} className="flex items-center gap-1.5">
-              <span className="font-mono text-[11.5px] text-ink">{i.adresse}</span>
+              <span className="font-mono text-[12px] text-ink">{i.adresse}</span>
               <Badge tone={i.type === 'publique' ? 'accent' : 'neutral'} size="sm">
                 {i.type === 'publique' ? 'pub' : 'priv'}
               </Badge>
@@ -111,7 +111,7 @@ export default function ListeVms() {
         v.applicationId ? (
           <Link
             href={hrefDuService(v.applicationId)}
-            className="text-[12.5px] text-p-700 hover:text-m-600"
+            className="text-[13px] text-p-700 hover:underline"
           >
             {v.applicationNom}
           </Link>
@@ -156,7 +156,7 @@ export default function ListeVms() {
       rendu: (v) => (
         <Link
           href={`/app/vms/${v.id}`}
-          className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+          className="text-[12px] font-semibold text-p-700 hover:underline"
         >
           Ouvrir →
         </Link>
@@ -376,7 +376,7 @@ export default function ListeVms() {
         <Callout ton="info" titre="Machines dans les autres espaces">
           {ESPACES.filter((e) => e.id !== espace.id).map((e) => (
             <span key={e.id} className="mr-4 inline-block">
-              <Link href={`/app/espaces/${e.id}`} className="font-semibold text-p-700 hover:text-m-600">
+              <Link href={`/app/espaces/${e.id}`} className="font-semibold text-p-700 hover:underline">
                 {e.code}
               </Link>{' '}
               · {parc.items.filter((v) => v.espaceId === e.id).length} machines

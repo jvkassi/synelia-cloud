@@ -12,7 +12,7 @@ export default function Connexion() {
     <div className="space-y-6">
       <div>
         <h1 className="type-h1">Se connecter</h1>
-        <p className="mt-2 text-[13.5px] leading-relaxed text-g-500">
+        <p className="mt-2 text-[14px] leading-relaxed text-g-500">
           Accédez à votre espace client ou à votre espace super admin. L’authentification est
           déléguée à notre fournisseur d’identité.
         </p>
@@ -31,7 +31,7 @@ export default function Connexion() {
         <ButtonLink href="/callback" fullWidth className="mt-3.5" iconAfter={<ArrowRight size={14} />}>
           Continuer
         </ButtonLink>
-        <p className="mt-2.5 text-[11.5px] leading-relaxed text-g-500">
+        <p className="mt-2.5 text-[12px] leading-relaxed text-g-500">
           Vous serez redirigé vers notre fournisseur d’identité pour saisir votre mot de passe. Ce
           portail n’affiche jamais de champ de mot de passe et n’en conserve aucun.
         </p>
@@ -39,7 +39,7 @@ export default function Connexion() {
 
       <div className="flex items-center gap-3">
         <span className="h-px flex-1 bg-g-300" />
-        <span className="text-[11.5px] font-semibold uppercase tracking-wider text-g-500">ou</span>
+        <span className="text-[12px] font-semibold uppercase tracking-wider text-g-500">ou</span>
         <span className="h-px flex-1 bg-g-300" />
       </div>
 
@@ -51,7 +51,7 @@ export default function Connexion() {
           <Building2 size={17} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block text-[13.5px] font-bold text-m-600">
+          <span className="block text-[14px] font-bold text-m-600">
             Se connecter avec le SSO de mon entreprise
           </span>
           <span className="block text-[12px] leading-snug text-g-500">
@@ -78,7 +78,7 @@ export default function Connexion() {
         demandé après la saisie de votre mot de passe.
       </Callout>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-g-100 pt-4 text-[12.5px]">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-g-100 pt-4 text-[13px]">
         <span className="text-g-500">
           Pas encore de compte ?{' '}
           <Link href="/signup" className="font-semibold text-p-700 hover:text-m-600">

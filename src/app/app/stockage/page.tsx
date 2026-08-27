@@ -62,7 +62,7 @@ export default function Stockage() {
       cle: (v) => v.nom,
       rendu: (v) => (
         <span className="block">
-          <span className="block font-mono text-[12.5px] font-semibold text-ink">{v.nom}</span>
+          <span className="block font-mono text-[13px] font-semibold text-ink">{v.nom}</span>
           {v.ephemere && (
             <Badge tone="warn" size="sm" className="mt-0.5">
               Éphémère
@@ -125,7 +125,7 @@ export default function Stockage() {
       entete: 'Point de montage',
       cle: (v) => v.montage ?? '',
       rendu: (v) => (
-        <span className="font-mono text-[11.5px] text-g-700">{v.montage ?? '—'}</span>
+        <span className="font-mono text-[12px] text-g-700">{v.montage ?? '—'}</span>
       ),
       masquable: true,
     },
@@ -347,12 +347,12 @@ export default function Stockage() {
                 className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2"
               >
                 <span className="min-w-0">
-                  <span className="block text-[12.5px] font-semibold text-ink">
+                  <span className="block text-[13px] font-semibold text-ink">
                     {c.toUpperCase()}
                   </span>
                   <span className="block text-[11px] text-g-500">{LIBELLE_CLASSE[c]}</span>
                 </span>
-                <span className="tnum shrink-0 text-[12.5px] font-semibold text-p-700">
+                <span className="tnum shrink-0 text-[13px] font-semibold text-p-700">
                   {money(Math.round(PRIX_GO[c] * 1000))}/To/mois
                 </span>
               </div>

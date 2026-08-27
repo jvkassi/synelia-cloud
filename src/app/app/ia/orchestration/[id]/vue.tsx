@@ -220,7 +220,7 @@ function CarteEtape({
         <span className="flex items-center gap-1.5">
           <span className="type-micro truncate text-g-500">{TYPE_ETAPE_LABEL[etape.type]}</span>
           {etape.reprise && etape.reprise.tentatives > 1 && (
-            <span className="tnum shrink-0 text-[9.5px] font-bold text-warn">
+            <span className="tnum shrink-0 text-[11px] font-bold text-warn">
               ×{etape.reprise.tentatives}
             </span>
           )}
@@ -233,8 +233,8 @@ function CarteEtape({
             </span>
           )}
         </span>
-        <span className="block truncate text-[12.5px] font-bold text-ink">{etape.nom}</span>
-        <span className="block truncate text-[10.5px] text-g-500">{etape.source}</span>
+        <span className="block truncate text-[13px] font-bold text-ink">{etape.nom}</span>
+        <span className="block truncate text-[11px] text-g-500">{etape.source}</span>
       </span>
     </button>
   )
@@ -300,13 +300,13 @@ function Colonne({
                     <span
                       className={cn(
                         'max-w-full rounded-full border px-2.5 py-1 text-center',
-                        b.parDefaut ? 'border-g-300 bg-g-050' : 'border-warn/40 bg-warn-bg',
+                        b.parDefaut ? 'border-g-300 bg-g-050' : 'border-warn/40',
                       )}
                     >
-                      <span className="block truncate text-[11.5px] font-bold text-ink">
+                      <span className="block truncate text-[12px] font-bold text-ink">
                         {b.nom} · {pct(b.partPct)}
                       </span>
-                      <span className="block truncate text-[10px] text-g-500">{b.condition}</span>
+                      <span className="block truncate text-[11px] text-g-500">{b.condition}</span>
                     </span>
                     <Colonne etapes={b.etapes} listeId={`branche:${b.id}`} ctx={ctx} />
                     <Ligne extensible />
@@ -450,7 +450,7 @@ function Constructeur({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-g-300 px-3 py-2">
         <span className="flex items-center gap-2">
           <MicroLabel>Canevas</MicroLabel>
-          <span className="text-[11.5px] text-g-500">
+          <span className="text-[12px] text-g-500">
             Glissez une carte sur un bouton <span className="font-bold">+</span> pour la déplacer ·
             les étapes marquées d’un cadenas sont posées par la plateforme
           </span>
@@ -464,7 +464,7 @@ function Constructeur({
           >
             <Minus size={13} />
           </IconButton>
-          <span className="tnum w-10 text-center text-[11.5px] text-g-500">
+          <span className="tnum w-10 text-center text-[12px] text-g-500">
             {Math.round(echelle * 100)} %
           </span>
           <IconButton
@@ -496,10 +496,10 @@ function Constructeur({
               </span>
               <span className="min-w-0 flex-1">
                 <span className="type-micro block text-p-300">Déclencheur</span>
-                <span className="block truncate text-[12.5px] font-bold text-white">
+                <span className="block truncate text-[13px] font-bold text-white">
                   {flux.declencheur.libelle}
                 </span>
-                <span className="block truncate text-[10.5px] text-p-300">
+                <span className="block truncate text-[11px] text-p-300">
                   {flux.declencheur.detail}
                 </span>
               </span>
@@ -556,9 +556,9 @@ function Constructeur({
                       >
                         {STYLE[p.type].icone}
                       </span>
-                      <span className="text-[12.5px] font-bold text-ink">{p.nom}</span>
+                      <span className="text-[13px] font-bold text-ink">{p.nom}</span>
                     </span>
-                    <span className="mt-1.5 block text-[11.5px] leading-relaxed text-g-500">
+                    <span className="mt-1.5 block text-[12px] leading-relaxed text-g-500">
                       {p.detail}
                     </span>
                   </button>
@@ -690,7 +690,7 @@ function PanneauEtape({
                         {b.parDefaut ? 'Repli' : pct(b.partPct)}
                       </Badge>
                     </div>
-                    <p className="mt-0.5 font-mono text-[10.5px] text-g-500">{b.condition}</p>
+                    <p className="mt-0.5 font-mono text-[11px] text-g-500">{b.condition}</p>
                   </div>
                 ))}
               </div>
@@ -937,7 +937,7 @@ export function VueFlux({ fluxId }: { fluxId: string }) {
               />
             ) : (
               <Card>
-                <p className="text-[12.5px] text-g-500">
+                <p className="text-[13px] text-g-500">
                   Sélectionnez une étape du canevas pour la configurer.
                 </p>
               </Card>
@@ -1015,7 +1015,7 @@ export function VueFlux({ fluxId }: { fluxId: string }) {
             <Card>
               <CardHeader
                 titre="Variables"
-                sousTitre="Trois portées. Les secrets d’environnement ne sont jamais exportés avec la définition du flux — c’est ce qui rend le partage d’un flux inoffensif."
+                sousTitre="Trois portées. Les secrets d’environnement ne sont jamais exportés avec la définition du flux."
               />
               <div className="space-y-2">
                 {courant.variables.map((v) => (
@@ -1042,7 +1042,7 @@ export function VueFlux({ fluxId }: { fluxId: string }) {
                     <p className="mt-1 font-mono text-[11px] text-g-500">
                       {v.secret ? '••••••••••••' : v.valeur}
                     </p>
-                    <p className="mt-1 text-[11.5px] leading-relaxed text-g-500">{v.description}</p>
+                    <p className="mt-1 text-[12px] leading-relaxed text-g-500">{v.description}</p>
                   </div>
                 ))}
               </div>

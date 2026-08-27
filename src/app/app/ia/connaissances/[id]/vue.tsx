@@ -282,7 +282,7 @@ export function VueBase({ baseId }: { baseId: string }) {
                             className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                           >
                             <span className="min-w-0">
-                              <span className="block truncate text-[12.5px] font-semibold text-ink">
+                              <span className="block truncate text-[13px] font-semibold text-ink">
                                 {c.nom}
                               </span>
                               <span className="block font-mono text-[11px] text-g-500">
@@ -417,7 +417,7 @@ curl ${PASSERELLE_IA.base}/chat/completions \\
                                 </span>
                                 <span className="block text-[11px] text-g-500">{f.libelle}</span>
                               </td>
-                              <td className="py-2.5 font-mono text-[11.5px] text-g-700">
+                              <td className="py-2.5 font-mono text-[12px] text-g-700">
                                 {f.exemple}
                               </td>
                               <td className="py-2.5 text-right">

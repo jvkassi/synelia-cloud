@@ -81,7 +81,7 @@ export default function ConsommationIA() {
       id: 'date',
       entete: 'Jour',
       cle: (j) => j.date,
-      rendu: (j) => <span className="text-[12.5px] text-ink">{dateCourte(j.date)}</span>,
+      rendu: (j) => <span className="text-[13px] text-ink">{dateCourte(j.date)}</span>,
     },
     {
       id: 'requetes',
@@ -188,19 +188,19 @@ export default function ConsommationIA() {
                     <tr key={c.slug} className="border-b border-g-100 last:border-0">
                       <td className="py-2.5">
                         <span className="flex flex-wrap items-center gap-2">
-                          <span className="text-[12.5px] text-ink">{m?.nom ?? c.slug}</span>
+                          <span className="text-[13px] text-ink">{m?.nom ?? c.slug}</span>
                           <Badge tone={m?.hebergement === 'souverain' ? 'ok' : 'warn'} size="sm">
                             {m?.hebergement === 'souverain' ? 'Territoire' : 'Hors territoire'}
                           </Badge>
                         </span>
                       </td>
-                      <td className="tnum py-2.5 text-right text-[12.5px] text-g-700">
+                      <td className="tnum py-2.5 text-right text-[13px] text-g-700">
                         {jetons(c.jetons)}
                       </td>
-                      <td className="tnum py-2.5 text-right text-[12.5px] font-semibold text-ink">
+                      <td className="tnum py-2.5 text-right text-[13px] font-semibold text-ink">
                         {money(c.montant)}
                       </td>
-                      <td className="tnum py-2.5 text-right text-[12.5px] text-g-500">
+                      <td className="tnum py-2.5 text-right text-[13px] text-g-500">
                         {pct(c.pct, 1)}
                       </td>
                     </tr>
@@ -222,7 +222,7 @@ export default function ConsommationIA() {
               return (
                 <div key={c.cleId}>
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="min-w-0 truncate text-[12.5px] text-ink">
+                    <span className="min-w-0 truncate text-[13px] text-ink">
                       {cle?.nom ?? c.cleId}
                     </span>
                     <span className="tnum shrink-0 text-[12px] font-semibold text-ink">
@@ -260,7 +260,7 @@ export default function ConsommationIA() {
             { label: 'Tout sur les modèles souverains', montant: COMPARAISON_SOUVERAIN.toutSouverainFcfa, ton: 'ok' as const },
           ].map((s) => (
             <div key={s.label} className="flex flex-wrap items-center gap-3">
-              <span className="w-full min-w-0 text-[12.5px] text-ink sm:w-64">{s.label}</span>
+              <span className="w-full min-w-0 text-[13px] text-ink sm:w-64">{s.label}</span>
               <span className="flex min-w-0 flex-1 items-center gap-2">
                 <span className="h-3 min-w-0 flex-1 overflow-hidden rounded-full bg-g-100">
                   <span
@@ -273,7 +273,7 @@ export default function ConsommationIA() {
                     }}
                   />
                 </span>
-                <span className="tnum w-28 shrink-0 text-right text-[12.5px] font-semibold text-ink">
+                <span className="tnum w-28 shrink-0 text-right text-[13px] font-semibold text-ink">
                   {money(s.montant)}
                 </span>
               </span>

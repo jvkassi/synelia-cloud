@@ -55,7 +55,7 @@ export default function Lanceur() {
           <>
             <span className="flex items-center gap-2">
               <Avatar nom={UTILISATEUR_COURANT.nom} size="sm" />
-              <span className="text-[12.5px] text-g-700">
+              <span className="text-[13px] text-g-700">
                 {UTILISATEUR_COURANT.nom} · {UTILISATEUR_COURANT.fonction}
               </span>
             </span>
@@ -99,7 +99,7 @@ export default function Lanceur() {
               <span className="block text-[13px] font-semibold text-ink group-hover:text-p-700">
                 {r.titre}
               </span>
-              <span className="block text-[11.5px] text-g-500">{r.detail}</span>
+              <span className="block text-[12px] text-g-500">{r.detail}</span>
             </span>
           </Link>
         ))}
@@ -127,13 +127,13 @@ export default function Lanceur() {
                   return (
                     <tr key={st.id} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2.5 text-[13px] font-medium text-ink">{svc.nom}</td>
-                      <td className="px-3 py-2.5 text-[12.5px] text-g-700">{cat?.solutionOSS}</td>
-                      <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">
+                      <td className="px-3 py-2.5 text-[13px] text-g-700">{cat?.solutionOSS}</td>
+                      <td className="tnum px-3 py-2.5 text-[13px] text-g-700">
                         {st.quotaTotal
                           ? `${st.quotaUtilise} / ${st.quotaTotal} Go · ${pct(Math.round(((st.quotaUtilise ?? 0) / st.quotaTotal) * 100))}`
                           : 'Non applicable'}
                       </td>
-                      <td className="px-3 py-2.5 text-[12.5px] text-g-700">
+                      <td className="px-3 py-2.5 text-[13px] text-g-700">
                         {st.derniereActivite ? st.derniereActivite.slice(0, 10) : '—'}
                       </td>
                       <td className="px-3 py-2.5 text-right">
@@ -157,11 +157,9 @@ export default function Lanceur() {
       )}
 
       <Callout ton="violet" titre="Cet écran peut être votre page d’accueil">
-        Si votre rôle est uniquement utilisateur, le lanceur est plus utile que le tableau de bord
-        d’infrastructure — un comptable qui dispose d’un siège Drive et d’un siège messagerie n’a
-        rien à faire sur un écran de capacité vCPU. Votre administrateur peut définir le lanceur
-        comme page d’accueil par défaut pour les rôles concernés, depuis les paramètres de
-        l’organisation.
+        Pour un rôle purement utilisateur — un siège Drive, un siège messagerie, rien à faire sur un
+        écran de capacité vCPU — un administrateur peut définir le lanceur comme page d’accueil par
+        défaut, depuis les paramètres de l’organisation.
       </Callout>
     </div>
   )

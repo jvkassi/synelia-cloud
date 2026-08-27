@@ -8,7 +8,6 @@ import {
   FileCode,
   History,
   Pencil,
-  Plus,
   RotateCcw,
   ShieldCheck,
   Trash2,
@@ -202,7 +201,7 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
                   type="button"
                   onClick={() => setFiltre('tous')}
                   className={cn(
-                    'rounded-[5px] px-2 py-1 text-[11.5px] font-semibold transition-colors',
+                    'rounded-[5px] px-2 py-1 text-[12px] font-semibold transition-colors',
                     filtre === 'tous' ? 'bg-p-700 text-white' : 'bg-g-050 text-g-700 hover:bg-g-100',
                   )}
                 >
@@ -214,7 +213,7 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
                     type="button"
                     onClick={() => setFiltre(t)}
                     className={cn(
-                      'rounded-[5px] px-2 py-1 font-mono text-[11.5px] font-semibold transition-colors',
+                      'rounded-[5px] px-2 py-1 font-mono text-[12px] font-semibold transition-colors',
                       filtre === t ? 'bg-p-700 text-white' : 'bg-g-050 text-g-700 hover:bg-g-100',
                     )}
                   >
@@ -392,11 +391,11 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
                     <td className="px-3 py-2 font-mono text-[12px] font-semibold text-ink">
                       {r.nom}
                     </td>
-                    <td className="max-w-[42ch] truncate px-3 py-2 font-mono text-[11.5px] text-g-700">
+                    <td className="max-w-[42ch] truncate px-3 py-2 font-mono text-[12px] text-g-700">
                       {r.valeur}
                     </td>
-                    <td className="tnum px-3 py-2 text-[11.5px] text-g-500">{r.ttl}</td>
-                    <td className="tnum px-3 py-2 text-[11.5px] text-g-500">
+                    <td className="tnum px-3 py-2 text-[12px] text-g-500">{r.ttl}</td>
+                    <td className="tnum px-3 py-2 text-[12px] text-g-500">
                       {r.priorite ?? '—'}
                     </td>
                     <td className="px-3 py-2 text-right">
@@ -437,14 +436,14 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
 
           {lignes.length === 0 && (
             <div className="px-4 py-10 text-center">
-              <p className="text-[12.5px] text-g-500">
+              <p className="text-[13px] text-g-500">
                 Aucun enregistrement ne correspond à ce filtre.
               </p>
             </div>
           )}
 
           <div className="border-t border-g-100 px-4 py-3">
-            <p className="text-[11.5px] leading-relaxed text-g-500">
+            <p className="text-[12px] leading-relaxed text-g-500">
               Un changement est publié sur les trois serveurs de noms en moins de dix secondes. Le
               temps qu’il devienne visible partout dépend du TTL de l’enregistrement modifié — un TTL
               de 3 600 secondes signifie qu’un résolveur peut encore servir l’ancienne valeur pendant
@@ -575,16 +574,16 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
                   key={v.t}
                   className={cn(
                     'rounded-[6px] border px-3 py-2.5',
-                    v.ok ? 'border-g-300' : 'border-warn/40 bg-warn-bg',
+                    v.ok ? 'border-g-300' : 'border-warn/40',
                   )}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-[12.5px] font-semibold text-ink">{v.t}</span>
+                    <span className="text-[13px] font-semibold text-ink">{v.t}</span>
                     <Badge tone={v.ok ? 'ok' : 'warn'} size="sm">
                       {v.ok ? 'Conforme' : 'À corriger'}
                     </Badge>
                   </div>
-                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-500">{v.d}</p>
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-g-500">{v.d}</p>
                 </div>
               ))}
             </div>
@@ -606,7 +605,7 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
                   className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                 >
                   <span className="min-w-0">
-                    <span className="block font-mono text-[12.5px] font-semibold text-ink">{n}</span>
+                    <span className="block font-mono text-[13px] font-semibold text-ink">{n}</span>
                     <span className="block text-[11px] text-g-500">
                       {i === 0
                         ? 'Abidjan · ABJ-1 · primaire'
@@ -724,7 +723,7 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
                     'Aucun enregistrement n’a été modifié : le comparatif liste ce qui serait ajouté, remplacé et laissé en place.',
                 }}
               />
-              <span className="text-[11.5px] text-g-500">
+              <span className="text-[12px] text-g-500">
                 Aucun enregistrement n’est modifié avant votre validation du comparatif.
               </span>
             </div>
@@ -940,7 +939,7 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
                 className="flex flex-wrap items-baseline justify-between gap-2 border-b border-g-100 pb-1.5 last:border-0"
               >
                 <span className="min-w-0 text-[12px] text-ink">{h.t}</span>
-                <span className="shrink-0 text-[10.5px] text-g-500">
+                <span className="shrink-0 text-[11px] text-g-500">
                   {h.a} · {dateHeure(h.q)}
                 </span>
               </div>

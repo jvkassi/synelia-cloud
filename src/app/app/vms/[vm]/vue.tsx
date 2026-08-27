@@ -138,14 +138,14 @@ export function VueVm({ id }: { id: string }) {
             <HealthBadge etat={vm.statut} />
             {ipPrivee && <span className="font-mono text-[12px] text-g-500">{ipPrivee}</span>}
             {ipPublique && (
-              <Badge tone="accent" size="sm">
+              <Badge tone="neutral" size="sm">
                 {ipPublique}
               </Badge>
             )}
             {vm.applicationId && (
               <Link
                 href={hrefDuService(vm.applicationId)}
-                className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+                className="text-[12px] font-semibold text-p-700 hover:underline"
               >
                 {vm.applicationNom} →
               </Link>
@@ -258,7 +258,7 @@ export function VueVm({ id }: { id: string }) {
                           close()
                           a.faire()
                         }}
-                        className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[12.5px] text-ink hover:bg-p-050"
+                        className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[13px] text-ink hover:bg-p-050"
                       >
                         <span className="text-g-500">{a.i}</span>
                         {a.l}
@@ -275,7 +275,7 @@ export function VueVm({ id }: { id: string }) {
                         close()
                         setRedimensionnement(true)
                       }}
-                      className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[12.5px] text-ink hover:bg-p-050"
+                      className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[13px] text-ink hover:bg-p-050"
                     >
                       <span className="text-g-500">
                         <Ruler size={13} />
@@ -294,7 +294,7 @@ export function VueVm({ id }: { id: string }) {
                           close()
                           setSuppression(true)
                         }}
-                        className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[12.5px] text-err hover:bg-err-bg"
+                        className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[13px] text-err hover:bg-err-bg"
                       >
                         <Trash2 size={13} />
                         Supprimer la machine
@@ -401,7 +401,7 @@ export function VueVm({ id }: { id: string }) {
                   value={`ssh ops@${ipPublique ?? ipPrivee} -p 22`}
                 />
               </div>
-              <p className="mt-3 border-t border-g-100 pt-3 text-[11.5px] leading-relaxed text-g-500">
+              <p className="mt-3 border-t border-g-100 pt-3 text-[12px] leading-relaxed text-g-500">
                 {ipPublique
                   ? 'L’accès SSH depuis Internet est filtré par le groupe de sécurité. Vérifiez que votre adresse est autorisée.'
                   : 'Cette machine n’a pas d’IP publique : l’accès SSH passe par le VPN ou par le bastion.'}
@@ -453,16 +453,16 @@ export function VueVm({ id }: { id: string }) {
                   {vm.ips.map((ip, i) => (
                     <tr key={ip.adresse} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2.5 font-mono text-[12px] text-ink">eth{i}</td>
-                      <td className="px-3 py-2.5 font-mono text-[12.5px] text-ink">{ip.adresse}</td>
+                      <td className="px-3 py-2.5 font-mono text-[13px] text-ink">{ip.adresse}</td>
                       <td className="px-3 py-2.5">
                         <Badge tone={ip.type === 'publique' ? 'accent' : 'neutral'} size="sm">
                           {ip.type === 'publique' ? 'Publique' : 'Privée'}
                         </Badge>
                       </td>
-                      <td className="px-3 py-2.5 font-mono text-[11.5px] text-g-700">
+                      <td className="px-3 py-2.5 font-mono text-[12px] text-g-700">
                         {ip.ptr ?? '—'}
                       </td>
-                      <td className="px-3 py-2.5 text-[12.5px] text-g-700">
+                      <td className="px-3 py-2.5 text-[13px] text-g-700">
                         {ip.type === 'privee' ? 'prod-front · 10.0.1.0/24' : 'Internet'}
                       </td>
                     </tr>
@@ -533,16 +533,16 @@ export function VueVm({ id }: { id: string }) {
                               {r.direction === 'in' ? 'Entrée' : 'Sortie'}
                             </Badge>
                           </td>
-                          <td className="px-3 py-1.5 font-mono text-[11.5px] uppercase text-ink">
+                          <td className="px-3 py-1.5 font-mono text-[12px] uppercase text-ink">
                             {r.protocole}
                           </td>
-                          <td className="px-3 py-1.5 font-mono text-[11.5px] text-ink">
+                          <td className="px-3 py-1.5 font-mono text-[12px] text-ink">
                             {r.ports ?? 'tous'}
                           </td>
-                          <td className="px-3 py-1.5 font-mono text-[11.5px] text-g-700">
+                          <td className="px-3 py-1.5 font-mono text-[12px] text-g-700">
                             {r.cible}
                           </td>
-                          <td className="px-3 py-1.5 text-[11.5px] text-g-700">
+                          <td className="px-3 py-1.5 text-[12px] text-g-700">
                             {r.description ?? '—'}
                           </td>
                         </tr>
@@ -611,10 +611,10 @@ export function VueVm({ id }: { id: string }) {
           <div className="mb-4 rounded-[8px] border border-g-300 bg-g-050 px-3.5 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span>
-                <span className="block text-[12.5px] font-semibold text-ink">
+                <span className="block text-[13px] font-semibold text-ink">
                   Disque système ({goHumain(vm.diskGo)})
                 </span>
-                <span className="block font-mono text-[11.5px] text-g-500">/ · inclus au gabarit</span>
+                <span className="block font-mono text-[12px] text-g-500">/ · inclus au gabarit</span>
               </span>
               <span className="w-40">
                 <QuotaBar
@@ -650,11 +650,11 @@ export function VueVm({ id }: { id: string }) {
                 <tbody>
                   {volumes.map((v) => (
                     <tr key={v.id} className="border-b border-g-100 last:border-0">
-                      <td className="px-3 py-2.5 font-mono text-[12.5px] text-ink">{v.nom}</td>
-                      <td className="px-3 py-2.5 font-mono text-[11.5px] text-g-700">
+                      <td className="px-3 py-2.5 font-mono text-[13px] text-ink">{v.nom}</td>
+                      <td className="px-3 py-2.5 font-mono text-[12px] text-g-700">
                         {v.montage ?? '—'}
                       </td>
-                      <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">
+                      <td className="tnum px-3 py-2.5 text-[13px] text-g-700">
                         {goHumain(v.tailleGo)}
                       </td>
                       <td className="px-3 py-2.5">
@@ -758,9 +758,9 @@ export function VueVm({ id }: { id: string }) {
               <tbody>
                 {snapshots.items.map((s) => (
                   <tr key={s.id} className="border-b border-g-100 last:border-0">
-                    <td className="px-3 py-2.5 font-mono text-[12.5px] text-ink">{s.nom}</td>
-                    <td className="px-3 py-2.5 text-[12.5px] text-g-700">{dateHeure(s.date)}</td>
-                    <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">
+                    <td className="px-3 py-2.5 font-mono text-[13px] text-ink">{s.nom}</td>
+                    <td className="px-3 py-2.5 text-[13px] text-g-700">{dateHeure(s.date)}</td>
+                    <td className="tnum px-3 py-2.5 text-[13px] text-g-700">
                       {goHumain(s.taille)}
                     </td>
                     <td className="px-3 py-2.5">
@@ -970,12 +970,12 @@ export function VueVm({ id }: { id: string }) {
                   <tbody>
                     {points.map((p) => (
                       <tr key={p.id} className="border-b border-g-100 last:border-0">
-                        <td className="px-3 py-2.5 text-[12.5px] text-ink">{dateHeure(p.date)}</td>
-                        <td className="px-3 py-2.5 text-[12.5px] text-g-700">{p.type}</td>
-                        <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">
+                        <td className="px-3 py-2.5 text-[13px] text-ink">{dateHeure(p.date)}</td>
+                        <td className="px-3 py-2.5 text-[13px] text-g-700">{p.type}</td>
+                        <td className="tnum px-3 py-2.5 text-[13px] text-g-700">
                           {goHumain(p.tailleGo)}
                         </td>
-                        <td className="px-3 py-2.5 font-mono text-[11.5px] text-g-700">
+                        <td className="px-3 py-2.5 font-mono text-[12px] text-g-700">
                           {p.destination}
                         </td>
                         <td className="px-3 py-2.5 text-[12px] text-g-700">
@@ -1004,7 +1004,7 @@ export function VueVm({ id }: { id: string }) {
                 </table>
               </div>
             )}
-            <p className="mt-3 border-t border-g-100 pt-3 text-[11.5px] leading-relaxed text-g-500">
+            <p className="mt-3 border-t border-g-100 pt-3 text-[12px] leading-relaxed text-g-500">
               Granularité disponible pour une machine : machine entière, volume, système de fichiers
               parcourable, fichier unique. La destination peut être le même emplacement, un autre
               Espace Cloud, l’autre site, ou un téléchargement local.
@@ -1022,7 +1022,7 @@ export function VueVm({ id }: { id: string }) {
         size="full"
         footer={
           <>
-            <span className="mr-auto text-[11.5px] text-g-500">
+            <span className="mr-auto text-[12px] text-g-500">
               Session console chiffrée · déconnexion automatique après 15 minutes d’inactivité
             </span>
             <Button
@@ -1065,7 +1065,7 @@ export function VueVm({ id }: { id: string }) {
               Connecté · {vm.nom} · {vm.os}
             </span>
           </div>
-          <pre className="flex-1 overflow-auto px-4 py-3 font-mono text-[12.5px] leading-relaxed text-[#C9E4CA]">
+          <pre className="flex-1 overflow-auto px-4 py-3 font-mono text-[13px] leading-relaxed text-[#C9E4CA]">
 {`Ubuntu 24.04.1 LTS ${vm.nom} tty1
 
 ${vm.nom} login: ops
@@ -1504,7 +1504,7 @@ function Ligne({
             {redemarrage ? 'Redémarrage requis' : 'Applicable à chaud'}
           </Badge>
         </p>
-        <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-500">{note}</p>
+        <p className="mt-0.5 text-[12px] leading-relaxed text-g-500">{note}</p>
       </div>
       <div className="shrink-0">{children}</div>
     </div>

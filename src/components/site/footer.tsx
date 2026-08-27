@@ -71,12 +71,12 @@ export function SiteFooter() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.4fr_repeat(5,1fr)]">
           <div>
             <Logo />
-            <p className="mt-3 max-w-xs text-[12.5px] leading-relaxed text-g-500">
+            <p className="mt-3 max-w-xs text-[13px] leading-relaxed text-g-500">
               Plateforme de gestion de cloud multi-tenant opérée par Synelia Group Afrique. Deux
               sites en Côte d’Ivoire, une équipe à Abidjan, une supervision 24/7.
             </p>
             <p className="mt-3 text-[12px] text-g-500">
-              <a href="mailto:avs@synelia.tech" className="font-semibold text-p-700 hover:text-m-600">
+              <a href="mailto:avs@synelia.tech" className="font-semibold text-p-700 hover:underline">
                 avs@synelia.tech
               </a>
               {' · '}
@@ -99,7 +99,7 @@ export function SiteFooter() {
                   <li key={l.href}>
                     <Link
                       href={l.href}
-                      className="text-[12.5px] text-g-700 transition-colors hover:text-p-700"
+                      className="text-[13px] text-g-700 transition-colors hover:text-p-700"
                     >
                       {l.nom}
                     </Link>
@@ -111,7 +111,7 @@ export function SiteFooter() {
         </div>
 
         <div className="mt-10 flex flex-col gap-4 border-t border-g-300 pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-[11.5px] leading-relaxed text-g-500">
+          <p className="text-[12px] leading-relaxed text-g-500">
             © 2026 Synelia Group Afrique · Cocody, Abidjan, Côte d’Ivoire · Données hébergées à
             Abidjan (Synertech Vallon) et Grand-Bassam (VITIB) · TVA 18 % · Prix en FCFA (XOF)
             <br />

@@ -29,7 +29,7 @@ export default function CentreDeTaches() {
       cle: (j) => j.label,
       rendu: (j) => (
         <span className="block">
-          <span className="block text-[12.5px] font-semibold text-ink">{j.label}</span>
+          <span className="block text-[13px] font-semibold text-ink">{j.label}</span>
           <span className="block font-mono text-[11px] text-g-500">{j.type}</span>
         </span>
       ),
@@ -52,7 +52,7 @@ export default function CentreDeTaches() {
         const a = avancement(j)
         return (
           <span className="block w-32">
-            <span className="tnum block text-[11.5px] text-g-700">
+            <span className="tnum block text-[12px] text-g-700">
               {a.faites}/{a.total} étapes
             </span>
             <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-g-100">
@@ -129,7 +129,7 @@ export default function CentreDeTaches() {
           )}
           <Link
             href={`/app/taches/${j.id}`}
-            className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+            className="text-[12px] font-semibold text-p-700 hover:underline"
           >
             Suivre →
           </Link>
@@ -212,7 +212,7 @@ export default function CentreDeTaches() {
           titre="Ce que le centre de tâches ne fait pas"
           sousTitre="Il suit des opérations de provisionnement, pas des traitements applicatifs."
         />
-        <p className="text-[12.5px] leading-relaxed text-g-700">
+        <p className="text-[13px] leading-relaxed text-g-700">
           Les tâches listées ici sont celles de l’orchestrateur d’infrastructure. Les traitements de
           vos propres applications — files de messages, tâches planifiées, imports métier — restent
           dans vos applications : le portail n’en est pas l’ordonnanceur et ne cherche pas à le

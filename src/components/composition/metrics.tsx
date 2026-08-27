@@ -114,19 +114,19 @@ export function StatTile({
         >
           {valeur}
         </span>
-        {unite && <span className="shrink-0 text-[12.5px] font-semibold text-g-500">{unite}</span>}
+        {unite && <span className="shrink-0 text-[13px] font-semibold text-g-500">{unite}</span>}
       </div>
       {variation !== undefined && (
         <p
           className={cn(
-            'tnum mt-1.5 text-[11.5px] font-semibold',
+            'tnum mt-1.5 text-[12px] font-semibold',
             varTon === 'ok' ? 'text-ok' : varTon === 'err' ? 'text-err' : 'text-g-500',
           )}
         >
           {delta(variation, variationUnite)}
         </p>
       )}
-      {detail && <p className="mt-1.5 text-[11.5px] leading-snug text-g-500">{detail}</p>}
+      {detail && <p className="mt-1.5 text-[12px] leading-snug text-g-500">{detail}</p>}
       {serie && (
         <div className="mt-auto pt-3">
           <Sparkline serie={serie} couleur={couleurs[ton]} />
@@ -166,11 +166,11 @@ export function QuotaBar({
       {(libelle || !compact) && (
         <div className="mb-1 flex items-baseline justify-between gap-2">
           {libelle && (
-            <span className={cn('font-semibold text-g-700', compact ? 'text-[11.5px]' : 'text-[12.5px]')}>
+            <span className={cn('font-semibold text-g-700', compact ? 'text-[12px]' : 'text-[13px]')}>
               {libelle}
             </span>
           )}
-          <span className="tnum text-[11.5px] text-g-500">
+          <span className="tnum text-[12px] text-g-500">
             {fmt(utilise)} / {fmt(total)}
             {unite ? ` ${unite}` : ''}
             <span
@@ -230,7 +230,7 @@ export function StackedBar({
       </div>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
         {segments.map((s) => (
-          <span key={s.label} className="flex items-center gap-1.5 text-[11.5px] text-g-700">
+          <span key={s.label} className="flex items-center gap-1.5 text-[12px] text-g-700">
             <span className="h-2 w-2 rounded-sm" style={{ background: s.couleur }} />
             {s.label}
             <span className="tnum font-semibold">{pct(Math.round((s.valeur / total) * 100))}</span>
@@ -299,7 +299,7 @@ export function GaugeCircle({
           )}
         </div>
       </div>
-      {libelle && <p className="mt-2 text-center text-[12.5px] text-g-500">{libelle}</p>}
+      {libelle && <p className="mt-2 text-center text-[13px] text-g-500">{libelle}</p>}
     </div>
   )
 }

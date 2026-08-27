@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { SITE_LABEL, type PointInference } from '@/lib/types'
 import { dateCourte, money, num } from '@/lib/format'

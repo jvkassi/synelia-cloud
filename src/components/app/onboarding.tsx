@@ -72,7 +72,7 @@ export function PanneauOnboarding() {
         <button
           type="button"
           onClick={() => setFerme(true)}
-          className="flex items-center gap-1 text-[11.5px] font-semibold text-g-500 transition-colors hover:text-p-700"
+          className="flex items-center gap-1 text-[12px] font-semibold text-g-500 transition-colors hover:text-p-700"
         >
           Ne plus afficher
           <X size={12} />
@@ -113,7 +113,7 @@ export function PanneauOnboarding() {
             </button>
             {ouvert === j.id && (
               <div className="px-4 pb-3.5 pl-12">
-                <p className="max-w-2xl text-[12.5px] leading-relaxed text-g-700">{j.detail}</p>
+                <p className="max-w-2xl text-[13px] leading-relaxed text-g-700">{j.detail}</p>
                 <div className="mt-2.5 flex flex-wrap gap-2">
                   {j.actions.map((a) => (
                     <Link

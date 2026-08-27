@@ -60,7 +60,7 @@ export default function Ressources() {
               onChange={(e) => setQ(e.target.value)}
               className="w-full sm:w-72"
             />
-            <p className="tnum text-[12.5px] text-g-500">
+            <p className="tnum text-[13px] text-g-500">
               {resultats.length} ressource{resultats.length > 1 ? 's' : ''}
             </p>
           </div>
@@ -109,13 +109,13 @@ export default function Ressources() {
                       <Badge tone="violet" size="sm">
                         {r.type}
                       </Badge>
-                      <span className="text-[10.5px] text-g-500">{r.duree}</span>
+                      <span className="text-[11px] text-g-500">{r.duree}</span>
                     </div>
                   </div>
                   <h3 className="mt-3.5 text-[15px] font-bold leading-snug [font-family:var(--font-display)] text-ink">
                     {r.titre}
                   </h3>
-                  <p className="mt-2 flex-1 text-[12.5px] leading-relaxed text-g-700">{r.extrait}</p>
+                  <p className="mt-2 flex-1 text-[13px] leading-relaxed text-g-700">{r.extrait}</p>
                   <div className="mt-4 flex items-center justify-between gap-2 border-t border-g-100 pt-3.5">
                     <Badge tone="neutral" size="sm">
                       {r.theme}
@@ -157,7 +157,7 @@ export default function Ressources() {
               />
               <Button>S’abonner</Button>
             </div>
-            <p className="mt-3 text-[11.5px] leading-relaxed text-g-500">
+            <p className="mt-3 text-[12px] leading-relaxed text-g-500">
               Pas de relance commerciale, pas de transmission à des tiers, désabonnement en un clic.
               Nous publions y compris nos post-mortems d’incident — c’est la partie que nos lecteurs
               nous disent trouver la plus utile.
@@ -208,7 +208,7 @@ export default function Ressources() {
                 {demande.duree}
               </Badge>
             </div>
-            <p className="text-[12.5px] leading-relaxed text-g-700">{demande.extrait}</p>
+            <p className="text-[13px] leading-relaxed text-g-700">{demande.extrait}</p>
             {envoye ? (
               <Callout ton="ok" titre="Demande enregistrée">
                 Le {demande.type === 'Webinaire' ? 'lien de visionnage' : 'document'} part vers{' '}
@@ -251,7 +251,7 @@ function Puce({
       type="button"
       onClick={onClick}
       className={cn(
-        'rounded-full border px-2.5 py-1 text-[11.5px] font-semibold transition-colors',
+        'rounded-full border px-2.5 py-1 text-[12px] font-semibold transition-colors',
         actif
           ? 'border-p-700 bg-p-700 text-white'
           : 'border-g-300 bg-white text-g-700 hover:border-p-400',

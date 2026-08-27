@@ -161,7 +161,7 @@ export default function Sso() {
           <Card>
             <CardHeader
               titre="Le trajet d’une connexion"
-              sousTitre="Comprendre où se trouve le mot de passe est la première question de sécurité que pose un DSI. Voici la réponse, sans détour."
+              sousTitre="Où se trouve le mot de passe, et ce que le portail en voit."
             />
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
               {[
@@ -205,8 +205,8 @@ export default function Sso() {
                     >
                       {e.n}
                     </span>
-                    <p className="mt-2 text-[12.5px] font-bold text-ink">{e.t}</p>
-                    <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{e.d}</p>
+                    <p className="mt-2 text-[13px] font-bold text-ink">{e.t}</p>
+                    <p className="mt-1 text-[12px] leading-relaxed text-g-700">{e.d}</p>
                   </div>
                   {i < arr.length - 1 && (
                     <ArrowRight
@@ -299,11 +299,11 @@ export default function Sso() {
                     key={v.t}
                     className={cn(
                       'rounded-[6px] border px-3 py-2.5',
-                      v.ok ? 'border-g-300' : 'border-warn/40 bg-warn-bg',
+                      v.ok ? 'border-g-300' : 'border-warn/40',
                     )}
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <span className="flex items-center gap-1.5 text-[12.5px] font-semibold text-ink">
+                      <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
                         {v.ok && <CheckCircle2 size={12} className="shrink-0 text-ok" />}
                         {v.t}
                       </span>
@@ -311,7 +311,7 @@ export default function Sso() {
                         {v.ok ? 'Conforme' : 'À corriger'}
                       </Badge>
                     </div>
-                    <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-500">{v.d}</p>
+                    <p className="mt-0.5 text-[12px] leading-relaxed text-g-500">{v.d}</p>
                   </div>
                 ))}
               </div>
@@ -342,7 +342,7 @@ export default function Sso() {
                     <span className="text-[13px] font-bold text-ink">{p.nom}</span>
                     {protocole === p.id && <CheckCircle2 size={14} className="shrink-0 text-p-700" />}
                   </span>
-                  <span className="mt-1 block text-[11.5px] leading-relaxed text-g-700">
+                  <span className="mt-1 block text-[12px] leading-relaxed text-g-700">
                     {p.detail}
                   </span>
                 </button>
@@ -607,7 +607,7 @@ export default function Sso() {
                     <span className="block font-mono text-[12px] font-semibold text-ink">
                       {c.groupe}
                     </span>
-                    <span className="block text-[10.5px] text-g-500">
+                    <span className="block text-[11px] text-g-500">
                       {c.membres} membres dans votre annuaire
                     </span>
                   </span>
@@ -734,10 +734,10 @@ export default function Sso() {
                     <option value="attente">Créer le compte en attente de validation</option>
                   </Select>
                 </Field>
-                <Callout ton="info" titre="Pourquoi refuser plutôt que donner la lecture">
+                <Callout ton="info" titre="Refus par défaut ou rôle de consultation">
                   Le rôle de consultation donne accès à la topologie de votre infrastructure, aux noms
-                  de vos machines et à vos métriques. Ce n’est pas rien. Si votre annuaire contient des
-                  comptes externes, un refus par défaut est le réglage prudent.
+                  de vos machines et à vos métriques. Si votre annuaire contient des comptes externes,
+                  le refus par défaut est le réglage prudent.
                 </Callout>
               </div>
             </Card>
@@ -797,7 +797,7 @@ export default function Sso() {
                         Résultat : {ROLE_LABEL[resultatSimulation.role]}, portée{' '}
                         {resultatSimulation.portee}
                       </p>
-                      <p className="mt-0.5 text-[11.5px] text-g-700">
+                      <p className="mt-0.5 text-[12px] text-g-700">
                         Correspondance retenue : {resultatSimulation.groupe}, évaluée avant les
                         suivantes.
                       </p>
@@ -829,7 +829,7 @@ export default function Sso() {
                   className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                 >
                   <span className="min-w-0">
-                    <span className="block text-[12.5px] font-semibold text-ink">{s.nom}</span>
+                    <span className="block text-[13px] font-semibold text-ink">{s.nom}</span>
                     <span className="block font-mono text-[11px] text-g-500">{s.domaine}</span>
                   </span>
                   <span className="flex shrink-0 items-center gap-1.5">
@@ -886,11 +886,11 @@ export default function Sso() {
                   <p className="text-[13px] font-bold text-ink">{x.t}</p>
                   <div className="mt-2.5">
                     <MicroLabel className="text-g-500">Sans authentification unique</MicroLabel>
-                    <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">{x.sans}</p>
+                    <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">{x.sans}</p>
                   </div>
                   <div className="mt-2.5">
                     <MicroLabel className="text-m-600">Avec</MicroLabel>
-                    <p className="mt-0.5 text-[11.5px] leading-relaxed text-ink">{x.avec}</p>
+                    <p className="mt-0.5 text-[12px] leading-relaxed text-ink">{x.avec}</p>
                   </div>
                 </div>
               ))}
@@ -961,22 +961,22 @@ export default function Sso() {
             <Card>
               <CardHeader titre="Points d’attention" />
               <div className="space-y-2.5">
-                <div className="rounded-[6px] border border-err/40 bg-err-bg px-3 py-2.5">
-                  <p className="text-[12.5px] font-semibold text-ink">
+                <div className="rounded-[6px] border border-err/40 px-3 py-2.5">
+                  <p className="text-[13px] font-semibold text-ink">
                     Une tentative depuis un compte désactivé
                   </p>
-                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">
                     Le compte d’un collaborateur parti le 12 août a tenté de se connecter ce matin. La
                     fédération a fait son travail : accès refusé. Mais la tentative mérite un coup de
                     téléphone — soit la personne ignore qu’elle n’a plus accès, soit quelqu’un utilise
                     ses identifiants.
                   </p>
                 </div>
-                <div className="rounded-[6px] border border-warn/40 bg-warn-bg px-3 py-2.5">
-                  <p className="text-[12.5px] font-semibold text-ink">
+                <div className="rounded-[6px] border border-warn/40 px-3 py-2.5">
+                  <p className="text-[13px] font-semibold text-ink">
                     La déconnexion n’est pas propagée
                   </p>
-                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">
+                  <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">
                     Se déconnecter du portail ne ferme pas la session dans votre annuaire. Sur un poste
                     partagé, la personne suivante peut donc se reconnecter sans ressaisir ses
                     identifiants. Le réglage se trouve côté Entra ID.

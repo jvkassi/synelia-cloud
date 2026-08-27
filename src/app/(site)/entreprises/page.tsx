@@ -79,7 +79,7 @@ export default function Entreprises() {
               loading="lazy"
               className="h-52 w-full object-cover sm:h-64"
             />
-            <figcaption className="bg-white px-5 py-3 text-[11.5px] leading-relaxed text-g-500">
+            <figcaption className="bg-white px-5 py-3 text-[12px] leading-relaxed text-g-500">
               Vue d’illustration d’un atelier de cadrage. Il dure une demi-journée, ne se facture
               pas, et se termine par un dimensionnement chiffré que vous emportez même si vous ne
               signez pas.
@@ -92,7 +92,7 @@ export default function Entreprises() {
                 <p className="mt-2 flex-1 text-[13px] leading-relaxed text-g-700">{o.texte}</p>
                 <ul className="mt-4 space-y-1.5 border-t border-g-100 pt-3.5">
                   {o.points.map((p) => (
-                    <li key={p} className="flex items-start gap-2 text-[12.5px] text-g-700">
+                    <li key={p} className="flex items-start gap-2 text-[13px] text-g-700">
                       <Check size={13} className="mt-0.5 shrink-0 text-ok" />
                       {p}
                     </li>
@@ -125,7 +125,7 @@ export default function Entreprises() {
                     <span className="tnum mr-2 text-p-600">0{i + 1}</span>
                     {a.titre}
                   </h3>
-                  <p className="mt-2 text-[13.5px] leading-relaxed text-g-700">{a.texte}</p>
+                  <p className="mt-2 text-[14px] leading-relaxed text-g-700">{a.texte}</p>
                 </div>
               </div>
             ))}
@@ -167,12 +167,12 @@ export default function Entreprises() {
                 ].map(([t, d]) => (
                   <div key={t} className="border-l-2 border-p-300 pl-3.5">
                     <dt className="text-[13px] font-bold text-ink">{t}</dt>
-                    <dd className="text-[12.5px] text-g-700">{d}</dd>
+                    <dd className="text-[13px] text-g-700">{d}</dd>
                   </div>
                 ))}
               </dl>
               <div className="mt-7 rounded-[10px] border border-g-300 bg-g-050 p-4">
-                <p className="text-[12.5px] leading-relaxed text-g-700">
+                <p className="text-[13px] leading-relaxed text-g-700">
                   Vous préparez un appel d’offres ? Demandez notre trame de cahier des charges cloud :
                   elle liste les exigences à formuler pour comparer des offres réellement
                   comparables — y compris celles qui nous désavantagent.

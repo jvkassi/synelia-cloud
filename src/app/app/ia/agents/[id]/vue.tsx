@@ -161,8 +161,8 @@ export function VueAgent({ agentId }: { agentId: string }) {
                       {versionPubliee?.numero ?? agent.versions[0]?.numero}
                     </Badge>
                   </span>
-                  <span className="mt-1 block font-mono text-[11.5px] text-g-500">{agent.slug}</span>
-                  <p className="mt-1.5 max-w-2xl text-[12.5px] leading-relaxed text-g-500">
+                  <span className="mt-1 block font-mono text-[12px] text-g-500">{agent.slug}</span>
+                  <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-g-500">
                     {agent.description}
                   </p>
                 </span>
@@ -190,7 +190,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                   <div className="rounded-[8px] border border-g-300 bg-g-050 p-3.5">
                     <ConsigneAnnotee texte={agent.consigne} />
                   </div>
-                  <p className="mt-2 text-[11.5px] text-g-500">
+                  <p className="mt-2 text-[12px] text-g-500">
                     {num(agent.consigne.length)} caractères · environ{' '}
                     {num(Math.round(agent.consigne.length / 3.6))} jetons, facturés à chaque appel et
                     mis en cache entre deux tours d’une même conversation.
@@ -209,7 +209,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                     sousTitre="Ce que l’appelant doit fournir, et ce que la plateforme calcule elle-même."
                   />
                   {agent.variables.length === 0 ? (
-                    <p className="text-[12.5px] text-g-500">
+                    <p className="text-[13px] text-g-500">
                       Aucune variable : la consigne de cet agent est la même à chaque appel.
                     </p>
                   ) : (
@@ -239,7 +239,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                                     ? 'Calculée par la plateforme'
                                     : 'Lue dans l’annuaire'}
                               </td>
-                              <td className="py-2.5 font-mono text-[11.5px] text-g-500">
+                              <td className="py-2.5 font-mono text-[12px] text-g-500">
                                 {v.exemple}
                               </td>
                               <td className="py-2.5">
@@ -382,7 +382,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                   }
                 />
                 {agent.outils.length === 0 ? (
-                  <p className="text-[12.5px] leading-relaxed text-g-500">
+                  <p className="text-[13px] leading-relaxed text-g-500">
                     Aucun outil. Cet agent ne fait que lire sa consigne et répondre — c’est
                     exactement ce qu’on attend d’un classifieur, et une limite pour tout le reste.
                   </p>
@@ -398,7 +398,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                         >
                           <div className="flex flex-wrap items-start justify-between gap-2">
                             <span className="min-w-0">
-                              <span className="block font-mono text-[12.5px] font-semibold text-ink">
+                              <span className="block font-mono text-[13px] font-semibold text-ink">
                                 {o.nom}
                               </span>
                               <span className="block text-[11px] text-g-500">{o.fournisseur}</span>
@@ -421,7 +421,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                               </Badge>
                             </span>
                           </div>
-                          <p className="mt-1.5 text-[11.5px] text-g-500">
+                          <p className="mt-1.5 text-[12px] text-g-500">
                             {CATEGORIE_OUTIL_LABEL[o.categorie]} · {num(o.appels24h)} appels en 24 h
                             · {pct(o.tauxErreurPct, 1)} d’erreurs · {num(o.latenceP50Ms)} ms
                           </p>
@@ -450,7 +450,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                   }
                 />
                 {agent.connaissances.length === 0 ? (
-                  <p className="text-[12.5px] leading-relaxed text-g-500">
+                  <p className="text-[13px] leading-relaxed text-g-500">
                     Aucune base rattachée.
                   </p>
                 ) : (
@@ -464,7 +464,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                           className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2.5"
                         >
                           <span className="min-w-0">
-                            <span className="block truncate font-mono text-[12.5px] font-semibold text-ink">
+                            <span className="block truncate font-mono text-[13px] font-semibold text-ink">
                               {b.nom}
                             </span>
                             <span className="block text-[11px] text-g-500">
@@ -525,7 +525,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                     </Callout>
                   </>
                 ) : (
-                  <p className="text-[12.5px] leading-relaxed text-g-500">
+                  <p className="text-[13px] leading-relaxed text-g-500">
                     Imposer un schéma à un agent conversationnel le rendrait inutilisable : ses
                     réponses sont lues par des personnes, pas analysées par un programme.
                   </p>
@@ -557,7 +557,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                       seuil={85}
                       formateur={(v) => money(v)}
                     />
-                    <p className="mt-1.5 text-[11.5px] text-g-500">
+                    <p className="mt-1.5 text-[12px] text-g-500">
                       Au plafond, l’agent est suspendu et les appels reçoivent un 402. Le plafond
                       protège d’une boucle, pas d’une mauvaise réponse.
                     </p>
@@ -666,7 +666,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                           className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2.5"
                         >
                           <span className="min-w-0">
-                            <span className="block text-[12.5px] font-semibold text-ink">
+                            <span className="block text-[13px] font-semibold text-ink">
                               {TYPE_CANAL_LABEL[c.type]}
                             </span>
                             <span className="block truncate font-mono text-[11px] text-g-500">
@@ -674,7 +674,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                             </span>
                           </span>
                           <span className="flex shrink-0 items-center gap-2">
-                            <span className="tnum text-[11.5px] text-g-500">
+                            <span className="tnum text-[12px] text-g-500">
                               {num(c.messages24h)} msg / 24 h
                             </span>
                             <Badge tone={c.etat === 'connecte' ? 'ok' : 'warn'} dot size="sm">
@@ -708,7 +708,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
     "session": "wa-2250700000000"
   }'`}
                   />
-                  <p className="mt-2.5 text-[11.5px] leading-relaxed text-g-500">
+                  <p className="mt-2.5 text-[12px] leading-relaxed text-g-500">
                     Le champ <span className="font-mono text-[11px]">session</span> est la clé du
                     routeur omnicanal : donnez le même identifiant depuis le SMS et depuis WhatsApp,
                     et l’agent retrouve le fil.
@@ -748,7 +748,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                       </Callout>
                     </>
                   ) : (
-                    <p className="text-[12.5px] leading-relaxed text-g-500">
+                    <p className="text-[13px] leading-relaxed text-g-500">
                       Cet agent n’est pas exposé. Son extracteur rend du JSON dans un format qui n’a
                       de sens que pour la chaîne comptable : l’ouvrir à d’autres systèmes créerait une
                       dépendance sans usage.
@@ -783,7 +783,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                     >
                       <span className="min-w-0">
                         <span className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-[12.5px] font-bold text-ink">
+                          <span className="font-mono text-[13px] font-bold text-ink">
                             {v.numero}
                           </span>
                           {v.statut === 'publiee' && (
@@ -866,7 +866,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                       Publier la version courante
                     </Button>
                   </GatedAction>
-                  <p className="mt-2.5 text-[11.5px] leading-relaxed text-g-500">
+                  <p className="mt-2.5 text-[12px] leading-relaxed text-g-500">
                     La bascule se fait sur 10 % du trafic pendant trente minutes. Si le taux d’erreur
                     dépasse celui de la version en place, la plateforme revient seule à l’ancienne.
                   </p>
@@ -886,7 +886,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                       <Badge tone="ok" size="sm">
                         Succès
                       </Badge>
-                      <span className="tnum text-[11.5px] text-g-500">
+                      <span className="tnum text-[12px] text-g-500">
                         {(TRACE_EXECUTION.dureeMs / 1000).toFixed(1).replace('.', ',')} s ·{' '}
                         {jetons(TRACE_EXECUTION.jetons)} · {money(TRACE_EXECUTION.cout)}
                       </span>
@@ -899,7 +899,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                       key={e.id}
                       className={cn(
                         'rounded-[6px] border px-3 py-2.5',
-                        e.type === 'reprise' ? 'border-warn/40 bg-warn-bg' : 'border-g-300',
+                        e.type === 'reprise' ? 'border-warn/40' : 'border-g-300',
                       )}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -909,7 +909,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                           </span>
                           <span className="min-w-0">
                             <span className="flex flex-wrap items-center gap-2">
-                              <span className="text-[12.5px] font-semibold text-ink">{e.noeud}</span>
+                              <span className="text-[13px] font-semibold text-ink">{e.noeud}</span>
                               <Badge tone={TON_TRACE[e.type]} size="sm">
                                 {e.type === 'garde'
                                   ? 'Garde-fou'
@@ -930,7 +930,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                             </span>
                             <span className="mt-1 flex items-start gap-1.5">
                               <CornerDownRight size={11} className="mt-1 shrink-0 text-g-500" aria-hidden />
-                              <span className="font-mono text-[11.5px] leading-relaxed text-g-700">
+                              <span className="font-mono text-[12px] leading-relaxed text-g-700">
                                 {e.detail}
                               </span>
                             </span>
@@ -957,14 +957,14 @@ export function VueAgent({ agentId }: { agentId: string }) {
                   titre="Corrections annotées"
                   sousTitre="Une réponse corrigée par un humain est rejouée en priorité sur les questions équivalentes, sans réentraîner quoi que ce soit."
                   actions={
-                    <span className="flex items-center gap-1.5 text-[11.5px] text-g-500">
+                    <span className="flex items-center gap-1.5 text-[12px] text-g-500">
                       <History size={13} aria-hidden />
                       {agent.annotations} corrections enregistrées
                     </span>
                   }
                 />
                 {annotations.length === 0 ? (
-                  <p className="text-[12.5px] leading-relaxed text-g-500">
+                  <p className="text-[13px] leading-relaxed text-g-500">
                     Aucune correction sur cet agent. C’est normal pour un extracteur : sa sortie est
                     vérifiée par un contrôle de cohérence, pas par une relecture.
                   </p>
@@ -972,7 +972,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                   <div className="space-y-3">
                     {annotations.map((a) => (
                       <div key={a.id} className="rounded-[6px] border border-g-300 px-3 py-2.5">
-                        <p className="text-[12.5px] font-semibold text-ink">{a.question}</p>
+                        <p className="text-[13px] font-semibold text-ink">{a.question}</p>
                         <p className="mt-1.5 text-[12px] text-g-500 line-through">
                           {a.reponseInitiale}
                         </p>
@@ -1017,7 +1017,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
         utilisable en production tient en quatre points visibles sur cette page — un périmètre écrit,
         des outils dont la portée est vérifiée côté API, un jeu d’épreuves qui bloque la publication,
         et une trace qui permet de dire après coup pourquoi il a répondu cela.{' '}
-        <Link href="/app/ia/orchestration" className="font-semibold text-p-700 hover:text-m-600">
+        <Link href="/app/ia/orchestration" className="font-semibold text-p-700 hover:underline">
           Plusieurs agents se coordonnent dans un flux d’orchestration →
         </Link>
       </Callout>

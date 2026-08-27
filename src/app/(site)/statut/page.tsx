@@ -61,10 +61,10 @@ export default function Statut() {
             className={cn(
               'border-2',
               global === 'operationnel'
-                ? 'border-[#B7E3D0] bg-ok-bg'
+                ? 'border-ok/25 bg-ok-bg'
                 : global === 'degrade'
-                  ? 'border-[#EED9B0] bg-warn-bg'
-                  : 'border-[#BFD6EE] bg-info-bg',
+                  ? 'border-warn/25 bg-warn-bg'
+                  : 'border-info/25 bg-info-bg',
             )}
           >
             <div className="flex flex-wrap items-center justify-between gap-4">
@@ -89,7 +89,7 @@ export default function Statut() {
                         ? `${degrades.length} service${degrades.length > 1 ? 's' : ''} en état dégradé`
                         : 'Maintenance planifiée en cours'}
                   </p>
-                  <p className="mt-0.5 text-[12.5px] text-g-700">
+                  <p className="mt-0.5 text-[13px] text-g-700">
                     Dernière actualisation {relatif('2026-08-19T15:18:00Z')} ·{' '}
                     {maintenance.length > 0 &&
                       `${maintenance.length} fenêtre de maintenance en cours · `}
@@ -159,7 +159,7 @@ export default function Statut() {
                             </td>
                           )
                         })}
-                        <td className="tnum px-4 py-2.5 text-right text-[12.5px] font-semibold text-g-700">
+                        <td className="tnum px-4 py-2.5 text-right text-[13px] font-semibold text-g-700">
                           {pct(s.uptime90j, 2)}
                         </td>
                       </tr>
@@ -182,10 +182,10 @@ export default function Statut() {
                   key={inc.id}
                   className={cn(
                     inc.gravite === 'majeur'
-                      ? 'border-[#EFC3BD]'
+                      ? 'border-err/25'
                       : inc.gravite === 'maintenance'
-                        ? 'border-[#BFD6EE]'
-                        : 'border-[#EED9B0]',
+                        ? 'border-info/25'
+                        : 'border-warn/25',
                   )}
                 >
                   <CardHeader
@@ -257,11 +257,11 @@ export default function Statut() {
                 />
               ))}
             </div>
-            <div className="mt-2 flex justify-between text-[10.5px] text-g-500">
+            <div className="mt-2 flex justify-between text-[11px] text-g-500">
               <span>-{jours} j</span>
               <span>aujourd’hui</span>
             </div>
-            <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-g-100 pt-3 text-[11.5px] text-g-500">
+            <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-g-100 pt-3 text-[12px] text-g-500">
               <span className="flex items-center gap-1.5">
                 <span className="h-2.5 w-2.5 rounded-sm bg-ok" /> aucun incident
               </span>
@@ -288,7 +288,7 @@ export default function Statut() {
                   <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-4 py-3">
                     <span className="min-w-0">
                       <span className="block text-[13px] font-semibold text-ink">{inc.titre}</span>
-                      <span className="block text-[11.5px] text-g-500">
+                      <span className="block text-[12px] text-g-500">
                         {dateHeure(inc.debut)}
                         {inc.fin && ` → ${dateHeure(inc.fin)}`} · {inc.services.join(', ')}
                       </span>
@@ -347,8 +347,8 @@ export default function Statut() {
               <div className="flex items-start gap-2.5">
                 <Webhook size={14} className="mt-0.5 shrink-0 text-p-700" />
                 <div>
-                  <p className="text-[12.5px] font-semibold text-ink">Webhook</p>
-                  <p className="text-[11.5px] leading-snug text-g-700">
+                  <p className="text-[13px] font-semibold text-ink">Webhook</p>
+                  <p className="text-[12px] leading-snug text-g-700">
                     Recevez chaque changement d’état en JSON sur votre endpoint. Configuration depuis
                     votre espace client.
                   </p>
@@ -357,14 +357,14 @@ export default function Statut() {
               <div className="flex items-start gap-2.5">
                 <Rss size={14} className="mt-0.5 shrink-0 text-p-700" />
                 <div>
-                  <p className="text-[12.5px] font-semibold text-ink">Flux RSS</p>
+                  <p className="text-[13px] font-semibold text-ink">Flux RSS</p>
                   <p className="font-mono text-[11px] leading-snug text-g-700">
                     status.synelia.cloud/feed.xml
                   </p>
                 </div>
               </div>
             </div>
-            <p className="mt-4 border-t border-g-100 pt-3 text-[11.5px] leading-relaxed text-g-500">
+            <p className="mt-4 border-t border-g-100 pt-3 text-[12px] leading-relaxed text-g-500">
               Les clients sous contrat reçoivent en plus une notification dans le portail et, pour les
               incidents majeurs, un appel de l’équipe d’astreinte lorsque leurs ressources sont
               concernées.

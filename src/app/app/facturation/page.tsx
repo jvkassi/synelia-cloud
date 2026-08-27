@@ -245,7 +245,7 @@ export default function Facturation() {
                   )
                 })}
               </div>
-              <div className="mt-2 flex justify-between text-[10.5px] text-g-500">
+              <div className="mt-2 flex justify-between text-[11px] text-g-500">
                 <span>1er août</span>
                 <span>19 août</span>
               </div>
@@ -261,7 +261,7 @@ export default function Facturation() {
                   <p className="tnum mt-0.5 text-[15px] font-bold text-ink">
                     {masque(money(Math.max(...CONSOMMATION_JOURS.map((j) => j.montant))))}
                   </p>
-                  <p className="text-[10.5px] text-g-500">Restauration de test du 19 août</p>
+                  <p className="text-[11px] text-g-500">Restauration de test du 19 août</p>
                 </div>
                 <div>
                   <MicroLabel className="text-g-500">vCPU-heures cumulées</MicroLabel>
@@ -274,7 +274,7 @@ export default function Facturation() {
                   <p className="tnum mt-0.5 text-[15px] font-bold text-ink">
                     {masque(money(prorata(SYNTHESE_CLIENT.depenseMois, 19)))}
                   </p>
-                  <p className="text-[10.5px] text-g-500">Sur 31 jours</p>
+                  <p className="text-[11px] text-g-500">Sur 31 jours</p>
                 </div>
               </div>
             </Card>
@@ -325,11 +325,9 @@ export default function Facturation() {
           )}
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <Callout ton="violet" titre="Nous facturons ce que vous consommez, pas ce que vous réservez">
-              Une machine arrêtée ne consomme ni processeur ni mémoire : vous ne payez que son disque.
-              Un compartiment vidé cesse d’être facturé le jour même. Un siège de service managé
-              libéré est décompté au prorata. Il n’y a pas de facturation à la réservation dissimulée
-              dans nos grilles.
+            <Callout ton="violet" titre="Facturation à la consommation, pas à la réservation">
+              Une machine arrêtée ne paie que son disque. Un compartiment vidé cesse d’être facturé le
+              jour même. Un siège de service managé libéré est décompté au prorata.
             </Callout>
             <Callout ton="info" titre="Le transfert sortant est plafonné">
               Au-delà du forfait inclus dans votre offre, le transfert sortant est facturé, mais son
@@ -370,7 +368,7 @@ export default function Facturation() {
                   rendu: (f) => (
                     <span className="flex items-center gap-2">
                       <FileText size={13} className="shrink-0 text-p-700" />
-                      <span className="font-mono text-[12.5px] font-semibold text-ink">
+                      <span className="font-mono text-[13px] font-semibold text-ink">
                         {f.numero}
                       </span>
                     </span>
@@ -400,17 +398,17 @@ export default function Facturation() {
                     f.echeance ? (
                       <span
                         className={cn(
-                          'text-[11.5px]',
+                          'text-[12px]',
                           f.statut === 'impayee' ? 'font-semibold text-err' : 'text-g-700',
                         )}
                       >
                         {dateCourte(f.echeance)}
                         {f.statut === 'impayee' && (
-                          <span className="block text-[10px]">{relatif(f.echeance)}</span>
+                          <span className="block text-[11px]">{relatif(f.echeance)}</span>
                         )}
                       </span>
                     ) : (
-                      <span className="text-[11.5px] text-g-500">—</span>
+                      <span className="text-[12px] text-g-500">—</span>
                     ),
                 },
                 {
@@ -429,7 +427,7 @@ export default function Facturation() {
                   aligne: 'right',
                   cle: (f) => f.total,
                   rendu: (f) => (
-                    <span className="tnum text-[12.5px] font-bold text-ink">
+                    <span className="tnum text-[13px] font-bold text-ink">
                       {money(f.total, f.devise)}
                     </span>
                   ),
@@ -450,7 +448,7 @@ export default function Facturation() {
                   cle: (f) => f.moyen ?? '',
                   masquable: true,
                   rendu: (f) => (
-                    <span className="text-[11.5px] text-g-700">
+                    <span className="text-[12px] text-g-700">
                       {f.moyen ? MOYEN_LABEL[f.moyen] : '—'}
                     </span>
                   ),
@@ -534,10 +532,10 @@ export default function Facturation() {
                   {SOUSCRIPTIONS.map((s) => (
                     <tr key={s.id} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2.5">
-                        <span className="block text-[12.5px] font-semibold text-ink">
+                        <span className="block text-[13px] font-semibold text-ink">
                           {s.cible.label}
                         </span>
-                        <span className="block font-mono text-[10.5px] text-g-500">
+                        <span className="block font-mono text-[11px] text-g-500">
                           {s.cible.ref}
                         </span>
                       </td>
@@ -555,10 +553,10 @@ export default function Facturation() {
                       <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
                         {masque(money(s.prixApplique))}
                       </td>
-                      <td className="tnum px-3 py-2.5 text-[12.5px] font-bold text-ink">
+                      <td className="tnum px-3 py-2.5 text-[13px] font-bold text-ink">
                         {masque(money(somme(s)))}
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                      <td className="px-3 py-2.5 text-[12px] text-g-700">
                         {dateCourte(s.debut)}
                       </td>
                       <td className="px-3 py-2.5 text-right">
@@ -626,7 +624,7 @@ export default function Facturation() {
                       className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                     >
                       <span className="min-w-0">
-                        <span className="block text-[12.5px] font-semibold text-ink">
+                        <span className="block text-[13px] font-semibold text-ink">
                           {s.cible.label}
                         </span>
                         <span className="block text-[11px] text-g-500">
@@ -634,7 +632,7 @@ export default function Facturation() {
                         </span>
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
-                        <span className="tnum text-[12.5px] font-bold text-ok">
+                        <span className="tnum text-[13px] font-bold text-ok">
                           − {masque(money(economie))}/an
                         </span>
                         <BoutonAction
@@ -675,7 +673,7 @@ export default function Facturation() {
                       className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                     >
                       <span className="min-w-0">
-                        <span className="block text-[12.5px] font-semibold text-ink">{o.nom}</span>
+                        <span className="block text-[13px] font-semibold text-ink">{o.nom}</span>
                         <span className="block text-[11px] text-g-500">{o.specs}</span>
                       </span>
                       <span className="flex shrink-0 items-center gap-2">
@@ -696,10 +694,9 @@ export default function Facturation() {
 
       {onglet === 'repartition' && (
         <div className="space-y-4">
-          <Callout ton="violet" titre="Refacturer en interne, sans y passer une journée">
-            La répartition suit vos étiquettes : centre de coût, projet, environnement. Chaque
-            ressource porte les siennes, la ventilation se calcule seule. C’est la différence entre
-            une refacturation interne réelle et un tableau reconstitué à la main tous les trimestres.
+          <Callout ton="violet" titre="Ventilation par étiquette">
+            La répartition suit vos étiquettes — centre de coût, projet, environnement — et se calcule
+            à partir de celles que porte chaque ressource. Rien à reconstituer à la main.
           </Callout>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -839,7 +836,7 @@ export default function Facturation() {
                       )}
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-[12.5px] font-semibold text-ink">
+                      <span className="block text-[13px] font-semibold text-ink">
                         {MOYEN_LABEL[m.moyen]}
                       </span>
                       <span className="block font-mono text-[11px] text-g-500">{m.detail}</span>
@@ -950,10 +947,8 @@ export default function Facturation() {
                 ]}
               />
               <Callout ton="violet" className="mt-4" titre="Notre politique de suspension">
-                Couper un service pour un retard de paiement de trois jours cause un dommage
-                disproportionné à un client dont la trésorerie est simplement tendue. Nous
-                n’intervenons qu’après un rappel écrit et un délai de quinze jours, et nous préférons
-                toujours discuter d’un échelonnement.
+                Aucune suspension avant un rappel écrit et quinze jours supplémentaires, et un
+                échelonnement est proposé à chaque fois. La décision est humaine et consignée.
               </Callout>
             </Card>
 
@@ -969,7 +964,7 @@ export default function Facturation() {
                     >
                       <span className="min-w-0">
                         <span className="font-mono text-[12px] text-ink">{f.numero}</span>
-                        <span className="ml-2 text-[10.5px] text-g-500">
+                        <span className="ml-2 text-[11px] text-g-500">
                           {f.moyen ? MOYEN_LABEL[f.moyen] : '—'} · {f.periode}
                         </span>
                       </span>
@@ -1014,13 +1009,13 @@ export default function Facturation() {
                         {d.numero}
                       </td>
                       <td className="px-3 py-2.5 text-[12px] text-ink">{d.objet}</td>
-                      <td className="tnum px-3 py-2.5 text-[12.5px] font-bold text-ink">
+                      <td className="tnum px-3 py-2.5 text-[13px] font-bold text-ink">
                         {masque(money(d.montant))}
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                      <td className="px-3 py-2.5 text-[12px] text-g-700">
                         {dateCourte(d.createdAt)}
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                      <td className="px-3 py-2.5 text-[12px] text-g-700">
                         {dateCourte(d.validite)}
                       </td>
                       <td className="px-3 py-2.5">
@@ -1206,7 +1201,7 @@ function TableLignes({ facture, peutVoir }: { facture: Invoice; peutVoir: boolea
           {facture.lignes.map((l, i) => (
             <tr key={`${l.ref}-${i}`} className="border-b border-g-100 last:border-0">
               <td className="px-3 py-2 text-[12px] text-ink">{l.libelle}</td>
-              <td className="px-3 py-2 font-mono text-[10.5px] text-g-500">{l.ref}</td>
+              <td className="px-3 py-2 font-mono text-[11px] text-g-500">{l.ref}</td>
               <td className="tnum px-3 py-2 text-[12px] text-g-700">{num(l.quantite)}</td>
               <td className="tnum px-3 py-2 text-[12px] text-g-700">
                 {masque(money(l.pu, facture.devise))}
@@ -1266,7 +1261,7 @@ function BarresShowback({
             <span className="min-w-0 truncate font-mono text-[12px] font-semibold text-ink">
               {l.label}
             </span>
-            <span className="tnum shrink-0 text-[12.5px]">
+            <span className="tnum shrink-0 text-[13px]">
               <span className="font-bold text-ink">{peutVoir ? money(l.montant) : '•••'}</span>
               <span className="ml-1.5 text-g-500">{pct(l.pct, 1)}</span>
             </span>
