@@ -93,7 +93,6 @@ export const UNIVERS_CLIENT: UniversNav[] = [
       { nom: 'Réseau & VPN', href: '/app/reseau' },
       { nom: 'Stockage bloc', href: '/app/stockage' },
       { nom: 'Stockage objet S3', href: '/app/objet' },
-      { nom: 'Bases managées', href: '/app/bases' },
       // Les sauvegardes se règlent aussi ressource par ressource ; cette
       // section porte les plans réutilisables, la restauration granulaire, la
       // reprise d'activité et le tableau de conformité qu'on montre à un auditeur.
