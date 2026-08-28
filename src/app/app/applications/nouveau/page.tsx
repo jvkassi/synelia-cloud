@@ -118,10 +118,15 @@ export default function NouvelleApplication() {
   ]
 
   const peutContinuer = etape === 5 ? conditions && envsActifs.length > 0 : true
+  // L'étape « Architecture » (composition proposée du canvas) est désactivée pour l'instant :
+  // peu utile en pratique, elle reste dans le code pour être réactivée plus tard.
+  const etapesActives = ETAPES.filter((e) => e.numero !== 3 && (source === 'git' || e.numero !== 2))
+  const numerosActifs = etapesActives.map((e) => e.numero)
+  const idxCourant = numerosActifs.indexOf(etape)
 
   return (
     <WizardShell
-      etapes={source === 'git' ? ETAPES : ETAPES.filter((e) => e.numero !== 2)}
+      etapes={etapesActives}
       courante={etape}
       onChange={setEtape}
       titre={ETAPES[etape - 1].titre}
@@ -164,17 +169,13 @@ export default function NouvelleApplication() {
             variant="ghost"
             onClick={() => {
               if (etape === 1) return router.push('/app/applications/projets')
-              setEtape(source === 'git' || etape !== 3 ? etape - 1 : 1)
+              setEtape(numerosActifs[idxCourant - 1])
             }}
           >
             {etape === 1 ? 'Annuler' : 'Précédent'}
           </Button>
           {etape < 5 ? (
-            <Button
-              onClick={() => setEtape(source === 'git' || etape !== 1 ? etape + 1 : 3)}
-            >
-              Continuer
-            </Button>
+            <Button onClick={() => setEtape(numerosActifs[idxCourant + 1])}>Continuer</Button>
           ) : (
             <Button
               disabled={!peutContinuer}
