@@ -512,42 +512,37 @@ export function VueHebergement({ id }: { id: string }) {
                     titre="Ajouter un compte de transfert"
                     description="Un compte par intervenant, cantonné à son dossier. Le mot de passe n’est affiché qu’une fois."
                     champs={[
-                      { id: 'utilisateur', label: 'Identifiant', placeholder: 'agence-web', obligatoire: true },
+                      { id: 'utilisateur', label: 'Identifiant', placeholder: 'agence-web', obligatoire: true, demi: true },
+                      { id: 'motDePasse', label: 'Mot de passe', type: 'mot_de_passe', placeholder: 'Au moins 12 caractères', obligatoire: true, demi: true },
                       { id: 'racine', label: 'Dossier racine', placeholder: '/var/www/boutique', obligatoire: true },
-                      {
-                        id: 'protocole',
-                        label: 'Protocoles',
-                        type: 'select',
-                        demi: true,
-                        options: [
-                          { value: 'sftp', label: 'SFTP seulement (recommandé)' },
-                          { value: 'ftps', label: 'FTPS' },
-                          { value: 'ftp', label: 'FTP en clair' },
-                        ],
-                      },
+                      { id: 'sftp', label: 'SFTP', type: 'switch', demi: true, placeholder: 'Recommandé' },
+                      { id: 'ftps', label: 'FTPS', type: 'switch', demi: true, placeholder: 'Autorisé' },
+                      { id: 'ftp', label: 'FTP en clair', type: 'switch', demi: true, placeholder: 'Déconseillé' },
                       { id: 'quota', label: 'Quota', type: 'nombre', demi: true, min: 0, suffixe: 'Go' },
                     ]}
-                    valeursDepart={{ protocole: 'sftp', quota: 5, racine: '/var/www' }}
+                    valeursDepart={{ sftp: true, ftps: false, ftp: false, quota: 5, racine: '/var/www' }}
                     libelleValider="Créer le compte"
-                    operation={(v) => ({
-                      titre: `Compte ${v.utilisateur} créé`,
-                      detail:
-                        v.protocole === 'ftp'
+                    operation={(v) => {
+                      const protocoles = (['sftp', 'ftps', 'ftp'] as const).filter((p) => v[p])
+                      return {
+                        titre: `Compte ${v.utilisateur} créé`,
+                        detail: protocoles.includes('ftp')
                           ? 'FTP en clair transmet le mot de passe en clair : à réserver à un besoin ponctuel.'
-                          : 'Le mot de passe est affiché une seule fois.',
-                      effet: () =>
-                        tousComptes.creer({
-                          id: tousComptes.identifiant('cf'),
-                          hebergementId: h.id,
-                          utilisateur: String(v.utilisateur),
-                          protocoles: [v.protocole as 'ftp' | 'sftp' | 'ftps'],
-                          racine: String(v.racine),
-                          quotaGo: Number(v.quota) || null,
-                          utiliseGo: 0,
-                          clesSsh: 0,
-                          statut: 'actif',
-                        }),
-                    })}
+                          : 'Communiquez le mot de passe saisi à l’intervenant par un canal séparé.',
+                        effet: () =>
+                          tousComptes.creer({
+                            id: tousComptes.identifiant('cf'),
+                            hebergementId: h.id,
+                            utilisateur: String(v.utilisateur),
+                            protocoles: protocoles.length > 0 ? protocoles : ['sftp'],
+                            racine: String(v.racine),
+                            quotaGo: Number(v.quota) || null,
+                            utiliseGo: 0,
+                            clesSsh: 0,
+                            statut: 'actif',
+                          }),
+                      }
+                    }}
                   />
                 }
               />
@@ -584,14 +579,25 @@ export function VueHebergement({ id }: { id: string }) {
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
-                      <BoutonAction
+                      <BoutonFormulaire
                         libelle="Remplacer le mot de passe"
-                        operation={{
-                          action: 'service.admin',
+                        action="service.admin"
+                        titre={`Remplacer le mot de passe de ${c.utilisateur}`}
+                        description="L’ancien mot de passe cesse de fonctionner immédiatement : prévenez l’intervenant."
+                        champs={[
+                          {
+                            id: 'motDePasse',
+                            label: 'Nouveau mot de passe',
+                            type: 'mot_de_passe',
+                            placeholder: 'Au moins 12 caractères',
+                            obligatoire: true,
+                          },
+                        ]}
+                        libelleValider="Remplacer"
+                        operation={() => ({
                           titre: `Mot de passe de ${c.utilisateur} remplacé`,
-                          detail:
-                            'Affiché une seule fois. L’ancien cesse de fonctionner immédiatement : prévenez l’intervenant.',
-                        }}
+                          detail: 'L’ancien cesse de fonctionner immédiatement : prévenez l’intervenant.',
+                        })}
                       />
                       <IconButton
                         label={`Supprimer ${c.utilisateur}`}
