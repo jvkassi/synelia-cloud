@@ -692,6 +692,18 @@ export const serviceProjetById = (id: string) => SERVICES_PROJET.find((s) => s.i
 export const domainesDuService = (serviceId: string) =>
   DOMAINES_APPLICATIFS.filter((d) => d.serviceId === serviceId)
 
+/**
+ * Adresse à laquelle les autres services du même projet joignent celui-ci —
+ * jamais résolue depuis Internet. Une base la porte déjà (`base.hoteInterne`) ;
+ * pour les autres types on la dérive du même gabarit `<id>.<projet>.interne`.
+ * Un cron ou un worker n'écoutent aucun port entrant : pas d'adresse pour eux.
+ */
+export function urlInterneDuService(service: ServiceProjet): string | undefined {
+  if (service.base) return `${service.base.hoteInterne}:${service.base.port}`
+  if (service.type === 'cron' || service.type === 'worker') return undefined
+  return `${service.id}.${service.projetId}.interne${service.portConteneur ? `:${service.portConteneur}` : ''}`
+}
+
 /** Service applicatif rattaché à une entrée APPLICATIONS, pour les liens croisés. */
 export const serviceDeLApp = (appId: string) => SERVICES_PROJET.find((s) => s.appId === appId)
 
