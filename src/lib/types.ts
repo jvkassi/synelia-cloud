@@ -511,6 +511,8 @@ export interface Projet {
   espaceId: string
   /** Un projet est toujours un cluster Kubernetes dédié — jamais des machines virtuelles. */
   clusterId: string
+  /** Un load balancer L7 dédié, provisionné automatiquement à la création — c'est la porte d'entrée du projet. */
+  lbId: string
   cree: string
   tags?: string[]
   /** Un même projet se décline par environnement, chacun avec ses services. Un nouveau projet ne porte que « Production ». */

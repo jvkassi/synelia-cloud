@@ -124,7 +124,7 @@ function NouvelleApplicationInterne() {
         titre="Aucun projet pour l’instant"
         phrase="Une application se déploie toujours dans un projet — le contenant qui porte l’Espace Cloud et le cluster Kubernetes. Créez-en un d’abord, ça ne facture rien tant qu’aucun service n’y tourne."
         icone={<FolderPlus size={22} />}
-        action={{ libelle: 'Créer un projet', href: '/app/applications/projets?creer=1' }}
+        action={{ libelle: 'Créer un projet', href: '/app/applications/projets/nouveau' }}
       />
     )
   }
