@@ -144,8 +144,14 @@ export function CarteService({ service }: { service: ServiceProjet }) {
   const href = `/app/applications/projets/${service.projetId}/${service.id}`
 
   return (
-    <Card hover className="flex flex-col">
-      <div className="flex items-start justify-between gap-2">
+    <Card hover className="group relative flex flex-col">
+      <Link
+        href={href}
+        className="absolute inset-0 z-0 rounded-[10px]"
+        aria-label={`Ouvrir ${service.nom}`}
+      />
+
+      <div className="pointer-events-none relative z-[1] flex items-start justify-between gap-2">
         <span className="flex min-w-0 items-center gap-2.5">
           <span
             className={cn(
@@ -156,12 +162,9 @@ export function CarteService({ service }: { service: ServiceProjet }) {
             {ICONE_TYPE[service.type]}
           </span>
           <span className="min-w-0">
-            <Link
-              href={href}
-              className="block truncate font-mono text-[13px] font-bold text-ink hover:text-p-700"
-            >
+            <span className="block truncate font-mono text-[13px] font-bold text-ink group-hover:text-p-700">
               {service.nom}
-            </Link>
+            </span>
             <span className="block text-[11px] text-g-500">
               {TYPE_SERVICE_LABEL[service.type]}
               {service.moteur && ` · ${MOTEUR_LABEL[service.moteur]} ${service.version}`}
@@ -171,7 +174,7 @@ export function CarteService({ service }: { service: ServiceProjet }) {
         <StatutServiceBadge statut={service.statut} />
       </div>
 
-      <dl className="mt-3.5 space-y-1.5 border-t border-g-100 pt-3">
+      <dl className="pointer-events-none relative z-[1] mt-3.5 space-y-1.5 border-t border-g-100 pt-3">
         {service.type === 'base' && service.base && (
           <>
             <Ligne cle="Hôte interne">
@@ -237,7 +240,7 @@ export function CarteService({ service }: { service: ServiceProjet }) {
                   href={`https://${domaines[0].hote}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-semibold text-p-700 hover:underline"
+                  className="pointer-events-auto relative z-[2] inline-flex items-center gap-1 font-semibold text-p-700 hover:underline"
                 >
                   {domaines[0].hote}
                   <ExternalLink size={10} />
