@@ -316,6 +316,33 @@ export const WORKFLOWS: DefinitionWorkflow[] = [
     ],
   },
   {
+    id: 'variable.create',
+    portee: 'client',
+    libelle: 'Ajout de la variable {cible}',
+    lancement: 'La valeur est enregistrée dans la configuration du projet.',
+    fin: 'La variable est prête ; redéployez les services concernés pour qu’ils la reçoivent.',
+    href: '/app/applications/variables',
+    etapes: [
+      { nom: 'Valider le format de la clé', dureeS: 2 },
+      { nom: 'Enregistrer la variable dans le projet', dureeS: 4 },
+      { nom: 'Programmer l’injection au prochain déploiement', dureeS: 3 },
+    ],
+  },
+  {
+    id: 'secret.create',
+    portee: 'client',
+    libelle: 'Ajout du secret {cible}',
+    lancement: 'La valeur part directement au coffre : le portail ne la garde pas en clair.',
+    fin: 'Le secret est au coffre ; redéployez les services concernés pour qu’ils le reçoivent.',
+    href: '/app/applications/variables',
+    etapes: [
+      { nom: 'Chiffrer la valeur', dureeS: 3 },
+      { nom: 'Envoyer au coffre de secrets', dureeS: 6 },
+      { nom: 'Enregistrer la référence dans le projet', dureeS: 3 },
+      { nom: 'Programmer l’injection au prochain déploiement', dureeS: 3 },
+    ],
+  },
+  {
     id: 'domaine.verify',
     portee: 'client',
     libelle: 'Vérification de {cible}',
