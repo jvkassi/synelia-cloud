@@ -31,7 +31,7 @@ import {
 } from '@/components/business/projets'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
-import { useOperation } from '@/components/app/actions'
+import { BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 /**
  * Fiche d'un projet — ses services, environnement par environnement.
@@ -124,6 +124,31 @@ export function VueProjet({ id }: { id: string }) {
               </button>
             )
           })}
+          <BoutonFormulaire
+            libelle="Ajouter un environnement"
+            icone={<Plus size={12} />}
+            action="app.deploy"
+            variant="ghost"
+            size="sm"
+            titre={`Ajouter un environnement à ${projet.nom}`}
+            description="Il démarre vide — aucun coût tant qu’aucun service n’y est déployé. Une application déployée depuis l’assistant ne cible qu’un seul environnement à la fois."
+            libelleValider="Ajouter"
+            champs={[
+              { id: 'nom', label: 'Nom de l’environnement', obligatoire: true, placeholder: 'Recette' },
+            ]}
+            operation={(v) => {
+              const nomEnv = String(v.nom).trim()
+              return {
+                titre: `Environnement « ${nomEnv} » ajouté à ${projet.nom}`,
+                effet: () => {
+                  lesProjets.modifier(projet.id, {
+                    environnements: Array.from(new Set([...projet.environnements, nomEnv])),
+                  })
+                  setEnv(nomEnv)
+                },
+              }
+            }}
+          />
         </div>
         <span className="text-[12px] text-g-500">
           Chaque environnement porte ses propres services et ses propres variables.
@@ -135,7 +160,10 @@ export function VueProjet({ id }: { id: string }) {
           titre={`Aucun service en ${env}`}
           phrase="Un environnement vide ne facture rien. Déployez une application, une base ou une tâche planifiée pour le peupler."
           icone={<Rocket size={22} />}
-          action={{ libelle: 'Déployer une application', href: '/app/applications/nouveau' }}
+          action={{
+            libelle: 'Déployer une application',
+            href: `/app/applications/nouveau?projet=${projet.id}&env=${env}`,
+          }}
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
@@ -389,7 +417,9 @@ function TiroirCreation({
             Annuler
           </Button>
           {type === 'application' || type === 'statique' ? (
-            <ButtonLink href="/app/applications/nouveau">Ouvrir l’assistant complet</ButtonLink>
+            <ButtonLink href={`/app/applications/nouveau?projet=${projet.id}&env=${env}`}>
+              Ouvrir l’assistant complet
+            </ButtonLink>
           ) : (
             <Button disabled={nom.trim().length === 0} onClick={creerService}>
               Créer le service

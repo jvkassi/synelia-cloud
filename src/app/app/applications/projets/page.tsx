@@ -1,12 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
 import { Boxes, Globe, Layers, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MAINTENANT, money, relatif } from '@/lib/format'
-import type { Projet, ServiceProjet, TypeServiceProjet } from '@/lib/types'
+import type { K8sCluster, Projet, ServiceProjet, TypeServiceProjet } from '@/lib/types'
 import {
+  ESPACES,
+  K8S_CLUSTERS,
   PROJETS,
   SERVICES_PROJET,
   TYPE_SERVICE_LABEL,
@@ -16,25 +19,49 @@ import {
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { CopyField, GatedAction } from '@/components/ui/display'
-import { Field, Input, Textarea } from '@/components/ui/field'
+import { Field, Input, Select, Textarea } from '@/components/ui/field'
 import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/card'
+import { CostPreview } from '@/components/composition/flow'
 import { StatTile } from '@/components/composition/metrics'
 import { Drawer } from '@/components/ui/overlay'
 import { ICONE_TYPE } from '@/components/business/projets'
 import { useApp, useEspace } from '@/components/app/contexte'
-import { useCollection } from '@/components/app/atelier'
+import { useAtelier, useCollection } from '@/components/app/atelier'
 import { useOperation } from '@/components/app/actions'
 
+/** Un projet naît toujours avec un cluster Kubernetes dédié — trois tailles suffisent au départ, ajustables ensuite depuis Kubernetes. */
+const TAILLES_CLUSTER = [
+  { id: 'petit', label: 'Petit', detail: '3 nœuds · 4 vCPU · 8 Go', flavor: '4 vCPU · 8 Go', nodes: 3, prixNoeud: 7800 },
+  { id: 'moyen', label: 'Moyen', detail: '3 nœuds · 8 vCPU · 16 Go', flavor: '8 vCPU · 16 Go', nodes: 3, prixNoeud: 15600 },
+  { id: 'grand', label: 'Grand', detail: '5 nœuds · 8 vCPU · 32 Go', flavor: '8 vCPU · 32 Go', nodes: 5, prixNoeud: 24800 },
+] as const
+
 export default function Projets() {
+  return (
+    <Suspense fallback={null}>
+      <ProjetsInterne />
+    </Suspense>
+  )
+}
+
+/** Isolé pour `useSearchParams`, qui exige un contour de Suspense. */
+function ProjetsInterne() {
   const { autorise, refus } = useApp()
   const espace = useEspace()
+  const searchParams = useSearchParams()
   const lesProjets = useCollection<Projet>('projets', PROJETS)
   const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+  const grappes = useCollection<K8sCluster>('clusters', K8S_CLUSTERS)
+  const { lancerJob } = useAtelier()
   const executer = useOperation()
-  const [creation, setCreation] = useState(false)
+  const [creation, setCreation] = useState(searchParams.get('creer') === '1')
   const [nom, setNom] = useState('')
   const [description, setDescription] = useState('')
-  const [environnements, setEnvironnements] = useState('Production, Préproduction')
+  const [tags, setTags] = useState('')
+  const [espaceId, setEspaceId] = useState(espace.id)
+  const [modeCluster, setModeCluster] = useState<'nouveau' | 'existant'>('nouveau')
+  const [tailleId, setTailleId] = useState<(typeof TAILLES_CLUSTER)[number]['id']>('moyen')
+  const [clusterExistantId, setClusterExistantId] = useState('')
 
   const servicesDe = (projetId: string) =>
     lesServices.items.filter((x) => x.projetId === projetId)
@@ -44,29 +71,70 @@ export default function Projets() {
   // sur les projets visibles, et non sur tout le parc.
   const projets = lesProjets.items.filter((p) => p.espaceId === espace.id)
 
+  const espaceCible = ESPACES.find((e) => e.id === espaceId) ?? espace
+  const clustersDisponibles = grappes.items.filter((c) => c.espaceId === espaceCible.id)
+  const modeClusterEffectif = clustersDisponibles.length === 0 ? 'nouveau' : modeCluster
+  const clusterExistantEffectif =
+    clusterExistantId && clustersDisponibles.some((c) => c.id === clusterExistantId)
+      ? clusterExistantId
+      : (clustersDisponibles[0]?.id ?? '')
+  const taille = TAILLES_CLUSTER.find((t) => t.id === tailleId)!
+
   const creerProjet = () => {
-    const envs = environnements
-      .split(',')
-      .map((e) => e.trim())
-      .filter(Boolean)
+    const idProjet = lesProjets.identifiant('prj')
+    let clusterId = clusterExistantEffectif
+
+    if (modeClusterEffectif === 'nouveau') {
+      const cluster: K8sCluster = {
+        id: grappes.identifiant('k8s'),
+        espaceId: espaceCible.id,
+        nom: `${nom.trim()}-k8s`,
+        version: '1.31.2',
+        controlPlane: { mode: 'ha', nodes: 3 },
+        pools: [
+          { nom: 'pool-defaut', nodes: taille.nodes, flavor: taille.flavor, diskGo: 100, type: 'standard' },
+        ],
+        modules: ['ingress-nginx 4.11.2', 'cert-manager 1.15.3', 'velero 1.14.1'],
+        statut: 'provisioning',
+        site: espaceCible.site,
+      }
+      grappes.creer(cluster)
+      clusterId = cluster.id
+      lancerJob({
+        workflow: 'k8s.create',
+        cible: `${cluster.nom} · ${espaceCible.site}`,
+        alFin: () => grappes.modifier(cluster.id, { statut: 'running' }),
+      })
+    }
+
     executer({
       action: 'app.deploy',
       titre: `Projet « ${nom.trim()} » créé`,
-      detail: `${envs.length || 1} environnement(s), aucun service : la facturation commence au premier déploiement.`,
+      detail:
+        modeClusterEffectif === 'nouveau'
+          ? 'Cluster Kubernetes dédié en cours de provisionnement. Aucun service : la facturation du projet commence au premier déploiement.'
+          : 'Rattaché à un cluster existant. Aucun service : la facturation du projet commence au premier déploiement.',
       effet: () =>
         lesProjets.creer({
-          id: lesProjets.identifiant('prj'),
+          id: idProjet,
           nom: nom.trim(),
           description: description.trim(),
-          espaceId: espace.id,
+          espaceId: espaceCible.id,
+          clusterId,
           cree: MAINTENANT,
-          environnements: envs.length > 0 ? envs : ['Production'],
+          environnements: ['Production'],
           variables: [],
+          tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
         }),
+      job: { workflow: 'projet.create', cible: nom.trim() },
     })
     setNom('')
     setDescription('')
-    setEnvironnements('Production, Préproduction')
+    setTags('')
+    setEspaceId(espace.id)
+    setModeCluster('nouveau')
+    setTailleId('moyen')
+    setClusterExistantId('')
     setCreation(false)
   }
 
@@ -194,6 +262,17 @@ export default function Projets() {
                 ))}
               </div>
 
+              {(p.tags ?? []).length > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <MicroLabel className="mr-1">Étiquettes</MicroLabel>
+                  {(p.tags ?? []).map((t) => (
+                    <Badge key={t} tone="violet" size="sm">
+                      {t}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
               <ul className="mt-3.5 space-y-1 border-t border-g-100 pt-3">
                 {services.slice(0, 4).map((svc) => (
                   <li key={svc.id} className="flex items-center justify-between gap-2">
@@ -294,14 +373,112 @@ export default function Projets() {
             />
           </Field>
           <Field
-            label="Environnements"
-            hint="Un environnement porte ses propres services et ses propres variables. Vous pourrez en ajouter ensuite."
+            label="Étiquettes"
+            hint="Séparées par une virgule. Servent à ventiler la dépense et à retrouver le projet dans la recherche."
           >
             <Input
-              value={environnements}
-              onChange={(e) => setEnvironnements(e.target.value)}
+              placeholder="facturation, critique"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
             />
           </Field>
+          <Field label="Espace Cloud">
+            <Select value={espaceId} onChange={(e) => setEspaceId(e.target.value)}>
+              {ESPACES.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.code} · {e.site} · {e.quota.vcpu - e.usage.vcpu} vCPU libres
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <div>
+            <MicroLabel className="mb-2">Cluster Kubernetes</MicroLabel>
+            <p className="mb-2 text-[11.5px] leading-relaxed text-g-500">
+              Un projet est toujours servi par un cluster Kubernetes dédié — jamais par des machines
+              virtuelles choisies à la main.
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setModeCluster('nouveau')}
+                className={cn(
+                  'rounded-[8px] border-2 bg-white p-3 text-left transition-colors',
+                  modeClusterEffectif === 'nouveau' ? 'border-p-700' : 'border-g-300 hover:border-p-400',
+                )}
+              >
+                <span className="block text-[12.5px] font-semibold text-ink">Nouveau cluster</span>
+                <span className="mt-1 block text-[11.5px] text-g-500">
+                  Provisionné à la création, rien que pour ce projet.
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled={clustersDisponibles.length === 0}
+                onClick={() => setModeCluster('existant')}
+                className={cn(
+                  'rounded-[8px] border-2 bg-white p-3 text-left transition-colors',
+                  clustersDisponibles.length === 0
+                    ? 'cursor-not-allowed opacity-50'
+                    : modeClusterEffectif === 'existant'
+                      ? 'border-p-700'
+                      : 'border-g-300 hover:border-p-400',
+                )}
+              >
+                <span className="block text-[12.5px] font-semibold text-ink">Cluster existant</span>
+                <span className="mt-1 block text-[11.5px] text-g-500">
+                  {clustersDisponibles.length === 0
+                    ? `Aucun cluster dans ${espaceCible.code}`
+                    : 'Partagé avec d’autres projets de cet Espace.'}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {modeClusterEffectif === 'nouveau' ? (
+            <Field label="Taille du cluster" hint="Ajustable ensuite — pools, autoscaling — depuis Kubernetes.">
+              <Select
+                value={tailleId}
+                onChange={(e) => setTailleId(e.target.value as (typeof TAILLES_CLUSTER)[number]['id'])}
+              >
+                {TAILLES_CLUSTER.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.label} · {t.detail}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          ) : (
+            <Field label="Cluster">
+              <Select value={clusterExistantEffectif} onChange={(e) => setClusterExistantId(e.target.value)}>
+                {clustersDisponibles.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.nom} · v{c.version}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+
+          <CostPreview
+            lignes={
+              modeClusterEffectif === 'nouveau'
+                ? [
+                    {
+                      libelle: 'Control plane haute disponibilité',
+                      detail: '3 masters répartis · SLA 99,95 %',
+                      montant: 42000,
+                    },
+                    {
+                      libelle: `Nœuds workers · ${taille.nodes} nœuds`,
+                      detail: taille.detail,
+                      montant: taille.nodes * taille.prixNoeud,
+                    },
+                  ]
+                : [{ libelle: 'Cluster existant', detail: 'Aucun coût additionnel de cluster', montant: 0 }]
+            }
+          />
+
           <div className="rounded-[8px] border border-g-300 bg-g-050 p-3">
             <MicroLabel>Adresse offerte pour ce projet</MicroLabel>
             <CopyField value={`<service>-<env>.${ZONE_APPLICATIVE.zone}`} className="mt-1.5" />

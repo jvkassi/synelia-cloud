@@ -106,7 +106,7 @@ export function VueDeploiements({ id }: { id: string }) {
           titre="Aucun déploiement dans ce projet"
           phrase="Ce projet ne contient que des ressources qui ne se déploient pas depuis un dépôt — une base managée, une tâche planifiée ou une solution du catalogue. L’historique se remplira dès la première application."
           icone={<Rocket size={22} />}
-          action={{ libelle: 'Déployer une application', href: '/app/applications/nouveau' }}
+          action={{ libelle: 'Déployer une application', href: `/app/applications/nouveau?projet=${id}` }}
           actionSecondaire={{
             libelle: 'Voir tous les déploiements',
             href: '/app/applications/deploiements',

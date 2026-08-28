@@ -72,7 +72,7 @@ export function CadreProjet({
   const panneau = (
     <SelecteurRessource
       titre="Projets"
-      actionPrincipale={{ libelle: 'Nouveau projet', href: '/app/applications/nouveau' }}
+      actionPrincipale={{ libelle: 'Nouveau projet', href: '/app/applications/projets?creer=1' }}
       entrees={entrees}
       actifId={actif?.id}
       placeholderRecherche="Rechercher un projet, un service…"
