@@ -6,7 +6,6 @@ import { useState } from 'react'
 import {
   Camera,
   Copy,
-  Maximize2,
   MonitorPlay,
   MoveRight,
   Power,
@@ -31,11 +30,12 @@ import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, IconButton } from '@/components/ui/button'
 import { CopyField, GatedAction, Tabs } from '@/components/ui/display'
 import { Field, Input, SegmentedControl, Select, Switch } from '@/components/ui/field'
-import { ConfirmDialog, Drawer, Popover } from '@/components/ui/overlay'
+import { ConfirmDialog, Popover } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { HealthBadge, QuotaBar, StatTile } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { EventList, GrilleSparkCharts } from '@/components/business/observabilite'
+import { ConsoleDrawer } from '@/components/business/console'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import {
@@ -1014,59 +1014,33 @@ export function VueVm({ id }: { id: string }) {
       )}
 
       {/* Console en panneau plein écran */}
-      <Drawer
+      <ConsoleDrawer
         open={console_}
         onClose={() => setConsole(false)}
-        title={`Console · ${vm.nom}`}
+        titre={`Console · ${vm.nom}`}
         description="Le portail encapsule la console KVM de l’hyperviseur. Il ne réimplémente pas le protocole."
-        size="full"
-        footer={
+        statut={
           <>
-            <span className="mr-auto text-[12px] text-g-500">
-              Session console chiffrée · déconnexion automatique après 15 minutes d’inactivité
-            </span>
-            <Button
-              variant="ghost"
-              iconBefore={<Maximize2 size={13} />}
-              onClick={() =>
-                executer({
-                  ton: 'info',
-                  titre: 'Console en plein écran',
-                  detail: 'La console s’ouvre dans un onglet dédié, hors du portail.',
-                })
-              }
-            >
-              Plein écran
-            </Button>
-            <Button
-              variant="secondary"
-              iconBefore={<RotateCw size={13} />}
-              onClick={() =>
-                executer({
-                  action: 'vm.power',
-                  ton: 'info',
-                  titre: 'Ctrl+Alt+Suppr envoyé',
-                  detail: `Séquence transmise à la console de ${vm.nom}.`,
-                })
-              }
-            >
-              Envoyer Ctrl+Alt+Suppr
-            </Button>
-            <Button variant="ghost" onClick={() => setConsole(false)}>
-              Fermer
-            </Button>
+            Connecté · {vm.nom} · {vm.os}
           </>
         }
-      >
-        <div className="flex h-full min-h-[60vh] flex-col overflow-hidden rounded-[8px] border border-g-300 bg-p-900">
-          <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-ok animate-pulse-dot" />
-            <span className="type-micro text-p-300">
-              Connecté · {vm.nom} · {vm.os}
-            </span>
-          </div>
-          <pre className="flex-1 overflow-auto px-4 py-3 font-mono text-[13px] leading-relaxed text-[#C9E4CA]">
-{`Ubuntu 24.04.1 LTS ${vm.nom} tty1
+        footerExtra={
+          <Button
+            variant="secondary"
+            iconBefore={<RotateCw size={13} />}
+            onClick={() =>
+              executer({
+                action: 'vm.power',
+                ton: 'info',
+                titre: 'Ctrl+Alt+Suppr envoyé',
+                detail: `Séquence transmise à la console de ${vm.nom}.`,
+              })
+            }
+          >
+            Envoyer Ctrl+Alt+Suppr
+          </Button>
+        }
+        contenu={`Ubuntu 24.04.1 LTS ${vm.nom} tty1
 
 ${vm.nom} login: ops
 Password:
@@ -1094,9 +1068,7 @@ ops@${vm.nom}:~$ systemctl is-system-running
 running
 
 ops@${vm.nom}:~$ _`}
-          </pre>
-        </div>
-      </Drawer>
+      />
 
       <ModaleFormulaire
         ouvert={redimensionnement}

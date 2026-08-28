@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Download, Plus, Trash2 } from 'lucide-react'
+import { Download, Plus, Terminal, Trash2 } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { dateCourte, goHumain, num, pct } from '@/lib/format'
 import { SITE_LABEL, ROLE_LABEL, type Role } from '@/lib/types'
@@ -14,6 +14,7 @@ import { Field, Input, Select, Switch } from '@/components/ui/field'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { HealthBadge, QuotaBar, StatTile } from '@/components/composition/metrics'
 import { GrilleSparkCharts } from '@/components/business/observabilite'
+import { ConsoleDrawer } from '@/components/business/console'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
@@ -66,9 +67,17 @@ export function VueCluster({ id }: { id: string }) {
   const [oidcObligatoire, setOidcObligatoire] = useState(true)
   const [auditApi, setAuditApi] = useState(true)
   const [apiPublique, setApiPublique] = useState(false)
+  const [shell, setShell] = useState(false)
+  const [noeudCible, setNoeudCible] = useState<string>()
 
   const cluster = grappes.items.find((c) => c.id === id)!
   const espace = espaceById(cluster.espaceId)
+
+  /** Mêmes noms que ceux affichés dans l'onglet Nœuds. */
+  const noms = cluster.pools.flatMap((p) =>
+    Array.from({ length: p.nodes }, (_, i) => `${cluster.nom}-${p.nom}-${String(i + 1).padStart(2, '0')}`),
+  )
+  const noeud = noeudCible ?? noms[0]
 
   const poserBrouillon = (pool: string, champ: 'nodes' | 'min' | 'max' | 'disk', valeur: number) =>
     setBrouillons((p) => ({ ...p, [pool]: { ...p[pool], [champ]: valeur } }))
@@ -128,6 +137,13 @@ users:
         }
         actions={
           <>
+            <Button
+              iconBefore={<Terminal size={14} />}
+              onClick={() => setShell(true)}
+              disabled={cluster.statut !== 'running' || noms.length === 0}
+            >
+              Shell
+            </Button>
             <Button
               variant="secondary"
               iconBefore={<Download size={14} />}
@@ -995,6 +1011,48 @@ users:
           </Card>
         </div>
       )}
+
+      {/* Shell en panneau plein écran */}
+      <ConsoleDrawer
+        open={shell}
+        onClose={() => setShell(false)}
+        titre={`Shell · ${cluster.nom}`}
+        description="Le portail encapsule kubectl debug node/ — il ne réimplémente pas le protocole d’exec de Kubernetes."
+        statut={
+          <>
+            Connecté · {noeud} · Kubernetes {cluster.version}
+          </>
+        }
+        barre={
+          noms.length > 1 ? (
+            <div className="border-b border-white/10 px-3 py-2">
+              <Select
+                value={noeud}
+                onChange={(e) => setNoeudCible(e.target.value)}
+                className="h-7 bg-p-800 text-p-100"
+              >
+                {noms.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          ) : undefined
+        }
+        contenu={`$ kubectl debug node/${noeud} -it --image=busybox:1.36 -- chroot /host sh
+
+Creating debugging pod node-debugger-${noeud}-a1b2c3 with container debugger on node ${noeud}.
+If you don't see a command prompt, try pressing enter.
+
+/ # uname -a
+Linux ${noeud} 6.8.0-45-generic #1 SMP x86_64 GNU/Linux
+
+/ # kubectl get pods -A --field-selector spec.nodeName=${noeud} --no-headers | wc -l
+${12 + (noms.indexOf(noeud) * 3) % 8}
+
+/ # _`}
+      />
     </div>
   )
 }

@@ -11,6 +11,7 @@ import {
   RefreshCw,
   RotateCcw,
   Square,
+  Terminal,
   Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -29,6 +30,7 @@ import {
   deploiementsDeLApp,
   domainesDuService,
   serviceProjetById,
+  urlInterneDuService,
 } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink, IconButton } from '@/components/ui/button'
@@ -40,6 +42,7 @@ import { EmptyState } from '@/components/composition/states'
 import { ConfirmDialog, Drawer } from '@/components/ui/overlay'
 import { EventList, GrilleSparkCharts, LogPeek } from '@/components/business/observabilite'
 import { EmplacementReel, StatutServiceBadge } from '@/components/business/projets'
+import { ConsoleDrawer } from '@/components/business/console'
 import { ConfigurationServicePanel } from '@/components/business/configuration-service'
 import { configurationDuService } from '@/lib/configurations'
 import { modeleBySlug } from '@/lib/mock/modeles'
@@ -119,6 +122,7 @@ export function VueService({ id }: { id: string }) {
   const services = useServices()
   const lesProjets = useCollection<Projet>('projets', PROJETS)
   const [onglet, setOnglet] = useState('apercu')
+  const [shell, setShell] = useState(false)
   const { autorise, refus } = useApp()
 
   const service = services.items.find((x) => x.id === id)
@@ -128,6 +132,11 @@ export function VueService({ id }: { id: string }) {
 
   const domaines = domainesDuService(id)
   const onglets = ongletsDu(service)
+  /** Un shell exige un conteneur vivant : ni une base managée, ni une exécution planifiée. */
+  const peutOuvrirUnShell = service.type === 'application' || service.type === 'statique' || service.type === 'worker'
+  const cibleShell = service.emplacement.namespace
+    ? `kubectl exec -it deploy/${service.nom} -n ${service.emplacement.namespace} -- sh`
+    : `ssh ops@${service.emplacement.vms?.[0] ?? service.nom}`
 
   return (
     <div className="space-y-5">
@@ -172,6 +181,16 @@ export function VueService({ id }: { id: string }) {
         }
         actions={
           <>
+            {peutOuvrirUnShell && (
+              <Button
+                variant="secondary"
+                iconBefore={<Terminal size={14} />}
+                onClick={() => setShell(true)}
+                disabled={service.statut !== 'running'}
+              >
+                Shell
+              </Button>
+            )}
             {domaines.length > 0 && (
               <ButtonLink
                 href={`https://${domaines[0].hote}`}
@@ -246,6 +265,33 @@ export function VueService({ id }: { id: string }) {
       {onglet === 'journaux' && <Journaux service={service} />}
       {onglet === 'supervision' && <Supervision service={service} />}
       {onglet === 'avance' && <Avance service={service} />}
+
+      {peutOuvrirUnShell && (
+        <ConsoleDrawer
+          open={shell}
+          onClose={() => setShell(false)}
+          titre={`Shell · ${service.nom}`}
+          description="Le portail encapsule l’exécution distante — il ne réimplémente pas de terminal interactif."
+          statut={
+            <>
+              Connecté · {service.nom} · {TYPE_SERVICE_LABEL[service.type]}
+            </>
+          }
+          contenu={`$ ${cibleShell}
+
+${service.emplacement.namespace ? `Defaulting container name to ${service.nom}.` : `Warning: Permanently added '${service.emplacement.vms?.[0] ?? service.nom}' (ED25519) to the list of known hosts.`}
+
+/ $ ps aux | head -3
+PID   USER     TIME  COMMAND
+    1 app       0:03 ${service.source?.type === 'image' ? service.source.ref.split(':')[0].split('/').pop() : 'node dist/server.js'}
+   18 app       0:00 sh
+
+/ $ env | grep -c ^
+${service.ressources.cpu * 6} variables d’environnement visibles
+
+/ $ _`}
+        />
+      )}
     </div>
   )
 }
@@ -330,6 +376,16 @@ function Apercu({
             ]}
           />
         </Card>
+
+        {urlInterneDuService(service) && (
+          <Card>
+            <CardHeader
+              titre="Adresse interne"
+              sousTitre="Pour joindre ce service depuis un autre service du même projet — pas depuis Internet."
+            />
+            <CopyField value={urlInterneDuService(service)!} mono />
+          </Card>
+        )}
 
         {domaines.length > 0 && (
           <Card>
