@@ -27,7 +27,7 @@ export function VueVariables({ id }: { id: string }) {
   const secrets = projet.variables.filter((v) => v.secret)
   const build = projet.variables.filter((v) => v.portee === 'build')
 
-  const champsVariable = (defaut?: Projet['variables'][number]) => [
+  const champsVariable = (defaut?: Projet['variables'][number], secretForce?: boolean) => [
     {
       id: 'cle',
       label: 'Clé',
@@ -52,13 +52,17 @@ export function VueVariables({ id }: { id: string }) {
         { value: 'build', label: 'Construction — figée dans l’artefact' },
       ],
     },
-    {
-      id: 'secret',
-      label: 'Secret',
-      type: 'switch' as const,
-      demi: true,
-      placeholder: 'Stocker dans le coffre, ne jamais afficher',
-    },
+    ...(secretForce
+      ? []
+      : [
+          {
+            id: 'secret',
+            label: 'Secret',
+            type: 'switch' as const,
+            demi: true,
+            placeholder: 'Stocker dans le coffre, ne jamais afficher',
+          },
+        ]),
     {
       id: 'environnements',
       label: 'Environnements',
@@ -70,10 +74,10 @@ export function VueVariables({ id }: { id: string }) {
     },
   ]
 
-  const versVariable = (v: Record<string, string | number | boolean>) => ({
+  const versVariable = (v: Record<string, string | number | boolean>, secretForce?: boolean) => ({
     cle: String(v.cle).trim(),
-    valeur: v.secret ? undefined : String(v.valeur),
-    secret: Boolean(v.secret),
+    valeur: secretForce || v.secret ? undefined : String(v.valeur),
+    secret: secretForce || Boolean(v.secret),
     portee: v.portee as 'build' | 'runtime',
     environnements:
       v.environnements === 'tous' ? [...projet.environnements] : [String(v.environnements)],
@@ -127,36 +131,73 @@ export function VueVariables({ id }: { id: string }) {
           titre="Variables et secrets du projet"
           sousTitre="Les valeurs secrètes ne sont jamais affichées par défaut, et leur révélation est journalisée."
           actions={
-            <BoutonFormulaire
-              libelle="Ajouter une variable"
-              icone={<Plus size={13} />}
-              action="app.deploy"
-              titre={`Ajouter une variable à ${projet.nom}`}
-              description="Elle est injectée dans chaque service de l’environnement concerné. Un service peut la redéfinir pour lui seul ; la valeur du service gagne toujours."
-              libelleValider="Ajouter"
-              champs={champsVariable()}
-              valeursDepart={{ portee: 'runtime', environnements: 'tous' }}
-              complement={(v) =>
-                v.secret ? (
+            <>
+              <BoutonFormulaire
+                libelle="Ajouter une variable"
+                icone={<Plus size={13} />}
+                action="app.deploy"
+                titre={`Ajouter une variable à ${projet.nom}`}
+                description="Elle est injectée dans chaque service de l’environnement concerné. Un service peut la redéfinir pour lui seul ; la valeur du service gagne toujours."
+                libelleValider="Ajouter"
+                champs={champsVariable()}
+                valeursDepart={{ portee: 'runtime', environnements: 'tous' }}
+                complement={(v) =>
+                  v.secret ? (
+                    <Callout ton="violet" titre="Un secret ne se relit pas">
+                      La valeur part au coffre de l’organisation. Le portail ne l’affichera plus :
+                      pour la changer, il faudra en saisir une nouvelle, jamais la corriger à
+                      partir de l’ancienne.
+                    </Callout>
+                  ) : null
+                }
+                operation={(v) => {
+                  const cle = String(v.cle).trim()
+                  return {
+                    titre: `Variable ${cle} ajoutée`,
+                    detail:
+                      v.portee === 'build'
+                        ? 'Portée construction : elle prendra effet au prochain build.'
+                        : 'Portée exécution : redéployez les services concernés pour qu’ils la relisent.',
+                    job: { workflow: v.secret ? 'secret.create' : 'variable.create', cible: cle },
+                    effet: () =>
+                      lesProjets.modifier(projet.id, (p) => ({
+                        variables: [...p.variables, versVariable(v)],
+                      })),
+                  }
+                }}
+              />
+              <BoutonFormulaire
+                libelle="Ajouter un secret"
+                icone={<Plus size={13} />}
+                action="app.deploy"
+                titre={`Ajouter un secret à ${projet.nom}`}
+                description="La valeur part directement au coffre de l’organisation : le portail ne la conserve jamais en clair et ne l’affichera plus une fois enregistrée."
+                libelleValider="Ajouter au coffre"
+                champs={champsVariable(undefined, true)}
+                valeursDepart={{ portee: 'runtime', environnements: 'tous' }}
+                complement={() => (
                   <Callout ton="violet" titre="Un secret ne se relit pas">
-                    La valeur part au coffre de l’organisation. Le portail ne l’affichera plus :
-                    pour la changer, il faudra en saisir une nouvelle, jamais la corriger à partir
-                    de l’ancienne.
+                    Pour le changer, il faudra en saisir une nouvelle valeur, jamais la corriger à
+                    partir de l’ancienne.
                   </Callout>
-                ) : null
-              }
-              operation={(v) => ({
-                titre: `Variable ${String(v.cle).trim()} ajoutée`,
-                detail:
-                  v.portee === 'build'
-                    ? 'Portée construction : elle prendra effet au prochain build.'
-                    : 'Portée exécution : redéployez les services concernés pour qu’ils la relisent.',
-                effet: () =>
-                  lesProjets.modifier(projet.id, (p) => ({
-                    variables: [...p.variables, versVariable(v)],
-                  })),
-              })}
-            />
+                )}
+                operation={(v) => {
+                  const cle = String(v.cle).trim()
+                  return {
+                    titre: `Secret ${cle} ajouté`,
+                    detail:
+                      v.portee === 'build'
+                        ? 'Portée construction : il prendra effet au prochain build.'
+                        : 'Portée exécution : redéployez les services concernés pour qu’ils le relisent.',
+                    job: { workflow: 'secret.create', cible: cle },
+                    effet: () =>
+                      lesProjets.modifier(projet.id, (p) => ({
+                        variables: [...p.variables, versVariable(v, true)],
+                      })),
+                  }
+                }}
+              />
+            </>
           }
         />
         <div className="no-scrollbar -mx-4 overflow-x-auto px-4">
