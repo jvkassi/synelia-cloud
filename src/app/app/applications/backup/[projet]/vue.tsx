@@ -25,7 +25,7 @@ import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/a
 /**
  * Sauvegardes d'un projet — service par service.
  *
- * La section transverse « Sauvegardes & PRA » d'Infrastructure porte les plans
+ * La section transverse « Sauvegardes » d'Infrastructure porte les plans
  * réutilisables et la conformité 3-2-1 qu'on montre à un auditeur. Ici on
  * répond à la question du jour : ce projet est-il protégé, depuis quand, et
  * qu'est-ce que je récupère si je restaure maintenant ?
@@ -130,7 +130,7 @@ export function VueBackup({ id }: { id: string }) {
                     className="ml-2"
                     action="backup.plan.write"
                     titre={`Protéger ${s.nom}`}
-                    description="Un plan de sauvegarde s’applique à ce service seul. Les plans réutilisables, eux, couvrent plusieurs projets d’un coup et vivent dans Sauvegardes & PRA."
+                    description="Un plan de sauvegarde s’applique à ce service seul. Les plans réutilisables, eux, couvrent plusieurs projets d’un coup et vivent dans Sauvegardes."
                     libelleValider="Activer la sauvegarde"
                     champs={[
                       {
@@ -345,7 +345,7 @@ export function VueBackup({ id }: { id: string }) {
           Chaque point est relu après écriture, et un test de restauration complet est joué
           périodiquement. Le résultat de ces tests, avec sa durée, est dans{' '}
           <Link href="/app/sauvegarde" className="font-semibold text-p-700 hover:text-m-600">
-            Sauvegardes &amp; PRA
+            Sauvegardes
           </Link>
           , avec le tableau de conformité 3-2-1.
         </Callout>

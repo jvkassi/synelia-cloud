@@ -40,7 +40,7 @@ Abidjan (Synertech Vallon) et Grand-Bassam (VITIB).
 Trois espaces, une seule API :
 
 - **espace client** : Espaces Cloud, machines, Kubernetes, réseau, stockage,
-  sauvegarde et PRA, plateforme applicative, projets, Web Cloud, services
+  sauvegarde, plateforme applicative, projets, Web Cloud, services
   managés, facturation, support ;
 - **espace super admin** (préfixe \`/admin\`) : pilotage, clients,
   capacité, catalogue, finance, exploitation ;
@@ -103,7 +103,7 @@ const TAGS = [
   ['Réseau', 'Réseaux privés, IP publiques, pare-feu, VPN, load balancers.'],
   ['Stockage', 'Volumes bloc, buckets objet, clés d’accès S3.'],
   ['Bases managées', 'Bases opérées par la plateforme, réplicas, restauration dans le temps.'],
-  ['Sauvegarde & PRA', 'Plans, points de restauration, conformité 3-2-1, plans de reprise.'],
+  ['Sauvegarde', 'Plans, points de restauration, conformité 3-2-1, capacité NFS et agent de sauvegarde.'],
   ['Applications', 'Applications, environnements, composants, dépôts.'],
   ['Déploiements', 'Construction, analyse, mise en service, retour arrière.'],
   ['Projets applicatifs', 'Projets, services, zone applicative, domaines, routage.'],

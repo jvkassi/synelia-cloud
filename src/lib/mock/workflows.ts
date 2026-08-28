@@ -182,7 +182,7 @@ export const WORKFLOWS: DefinitionWorkflow[] = [
     ],
   },
 
-  // ─── Sauvegarde, restauration, PRA (§5.6 et §5.7) ─────────────────────
+  // ─── Sauvegarde, restauration (§5.6 et §5.7) ──────────────────────────
   {
     id: 'backup.restore',
     portee: 'client',
@@ -196,38 +196,6 @@ export const WORKFLOWS: DefinitionWorkflow[] = [
       { nom: 'Restaurer les données', dureeS: 486 },
       { nom: 'Remonter les services', dureeS: 72 },
       { nom: 'Contrôler la cohérence', dureeS: 38 },
-    ],
-  },
-  {
-    id: 'dr.failover.test',
-    portee: 'client',
-    libelle: 'Bascule de test · {cible}',
-    lancement: 'Réseau isolé : aucun impact sur la production.',
-    fin: 'Le test est concluant. Le RTO constaté est enregistré dans le plan.',
-    href: '/app/pra',
-    etapes: [
-      { nom: 'Créer le réseau isolé de test', dureeS: 34 },
-      { nom: 'Démarrer le groupe 1 — bases de données', dureeS: 168 },
-      { nom: 'Démarrer le groupe 2 — applications', dureeS: 124 },
-      { nom: 'Démarrer le groupe 3 — frontaux', dureeS: 62 },
-      { nom: 'Exécuter les contrôles applicatifs', dureeS: 96 },
-      { nom: 'Détruire l’environnement de test', dureeS: 48 },
-    ],
-  },
-  {
-    id: 'dr.failover.real',
-    portee: 'client',
-    libelle: 'Bascule réelle · {cible}',
-    lancement: 'La production bascule sur le site de secours. Le retour arrière est une opération distincte.',
-    fin: 'La production tourne sur le site de secours.',
-    href: '/app/pra',
-    etapes: [
-      { nom: 'Geler les écritures sur le site principal', dureeS: 22 },
-      { nom: 'Terminer la réplication en cours', dureeS: 148 },
-      { nom: 'Démarrer le groupe 1 — bases de données', dureeS: 186 },
-      { nom: 'Démarrer le groupe 2 — applications', dureeS: 132 },
-      { nom: 'Démarrer le groupe 3 — frontaux', dureeS: 68 },
-      { nom: 'Basculer les entrées DNS', dureeS: 42 },
     ],
   },
 

@@ -5,19 +5,17 @@ import { useState } from 'react'
 import { Download, FileDown, Plus, RotateCcw, Shield, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateCourte, dateHeure, dureeMin, goHumain, num, pct } from '@/lib/format'
-import { SITE_COURT } from '@/lib/types'
-import type { BackupPlan, ConformiteLigne, RestorePoint } from '@/lib/types'
-import { BACKUP_PLANS, BUCKETS, CONFORMITE, DR_PLANS, RESTORE_POINTS, VMS } from '@/lib/mock'
+import type { AgentSauvegarde, BackupPlan, CapaciteSauvegarde, ConformiteLigne, RestorePoint } from '@/lib/types'
+import { AGENTS_SAUVEGARDE, BACKUP_PLANS, BUCKETS, CAPACITE_SAUVEGARDE, CONFORMITE, RESTORE_POINTS, VMS } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink, IconButton } from '@/components/ui/button'
 import { Checkbox, Field, Input, Radio, Select, Switch } from '@/components/ui/field'
 import { GatedAction, Tabs } from '@/components/ui/display'
 import { Drawer } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
-import { StatTile } from '@/components/composition/metrics'
-import { RpoRtoGauge } from '@/components/business/infra'
+import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { DataTable, type Colonne } from '@/components/composition/data-table'
-import { Stepper } from '@/components/composition/flow'
+import { CostPreview, Stepper } from '@/components/composition/flow'
 import { Regle321 } from '@/components/business/infra'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
@@ -77,7 +75,7 @@ const ONGLETS = [
   { id: 'points', label: 'Points de restauration' },
   { id: 'restauration', label: 'Restauration' },
   { id: 'conformite', label: 'Conformité' },
-  { id: 'reprise', label: 'Plans de reprise' },
+  { id: 'capacite', label: 'Capacité & agent' },
 ]
 
 export default function Sauvegarde() {
@@ -127,7 +125,7 @@ export default function Sauvegarde() {
       {onglet === 'points' && <OngletPoints />}
       {onglet === 'restauration' && <AssistantRestauration />}
       {onglet === 'conformite' && <OngletConformite />}
-      {onglet === 'reprise' && <OngletReprise />}
+      {onglet === 'capacite' && <OngletCapacite />}
     </div>
   )
 }
@@ -1220,81 +1218,124 @@ function Petit({ cle, valeur }: { cle: string; valeur: string }) {
   )
 }
 
+/** Paliers de stockage NFS — façon OVH Backup Storage : un tarif plat par palier, pas au To. */
+const PALIERS_NFS: Record<CapaciteSauvegarde['palier'], { libelle: string; go: number; prix: number }> = {
+  '500go': { libelle: '500 Go', go: 500, prix: 0 },
+  '5to': { libelle: '5 To', go: 5000, prix: 28_000 },
+  '10to': { libelle: '10 To', go: 10_000, prix: 52_000 },
+}
+
 /**
- * Plans de reprise, en accès depuis les sauvegardes : les deux répondent à la
- * même question — que se passe-t-il quand on perd quelque chose — mais à deux
- * échelles, le fichier et le site.
+ * Capacité de sauvegarde brute, en dehors des plans : un espace réseau (NFS,
+ * CIFS, FTP) qu'on dimensionne par palier, et un agent qui sauvegarde un
+ * serveur entier selon une politique fixe — on l'installe, on ne la règle pas.
  */
-function OngletReprise() {
+function OngletCapacite() {
+  const capacite = useCollection<CapaciteSauvegarde>('capacite-sauvegarde', CAPACITE_SAUVEGARDE)
+  const agents = useCollection<AgentSauvegarde>('agents-sauvegarde', AGENTS_SAUVEGARDE)
+  const [cibleChoisie, setCibleChoisie] = useState<CapaciteSauvegarde['palier'] | null>(null)
+  const cap = capacite.items[0]
+  const palier = PALIERS_NFS[cap.palier]
+  const superieurs = (Object.keys(PALIERS_NFS) as Array<CapaciteSauvegarde['palier']>).filter(
+    (p) => PALIERS_NFS[p].go > palier.go,
+  )
+  const cible = cibleChoisie && superieurs.includes(cibleChoisie) ? cibleChoisie : (superieurs[0] ?? null)
+  const installes = agents.items.filter((a) => a.installe).length
+
   return (
     <div className="space-y-4">
-      <Callout ton="info" titre="Sauvegarde et reprise ne se remplacent pas">
-        Une sauvegarde restaure un état passé, en quelques minutes à quelques heures. Un plan de
-        reprise redémarre tout un périmètre sur l’autre site, dans un ordre défini, avec un
-        engagement de délai. Le premier couvre l’erreur, le second couvre la perte du site.
+      <Callout ton="info" titre="Deux façons de protéger un serveur, sans se remplacer">
+        Un plan (onglet Plans) applique une politique que vous réglez, par étiquette, Espace ou
+        ressource. L’espace NFS et l’agent ci-dessous couvrent le cas où vous voulez juste un
+        volume réseau à monter vous-même, ou une sauvegarde complète d’un serveur sans rien
+        configurer.
       </Callout>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {DR_PLANS.map((p) => {
-          const dernier = p.exercices[0]
-          return (
-            <Card key={p.id}>
-              <CardHeader
-                titre={
-                  <span className="flex flex-wrap items-center gap-2.5">
-                    <Link
-                      href={`/app/pra/${p.id}`}
-                      className="font-mono text-[14px] font-bold text-ink hover:text-p-700"
-                    >
-                      {p.nom}
-                    </Link>
-                    <Badge
-                      tone={
-                        p.statut === 'operationnel'
-                          ? 'ok'
-                          : p.statut === 'degrade'
-                            ? 'warn'
-                            : 'err'
-                      }
-                      size="sm"
-                      dot
-                    >
-                      {p.statut === 'operationnel'
-                        ? 'Opérationnel'
-                        : p.statut === 'degrade'
-                          ? 'Dégradé'
-                          : 'Jamais testé'}
-                    </Badge>
-                  </span>
-                }
-                sousTitre={`${SITE_COURT[p.siteSource]} → ${SITE_COURT[p.siteRepli]} · ${p.groupes.length} groupes de démarrage · réplication ${p.replication.mode === 'continu' ? 'continue' : 'planifiée'}`}
-                actions={
-                  <ButtonLink href={`/app/pra/${p.id}`} variant="secondary" size="sm">
-                    Ouvrir le plan
-                  </ButtonLink>
-                }
-              />
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <RpoRtoGauge
-                  libelle="RPO — perte de données admise"
-                  cibleMin={p.rpoCibleMin}
-                  constateMin={p.rpoConstateMin}
-                />
-                <RpoRtoGauge
-                  libelle="RTO — délai de remise en service"
-                  cibleMin={p.rtoCibleMin}
-                  constateMin={p.rtoConstateMin}
-                />
+        <Card>
+          <CardHeader
+            titre="Stockage de sauvegarde NFS"
+            sousTitre="Protocoles FTP, FTPS, NFS et CIFS — montez-le et écrivez-y ce que vous voulez."
+          />
+          <QuotaBar
+            libelle={`Palier ${palier.libelle}`}
+            utilise={cap.utiliseGo}
+            total={palier.go}
+            unite="Go"
+            formateur={(v) => goHumain(v)}
+          />
+          {cible && (
+            <div className="mt-3.5 space-y-3 border-t border-g-100 pt-3">
+              <div className="flex flex-wrap gap-4">
+                {superieurs.map((p) => (
+                  <Radio
+                    key={p}
+                    name="palier-nfs"
+                    checked={cible === p}
+                    onChange={() => setCibleChoisie(p)}
+                    label={`${PALIERS_NFS[p].libelle} · ${num(PALIERS_NFS[p].prix)} FCFA/mois`}
+                  />
+                ))}
               </div>
-              {dernier && (
-                <p className="mt-3 border-t border-g-100 pt-2.5 text-[11.5px] text-g-500">
-                  Dernier exercice {dernier.type === 'test' ? 'de test' : 'réel'} le {dernier.date} —{' '}
-                  {dernier.succes ? 'réussi' : 'échoué'}, RTO constaté {dernier.rtoConstateMin} min.
-                </p>
-              )}
-            </Card>
-          )
-        })}
+              <CostPreview
+                compact
+                lignes={[{ libelle: `Stockage NFS · palier ${PALIERS_NFS[cible].libelle}`, montant: PALIERS_NFS[cible].prix }]}
+              />
+              <BoutonAction
+                libelle={`Passer à ${PALIERS_NFS[cible].libelle}`}
+                variant="primary"
+                fullWidth
+                operation={{
+                  action: 'backup.plan.write',
+                  titre: `Palier de stockage relevé à ${PALIERS_NFS[cible].libelle}`,
+                  detail: 'Effectif immédiatement, sans coupure. Prorata ajouté à la prochaine facture.',
+                  effet: () => capacite.modifier(cap.id, { palier: cible, quotaGo: PALIERS_NFS[cible].go }),
+                }}
+              />
+            </div>
+          )}
+        </Card>
+
+        <Card>
+          <CardHeader
+            titre="Agent de sauvegarde"
+            sousTitre={`${installes}/${agents.items.length} serveurs équipés · politique fixe, non modifiable`}
+          />
+          <ul className="divide-y divide-g-100">
+            {agents.items.map((a) => (
+              <li key={a.id} className="flex items-center justify-between gap-3 py-2.5">
+                <span className="min-w-0">
+                  <span className="block truncate text-[13px] font-semibold text-ink">
+                    {a.resourceNom}
+                  </span>
+                  <span className="block text-[11px] text-g-500">
+                    {a.installe
+                      ? `Installé · rétention ${a.politique} · dernier passage ${a.dernierPassage ? dateHeure(a.dernierPassage) : '—'}`
+                      : 'Non installé'}
+                  </span>
+                </span>
+                <BoutonAction
+                  libelle={a.installe ? 'Retirer' : 'Installer'}
+                  variant={a.installe ? 'ghost' : 'secondary'}
+                  operation={{
+                    action: 'backup.plan.write',
+                    titre: a.installe
+                      ? `Agent retiré de ${a.resourceNom}`
+                      : `Agent installé sur ${a.resourceNom}`,
+                    detail: a.installe
+                      ? 'Les points déjà pris restent disponibles jusqu’à expiration de leur rétention.'
+                      : `Sauvegarde complète du serveur, fenêtre nocturne, rétention ${a.politique}. La politique n’est pas modifiable.`,
+                    effet: () =>
+                      agents.modifier(a.id, (v) => ({
+                        installe: !v.installe,
+                        dernierPassage: v.installe ? v.dernierPassage : undefined,
+                      })),
+                  }}
+                />
+              </li>
+            ))}
+          </ul>
+        </Card>
       </div>
     </div>
   )

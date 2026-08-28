@@ -33,9 +33,9 @@ const ARGUMENTS = [
       'Nous générons sur demande une attestation de résidence des données, ressource par ressource, avec l’identifiant du site. Nous documentons aussi ce qui n’est pas encore atteint : la capacité VMware et Hyper-V héritée de reprises de parcs clients est marquée « en sortie », avec une date cible de migration. Un évaluateur technique préfère une trajectoire honnête à une affirmation invérifiable.',
   },
   {
-    titre: 'Un PRA exercé, pas seulement contractualisé',
+    titre: 'Une sauvegarde testée, pas seulement planifiée',
     texte:
-      'Un RTO annoncé mais jamais mesuré ne vaut rien le jour du sinistre. Nous exerçons votre plan trimestriellement, en réseau isolé et sans impact sur la production, puis nous vous remettons le rapport avec le temps de reprise réellement constaté et les incidents relevés. Cible et constaté sont affichés côte à côte, en permanence, dans votre portail.',
+      'Une rétention annoncée mais jamais restaurée ne vaut rien le jour de l’incident. Nous restaurons un échantillon chaque mois, en conditions réelles, puis nous vous remettons le résultat avec la durée réellement constatée et les écarts relevés. Le dernier résultat est affiché en permanence dans votre portail.',
   },
   {
     titre: 'Une réversibilité testée',
@@ -56,7 +56,7 @@ export default function Entreprises() {
             <span className="text-m-600">prouver, pas promettre.</span>
           </>
         }
-        chapeau="Appels d’offres, audits, comités de sécurité : à un moment, il faut produire des preuves. Attestations de résidence, rapports d’exercice PRA avec RTO constaté, matrice de rôles publiée, journal d’audit qui enregistre aussi les refus. C’est ce que nous construisons."
+        chapeau="Appels d’offres, audits, comités de sécurité : à un moment, il faut produire des preuves. Attestations de résidence, rapports de test de restauration avec durée constatée, matrice de rôles publiée, journal d’audit qui enregistre aussi les refus. C’est ce que nous construisons."
       />
 
       <SiteSection>
@@ -269,7 +269,7 @@ export default function Entreprises() {
                     required
                     name="besoin"
                     rows={5}
-                    placeholder="Nous sortons d’un contrat de licences propriétaires arrivant à échéance en mars, pour un parc de 40 machines virtuelles et 240 boîtes de messagerie. Nous cherchons à établir un PRA inter-site avec un RTO inférieur à quatre heures."
+                    placeholder="Nous sortons d’un contrat de licences propriétaires arrivant à échéance en mars, pour un parc de 40 machines virtuelles et 240 boîtes de messagerie. Nous cherchons un plan de sauvegarde immuable avec un agent installé sur l’ensemble du parc."
                   />
                 </Field>
                 <Checkbox
@@ -286,7 +286,7 @@ export default function Entreprises() {
 
       <AppelFinal
         titre="Ou commencez par explorer le portail"
-        chapeau="Créez un compte : l’espace client est peuplé de données de démonstration réalistes — Espaces Cloud, machines, applications, services managés, sauvegardes, PRA, facturation."
+        chapeau="Créez un compte : l’espace client est peuplé de données de démonstration réalistes — Espaces Cloud, machines, applications, services managés, sauvegardes, facturation."
         primaire={{ libelle: 'Créer un compte', href: '/signup' }}
         secondaire={{ libelle: 'Voir les datacenters', href: '/datacenters' }}
       />

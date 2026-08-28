@@ -118,7 +118,6 @@ const pilotage = {
             ),
           ),
           conformite321: tableau(ref('LigneConformite')),
-          exercicesPra: entier(),
           organisationsSansSauvegarde: entier(),
         },
         ['referentiels'],

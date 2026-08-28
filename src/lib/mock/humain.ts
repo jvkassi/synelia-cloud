@@ -189,8 +189,8 @@ export const VALEURS = [
   {
     titre: 'Prouver plutôt qu’engager',
     texte:
-      'Un RTO contractuel de quatre heures ne vaut rien sans un exercice qui en constate trois heures douze. Nous exerçons, nous datons, et nous remettons le rapport — y compris quand il est mauvais.',
-    lien: { libelle: 'Lire la fiche PRA / DRaaS', href: '/offres/pra' },
+      'Une rétention de sauvegarde annoncée ne vaut rien sans un test qui restaure et redémarre réellement la donnée. Nous testons, nous datons, et nous remettons le rapport — y compris quand il est mauvais.',
+    lien: { libelle: 'Lire la fiche Cloud Backup', href: '/offres/cloud-backup' },
   },
   {
     titre: 'Rendre le départ possible',
@@ -248,7 +248,7 @@ export const TEMOIGNAGES: Temoignage[] = [
     avant:
       'Un contrat de licences propriétaires arrivant à échéance, un hébergement européen facturé en euros, et un plan de reprise décrit dans un document que personne n’avait jamais exercé.',
     apres:
-      'Un Espace Cloud Pro réparti sur les deux sites, un PRA inter-site exercé chaque trimestre, et la messagerie de 240 collaborateurs reprise avec l’historique.',
+      'Un Espace Cloud Pro réparti sur les deux sites, un plan Cloud Backup immuable testé chaque mois, et la messagerie de 240 collaborateurs reprise avec l’historique.',
     accroc:
       'La bascule MX a pris six heures au lieu de deux : un enregistrement TTL laissé à 24 heures chez le registrar précédent. Personne ne l’avait vérifié, ni eux ni nous.',
     chiffre: '−41 %',

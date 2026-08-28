@@ -380,34 +380,24 @@ export interface ConformiteLigne {
   dernierTestRestauration?: { date: string; succes: boolean; dureeMin: number }
 }
 
-export interface DRPlan {
+/** Palier de stockage NFS pour la sauvegarde — façon OVH Backup Storage. */
+export interface CapaciteSauvegarde {
   id: string
   orgId: string
-  nom: string
-  siteSource: Site
-  siteRepli: Site
-  rpoCibleMin: number
-  rpoConstateMin: number
-  rtoCibleMin: number
-  rtoConstateMin: number
-  groupes: Array<{
-    ordre: number
-    nom: string
-    ressources: string[]
-    dependances: string[]
-    ipRepli?: Record<string, string>
-  }>
-  replication: { mode: 'continu' | 'planifie'; retardS: number }
-  exercices: Array<{
-    date: string
-    type: 'test' | 'reel'
-    dureeMin: number
-    rtoConstateMin: number
-    succes: boolean
-    rapportUrl: string
-    incidents?: string[]
-  }>
-  statut: 'operationnel' | 'degrade' | 'jamais_teste'
+  palier: '500go' | '5to' | '10to'
+  quotaGo: number
+  utiliseGo: number
+}
+
+/** Agent installé sur un serveur — sauvegarde complète, politique fixe, non configurable. */
+export interface AgentSauvegarde {
+  id: string
+  orgId: string
+  resourceId: string
+  resourceNom: string
+  installe: boolean
+  politique: '14j' | '30j'
+  dernierPassage?: string
 }
 
 // ─── PaaS ─────────────────────────────────────────────────────────────

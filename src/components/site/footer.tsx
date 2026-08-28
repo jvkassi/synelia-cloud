@@ -12,7 +12,6 @@ const COLONNES = [
       { nom: 'Load balancer', href: '/offres/load-balancer' },
       { nom: 'Stockage objet S3', href: '/offres/stockage-objet' },
       { nom: 'Cloud Backup', href: '/offres/cloud-backup' },
-      { nom: 'PRA / DRaaS', href: '/offres/pra' },
       { nom: 'WordPress managé', href: '/offres/wordpress' },
     ],
   },

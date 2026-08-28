@@ -115,7 +115,7 @@ Trente pictogrammes dans `public/photos/pate-*.webp`, tous générés dans la
 même matière pour former une famille : argile mate, arêtes biseautées, éclairage
 d'atelier doux, fond crème, violet / magenta / ocre uniquement.
 
-**Un produit, un pictogramme.** Les seize fiches produit portent un champ
+**Un produit, un pictogramme.** Les quinze fiches produit portent un champ
 `icone` ; les cartes de l'accueil aussi. Avant, la carte affichait la première
 lettre du nom dans une pastille — ce qui n'apprenait rien.
 
@@ -128,7 +128,6 @@ lettre du nom dans une pastille — ce qui n'apprenait rien.
 | Stockage bloc | `volumes` |
 | Load balancer | `load-balancer` |
 | Cloud Backup | `sauvegarde` |
-| PRA / DRaaS | `bouclier` |
 | Réseau & VPN | `reseau-vpn` |
 | IP & anti-DDoS | `ip-antiddos` |
 | Bases managées | `bases-managees` |

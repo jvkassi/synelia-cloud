@@ -55,7 +55,7 @@ export const OFFRES: Offer[] = [
       'Capacité dimensionnée sur mesure',
       'Hôtes dédiés possibles',
       'SLA 99,99 % avec crédits',
-      'PRA multi-site inclus',
+      'Agent de sauvegarde inclus',
       'Astreinte 24/7 nominative',
       'Revue d’architecture trimestrielle',
     ],
@@ -356,7 +356,7 @@ export const FACTURES: Invoice[] = [
 
 export const DEVIS: Devis[] = [
   { id: 'dev-1', orgId: 'org-dba', numero: 'DEV-0418', objet: 'Extension EC-DBA-01 · +16 vCPU / +64 Go', montant: 34000, validite: '2026-09-15', statut: 'envoye', createdAt: '2026-08-16' },
-  { id: 'dev-2', orgId: 'org-dba', numero: 'DEV-0402', objet: 'Évaluation PRA multi-site et exercice de bascule', montant: 780000, validite: '2026-09-30', statut: 'envoye', createdAt: '2026-08-04' },
+  { id: 'dev-2', orgId: 'org-dba', numero: 'DEV-0402', objet: 'Palier de sauvegarde 10 To et déploiement de l’agent sur le parc', montant: 780000, validite: '2026-09-30', statut: 'envoye', createdAt: '2026-08-04' },
   { id: 'dev-3', orgId: 'org-dba', numero: 'DEV-0377', objet: 'Migration messagerie Microsoft 365 → Email Pro (20 boîtes)', montant: 1_240_000, validite: '2026-07-31', statut: 'accepte', createdAt: '2026-06-28' },
   { id: 'dev-4', orgId: 'org-dba', numero: 'DEV-0341', objet: 'Cluster Kubernetes HA de recette', montant: 148000, validite: '2026-06-30', statut: 'expire', createdAt: '2026-05-22' },
 ]
@@ -556,7 +556,7 @@ export const ARTICLES_KB = [
   { id: 'kb-6', titre: 'Déployer une application depuis un dépôt Git', theme: 'Applications', duree: '10 min', extrait: "Connecter GitHub ou GitLab, choisir la branche, lire l'analyse automatique du dépôt." },
   { id: 'kb-7', titre: 'Comprendre le rapport de conformité 3-2-1', theme: 'Conformité', duree: '7 min', extrait: "Trois copies, deux supports, une hors site : ce que chaque pastille signifie." },
   { id: 'kb-8', titre: 'Ouvrir un service managé en SSO', theme: 'Services managés', duree: '2 min', extrait: "Pourquoi le bouton Ouvrir vous fait quitter le portail, et ce qui se passe alors." },
-  { id: 'kb-9', titre: 'Préparer un exercice de bascule PRA', theme: 'PRA', duree: '15 min', extrait: "Bascule de test en réseau isolé : préparation, exécution, lecture du rapport." },
+  { id: 'kb-9', titre: 'Installer l’agent de sauvegarde sur un serveur', theme: 'Sauvegarde', duree: '5 min', extrait: "Politique fixe, sans configuration : ce que l'agent sauvegarde et à quelle fréquence." },
   { id: 'kb-10', titre: 'Mettre en place une règle d’alerte', theme: 'Supervision', duree: '4 min', extrait: "Ressource, seuil, canal : les trois éléments d'une règle, et l'escalade." },
 ]
 

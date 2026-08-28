@@ -56,7 +56,6 @@ export default function NouvelEspace() {
   const [peering, setPeering] = useState('')
   const [planSauvegarde, setPlanSauvegarde] = useState('bp-prod-quotidien')
   const [supervision, setSupervision] = useState(true)
-  const [pra, setPra] = useState(false)
   const [periodicite, setPeriodicite] = useState<'mensuelle' | 'annuelle'>('mensuelle')
   const [conditions, setConditions] = useState(false)
 
@@ -77,15 +76,8 @@ export default function NouvelEspace() {
         montant: 0,
       })
     }
-    if (pra) {
-      l.push({
-        libelle: 'Option PRA inter-site',
-        detail: `Réplication vers ${site === 'ABJ' ? 'Grand-Bassam' : 'Abidjan'}`,
-        montant: 96000,
-      })
-    }
     return l
-  }, [offre, site, cidr, planSauvegarde, pra])
+  }, [offre, site, cidr, planSauvegarde])
 
   const codeValide = /^EC-[A-Z0-9]{2,6}-\d{2}$/.test(code) && !ESPACES.some((e) => e.code === code)
   const cidrValide = /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}\/(2[0-4]|1[6-9])$/.test(cidr)
@@ -109,7 +101,6 @@ export default function NouvelEspace() {
               <Petit cle="Site" valeur={site === 'ABJ' ? 'Abidjan' : 'Grand-Bassam'} />
               <Petit cle="Plage réseau" valeur={cidr} mono />
               <Petit cle="vCPU · Mémoire" valeur={offre.specs} />
-              <Petit cle="PRA inter-site" valeur={pra ? 'Activé' : 'Non'} />
             </dl>
           </Card>
           <CostPreview lignes={lignes} periodicite={periodicite} />
@@ -256,7 +247,7 @@ export default function NouvelEspace() {
                 <p className="mt-2.5 text-[12.5px] leading-relaxed text-g-700">
                   {s === 'ABJ'
                     ? 'Site principal, 640 m² de salle blanche, 1,2 MW installés, quatre opérateurs. Capacité la plus importante et connectivité la plus dense. Recommandé pour la production.'
-                    : 'Parc technologique VITIB en zone franche, 420 m², 800 kW installés. Site de repli PRA et destination des sauvegardes immuables. Recommandé pour séparer physiquement une charge de votre production.'}
+                    : 'Parc technologique VITIB en zone franche, 420 m², 800 kW installés. Site de repli et destination des sauvegardes immuables. Recommandé pour séparer physiquement une charge de votre production.'}
                 </p>
                 <dl className="mt-3 space-y-1.5 border-t border-g-100 pt-3">
                   <Petit cle="Latence indicative" valeur={LATENCE[s]} />
@@ -401,21 +392,7 @@ export default function NouvelEspace() {
                 label="Supervision incluse"
                 description="Sondes posées automatiquement à la création de chaque ressource, avec remontée dans l’écran Supervision et dans Centreon. Incluse dans l’offre."
               />
-              <Switch
-                checked={pra}
-                onChange={setPra}
-                label={`Plan de reprise vers ${site === 'ABJ' ? 'Grand-Bassam' : 'Abidjan'}`}
-                description="Réplication continue, ordre de démarrage avec dépendances, adressage de repli, exercices trimestriels avec rapport daté. Option facturée 96 000 FCFA par mois."
-              />
             </div>
-            {pra && (
-              <Callout ton="ok" className="mt-3.5" titre="Ce que l’option PRA vous engage à faire">
-                Un plan de reprise n’a de valeur que s’il est exercé. Nous planifions un premier
-                exercice de bascule de test dans les trente jours suivant la mise en place — en
-                réseau isolé, sans impact sur votre production — et vous remettons le rapport avec le
-                temps de reprise réellement constaté.
-              </Callout>
-            )}
           </Card>
         </div>
       )}
@@ -455,7 +432,6 @@ export default function NouvelEspace() {
                   valeur: BACKUP_PLANS.find((p) => p.id === planSauvegarde)?.nom ?? 'Aucun',
                 },
                 { cle: 'Supervision', valeur: supervision ? 'Incluse' : 'Désactivée' },
-                { cle: 'PRA inter-site', valeur: pra ? 'Activé' : 'Non souscrit' },
                 { cle: 'SLA', valeur: offre.sla ?? '—' },
                 {
                   cle: 'Périodicité',

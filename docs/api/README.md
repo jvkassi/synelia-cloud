@@ -91,7 +91,7 @@ effectives de la session.
 | Authentification, compte, organisations, membres, sécurité, audit | 61 |
 | Tableau de bord, travaux, recherche, copilote, anomalies | 13 |
 | IaaS — espaces, machines, Kubernetes, réseau, stockage, bases | 107 |
-| Sauvegarde et PRA | 21 |
+| Sauvegarde | 17 |
 | Plateforme applicative — applications, déploiements, projets, modèles | 63 |
 | Observabilité | 9 |
 | Services managés | 24 |

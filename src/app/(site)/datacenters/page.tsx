@@ -152,7 +152,7 @@ export default function Datacenters() {
                 textAnchor="middle"
                 className="fill-[color:var(--color-g-500)] text-[9.5px]"
               >
-                réplication de sauvegarde et PRA
+                réplication de sauvegarde inter-site
               </text>
 
               <g>
@@ -339,7 +339,7 @@ export default function Datacenters() {
                     <p className="text-[13px] leading-relaxed text-g-700">
                       {d.code === 'ABJ'
                         ? 'Site principal. Latence la plus faible depuis Abidjan et le district autonome, connectivité la plus dense, capacité la plus importante. C’est le site par défaut de toute création de ressource, et celui que nous recommandons pour les charges de production synchrones.'
-                        : 'Site de repli et d’archivage. Il accueille les réplications de sauvegarde immuable, les cibles de bascule PRA, et les charges pour lesquelles un client souhaite une séparation physique de sa production. Situé en zone franche technologique, il bénéficie d’un régime d’exploitation distinct.'}
+                        : 'Site de repli et d’archivage. Il accueille les réplications de sauvegarde immuable, les cibles de réplication inter-site, et les charges pour lesquelles un client souhaite une séparation physique de sa production. Situé en zone franche technologique, il bénéficie d’un régime d’exploitation distinct.'}
                     </p>
                   </Card>
                 </div>
@@ -353,7 +353,7 @@ export default function Datacenters() {
         <Container>
           <SectionTitle
             surtitre="Résilience"
-            titre="Deux sites, deux zones, un PRA — pas un cluster étiré"
+            titre="Deux sites, deux zones — pas un cluster étiré"
             chapeau="Nous ne prétendons pas offrir de la haute disponibilité transparente entre Abidjan et Grand-Bassam."
           />
           <Callout ton="violet" className="mt-7" titre="Pourquoi ce choix">
