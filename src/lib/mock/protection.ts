@@ -1,8 +1,8 @@
 /**
- * Données de démonstration — sauvegarde, restauration, PRA (Partie 11).
+ * Données de démonstration — sauvegarde et restauration (Partie 11).
  */
 
-import type { BackupPlan, ConformiteLigne, DRPlan, RestorePoint } from '../types'
+import type { AgentSauvegarde, BackupPlan, CapaciteSauvegarde, ConformiteLigne, RestorePoint } from '../types'
 
 export const BACKUP_PLANS: BackupPlan[] = [
   {
@@ -121,73 +121,20 @@ export const CONFORMITE: ConformiteLigne[] = [
   { ressourceId: 'svc-erp', ressourceNom: 'ERP · Odoo', type: 'Service managé', protection: 'protegee', dernierSucces: '2026-08-19T01:52:00Z', rpoConstateMin: 14, regle321: { copies: true, supports: true, horsSite: false }, dernierTestRestauration: { date: '2026-08-05', succes: false, dureeMin: 0 } },
 ]
 
-export const DR_PLANS: DRPlan[] = [
-  {
-    id: 'pra-dba-prod',
-    orgId: 'org-dba',
-    nom: 'PRA-DBA-PROD',
-    siteSource: 'ABJ',
-    siteRepli: 'GBM',
-    rpoCibleMin: 15,
-    rpoConstateMin: 11,
-    rtoCibleMin: 240,
-    rtoConstateMin: 192,
-    groupes: [
-      {
-        ordre: 1,
-        nom: 'Socle réseau & annuaire',
-        ressources: ['ad-win-01', 'dns interne', 'passerelle VPN'],
-        dependances: [],
-        ipRepli: { 'ad-win-01': '10.4.5.51' },
-      },
-      {
-        ordre: 2,
-        nom: 'Données',
-        ressources: ['metier-postgres', 'dr-db-01', 'sessions-redis'],
-        dependances: ['Socle réseau & annuaire'],
-        ipRepli: { 'dr-db-01': '10.4.2.21' },
-      },
-      {
-        ordre: 3,
-        nom: 'Applications',
-        ressources: ['dr-web-01', 'app-metier', 'cache-prod-01'],
-        dependances: ['Données'],
-        ipRepli: { 'dr-web-01': '10.4.1.11' },
-      },
-      {
-        ordre: 4,
-        nom: 'Exposition publique',
-        ressources: ['lb-api-prod (repli)', 'IP 102.176.34.21', 'bascule DNS'],
-        dependances: ['Applications'],
-      },
-    ],
-    replication: { mode: 'continu', retardS: 42 },
-    exercices: [
-      { date: '2026-07-12', type: 'test', dureeMin: 198, rtoConstateMin: 192, succes: true, rapportUrl: '#rapport-pra-2026-07-12', incidents: ["Bascule DNS manuelle sur l'enregistrement apex — à automatiser"] },
-      { date: '2026-04-08', type: 'test', dureeMin: 236, rtoConstateMin: 228, succes: true, rapportUrl: '#rapport-pra-2026-04-08', incidents: ['Retard de réplication de 6 min sur analytics-warehouse'] },
-      { date: '2026-01-17', type: 'test', dureeMin: 312, rtoConstateMin: 305, succes: false, rapportUrl: '#rapport-pra-2026-01-17', incidents: ['Groupe de sécurité de repli absent', 'Ordre de démarrage incorrect sur sessions-redis'] },
-    ],
-    statut: 'operationnel',
-  },
-  {
-    id: 'pra-dba-collab',
-    orgId: 'org-dba',
-    nom: 'PRA-DBA-COLLAB',
-    siteSource: 'ABJ',
-    siteRepli: 'GBM',
-    rpoCibleMin: 60,
-    rpoConstateMin: 48,
-    rtoCibleMin: 480,
-    rtoConstateMin: 0,
-    groupes: [
-      { ordre: 1, nom: 'Identité', ressources: ['Keycloak (repli)'], dependances: [] },
-      { ordre: 2, nom: 'Collaboration', ressources: ['Drive Pro', 'Email Pro'], dependances: ['Identité'] },
-    ],
-    replication: { mode: 'planifie', retardS: 2880 },
-    exercices: [],
-    statut: 'jamais_teste',
-  },
+/** Un seul palier souscrit par organisation, façon OVH Backup Storage. */
+export const CAPACITE_SAUVEGARDE: CapaciteSauvegarde[] = [
+  { id: 'cap-org-dba', orgId: 'org-dba', palier: '500go', quotaGo: 500, utiliseGo: 341 },
+]
+
+/** Sauvegarde complète d'un serveur, politique fixe — pas de plan à composer. */
+export const AGENTS_SAUVEGARDE: AgentSauvegarde[] = [
+  { id: 'ag-vm-web-01', orgId: 'org-dba', resourceId: 'vm-web-01', resourceNom: 'web-prod-01', installe: true, politique: '14j', dernierPassage: '2026-08-19T23:10:00Z' },
+  { id: 'ag-vm-web-02', orgId: 'org-dba', resourceId: 'vm-web-02', resourceNom: 'web-prod-02', installe: true, politique: '14j', dernierPassage: '2026-08-19T23:14:00Z' },
+  { id: 'ag-vm-db-01', orgId: 'org-dba', resourceId: 'vm-db-01', resourceNom: 'db-prod-01', installe: true, politique: '30j', dernierPassage: '2026-08-18T23:40:00Z' },
+  { id: 'ag-vm-win-01', orgId: 'org-dba', resourceId: 'vm-win-01', resourceNom: 'ad-win-01', installe: true, politique: '14j', dernierPassage: '2026-08-19T23:52:00Z' },
+  { id: 'ag-vm-analytics-01', orgId: 'org-dba', resourceId: 'vm-analytics-01', resourceNom: 'analytics-prod-01', installe: false, politique: '14j' },
+  { id: 'ag-vm-batch-01', orgId: 'org-dba', resourceId: 'vm-batch-01', resourceNom: 'batch-worker-01', installe: false, politique: '14j' },
+  { id: 'ag-vm-ci-01', orgId: 'org-dba', resourceId: 'vm-ci-01', resourceNom: 'ci-runner-01', installe: false, politique: '14j' },
 ]
 
 export const planById = (id: string) => BACKUP_PLANS.find((p) => p.id === id)
-export const draPlanById = (id: string) => DR_PLANS.find((p) => p.id === id)

@@ -474,7 +474,7 @@ export default function Membres() {
                 sousTitre="Celles qu’un rôle unique détient, et qu’il faut donc attribuer avec attention."
               />
               <div className="space-y-2">
-                {['dr.failover.real', 'espace.quota.update', 'payment.update', 'sso.configure', 'secrets.update'].map(
+                {['network.manage', 'espace.quota.update', 'payment.update', 'sso.configure', 'secrets.update'].map(
                   (id) => {
                     const a = MATRICE_RBAC.find((x) => x.id === id)
                     if (!a) return null

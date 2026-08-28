@@ -105,7 +105,7 @@ const communs = {
     {
       id: chaine(),
       orgId: chaine(),
-      type: chaine('Type de travail : `espace.create`, `vm.create`, `dr.failover`…'),
+      type: chaine('Type de travail : `espace.create`, `vm.create`, `backup.restore`…'),
       label: chaine(),
       statut: liste(['queued', 'running', 'done', 'failed', 'rolled_back']),
       taches: tableau(
@@ -1167,7 +1167,7 @@ const iaas = {
   ),
 }
 
-// ─── Protection : sauvegarde, restauration, PRA ───────────────────────
+// ─── Protection : sauvegarde, restauration ─────────────────────────────
 
 const protection = {
   PlanSauvegarde: objet(
@@ -1274,76 +1274,28 @@ const protection = {
     'Tableau de conformité 3-2-1 — celui qu’on montre à un auditeur.',
   ),
 
-  PlanPra: objet(
+  CapaciteSauvegarde: objet(
     {
       id: chaine(),
       orgId: chaine(),
-      nom: chaine(),
-      siteSource: liste(SITES),
-      siteRepli: liste(SITES),
-      rpoCibleMin: entier(),
-      rpoConstateMin: entier(),
-      rtoCibleMin: entier(),
-      rtoConstateMin: entier(),
-      groupes: tableau(
-        objet(
-          {
-            ordre: entier(),
-            nom: chaine(),
-            ressources: tableau(chaine()),
-            dependances: tableau(chaine()),
-            ipRepli: dictionnaire(chaine(), 'Correspondance d’adresses sur le site de repli.'),
-          },
-          ['ordre', 'nom', 'ressources', 'dependances'],
-        ),
-      ),
-      replication: objet({ mode: liste(['continu', 'planifie']), retardS: entier() }, ['mode', 'retardS']),
-      exercices: tableau(ref('ExercicePra')),
-      statut: liste(['operationnel', 'degrade', 'jamais_teste']),
+      palier: liste(['500go', '5to', '10to'], 'Façon OVH Backup Storage : un seul palier souscrit à la fois.'),
+      quotaGo: entier(),
+      utiliseGo: entier(),
     },
-    ['id', 'orgId', 'nom', 'siteSource', 'siteRepli', 'rpoCibleMin', 'rtoCibleMin', 'groupes', 'replication', 'exercices', 'statut'],
+    ['id', 'orgId', 'palier', 'quotaGo', 'utiliseGo'],
   ),
 
-  PlanPraCreation: objet(
+  AgentSauvegarde: objet(
     {
-      nom: chaine(),
-      siteSource: liste(SITES),
-      siteRepli: liste(SITES),
-      rpoCibleMin: entier(),
-      rtoCibleMin: entier(),
-      groupes: tableau(
-        objet(
-          { ordre: entier(), nom: chaine(), ressources: tableau(chaine()), dependances: tableau(chaine()) },
-          ['ordre', 'nom', 'ressources'],
-        ),
-      ),
-      replication: objet({ mode: liste(['continu', 'planifie']), retardS: entier() }),
+      id: chaine(),
+      orgId: chaine(),
+      resourceId: chaine(),
+      resourceNom: chaine(),
+      installe: booleen(),
+      politique: liste(['14j', '30j'], 'Rétention fixe — non modifiable une fois l’agent installé.'),
+      dernierPassage: horodatage(),
     },
-    ['nom', 'siteSource', 'siteRepli', 'rpoCibleMin', 'rtoCibleMin', 'groupes'],
-  ),
-
-  ExercicePra: objet(
-    {
-      date: horodatage(),
-      type: liste(['test', 'reel']),
-      dureeMin: entier(),
-      rtoConstateMin: entier(),
-      succes: booleen(),
-      rapportUrl: chaine(),
-      incidents: tableau(chaine()),
-    },
-    ['date', 'type', 'dureeMin', 'rtoConstateMin', 'succes', 'rapportUrl'],
-  ),
-
-  DemandeBascule: objet(
-    {
-      type: liste(['test', 'reel'], 'Une bascule réelle coupe le site source ; un test s’exécute en isolation.'),
-      groupes: tableau(chaine(), 'Groupes à basculer ; vide pour tout le plan.'),
-      confirmation: chaine('Nom exact du plan — exigé pour une bascule réelle.'),
-      fenetre: horodatage('Bascule planifiée plutôt qu’immédiate.'),
-      motif: chaine(),
-    },
-    ['type'],
+    ['id', 'orgId', 'resourceId', 'resourceNom', 'installe', 'politique'],
   ),
 }
 

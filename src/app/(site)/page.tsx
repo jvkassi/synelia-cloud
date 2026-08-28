@@ -12,7 +12,7 @@ import {
 } from '@/components/site/blocs'
 import {
   BANDEAU_CONFIANCE,
-  BLOC_PRA,
+  BLOC_SAUVEGARDE,
   BLOC_SOUVERAINETE,
   CARTES_PRODUIT,
   CATALOGUE,
@@ -362,7 +362,7 @@ export default function Accueil() {
         </Container>
       </SiteSection>
 
-      {/* ─── 5 · Sauvegarde et reprise ────────────────────────────────── */}
+      {/* ─── 5 · Sauvegarde ──────────────────────────────────────────── */}
       <SiteSection className="!bg-creme">
         <Container>
           <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[0.9fr_1.1fr]">
@@ -376,23 +376,23 @@ export default function Accueil() {
                 className="h-28 w-28 rounded-[20px]"
               />
               <h2 className="mt-5 text-[30px] font-black leading-[1.05] tracking-[-0.02em] [font-family:var(--font-display)] text-encre-2 sm:text-[42px]">
-                {BLOC_PRA.titre}
+                {BLOC_SAUVEGARDE.titre}
               </h2>
               <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-encre-2/70">
-                {BLOC_PRA.texte}
+                {BLOC_SAUVEGARDE.texte}
               </p>
               <div className="mt-7 flex flex-wrap items-center gap-4">
                 <Link
                   href="/entreprises#contact"
                   className="inline-flex items-center gap-2 rounded-full bg-p-700 px-6 py-3.5 text-[14.5px] font-bold text-creme transition-transform hover:-translate-y-1"
                 >
-                  {BLOC_PRA.cta} <ArrowRight size={16} />
+                  {BLOC_SAUVEGARDE.cta} <ArrowRight size={16} />
                 </Link>
-                <LienFleche href="/offres/pra">Voir la fiche PRA / DRaaS</LienFleche>
+                <LienFleche href="/offres/cloud-backup">Voir la fiche Cloud Backup</LienFleche>
               </div>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {BLOC_PRA.indicateurs.map((i, n) => (
+              {BLOC_SAUVEGARDE.indicateurs.map((i, n) => (
                 <div
                   key={i.libelle}
                   className="rounded-[22px] bg-creme-2 p-5"

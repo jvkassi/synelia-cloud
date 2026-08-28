@@ -342,7 +342,7 @@ export default function Souverainete() {
 
       <AppelFinal
         titre="Ces engagements se vérifient sur pièces"
-        chapeau="Demandez une attestation de résidence des données, un rapport d’exercice PRA ou la matrice de rôles complète. Nous les fournissons avant la signature, pas après."
+        chapeau="Demandez une attestation de résidence des données, un rapport de test de restauration ou la matrice de rôles complète. Nous les fournissons avant la signature, pas après."
         primaire={{ libelle: 'Parler à un architecte', href: '/entreprises#contact' }}
         secondaire={{ libelle: 'Voir les datacenters', href: '/datacenters' }}
       />

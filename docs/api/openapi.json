@@ -3,7 +3,7 @@
   "info": {
     "title": "Synelia Cloud — API",
     "version": "1.0.0",
-    "description": "API de Synelia Cloud — plateforme de gestion de cloud multi-tenant opérée à\nAbidjan (Synertech Vallon) et Grand-Bassam (VITIB).\n\n## Ce que cette API couvre\n\nTrois espaces, une seule API :\n\n- **espace client** : Espaces Cloud, machines, Kubernetes, réseau, stockage,\n  sauvegarde et PRA, plateforme applicative, projets, Web Cloud, services\n  managés, facturation, support ;\n- **espace super admin** (préfixe `/admin`) : pilotage, clients,\n  capacité, catalogue, finance, exploitation ;\n- **vitrine publique** (préfixe `/public`) : offres, tarifs, simulateur,\n  statut, souveraineté, demandes de contact.\n\n## Ce qu'elle ne couvre pas, volontairement\n\nLe portail **ne réimplémente jamais l'écran principal d'un produit amont** :\npas d'explorateur de fichiers, pas de webmail, pas d'écran métier d'ERP, pas\nd'éditeur de contenu de CMS, pas de constructeur de requêtes de journaux.\nL'API provisionne, dimensionne, sauvegarde, supervise et **ouvre la porte**\n(`POST /services/{id}/ouverture` renvoie un rebond SSO). Aucun point d'entrée\nne lit un courriel, ne liste un objet de bucket ni ne modifie une écriture\ncomptable.\n\nL'observabilité est bornée à quatre formats : tuile (`Tuile`), série\n(`Serie`, fenêtres `24h` / `7j` / `30j` seulement), liste d'événements\n(huit lignes), extrait de journal (vingt lignes). Au-delà, les réponses\nportent des liens de sortie vers Centreon, Grafana et VictoriaLogs.\n\n## Conventions\n\n- **Langue** : les noms de champs reprennent le modèle de données du produit,\n  en français. `Accept-Language` gouverne les libellés, jamais les clés.\n- **Multi-tenant** : l'organisation vient du jeton ; `X-Organisation-Id` la\n  remplace quand l'utilisateur appartient à plusieurs organisations.\n- **Pagination** : `page`, `parPage`, `tri`, `ordre` et `q` en requête,\n  `{ donnees, pagination }` en réponse. Une ressource seule n'est pas enveloppée.\n- **Asynchrone** : toute opération de provisioning répond `202` avec un\n  `TravailProvisioning` dont les étapes se suivent une par une.\n- **Actions destructives** : paramètre `confirmation` obligatoire, valant le\n  nom exact de la ressource. Un écart renvoie `422` sans rien détruire.\n- **Actions facturables** : `POST /facturation/estimation` renvoie l'aperçu de\n  coût attendu avant l'engagement.\n- **Droits** : chaque opération porte `x-rbac`, l'identifiant de son action\n  dans la matrice RBAC. Un refus renvoie `403` avec `rolesRequis` : le client\n  désactive l'action et nomme le rôle requis, il ne la masque pas.\n- **Erreurs** : enveloppe `{ erreur: { code, message, correlationId } }`. Le\n  `correlationId` est toujours présent, affiché et copiable côté interface.\n- **Secrets** : mots de passe, clés privées et jetons ne sont renvoyés qu'à leur\n  création ou à leur rotation, jamais en lecture.\n- **Intégration amont en défaut** : `424` avec la fraîcheur des dernières\n  données connues, pour un affichage dégradé plutôt qu'une page vide.\n- **Montants** : entiers en FCFA (XOF) sauf mention contraire.",
+    "description": "API de Synelia Cloud — plateforme de gestion de cloud multi-tenant opérée à\nAbidjan (Synertech Vallon) et Grand-Bassam (VITIB).\n\n## Ce que cette API couvre\n\nTrois espaces, une seule API :\n\n- **espace client** : Espaces Cloud, machines, Kubernetes, réseau, stockage,\n  sauvegarde, plateforme applicative, projets, Web Cloud, services\n  managés, facturation, support ;\n- **espace super admin** (préfixe `/admin`) : pilotage, clients,\n  capacité, catalogue, finance, exploitation ;\n- **vitrine publique** (préfixe `/public`) : offres, tarifs, simulateur,\n  statut, souveraineté, demandes de contact.\n\n## Ce qu'elle ne couvre pas, volontairement\n\nLe portail **ne réimplémente jamais l'écran principal d'un produit amont** :\npas d'explorateur de fichiers, pas de webmail, pas d'écran métier d'ERP, pas\nd'éditeur de contenu de CMS, pas de constructeur de requêtes de journaux.\nL'API provisionne, dimensionne, sauvegarde, supervise et **ouvre la porte**\n(`POST /services/{id}/ouverture` renvoie un rebond SSO). Aucun point d'entrée\nne lit un courriel, ne liste un objet de bucket ni ne modifie une écriture\ncomptable.\n\nL'observabilité est bornée à quatre formats : tuile (`Tuile`), série\n(`Serie`, fenêtres `24h` / `7j` / `30j` seulement), liste d'événements\n(huit lignes), extrait de journal (vingt lignes). Au-delà, les réponses\nportent des liens de sortie vers Centreon, Grafana et VictoriaLogs.\n\n## Conventions\n\n- **Langue** : les noms de champs reprennent le modèle de données du produit,\n  en français. `Accept-Language` gouverne les libellés, jamais les clés.\n- **Multi-tenant** : l'organisation vient du jeton ; `X-Organisation-Id` la\n  remplace quand l'utilisateur appartient à plusieurs organisations.\n- **Pagination** : `page`, `parPage`, `tri`, `ordre` et `q` en requête,\n  `{ donnees, pagination }` en réponse. Une ressource seule n'est pas enveloppée.\n- **Asynchrone** : toute opération de provisioning répond `202` avec un\n  `TravailProvisioning` dont les étapes se suivent une par une.\n- **Actions destructives** : paramètre `confirmation` obligatoire, valant le\n  nom exact de la ressource. Un écart renvoie `422` sans rien détruire.\n- **Actions facturables** : `POST /facturation/estimation` renvoie l'aperçu de\n  coût attendu avant l'engagement.\n- **Droits** : chaque opération porte `x-rbac`, l'identifiant de son action\n  dans la matrice RBAC. Un refus renvoie `403` avec `rolesRequis` : le client\n  désactive l'action et nomme le rôle requis, il ne la masque pas.\n- **Erreurs** : enveloppe `{ erreur: { code, message, correlationId } }`. Le\n  `correlationId` est toujours présent, affiché et copiable côté interface.\n- **Secrets** : mots de passe, clés privées et jetons ne sont renvoyés qu'à leur\n  création ou à leur rotation, jamais en lecture.\n- **Intégration amont en défaut** : `424` avec la fraîcheur des dernières\n  données connues, pour un affichage dégradé plutôt qu'une page vide.\n- **Montants** : entiers en FCFA (XOF) sauf mention contraire.",
     "contact": {
       "name": "Synelia",
       "url": "https://synelia.tech",
@@ -86,8 +86,8 @@
       "description": "Bases opérées par la plateforme, réplicas, restauration dans le temps."
     },
     {
-      "name": "Sauvegarde & PRA",
-      "description": "Plans, points de restauration, conformité 3-2-1, plans de reprise."
+      "name": "Sauvegarde",
+      "description": "Plans, points de restauration, conformité 3-2-1, capacité NFS et agent de sauvegarde."
     },
     {
       "name": "Applications",
@@ -1376,10 +1376,6 @@
                       "items": {
                         "$ref": "#/components/schemas/LigneConformite"
                       }
-                    },
-                    "exercicesPra": {
-                      "type": "integer",
-                      "format": "int32"
                     },
                     "organisationsSansSauvegarde": {
                       "type": "integer",
@@ -19108,563 +19104,6 @@
         }
       }
     },
-    "/pra": {
-      "get": {
-        "tags": [
-          "Sauvegarde & PRA"
-        ],
-        "operationId": "listerPlansPra",
-        "summary": "Lister les plans de reprise",
-        "x-rbac": "org.dashboard.view",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Organisation"
-          },
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "$ref": "#/components/parameters/Page"
-          },
-          {
-            "$ref": "#/components/parameters/ParPage"
-          },
-          {
-            "$ref": "#/components/parameters/Tri"
-          },
-          {
-            "$ref": "#/components/parameters/Ordre"
-          },
-          {
-            "$ref": "#/components/parameters/Recherche"
-          },
-          {
-            "name": "statut",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "operationnel",
-                "degrade",
-                "jamais_teste"
-              ]
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "donnees": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/PlanPra"
-                      }
-                    },
-                    "pagination": {
-                      "$ref": "#/components/schemas/Pagination"
-                    }
-                  },
-                  "required": [
-                    "donnees",
-                    "pagination"
-                  ]
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      },
-      "post": {
-        "tags": [
-          "Sauvegarde & PRA"
-        ],
-        "operationId": "creerPlanPra",
-        "summary": "Créer un plan de reprise",
-        "x-rbac": "dr.failover.test",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Organisation"
-          },
-          {
-            "$ref": "#/components/parameters/Langue"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlanPraCreation"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlanPra"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflit"
-          },
-          "422": {
-            "$ref": "#/components/responses/Invalidee"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      }
-    },
-    "/pra/{praId}": {
-      "get": {
-        "tags": [
-          "Sauvegarde & PRA"
-        ],
-        "operationId": "obtenirPlanPra",
-        "summary": "Obtenir un plan de reprise",
-        "x-rbac": "org.dashboard.view",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Organisation"
-          },
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "name": "praId",
-            "in": "path",
-            "required": true,
-            "description": "Identifiant du plan de reprise.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "pra-dba-prod"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlanPra"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "404": {
-            "$ref": "#/components/responses/Introuvable"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      },
-      "patch": {
-        "tags": [
-          "Sauvegarde & PRA"
-        ],
-        "operationId": "modifierPlanPra",
-        "summary": "Modifier un plan de reprise",
-        "x-rbac": "dr.failover.test",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Organisation"
-          },
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "name": "praId",
-            "in": "path",
-            "required": true,
-            "description": "Identifiant du plan de reprise.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "pra-dba-prod"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PlanPraCreation"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlanPra"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "404": {
-            "$ref": "#/components/responses/Introuvable"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflit"
-          },
-          "422": {
-            "$ref": "#/components/responses/Invalidee"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Sauvegarde & PRA"
-        ],
-        "operationId": "supprimerPlanPra",
-        "summary": "Supprimer un plan de reprise",
-        "description": "Action destructive : le nom exact de la ressource est exigé en confirmation.",
-        "x-rbac": "dr.failover.test",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Organisation"
-          },
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "$ref": "#/components/parameters/Confirmation"
-          },
-          {
-            "name": "praId",
-            "in": "path",
-            "required": true,
-            "description": "Identifiant du plan de reprise.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "pra-dba-prod"
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Supprimé. Aucun corps."
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "404": {
-            "$ref": "#/components/responses/Introuvable"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflit"
-          },
-          "422": {
-            "$ref": "#/components/responses/Invalidee"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      }
-    },
-    "/pra/{praId}/bascule": {
-      "post": {
-        "tags": [
-          "Sauvegarde & PRA"
-        ],
-        "operationId": "basculerPra",
-        "summary": "Déclencher une bascule",
-        "description": "Une bascule de test s’exécute en isolation sur le site de repli ; une bascule réelle coupe le site source et exige la saisie du nom exact du plan.",
-        "x-rbac": "dr.failover.real",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Organisation"
-          },
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "name": "praId",
-            "in": "path",
-            "required": true,
-            "description": "Identifiant du plan de reprise.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "pra-dba-prod"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DemandeBascule"
-              }
-            }
-          }
-        },
-        "responses": {
-          "202": {
-            "description": "Accepté — travail de provisioning créé.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TravailProvisioning"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "404": {
-            "$ref": "#/components/responses/Introuvable"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflit"
-          },
-          "422": {
-            "$ref": "#/components/responses/Invalidee"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      }
-    },
-    "/pra/{praId}/exercices": {
-      "get": {
-        "tags": [
-          "Sauvegarde & PRA"
-        ],
-        "operationId": "listerExercicesPra",
-        "summary": "Lister les exercices d’un plan de reprise",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Organisation"
-          },
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "name": "praId",
-            "in": "path",
-            "required": true,
-            "description": "Identifiant du plan de reprise.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "pra-dba-prod"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Succès.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ExercicePra"
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "404": {
-            "$ref": "#/components/responses/Introuvable"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      }
-    },
-    "/pra/{praId}/retour": {
-      "post": {
-        "tags": [
-          "Sauvegarde & PRA"
-        ],
-        "operationId": "revenirSiteSource",
-        "summary": "Revenir sur le site source après bascule",
-        "x-rbac": "dr.failover.real",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/Organisation"
-          },
-          {
-            "$ref": "#/components/parameters/Langue"
-          },
-          {
-            "name": "praId",
-            "in": "path",
-            "required": true,
-            "description": "Identifiant du plan de reprise.",
-            "schema": {
-              "type": "string"
-            },
-            "example": "pra-dba-prod"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "fenetre": {
-                    "type": "string",
-                    "format": "date-time"
-                  },
-                  "confirmation": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "confirmation"
-                ]
-              }
-            }
-          }
-        },
-        "responses": {
-          "202": {
-            "description": "Accepté — travail de provisioning créé.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TravailProvisioning"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/Invalide"
-          },
-          "401": {
-            "$ref": "#/components/responses/NonAuthentifie"
-          },
-          "403": {
-            "$ref": "#/components/responses/Interdit"
-          },
-          "404": {
-            "$ref": "#/components/responses/Introuvable"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflit"
-          },
-          "422": {
-            "$ref": "#/components/responses/Invalidee"
-          },
-          "429": {
-            "$ref": "#/components/responses/TropDeRequetes"
-          },
-          "500": {
-            "$ref": "#/components/responses/Serveur"
-          }
-        }
-      }
-    },
     "/projets": {
       "get": {
         "tags": [
@@ -22910,10 +22349,292 @@
         }
       }
     },
+    "/sauvegarde/agents": {
+      "get": {
+        "tags": [
+          "Sauvegarde"
+        ],
+        "operationId": "listerAgentsSauvegarde",
+        "summary": "Lister les agents de sauvegarde par serveur",
+        "description": "Sauvegarde complète d’un serveur selon une politique fixe — pas un plan qu’on compose.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organisation"
+          },
+          {
+            "$ref": "#/components/parameters/Langue"
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/ParPage"
+          },
+          {
+            "$ref": "#/components/parameters/Tri"
+          },
+          {
+            "$ref": "#/components/parameters/Ordre"
+          },
+          {
+            "$ref": "#/components/parameters/Recherche"
+          },
+          {
+            "name": "installe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "donnees": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AgentSauvegarde"
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  },
+                  "required": [
+                    "donnees",
+                    "pagination"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAuthentifie"
+          },
+          "403": {
+            "$ref": "#/components/responses/Interdit"
+          },
+          "429": {
+            "$ref": "#/components/responses/TropDeRequetes"
+          },
+          "500": {
+            "$ref": "#/components/responses/Serveur"
+          }
+        }
+      }
+    },
+    "/sauvegarde/agents/{resourceId}/installation": {
+      "post": {
+        "tags": [
+          "Sauvegarde"
+        ],
+        "operationId": "basculerAgentSauvegarde",
+        "summary": "Installer ou retirer l’agent de sauvegarde d’un serveur",
+        "description": "La politique appliquée à l’installation est fixe — rétention 14 ou 30 jours, fenêtre nocturne — et ne se règle pas.",
+        "x-rbac": "backup.plan.write",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organisation"
+          },
+          {
+            "$ref": "#/components/parameters/Langue"
+          },
+          {
+            "name": "resourceId",
+            "in": "path",
+            "required": true,
+            "description": "Identifiant du serveur.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "vm-web-01"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "installe": {
+                    "type": "boolean",
+                    "description": "Installer (true) ou retirer (false) l’agent."
+                  }
+                },
+                "required": [
+                  "installe"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepté — travail de provisioning créé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TravailProvisioning"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAuthentifie"
+          },
+          "403": {
+            "$ref": "#/components/responses/Interdit"
+          },
+          "404": {
+            "$ref": "#/components/responses/Introuvable"
+          },
+          "422": {
+            "$ref": "#/components/responses/Invalidee"
+          },
+          "429": {
+            "$ref": "#/components/responses/TropDeRequetes"
+          },
+          "500": {
+            "$ref": "#/components/responses/Serveur"
+          }
+        }
+      }
+    },
+    "/sauvegarde/capacite": {
+      "get": {
+        "tags": [
+          "Sauvegarde"
+        ],
+        "operationId": "obtenirCapaciteSauvegarde",
+        "summary": "Obtenir le palier de stockage NFS souscrit et son usage",
+        "description": "Espace réseau (NFS, CIFS, FTP) dimensionné par palier — 500 Go, 5 To ou 10 To.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organisation"
+          },
+          {
+            "$ref": "#/components/parameters/Langue"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapaciteSauvegarde"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAuthentifie"
+          },
+          "403": {
+            "$ref": "#/components/responses/Interdit"
+          },
+          "429": {
+            "$ref": "#/components/responses/TropDeRequetes"
+          },
+          "500": {
+            "$ref": "#/components/responses/Serveur"
+          }
+        }
+      }
+    },
+    "/sauvegarde/capacite/palier": {
+      "post": {
+        "tags": [
+          "Sauvegarde"
+        ],
+        "operationId": "changerPalierSauvegarde",
+        "summary": "Changer de palier de stockage NFS",
+        "description": "Effectif immédiatement, sans coupure. Le prorata du mois en cours est ajouté à la prochaine facture.",
+        "x-rbac": "backup.plan.write",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organisation"
+          },
+          {
+            "$ref": "#/components/parameters/Langue"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "palier": {
+                    "type": "string",
+                    "enum": [
+                      "500go",
+                      "5to",
+                      "10to"
+                    ],
+                    "description": "Palier cible."
+                  }
+                },
+                "required": [
+                  "palier"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepté — travail de provisioning créé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TravailProvisioning"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAuthentifie"
+          },
+          "403": {
+            "$ref": "#/components/responses/Interdit"
+          },
+          "422": {
+            "$ref": "#/components/responses/Invalidee"
+          },
+          "429": {
+            "$ref": "#/components/responses/TropDeRequetes"
+          },
+          "500": {
+            "$ref": "#/components/responses/Serveur"
+          }
+        }
+      }
+    },
     "/sauvegarde/conformite": {
       "get": {
         "tags": [
-          "Sauvegarde & PRA"
+          "Sauvegarde"
         ],
         "operationId": "obtenirConformiteSauvegarde",
         "summary": "Obtenir le tableau de conformité 3-2-1",
@@ -23010,7 +22731,7 @@
     "/sauvegarde/plans": {
       "get": {
         "tags": [
-          "Sauvegarde & PRA"
+          "Sauvegarde"
         ],
         "operationId": "listerPlansSauvegarde",
         "summary": "Lister les plans de sauvegarde",
@@ -23119,7 +22840,7 @@
       },
       "post": {
         "tags": [
-          "Sauvegarde & PRA"
+          "Sauvegarde"
         ],
         "operationId": "creerPlanSauvegarde",
         "summary": "Créer un plan de sauvegarde",
@@ -23180,7 +22901,7 @@
     "/sauvegarde/plans/{planId}": {
       "get": {
         "tags": [
-          "Sauvegarde & PRA"
+          "Sauvegarde"
         ],
         "operationId": "obtenirPlanSauvegarde",
         "summary": "Obtenir un plan de sauvegarde",
@@ -23235,7 +22956,7 @@
       },
       "patch": {
         "tags": [
-          "Sauvegarde & PRA"
+          "Sauvegarde"
         ],
         "operationId": "modifierPlanSauvegarde",
         "summary": "Modifier un plan de sauvegarde",
@@ -23306,7 +23027,7 @@
       },
       "delete": {
         "tags": [
-          "Sauvegarde & PRA"
+          "Sauvegarde"
         ],
         "operationId": "supprimerPlanSauvegarde",
         "summary": "Supprimer un plan de sauvegarde",
@@ -23366,7 +23087,7 @@
     "/sauvegarde/plans/{planId}/execution": {
       "post": {
         "tags": [
-          "Sauvegarde & PRA"
+          "Sauvegarde"
         ],
         "operationId": "executerPlanSauvegarde",
         "summary": "Lancer une sauvegarde hors planning",
@@ -23423,7 +23144,7 @@
     "/sauvegarde/points": {
       "get": {
         "tags": [
-          "Sauvegarde & PRA"
+          "Sauvegarde"
         ],
         "operationId": "listerPointsRestauration",
         "summary": "Lister les points de restauration",
@@ -23539,7 +23260,7 @@
     "/sauvegarde/points/{pointId}": {
       "delete": {
         "tags": [
-          "Sauvegarde & PRA"
+          "Sauvegarde"
         ],
         "operationId": "supprimerPointRestauration",
         "summary": "Supprimer un point de restauration",
@@ -23599,7 +23320,7 @@
     "/sauvegarde/points/{pointId}/verification": {
       "post": {
         "tags": [
-          "Sauvegarde & PRA"
+          "Sauvegarde"
         ],
         "operationId": "verifierPointRestauration",
         "summary": "Vérifier un point de restauration",
@@ -23657,7 +23378,7 @@
     "/sauvegarde/restaurations": {
       "get": {
         "tags": [
-          "Sauvegarde & PRA"
+          "Sauvegarde"
         ],
         "operationId": "listerRestaurations",
         "summary": "Lister les restaurations demandées",
@@ -23755,7 +23476,7 @@
       },
       "post": {
         "tags": [
-          "Sauvegarde & PRA"
+          "Sauvegarde"
         ],
         "operationId": "lancerRestauration",
         "summary": "Lancer une restauration",
@@ -23817,7 +23538,7 @@
     "/sauvegarde/restaurations/{restaurationId}": {
       "get": {
         "tags": [
-          "Sauvegarde & PRA"
+          "Sauvegarde"
         ],
         "operationId": "obtenirRestauration",
         "summary": "Suivre une restauration",
@@ -38169,6 +37890,46 @@
           "perms"
         ]
       },
+      "AgentSauvegarde": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string"
+          },
+          "resourceNom": {
+            "type": "string"
+          },
+          "installe": {
+            "type": "boolean"
+          },
+          "politique": {
+            "type": "string",
+            "enum": [
+              "14j",
+              "30j"
+            ],
+            "description": "Rétention fixe — non modifiable une fois l’agent installé."
+          },
+          "dernierPassage": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "orgId",
+          "resourceId",
+          "resourceNom",
+          "installe",
+          "politique"
+        ]
+      },
       "AnalyseDepot": {
         "type": "object",
         "description": "Lecture d'un dépôt avant création : ce que la plateforme y a vu et ce qu'elle en déduit.",
@@ -39584,6 +39345,41 @@
           "backends",
           "placements",
           "projection"
+        ]
+      },
+      "CapaciteSauvegarde": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "palier": {
+            "type": "string",
+            "enum": [
+              "500go",
+              "5to",
+              "10to"
+            ],
+            "description": "Façon OVH Backup Storage : un seul palier souscrit à la fois."
+          },
+          "quotaGo": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "utiliseGo": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "id",
+          "orgId",
+          "palier",
+          "quotaGo",
+          "utiliseGo"
         ]
       },
       "Certificat": {
@@ -41282,41 +41078,6 @@
         },
         "required": [
           "federationDisponible"
-        ]
-      },
-      "DemandeBascule": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "test",
-              "reel"
-            ],
-            "description": "Une bascule réelle coupe le site source ; un test s’exécute en isolation."
-          },
-          "groupes": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Groupes à basculer ; vide pour tout le plan."
-          },
-          "confirmation": {
-            "type": "string",
-            "description": "Nom exact du plan — exigé pour une bascule réelle."
-          },
-          "fenetre": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Bascule planifiée plutôt qu’immédiate."
-          },
-          "motif": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "type"
         ]
       },
       "DemandeConnexion": {
@@ -43191,50 +42952,6 @@
           "taille",
           "dureeMin",
           "contenu"
-        ]
-      },
-      "ExercicePra": {
-        "type": "object",
-        "properties": {
-          "date": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "test",
-              "reel"
-            ]
-          },
-          "dureeMin": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "rtoConstateMin": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "succes": {
-            "type": "boolean"
-          },
-          "rapportUrl": {
-            "type": "string"
-          },
-          "incidents": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        },
-        "required": [
-          "date",
-          "type",
-          "dureeMin",
-          "rtoConstateMin",
-          "succes",
-          "rapportUrl"
         ]
       },
       "ExportService": {
@@ -46668,223 +46385,6 @@
           "espaceId",
           "backendId",
           "percent"
-        ]
-      },
-      "PlanPra": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "orgId": {
-            "type": "string"
-          },
-          "nom": {
-            "type": "string"
-          },
-          "siteSource": {
-            "type": "string",
-            "enum": [
-              "ABJ",
-              "GBM"
-            ]
-          },
-          "siteRepli": {
-            "type": "string",
-            "enum": [
-              "ABJ",
-              "GBM"
-            ]
-          },
-          "rpoCibleMin": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "rpoConstateMin": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "rtoCibleMin": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "rtoConstateMin": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "groupes": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "ordre": {
-                  "type": "integer",
-                  "format": "int32"
-                },
-                "nom": {
-                  "type": "string"
-                },
-                "ressources": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "dependances": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "ipRepli": {
-                  "type": "object",
-                  "description": "Correspondance d’adresses sur le site de repli.",
-                  "additionalProperties": {
-                    "type": "string"
-                  }
-                }
-              },
-              "required": [
-                "ordre",
-                "nom",
-                "ressources",
-                "dependances"
-              ]
-            }
-          },
-          "replication": {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "enum": [
-                  "continu",
-                  "planifie"
-                ]
-              },
-              "retardS": {
-                "type": "integer",
-                "format": "int32"
-              }
-            },
-            "required": [
-              "mode",
-              "retardS"
-            ]
-          },
-          "exercices": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ExercicePra"
-            }
-          },
-          "statut": {
-            "type": "string",
-            "enum": [
-              "operationnel",
-              "degrade",
-              "jamais_teste"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "orgId",
-          "nom",
-          "siteSource",
-          "siteRepli",
-          "rpoCibleMin",
-          "rtoCibleMin",
-          "groupes",
-          "replication",
-          "exercices",
-          "statut"
-        ]
-      },
-      "PlanPraCreation": {
-        "type": "object",
-        "properties": {
-          "nom": {
-            "type": "string"
-          },
-          "siteSource": {
-            "type": "string",
-            "enum": [
-              "ABJ",
-              "GBM"
-            ]
-          },
-          "siteRepli": {
-            "type": "string",
-            "enum": [
-              "ABJ",
-              "GBM"
-            ]
-          },
-          "rpoCibleMin": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "rtoCibleMin": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "groupes": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "ordre": {
-                  "type": "integer",
-                  "format": "int32"
-                },
-                "nom": {
-                  "type": "string"
-                },
-                "ressources": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "dependances": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                }
-              },
-              "required": [
-                "ordre",
-                "nom",
-                "ressources"
-              ]
-            }
-          },
-          "replication": {
-            "type": "object",
-            "properties": {
-              "mode": {
-                "type": "string",
-                "enum": [
-                  "continu",
-                  "planifie"
-                ]
-              },
-              "retardS": {
-                "type": "integer",
-                "format": "int32"
-              }
-            }
-          }
-        },
-        "required": [
-          "nom",
-          "siteSource",
-          "siteRepli",
-          "rpoCibleMin",
-          "rtoCibleMin",
-          "groupes"
         ]
       },
       "PlanSauvegarde": {
@@ -50622,7 +50122,7 @@
           },
           "type": {
             "type": "string",
-            "description": "Type de travail : `espace.create`, `vm.create`, `dr.failover`…"
+            "description": "Type de travail : `espace.create`, `vm.create`, `backup.restore`…"
           },
           "label": {
             "type": "string"

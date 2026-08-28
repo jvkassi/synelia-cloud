@@ -391,10 +391,10 @@ export default function Securite() {
                     action: { l: 'Voir le stockage', h: '/app/stockage' },
                   },
                   {
-                    t: 'Plan de reprise testé',
+                    t: 'Agent de sauvegarde sur tous les serveurs',
                     etat: 'warn' as const,
-                    d: 'Un plan de reprise n’a jamais été testé. Un plan non testé est une hypothèse, pas une garantie.',
-                    action: { l: 'Voir les plans', h: '/app/pra' },
+                    d: 'Certains serveurs tournent sans agent installé : rien n’en sauvegarde l’état complet en dehors des plans déjà en place.',
+                    action: { l: 'Voir la capacité', h: '/app/sauvegarde' },
                   },
                   {
                     t: 'Clés d’accès sans rotation',

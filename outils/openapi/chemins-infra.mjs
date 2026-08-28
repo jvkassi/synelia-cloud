@@ -1,6 +1,6 @@
 /**
  * Chemins — tableau de bord, travaux, IaaS, stockage, bases managées,
- * sauvegarde et PRA.
+ * sauvegarde.
  */
 
 import {
@@ -32,7 +32,7 @@ const T_K8S = 'Kubernetes'
 const T_RESEAU = 'Réseau'
 const T_STOCKAGE = 'Stockage'
 const T_BASES = 'Bases managées'
-const T_PROTECTION = 'Sauvegarde & PRA'
+const T_PROTECTION = 'Sauvegarde'
 const T_OBS = 'Observabilité'
 
 const idEspace = chemin('espaceId', 'Identifiant de l’Espace Cloud.', 'ec-dba-01')
@@ -927,7 +927,7 @@ const bases = fusion(
   }),
 )
 
-// ─── Sauvegarde, restauration, PRA ────────────────────────────────────
+// ─── Sauvegarde, restauration ──────────────────────────────────────────
 
 const protection = fusion(
   crud({
@@ -1043,56 +1043,50 @@ const protection = fusion(
     params: [chemin('pointId', 'Identifiant du point.')],
     rbac: 'backup.restore',
   }),
-  crud({
-    tag: T_PROTECTION,
-    base: '/pra',
-    idParam: chemin('praId', 'Identifiant du plan de reprise.', 'pra-dba-prod'),
-    nomSingulier: 'PlanPra',
-    nomPluriel: 'PlansPra',
-    libelle: 'un plan de reprise',
-    libellePluriel: 'les plans de reprise',
-    schema: 'PlanPra',
-    creation: 'PlanPraCreation',
-    rbacLecture: 'org.dashboard.view',
-    rbacEcriture: 'dr.failover.test',
-    filtres: [filtre('statut', liste(['operationnel', 'degrade', 'jamais_teste']))],
-  }),
-  action({
-    tag: T_PROTECTION,
-    chemin: '/pra/{praId}/bascule',
-    id: 'basculerPra',
-    resume: 'Déclencher une bascule',
-    detail:
-      'Une bascule de test s’exécute en isolation sur le site de repli ; une bascule réelle coupe ' +
-      'le site source et exige la saisie du nom exact du plan.',
-    params: [chemin('praId', 'Identifiant du plan de reprise.', 'pra-dba-prod')],
-    corps: ref('DemandeBascule'),
-    corpsRequis: true,
-    rbac: 'dr.failover.real',
-    erreurs: [409],
-  }),
-  action({
-    tag: T_PROTECTION,
-    chemin: '/pra/{praId}/retour',
-    id: 'revenirSiteSource',
-    resume: 'Revenir sur le site source après bascule',
-    params: [chemin('praId', 'Identifiant du plan de reprise.', 'pra-dba-prod')],
-    corps: objet({ fenetre: horodatage(), confirmation: chaine() }, ['confirmation']),
-    corpsRequis: true,
-    rbac: 'dr.failover.real',
-    erreurs: [409],
-  }),
   {
-    '/pra/{praId}/exercices': {
+    '/sauvegarde/capacite': {
       get: op({
         tag: T_PROTECTION,
-        id: 'listerExercicesPra',
-        resume: 'Lister les exercices d’un plan de reprise',
-        params: [chemin('praId', 'Identifiant du plan de reprise.', 'pra-dba-prod')],
-        ok: tableau(ref('ExercicePra')),
+        id: 'obtenirCapaciteSauvegarde',
+        resume: 'Obtenir le palier de stockage NFS souscrit et son usage',
+        detail: 'Espace réseau (NFS, CIFS, FTP) dimensionné par palier — 500 Go, 5 To ou 10 To.',
+        ok: ref('CapaciteSauvegarde'),
+      }),
+    },
+    '/sauvegarde/agents': {
+      get: op({
+        tag: T_PROTECTION,
+        id: 'listerAgentsSauvegarde',
+        resume: 'Lister les agents de sauvegarde par serveur',
+        detail:
+          'Sauvegarde complète d’un serveur selon une politique fixe — pas un plan qu’on compose.',
+        paginee: true,
+        params: [filtre('installe', booleen())],
+        ok: page(ref('AgentSauvegarde')),
       }),
     },
   },
+  action({
+    tag: T_PROTECTION,
+    chemin: '/sauvegarde/capacite/palier',
+    id: 'changerPalierSauvegarde',
+    resume: 'Changer de palier de stockage NFS',
+    detail: 'Effectif immédiatement, sans coupure. Le prorata du mois en cours est ajouté à la prochaine facture.',
+    corps: objet({ palier: liste(['500go', '5to', '10to'], 'Palier cible.') }, ['palier']),
+    corpsRequis: true,
+    rbac: 'backup.plan.write',
+  }),
+  action({
+    tag: T_PROTECTION,
+    chemin: '/sauvegarde/agents/{resourceId}/installation',
+    id: 'basculerAgentSauvegarde',
+    resume: 'Installer ou retirer l’agent de sauvegarde d’un serveur',
+    detail: 'La politique appliquée à l’installation est fixe — rétention 14 ou 30 jours, fenêtre nocturne — et ne se règle pas.',
+    params: [chemin('resourceId', 'Identifiant du serveur.', 'vm-web-01')],
+    corps: objet({ installe: booleen('Installer (true) ou retirer (false) l’agent.') }, ['installe']),
+    corpsRequis: true,
+    rbac: 'backup.plan.write',
+  }),
 )
 
 // ─── Observabilité transverse ─────────────────────────────────────────

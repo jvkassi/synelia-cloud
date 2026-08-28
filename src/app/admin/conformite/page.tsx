@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { CalendarClock, Download, FileCheck2, ShieldAlert, TestTubeDiagonal } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dateCourte, dureeMin, MAINTENANT, num, pct } from '@/lib/format'
+import { dateCourte, MAINTENANT, num, pct } from '@/lib/format'
 import { telechargerCsv } from '@/lib/export'
 import { CONFORMITE_PLATEFORME, EQUIPE_SYNELIA, ORGANISATIONS } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -19,7 +19,6 @@ import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/a
 
 const ONGLETS = [
   { id: 'restauration', label: 'Tests de restauration' },
-  { id: 'pra', label: 'Exercices de reprise' },
   { id: 'vulnerabilites', label: 'Vulnérabilités' },
   { id: 'audits', label: 'Audits' },
   { id: 'attestations', label: 'Attestations' },
@@ -196,7 +195,6 @@ export default function Conformite() {
   const c = CONFORMITE_PLATEFORME
   const testsCourants = c.testsRestauration[0]
   const tauxSucces = Math.round((testsCourants.succes / Math.max(1, testsCourants.executes)) * 1000) / 10
-  const praEchoues = c.exercicesPra.filter((e) => !e.succes)
   const cveOuvertes = c.cve.reduce((a, x) => a + x.ouvertes, 0)
   const cveCritiques = c.cve.find((x) => x.gravite === 'critique')?.ouvertes ?? 0
   const constatsOuverts = c.audits.reduce((a, x) => a + x.ouverts, 0)
@@ -227,12 +225,6 @@ export default function Conformite() {
                       `${t.succes}/${t.executes} réussis`,
                       String(t.executes - t.succes),
                     ]),
-                    ...c.exercicesPra.map((e) => [
-                      'Exercices de reprise',
-                      `${e.plan} — ${e.org}`,
-                      `${dureeMin(e.rtoConstate)} constatées pour ${dureeMin(e.rtoCible)} visées`,
-                      e.succes ? '0' : '1',
-                    ]),
                     ...c.cve.map((v) => [
                       'Vulnérabilités',
                       v.gravite,
@@ -255,11 +247,6 @@ export default function Conformite() {
             <Badge tone={cveCritiques === 0 ? 'ok' : 'err'} dot size="sm">
               {cveCritiques === 0 ? 'Aucune vulnérabilité critique ouverte' : `${cveCritiques} critique ouverte`}
             </Badge>
-            <Badge tone={praEchoues.length === 0 ? 'ok' : 'warn'} size="sm">
-              {praEchoues.length === 0
-                ? 'Tous les exercices réussis'
-                : `${praEchoues.length} exercice sous l’objectif`}
-            </Badge>
             <Badge tone={constatsOuverts === 0 ? 'ok' : 'warn'} size="sm">
               {constatsOuverts} constat{constatsOuverts > 1 ? 's' : ''} d’audit ouvert
               {constatsOuverts > 1 ? 's' : ''}
@@ -268,21 +255,7 @@ export default function Conformite() {
         }
       />
 
-      {praEchoues.length > 0 && (
-        <Callout ton="warn" titre={`${praEchoues.length} exercice de reprise a dépassé son objectif`}>
-          {praEchoues
-            .map(
-              (e) =>
-                `${e.org} (${e.plan}) — ${dureeMin(e.rtoConstate)} constatées pour ${dureeMin(e.rtoCible)} engagées`,
-            )
-            .join(' · ')}
-          . Nous le publions plutôt que de le taire : un objectif de reprise dépassé lors d’un exercice
-          est une information précieuse, et bien préférable à le découvrir lors d’un vrai sinistre.
-          L’écart a été analysé et un plan de correction est en cours.
-        </Callout>
-      )}
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
           libelle="Tests de restauration du mois"
           valeur={`${testsCourants.executes}/${testsCourants.planifies}`}
@@ -294,11 +267,6 @@ export default function Conformite() {
           valeur={pct(tauxSucces, 1)}
           ton={tauxSucces > 95 ? 'ok' : 'warn'}
           detail={`${testsCourants.echecs} échec${testsCourants.echecs > 1 ? 's' : ''} analysé${testsCourants.echecs > 1 ? 's' : ''}`}
-        />
-        <StatTile
-          libelle="Exercices de reprise"
-          valeur={c.exercicesPra.length}
-          detail={`${c.exercicesPra.filter((e) => e.succes).length} sous l’objectif de temps`}
         />
         <StatTile
           libelle="Vulnérabilités ouvertes"
@@ -504,164 +472,6 @@ export default function Conformite() {
               />
             </Card>
           </div>
-        </div>
-      )}
-
-      {onglet === 'pra' && (
-        <div className="space-y-4">
-          <Card padding={false}>
-            <div className="border-b border-g-100 px-4 py-3.5">
-              <CardHeader
-                titre="Exercices de reprise d’activité"
-                sousTitre="Bascule réelle en réseau isolé, chronométrée. Nous publions le temps constaté, y compris quand il dépasse l’objectif."
-                className="mb-0"
-              />
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-max border-collapse">
-                <thead>
-                  <tr className="border-b border-g-300 bg-g-050">
-                    {['Organisation', 'Plan', 'Date', 'Objectif de temps', 'Temps constaté', 'Écart', 'Résultat'].map(
-                      (h) => (
-                        <th key={h} className="type-micro px-3 py-2 text-left font-semibold text-g-500">
-                          {h}
-                        </th>
-                      ),
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {c.exercicesPra.map((e) => {
-                    const ecart = e.rtoConstate - e.rtoCible
-                    return (
-                      <tr key={`${e.org}-${e.date}`} className="border-b border-g-100 last:border-0">
-                        <td className="px-3 py-2.5 text-[12.5px] font-semibold text-ink">{e.org}</td>
-                        <td className="px-3 py-2.5 font-mono text-[11.5px] text-g-700">{e.plan}</td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">
-                          {dateCourte(e.date)}
-                        </td>
-                        <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
-                          {dureeMin(e.rtoCible)}
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <Badge tone={e.succes ? 'ok' : 'err'} size="sm">
-                            {dureeMin(e.rtoConstate)}
-                          </Badge>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <span
-                            className={cn(
-                              'tnum text-[12px] font-semibold',
-                              ecart <= 0 ? 'text-ok' : 'text-err',
-                            )}
-                          >
-                            {ecart <= 0 ? '−' : '+'} {dureeMin(Math.abs(ecart))}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <Badge tone={e.succes ? 'ok' : 'err'} dot size="sm">
-                            {e.succes ? 'Objectif tenu' : 'Objectif dépassé'}
-                          </Badge>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          {praEchoues.map((e) => (
-            <Card key={e.plan} className="border-err/30">
-              <CardHeader
-                titre={`Analyse de l’écart — ${e.org}`}
-                sousTitre={`Exercice du ${dateCourte(e.date)} · ${dureeMin(e.rtoConstate)} constatées pour ${dureeMin(e.rtoCible)} engagées`}
-                actions={
-                  <Badge tone="err" dot size="sm">
-                    Objectif dépassé de {dureeMin(e.rtoConstate - e.rtoCible)}
-                  </Badge>
-                }
-              />
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div>
-                  <MicroLabel className="mb-2">Décomposition du temps de reprise</MicroLabel>
-                  <div className="space-y-2">
-                    {[
-                      { e: 'Détection et décision de bascule', m: 18, cible: 15 },
-                      { e: 'Démarrage des machines sur le site de repli', m: 42, cible: 40 },
-                      { e: 'Restauration du dernier point de reprise', m: 54, cible: 35 },
-                      { e: 'Bascule DNS et vérification', m: 22, cible: 20 },
-                      { e: 'Validation applicative par le client', m: 10, cible: 10 },
-                    ].map((x) => (
-                      <div key={x.e}>
-                        <div className="flex items-baseline justify-between gap-3">
-                          <span className="min-w-0 text-[11.5px] text-ink">{x.e}</span>
-                          <span className="tnum shrink-0 text-[11.5px]">
-                            <span
-                              className={cn(
-                                'font-semibold',
-                                x.m > x.cible ? 'text-err' : 'text-ink',
-                              )}
-                            >
-                              {x.m} min
-                            </span>
-                            <span className="ml-1.5 text-g-500">cible {x.cible}</span>
-                          </span>
-                        </div>
-                        <span className="mt-1 block h-2 overflow-hidden rounded-full bg-g-100">
-                          <span
-                            className={cn(
-                              'block h-full rounded-full',
-                              x.m > x.cible ? 'bg-err' : 'bg-ok',
-                            )}
-                            style={{ width: `${(x.m / 60) * 100}%` }}
-                          />
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <MicroLabel className="mb-2">Cause et correction</MicroLabel>
-                  <div className="space-y-2">
-                    <div className="rounded-[6px] border border-err/40 bg-err-bg px-3 py-2.5">
-                      <p className="text-[12px] font-semibold text-ink">
-                        Cause : restauration séquentielle des volumes
-                      </p>
-                      <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">
-                        Les huit volumes du plan ont été restaurés l’un après l’autre au lieu d’être
-                        traités en parallèle. Dix-neuf minutes perdues, uniquement d’attente.
-                      </p>
-                    </div>
-                    <div className="rounded-[6px] border border-ok/40 bg-ok-bg px-3 py-2.5">
-                      <p className="text-[12px] font-semibold text-ink">
-                        Correction : parallélisation de la restauration
-                      </p>
-                      <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">
-                        Déployée le 14 juin. Sur un test à blanc mené depuis, la même étape prend 21
-                        minutes au lieu de 54. Le prochain exercice réel est prévu en septembre pour
-                        confirmer.
-                      </p>
-                    </div>
-                    <div className="rounded-[6px] border border-g-300 px-3 py-2.5">
-                      <p className="text-[12px] font-semibold text-ink">Client informé</p>
-                      <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">
-                        Le rapport d’exercice, avec le dépassement et son analyse, a été remis au client
-                        sous cinq jours ouvrés. Nous n’avons pas attendu qu’il le demande.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
-
-          <Callout ton="violet" titre="Pourquoi publier un exercice raté">
-            Un fournisseur qui n’affiche que des exercices réussis n’en fait probablement pas beaucoup,
-            ou ne les chronomètre pas honnêtement. Un objectif de reprise dépassé de 26 minutes lors
-            d’un exercice, analysé et corrigé, vaut infiniment mieux qu’un tableau tout vert qui
-            s’effondre le jour d’un vrai sinistre.
-          </Callout>
         </div>
       )}
 

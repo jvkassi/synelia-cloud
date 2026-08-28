@@ -37,7 +37,6 @@ export const MEGAMENU: Array<{ colonne: string; entrees: EntreeMegamenu[] }> = [
       { nom: 'Stockage objet S3', slug: 'stockage-objet', resume: 'Compatible S3, versioning, WORM anti-rançongiciel.' },
       { nom: 'Bases managées', slug: 'bases-managees', resume: 'PostgreSQL, MySQL, MariaDB, MongoDB, Redis.' },
       { nom: 'Cloud Backup', slug: 'cloud-backup', resume: 'Plans immuables, restauration granulaire, 3-2-1.' },
-      { nom: 'PRA / DRaaS', slug: 'pra', resume: 'RPO et RTO constatés, bascule testée.' },
     ],
   },
   {
@@ -84,8 +83,8 @@ export const BANDEAU_CONFIANCE = [
 export const PORTES_ENTREE = [
   {
     titre: 'Je veux de l’infrastructure',
-    accroche: 'Capacité, machines, réseau, stockage et plan de reprise. Vous pilotez, nous opérons le socle.',
-    items: ['Espace Cloud (VDC)', 'Machines virtuelles', 'Kubernetes managé', 'Stockage bloc et objet', 'PRA / DRaaS'],
+    accroche: 'Capacité, machines, réseau, stockage et sauvegarde. Vous pilotez, nous opérons le socle.',
+    items: ['Espace Cloud (VDC)', 'Machines virtuelles', 'Kubernetes managé', 'Stockage bloc et objet', 'Cloud Backup'],
     cta: { libelle: 'Explorer l’infrastructure', href: '/offres/espace-cloud' },
     prix: 'À partir de 25 000 FCFA/mois',
   },
@@ -117,23 +116,22 @@ export const CARTES_PRODUIT = [
   { nom: 'Kubernetes managé', slug: 'kubernetes', icone: 'kubernetes', phrase: 'Control plane opéré, pools autoscalés, modules prêts.', prix: 45000, unite: '/mois', famille: 'Calcul' },
   { nom: 'Stockage objet S3', slug: 'stockage-objet', icone: 'stockage-objet', phrase: 'Compatible S3, versioning, verrouillage WORM.', prix: 1500, unite: '/To/mois', famille: 'Stockage' },
   { nom: 'Cloud Backup', slug: 'cloud-backup', icone: 'sauvegarde', phrase: 'Sauvegarde immuable, restauration au fichier près.', prix: 2800, unite: '/To/mois', famille: 'Protection' },
-  { nom: 'PRA / DRaaS', slug: 'pra', icone: 'bouclier', phrase: 'Bascule inter-site testée, RPO et RTO constatés.', prix: 96000, unite: '/mois', famille: 'Protection' },
   { nom: 'Drive Pro', slug: 'drive-pro', icone: 'drive-pro', href: '/marketplace/drive-pro', phrase: 'Fichiers partagés et documents collaboratifs.', prix: 2200, unite: '/siège/mois', famille: 'Applications' },
   { nom: 'WordPress managé', slug: 'wordpress', icone: 'wordpress', phrase: 'Votre site opéré, mis à jour et protégé.', prix: 14000, unite: '/mois', famille: 'Web' },
 ]
 
-// ─── Bloc PRA (§2.2 §5) ───────────────────────────────────────────────
+// ─── Bloc sauvegarde (§2.2 §5) ─────────────────────────────────────────
 
-export const BLOC_PRA = {
-  titre: 'Votre plan de reprise, testé et prouvé.',
+export const BLOC_SAUVEGARDE = {
+  titre: 'Une sauvegarde qu’on a réellement testée, pas seulement planifiée.',
   texte:
-    'Un plan de reprise qui n’a jamais été exercé n’est pas un plan, c’est une intention. Nous exerçons le vôtre trimestriellement, en réseau isolé, et nous vous remettons le rapport avec le temps de reprise réellement constaté.',
+    'Une archive dont personne n’a jamais vérifié qu’elle redémarre n’est pas une garantie. Nous restaurons un échantillon chaque mois, en conditions réelles, et nous vous remettons le résultat daté — y compris quand il est mauvais.',
   indicateurs: [
-    { valeur: '11 min', libelle: 'RPO constaté médian', cible: 'cible 15 min' },
-    { valeur: '3 h 12', libelle: 'RTO constaté médian', cible: 'cible 4 h' },
-    { valeur: '12/07/2026', libelle: 'dernier exercice réussi', cible: 'prochain : 15/10/2026' },
+    { valeur: '18 min', libelle: 'temps de restauration médian', cible: 'machine complète' },
+    { valeur: '99,6 %', libelle: 'taux de réussite des tests', cible: 'échantillon mensuel' },
+    { valeur: '12/07/2026', libelle: 'dernier test réussi', cible: 'prochain le 12/08' },
   ],
-  cta: 'Demander une évaluation PRA',
+  cta: 'Voir un plan de sauvegarde',
 }
 
 // ─── Bloc souveraineté (§2.2 §6 · §2.7) ───────────────────────────────
@@ -206,15 +204,15 @@ export const ETUDES_CAS = [
     chiffre: '−41 %',
     chiffreLibelle: 'de coût d’infrastructure la première année',
     texte:
-      'Sortie d’un contrat de licences propriétaires vers un Espace Cloud Pro réparti sur deux sites, avec PRA inter-site et messagerie Email Pro pour 240 collaborateurs.',
+      'Sortie d’un contrat de licences propriétaires vers un Espace Cloud Pro réparti sur deux sites, avec Cloud Backup immuable et messagerie Email Pro pour 240 collaborateurs.',
   },
   {
     client: 'Opérateur de transport urbain',
     secteur: 'Mobilité',
-    chiffre: '3 h 12',
-    chiffreLibelle: 'de temps de reprise constaté, pour 4 h engagées',
+    chiffre: '18 min',
+    chiffreLibelle: 'de restauration constatée pour une machine complète',
     texte:
-      'Mise en place d’un plan de reprise avec exercices trimestriels. Le dernier exercice de bascule a été mené en réseau isolé, sans impact sur la production.',
+      'Mise en place d’un plan de sauvegarde immuable avec tests de restauration mensuels automatisés. Le dernier test a restauré et redémarré la machine sans toucher à la production.',
   },
   {
     client: 'Institution publique · registre national',
@@ -343,7 +341,7 @@ export const FAMILLES_TARIFS: FamilleTarif[] = [
       { caracteristique: 'Socle 100 % open source', valeurs: [false, true, false, true] },
       { caracteristique: 'Sauvegarde incluse', valeurs: ['14 j', '35 j immuable', '35 j immuable', 'Sur mesure'] },
       { caracteristique: 'Réseau privé et VPN', valeurs: [false, true, true, true] },
-      { caracteristique: 'PRA inter-site', valeurs: [false, false, 'Option', true] },
+      { caracteristique: 'Agent de sauvegarde inclus', valeurs: [false, false, 'Option', true] },
       { caracteristique: 'SLA', valeurs: ['99,9 %', '99,95 %', '99,95 %', '99,99 %'] },
       { caracteristique: 'Astreinte 24/7', valeurs: [false, true, true, 'Nominative'] },
     ],
@@ -470,7 +468,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
       { nom: 'Cloud Flex', specs: '12 vCPU · 48 Go · 2 To SSD', prix: 25000, unite: '/mois' },
       { nom: 'Cloud Souverain', specs: '24 vCPU · 96 Go · 4 To NVMe · 100 % open source', prix: 62000, unite: '/mois' },
       { nom: 'Cloud Pro', specs: '48 vCPU · 192 Go · 6 To NVMe', prix: 85000, unite: '/mois', recommande: true },
-      { nom: 'Cloud Enterprise', specs: 'Sur mesure · SLA 99,99 % · PRA inclus', prix: null, surDevis: true, unite: '' },
+      { nom: 'Cloud Enterprise', specs: 'Sur mesure · SLA 99,99 % · agent de sauvegarde inclus', prix: null, surDevis: true, unite: '' },
     ],
     caracteristiques: [
       {
@@ -683,79 +681,6 @@ export const FICHES_PRODUIT: FicheProduit[] = [
     ],
   },
   {
-    slug: 'pra',
-    icone: 'bouclier',
-    nom: 'PRA / DRaaS',
-    surtitre: 'Stockage & protection',
-    accroche: 'Votre plan de reprise, testé et prouvé.',
-    resume:
-      'Un plan de reprise complet : réplication vers le second site, ordre de redémarrage avec dépendances, adressage de repli, et surtout des exercices trimestriels qui produisent un temps de reprise réellement constaté.',
-    puces: [
-      'RPO et RTO affichés en cible et en constaté, côte à côte',
-      'Bascule de test en réseau isolé, sans impact sur la production',
-      'Rapport d’exercice téléchargeable, opposable à un auditeur',
-    ],
-    paliers: [
-      { nom: 'PRA Essentiel', specs: 'Réplication planifiée · RPO 60 min · RTO 8 h', prix: 96000, unite: '/mois' },
-      { nom: 'PRA Business', specs: 'Réplication continue · RPO 15 min · RTO 4 h', prix: 184000, unite: '/mois', recommande: true },
-      { nom: 'PRA Critique', specs: 'Réplication continue · RPO 5 min · RTO 1 h', prix: null, surDevis: true, unite: '' },
-    ],
-    caracteristiques: [
-      {
-        theme: 'Réplication',
-        items: [
-          { libelle: 'Modes', valeur: 'Continue (journalisation) ou planifiée (snapshots)' },
-          { libelle: 'Retard affiché', valeur: 'En secondes, par ressource, en temps réel' },
-          { libelle: 'Portée', valeur: 'Machines, volumes, bases managées, services managés' },
-        ],
-      },
-      {
-        theme: 'Composition du plan',
-        items: [
-          { libelle: 'Groupes de démarrage', valeur: 'Ordonnés, avec dépendances explicites' },
-          { libelle: 'Adressage de repli', valeur: 'Table de correspondance IP source → IP cible' },
-          { libelle: 'Bascule DNS', valeur: 'Automatisable sur les zones que nous hébergeons' },
-        ],
-      },
-      {
-        theme: 'Exercices',
-        items: [
-          { libelle: 'Bascule de test', valeur: 'Réseau isolé, production intacte, à volonté' },
-          { libelle: 'Bascule réelle', valeur: 'Double confirmation, retour arrière disponible' },
-          { libelle: 'Fréquence recommandée', valeur: 'Trimestrielle, incluse dans le palier Business' },
-          { libelle: 'Rapport', valeur: 'Durée, RTO constaté, incidents relevés, plan d’action' },
-        ],
-      },
-    ],
-    sla: {
-      dispo: '99,95 % sur la chaîne de réplication',
-      reponse: '15 min en cas de sinistre déclaré',
-      resolution: 'RTO contractuel du palier souscrit',
-      credits: 'Crédits majorés en cas de dépassement du RTO engagé',
-    },
-    architecture: {
-      titre: 'Bascule Abidjan → Grand-Bassam',
-      couches: [
-        { nom: 'Groupe 1 — Socle', elements: ['Annuaire', 'DNS interne', 'Passerelle VPN'] },
-        { nom: 'Groupe 2 — Données', elements: ['Base PostgreSQL répliquée', 'Volumes de données'] },
-        { nom: 'Groupe 3 — Applications', elements: ['Machines web', 'Cache'] },
-        { nom: 'Groupe 4 — Exposition', elements: ['Load balancer de repli', 'IP publique de repli', 'Bascule DNS'] },
-      ],
-    },
-    schema: {
-      src: '/illustrations/sauvegarde-321.svg',
-      alt:
-        "Schéma de la règle 3-2-1 : production dans l'Espace Cloud à Abidjan, instantané local sur NVMe, réplique hors site sur stockage objet à Grand-Bassam, et copie immuable verrouillée quatorze jours.",
-      largeur: 760,
-      hauteur: 306,
-    },
-    faq: [
-      { question: 'Un exercice de test perturbe-t-il la production ?', reponse: 'Non. La bascule de test démarre les ressources répliquées dans un réseau isolé, sans conflit d’adressage et sans toucher au DNS public. C’est précisément ce qui permet de l’exercer souvent.' },
-      { question: 'Que vaut un RTO annoncé mais jamais mesuré ?', reponse: 'Rien, et c’est notre position. Nous affichons systématiquement cible et constaté côte à côte. Si l’écart se creuse, c’est visible avant le sinistre, pas pendant.' },
-      { question: 'Le PRA couvre-t-il les services managés du marketplace ?', reponse: 'Oui. Une instance Drive ou une messagerie entre dans un groupe de démarrage comme n’importe quelle autre ressource.' },
-    ],
-  },
-  {
     slug: 'cloud-backup',
     icone: 'sauvegarde',
     nom: 'Cloud Backup',
@@ -767,6 +692,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
       'Immuabilité réelle : un point de restauration sous rétention ne peut pas être supprimé',
       'Conformité 3-2-1 matérialisée par trois pastilles, ressource par ressource',
       'Tests de restauration automatisés, avec résultat daté',
+      'Stockage NFS par palier (500 Go à 10 To) ou agent installé serveur par serveur, sans configuration',
     ],
     paliers: [
       { nom: 'Standard', specs: 'Quotidien · rétention 14 j · local', prix: 2800, unite: '/To/mois' },
@@ -827,6 +753,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
       { question: 'Qu’est-ce que l’immuabilité change en cas de rançongiciel ?', reponse: 'Tout. Un point de restauration sous rétention WORM ne peut être supprimé par personne — ni par un attaquant ayant obtenu vos droits, ni par nous. C’est la seule protection qui résiste à une compromission d’administrateur.' },
       { question: 'Puis-je restaurer un seul e-mail ?', reponse: 'Oui, si la sauvegarde couvre une instance Email Pro. L’assistant descend jusqu’au message.' },
       { question: 'Les tests de restauration sont-ils facturés ?', reponse: 'Non. Un test mensuel sur échantillon est inclus dans le plan Immuable. Une restauration de test à votre initiative consomme du calcul temporaire, affiché avant lancement.' },
+      { question: 'Quelle est la différence entre un plan et l’agent de sauvegarde ?', reponse: 'Le plan protège ce que vous désignez — étiquette, Espace, ressource — selon des réglages que vous choisissez. L’agent sauvegarde un serveur entier selon une politique fixe, non modifiable : on l’installe, on ne la règle pas.' },
     ],
   },
   {
@@ -1215,7 +1142,7 @@ export const FICHES_PRODUIT: FicheProduit[] = [
         items: [
           { libelle: 'Sites', valeur: 'Abidjan et Grand-Bassam, choisis à la création' },
           { libelle: 'Redondance interne', valeur: 'Trois copies dans le site, sur des châssis distincts' },
-          { libelle: 'Réplication inter-site', valeur: 'Optionnelle, incluse dans les offres PRA' },
+          { libelle: 'Réplication inter-site', valeur: 'Optionnelle, rattachable au plan Cloud Backup' },
         ],
       },
     ],
@@ -1617,7 +1544,7 @@ export const DATACENTERS = [
     certifications: ['Tier III (conception)', 'Démarche ISO 27001'],
     surface: '420 m² de salle blanche',
     puissance: '800 kW installés',
-    services: ['Espace Cloud', 'Site de repli PRA', 'Stockage objet froid et immuable', 'Services managés'],
+    services: ['Espace Cloud', 'Site de repli et de sauvegarde', 'Stockage objet froid et immuable', 'Services managés'],
   },
 ]
 
@@ -1626,7 +1553,7 @@ export const DATACENTERS = [
 export const RESSOURCES = [
   { type: 'Livre blanc', titre: 'Sortir de VMware sans casser la production', duree: '24 pages', theme: 'Migration', extrait: 'Inventaire, lots, fenêtres, retour arrière : la méthode que nous appliquons chez nos clients depuis 2024.' },
   { type: 'Livre blanc', titre: 'Souveraineté numérique en Afrique de l’Ouest : trois niveaux, une trajectoire', duree: '18 pages', theme: 'Souveraineté', extrait: 'Données, opérations, logiciel : ce que chaque niveau exige réellement, et où se situent les acteurs du marché.' },
-  { type: 'Guide', titre: 'Construire un PRA opposable à un auditeur', duree: '32 pages', theme: 'PRA', extrait: 'Du RPO théorique au RTO constaté : comment produire des preuves plutôt que des promesses.' },
+  { type: 'Guide', titre: 'Un plan de sauvegarde opposable à un auditeur', duree: '32 pages', theme: 'Protection', extrait: 'De la fréquence annoncée au dernier test de restauration constaté : comment produire des preuves plutôt que des promesses.' },
   { type: 'Guide', titre: 'Protéger ses sauvegardes contre les rançongiciels', duree: '16 pages', theme: 'Protection', extrait: 'Pourquoi la règle 3-2-1 ne suffit plus, et ce que l’immuabilité change concrètement.' },
   { type: 'Webinaire', titre: 'Migrer 400 boîtes Microsoft 365 vers une messagerie souveraine', duree: '52 min', theme: 'Migration', extrait: 'Retour d’expérience détaillé, avec les chiffres et les difficultés rencontrées.' },
   { type: 'Webinaire', titre: 'Déployer une application Node.js en dix minutes', duree: '28 min', theme: 'Applications', extrait: 'Du dépôt Git au domaine en production, avec analyse DevSecOps.' },
@@ -1660,7 +1587,7 @@ export const SECTIONS_DOCS = [
       'Concevoir un plan de sauvegarde immuable',
       'Restaurer un fichier, une base, une boîte aux lettres',
       'Lire le rapport de conformité 3-2-1',
-      'Préparer et exécuter un exercice de bascule PRA',
+      'Installer l’agent de sauvegarde sur un serveur',
     ],
   },
   {

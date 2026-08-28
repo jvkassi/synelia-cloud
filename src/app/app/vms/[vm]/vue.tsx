@@ -1369,7 +1369,7 @@ function OngletMateriel({ vm }: { vm: VM }) {
             <Ligne libelle="Démarrage automatique de l’hôte" redemarrage={false} note="Redémarre la machine après une maintenance de l’hyperviseur.">
               <Switch checked={demarrageAuto} onChange={setDemarrageAuto} label="Démarrage automatique" />
             </Ligne>
-            <Ligne libelle="Ordre de démarrage" redemarrage={false} note="Priorité au sein d’un groupe de démarrage PRA.">
+            <Ligne libelle="Ordre de démarrage" redemarrage={false} note="Priorité au redémarrage automatique de l’hôte, quand plusieurs machines en dépendent.">
               <Input
                 type="number"
                 value={ordre}

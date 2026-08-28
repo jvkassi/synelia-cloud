@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     template: '%s · Synelia Cloud',
   },
   description:
-    'Espaces Cloud, machines virtuelles, Kubernetes managé, sauvegarde immuable, plan de reprise et solutions open source opérées par Synelia. Deux sites en Côte d’Ivoire : Abidjan et Grand-Bassam.',
+    'Espaces Cloud, machines virtuelles, Kubernetes managé, sauvegarde immuable et solutions open source opérées par Synelia. Deux sites en Côte d’Ivoire : Abidjan et Grand-Bassam.',
   applicationName: 'Synelia Cloud',
   authors: [{ name: 'Synelia Group Afrique', url: 'https://synelia.tech' }],
   keywords: [
@@ -38,7 +38,6 @@ export const metadata: Metadata = {
     'Abidjan',
     'Kubernetes managé',
     'sauvegarde immuable',
-    'PRA',
     'Nextcloud',
     'marketplace open source',
   ],

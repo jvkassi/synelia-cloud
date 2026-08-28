@@ -6,9 +6,9 @@ import { AlertTriangle, ArrowRight, Plus } from 'lucide-react'
 import { num, pct, toHumain } from '@/lib/format'
 import { SITE_COURT } from '@/lib/types'
 import {
+  AGENTS_SAUVEGARDE,
   BASES_MANAGEES,
   BUCKETS,
-  DR_PLANS,
   ESPACES,
   K8S_CLUSTERS,
   LOAD_BALANCERS,
@@ -66,11 +66,6 @@ export default function AccueilInfrastructure() {
       quoi: `${v.nom} — aucun plan de sauvegarde`,
       detail: 'La machine tourne, mais rien n’en garde de copie restaurable.',
       href: `/app/vms/${v.id}`,
-    })),
-    ...DR_PLANS.filter((p) => p.exercices.length === 0).map((p) => ({
-      quoi: `${p.nom} — jamais testé`,
-      detail: 'Un plan de reprise qu’on n’a jamais joué est une intention, pas une garantie.',
-      href: `/app/pra/${p.id}`,
     })),
   ]
 
@@ -212,13 +207,12 @@ export default function AccueilInfrastructure() {
         <Card>
           <CardHeader
             titre="Protection des données"
-            sousTitre="Ce que la section Sauvegardes & PRA détaille plan par plan."
+            sousTitre="Ce que la section Sauvegardes détaille plan par plan."
           />
           <dl className="mt-3 space-y-1.5 text-[12.5px]">
             {[
               ['Machines sans plan de sauvegarde', VMS.filter((v) => !v.backupPlanId).length],
-              ['Plans de reprise', DR_PLANS.length],
-              ['Plans jamais testés', DR_PLANS.filter((p) => p.exercices.length === 0).length],
+              ['Serveurs sans agent de sauvegarde', AGENTS_SAUVEGARDE.filter((a) => !a.installe).length],
               ['Compartiments S3 verrouillés (WORM)', BUCKETS.filter((b) => b.objectLock?.actif).length],
             ].map(([libelle, valeur]) => (
               <div key={libelle} className="flex items-baseline justify-between gap-2">
@@ -231,7 +225,7 @@ export default function AccueilInfrastructure() {
             href="/app/sauvegarde"
             className="mt-3 inline-block text-[12.5px] font-semibold text-p-700 hover:text-m-600"
           >
-            Sauvegardes &amp; PRA →
+            Sauvegardes →
           </Link>
         </Card>
 

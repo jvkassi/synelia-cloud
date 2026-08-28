@@ -483,12 +483,6 @@ export const CONFORMITE_PLATEFORME = {
     { id: 'tr-2', periode: 'Juillet 2026', perimetre: 'Échantillon 10 % du parc', planifies: 40, executes: 40, succes: 39, echecs: 1, statut: 'clôturée' },
     { id: 'tr-3', periode: 'Juin 2026', perimetre: 'Échantillon 10 % du parc', planifies: 38, executes: 38, succes: 38, echecs: 0, statut: 'clôturée' },
   ],
-  exercicesPra: [
-    { org: 'Digital Business Africa', plan: 'PRA-DBA-PROD', date: '2026-07-12', rtoCible: 240, rtoConstate: 192, succes: true },
-    { org: 'Cofina Digital', plan: 'PRA-COFINA-CORE', date: '2026-06-21', rtoCible: 180, rtoConstate: 168, succes: true },
-    { org: 'ONECI', plan: 'PRA-ONECI-ETAT', date: '2026-05-30', rtoCible: 120, rtoConstate: 146, succes: false },
-    { org: 'AMUGA', plan: 'PRA-AMUGA-01', date: '2026-04-18', rtoCible: 480, rtoConstate: 402, succes: true },
-  ],
   cve: [
     { gravite: 'critique', ouvertes: 0, corrigees30j: 3, delaiMoyenJours: 2 },
     { gravite: 'élevée', ouvertes: 4, corrigees30j: 21, delaiMoyenJours: 6 },

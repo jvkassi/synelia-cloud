@@ -38,7 +38,7 @@ export default function BackupTousProjets() {
         sousTitre="Ce qui est protégé dans vos projets, et ce qui ne l’est pas. Choisissez un projet dans le panneau de gauche pour ses points de restauration et son bouton de restauration."
         actions={
           <ButtonLink href="/app/sauvegarde" variant="secondary">
-            Plans réutilisables & PRA
+            Plans réutilisables
           </ButtonLink>
         }
         meta={
@@ -135,7 +135,7 @@ export default function BackupTousProjets() {
         <Callout ton="violet" titre="Deux endroits, deux questions">
           Ici on répond à « ce projet est-il protégé, et jusqu’où puis-je revenir ? ».{' '}
           <Link href="/app/sauvegarde" className="font-semibold text-p-700 hover:text-m-600">
-            Sauvegardes &amp; PRA
+            Sauvegardes
           </Link>{' '}
           répond à « quels plans couvrent quoi, et que montre-t-on à un auditeur ? » — plans
           réutilisables, restauration granulaire, conformité 3-2-1.

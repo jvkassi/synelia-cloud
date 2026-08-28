@@ -39,7 +39,7 @@ l'installation locale de la distante. Ne remettez pas de caret.
 
 ### Le contrat d'API
 
-`docs/api/openapi.json` (OpenAPI 3.0.3, 527 opérations) décrit l'API que le
+`docs/api/openapi.json` (OpenAPI 3.0.3, 510 opérations) décrit l'API que le
 backend doit servir pour remplacer `src/lib/mock/`. Il est **généré** par
 `outils/openapi/` : ne l'éditez pas à la main, éditez le générateur, qui refuse
 d'écrire un document incohérent — référence morte, `operationId` en doublon,
@@ -372,7 +372,7 @@ sélectionné. Le transformer en fiche de l'Espace courant est un chantier à pa
 
 Dix sections : `Accueil · Espaces Cloud · Machines virtuelles · Kubernetes ·
 Load balancers · Réseau & IP · Stockage bloc · Stockage objet S3 ·
-Bases managées · Sauvegardes & PRA`.
+Bases managées · Sauvegardes`.
 
 ### Applications
 
@@ -485,7 +485,8 @@ Pas de `notFound()`, pas de `!` sur un `find`, et la garde après tous les hooks
 |---|---|
 | Polices | Montserrat + Open Sans + JetBrains Mono. La charte interdit Inter, qui était pourtant suggéré par le cahier : la charte gagne. |
 | Socle du PaaS | Kubernetes managé via OpenStack Magnum, namespace par projet. Sans effet sur la maquette. |
-| Sauvegardes | Un onglet par ressource **et** une section transverse `Sauvegardes & PRA` dans Infrastructure, qui porte les plans réutilisables, la restauration granulaire et le tableau de conformité 3-2-1 qu'on montre à un auditeur. |
+| Sauvegardes | Un onglet par ressource **et** une section transverse `Sauvegardes` dans Infrastructure, qui porte les plans réutilisables, la restauration granulaire et le tableau de conformité 3-2-1 qu'on montre à un auditeur. |
+| PRA | **Supprimé.** Le module de plan de reprise (`/app/pra`, bascule de test/réelle, jauges RPO/RTO, exercices trimestriels) a été retiré : trop complexe pour la maquette, et il dupliquait ce qu'un plan de sauvegarde couvre déjà. Remplacé, façon OVH Backup Storage, par deux mécanismes simples dans l'onglet « Capacité & agent » de Sauvegardes : des paliers de stockage NFS à payer/upgrader (500 Go, 5 To, 10 To) et un agent installable par serveur, à politique fixe (rétention 14 ou 30 j, fenêtre nocturne), non configurable. L'offre vitrine `/offres/pra` et l'option « PRA inter-site » à la création d'un Espace ont été retirées avec le reste. |
 | Revendeurs | **Il n'y en a pas.** Deux acteurs seulement : l'organisation cliente et le super admin qui exploite la plateforme. Ni rôle `reseller_admin`, ni type d'organisation indirect, ni grille d'achat partenaire, ni revshare, ni page `/partenaires`. Une offre porte **un** prix, celui de la vitrine. |
 | Marketplace | Supprimé en tant qu'univers. Le partagé (messagerie, drive, CMS) est passé dans Web Cloud, attaché au domaine ; le dédié est devenu des modèles déployables dans un projet. |
 | Bibliothèque de modèles | Plus de section ni de fiche : les modèles se choisissent à l'étape « Source » de `/app/applications/nouveau`, à côté de Git, image Docker et canvas. Une fiche de modèle qu'on ne peut pas déployer depuis elle-même était un détour. Le jeu de données `mock/modeles.ts` reste : les services en portent le `modeleSlug` et leur configuration en dépend. |

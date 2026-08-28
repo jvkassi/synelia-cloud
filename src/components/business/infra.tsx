@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { AlertTriangle, Plus, Server } from 'lucide-react'
 import { cn, clamp } from '@/lib/utils'
-import { dateCourte, dureeMin, num, pct } from '@/lib/format'
-import { BACKEND_LABEL, SITE_COURT, type Backend, type DRPlan } from '@/lib/types'
+import { dateCourte, num, pct } from '@/lib/format'
+import { BACKEND_LABEL, SITE_COURT, type Backend } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, Callout } from '@/components/composition/card'
@@ -226,70 +226,6 @@ export function PlacementSlider({
   )
 }
 
-/**
- * Jauge RPO / RTO — cible et constaté côte à côte.
- * Composant le plus important du module PRA (§4.7).
- */
-export function RpoRtoGauge({
-  libelle,
-  cibleMin,
-  constateMin,
-  className,
-}: {
-  libelle: string
-  cibleMin: number
-  constateMin: number
-  className?: string
-}) {
-  const conforme = constateMin > 0 && constateMin <= cibleMin
-  const jamaisMesure = constateMin === 0
-  const ratio = jamaisMesure ? 0 : clamp((constateMin / cibleMin) * 100, 0, 140)
-
-  return (
-    <div className={cn('rounded-[8px] border border-g-300 bg-white p-3.5', className)}>
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="type-micro text-g-500">{libelle}</span>
-        <Badge tone={jamaisMesure ? 'warn' : conforme ? 'ok' : 'err'} size="sm">
-          {jamaisMesure ? 'Jamais mesuré' : conforme ? 'Conforme' : 'Hors cible'}
-        </Badge>
-      </div>
-
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <div>
-          <p className="text-[11px] text-g-500">Cible</p>
-          <p className="tnum mt-0.5 text-[17px] font-bold [font-family:var(--font-display)] text-g-700">
-            {dureeMin(cibleMin)}
-          </p>
-        </div>
-        <div>
-          <p className="text-[11px] text-g-500">Constaté</p>
-          <p
-            className={cn(
-              'tnum mt-0.5 text-[17px] font-bold [font-family:var(--font-display)]',
-              jamaisMesure ? 'text-g-500' : conforme ? 'text-ok' : 'text-err',
-            )}
-          >
-            {jamaisMesure ? '—' : dureeMin(constateMin)}
-          </p>
-        </div>
-      </div>
-
-      <div className="relative mt-3 h-2 w-full overflow-hidden rounded-full bg-g-100">
-        <div
-          className={cn('h-full rounded-full', conforme ? 'bg-ok' : 'bg-err')}
-          style={{ width: `${Math.min(100, ratio)}%` }}
-        />
-        <span className="absolute top-0 h-full w-[1.5px] bg-p-700" style={{ left: '100%' }} />
-      </div>
-      <p className="mt-1.5 text-[11px] text-g-500">
-        {jamaisMesure
-          ? 'Aucun exercice n’a encore été mené sur ce plan.'
-          : `${pct(Math.round(ratio))} de la cible contractuelle.`}
-      </p>
-    </div>
-  )
-}
-
 /** Jauge SLA — disponibilité constatée face à l'engagement (§7.5). */
 export function SlaGauge({
   composant,
@@ -334,47 +270,6 @@ export function SlaGauge({
           : `écart de ${pct(engagement - constate, 2)} → crédit SLA`}
       </p>
     </div>
-  )
-}
-
-/** Résumé d'un plan de reprise. */
-export function DrPlanSummary({ plan, className }: { plan: DRPlan; className?: string }) {
-  const dernier = plan.exercices[0]
-  return (
-    <Card className={className}>
-      <CardHeader
-        titre={<span className="font-mono">{plan.nom}</span>}
-        sousTitre={`${SITE_COURT[plan.siteSource]} → ${SITE_COURT[plan.siteRepli]} · réplication ${plan.replication.mode === 'continu' ? 'continue' : 'planifiée'}`}
-        actions={<HealthBadge etat={plan.statut} size="sm" />}
-      />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <RpoRtoGauge libelle="RPO" cibleMin={plan.rpoCibleMin} constateMin={plan.rpoConstateMin} />
-        <RpoRtoGauge libelle="RTO" cibleMin={plan.rtoCibleMin} constateMin={plan.rtoConstateMin} />
-      </div>
-      <div className="mt-3.5 flex flex-wrap items-center gap-x-5 gap-y-1.5 border-t border-g-100 pt-3">
-        <Meta cle="Groupes de démarrage" valeur={String(plan.groupes.length)} />
-        <Meta cle="Retard de réplication" valeur={`${plan.replication.retardS} s`} />
-        <Meta
-          cle="Dernier exercice"
-          valeur={dernier ? `${dateCourte(dernier.date)} · ${dernier.succes ? 'réussi' : 'échoué'}` : 'jamais'}
-        />
-      </div>
-      {plan.statut === 'jamais_teste' && (
-        <Callout ton="warn" className="mt-3" titre="Ce plan n’a jamais été exercé">
-          Un plan de reprise qui n’a pas été testé n’offre aucune garantie de temps de reprise.
-          Lancez une bascule de test en réseau isolé — elle n’a aucun impact sur la production.
-        </Callout>
-      )}
-    </Card>
-  )
-}
-
-function Meta({ cle, valeur }: { cle: string; valeur: string }) {
-  return (
-    <span className="text-[12px]">
-      <span className="text-g-500">{cle} : </span>
-      <span className="tnum font-semibold text-ink">{valeur}</span>
-    </span>
   )
 }
 
