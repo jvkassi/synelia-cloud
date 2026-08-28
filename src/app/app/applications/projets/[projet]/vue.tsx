@@ -31,7 +31,7 @@ import {
 } from '@/components/business/projets'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
-import { useOperation } from '@/components/app/actions'
+import { BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 /**
  * Fiche d'un projet — ses services, environnement par environnement.
@@ -79,7 +79,7 @@ export function VueProjet({ id }: { id: string }) {
             <Badge tone="neutral">
               Espace <span className="font-mono">{projet.espaceId.toUpperCase()}</span>
             </Badge>
-            <span className="text-[11.5px] text-g-500">
+            <span className="text-[12px] text-g-500">
               créé le {dateCourte(projet.cree)} · dernière activité {relatif(synthese.derniereMaj)}
             </span>
           </>
@@ -115,7 +115,7 @@ export function VueProjet({ id }: { id: string }) {
                 {e}
                 <span
                   className={cn(
-                    'tnum rounded-full px-1.5 text-[10.5px]',
+                    'tnum rounded-full px-1.5 text-[11px]',
                     e === env ? 'bg-white/20' : 'bg-g-100 text-g-700',
                   )}
                 >
@@ -124,8 +124,33 @@ export function VueProjet({ id }: { id: string }) {
               </button>
             )
           })}
+          <BoutonFormulaire
+            libelle="Ajouter un environnement"
+            icone={<Plus size={12} />}
+            action="app.deploy"
+            variant="ghost"
+            size="sm"
+            titre={`Ajouter un environnement à ${projet.nom}`}
+            description="Il démarre vide — aucun coût tant qu’aucun service n’y est déployé. Une application déployée depuis l’assistant ne cible qu’un seul environnement à la fois."
+            libelleValider="Ajouter"
+            champs={[
+              { id: 'nom', label: 'Nom de l’environnement', obligatoire: true, placeholder: 'Recette' },
+            ]}
+            operation={(v) => {
+              const nomEnv = String(v.nom).trim()
+              return {
+                titre: `Environnement « ${nomEnv} » ajouté à ${projet.nom}`,
+                effet: () => {
+                  lesProjets.modifier(projet.id, {
+                    environnements: Array.from(new Set([...projet.environnements, nomEnv])),
+                  })
+                  setEnv(nomEnv)
+                },
+              }
+            }}
+          />
         </div>
-        <span className="text-[11.5px] text-g-500">
+        <span className="text-[12px] text-g-500">
           Chaque environnement porte ses propres services et ses propres variables.
         </span>
       </div>
@@ -135,7 +160,10 @@ export function VueProjet({ id }: { id: string }) {
           titre={`Aucun service en ${env}`}
           phrase="Un environnement vide ne facture rien. Déployez une application, une base ou une tâche planifiée pour le peupler."
           icone={<Rocket size={22} />}
-          action={{ libelle: 'Déployer une application', href: '/app/applications/nouveau' }}
+          action={{
+            libelle: 'Déployer une application',
+            href: `/app/applications/nouveau?projet=${projet.id}&env=${env}`,
+          }}
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
@@ -242,7 +270,7 @@ function NouveauService({
                 {ICONE_TYPE[t.type]}
               </span>
               <span className="min-w-0">
-                <span className="block text-[12.5px] font-semibold text-ink">
+                <span className="block text-[13px] font-semibold text-ink">
                   {TYPE_SERVICE_LABEL[t.type]}
                 </span>
                 <span className="block text-[11px] leading-snug text-g-500">{t.phrase}</span>
@@ -389,7 +417,9 @@ function TiroirCreation({
             Annuler
           </Button>
           {type === 'application' || type === 'statique' ? (
-            <ButtonLink href="/app/applications/nouveau">Ouvrir l’assistant complet</ButtonLink>
+            <ButtonLink href={`/app/applications/nouveau?projet=${projet.id}&env=${env}`}>
+              Ouvrir l’assistant complet
+            </ButtonLink>
           ) : (
             <Button disabled={nom.trim().length === 0} onClick={creerService}>
               Créer le service
@@ -400,7 +430,7 @@ function TiroirCreation({
     >
       <div className="space-y-4">
         {(type === 'application' || type === 'statique') && (
-          <Callout ton="info" titre="Cinq étapes, pas un formulaire">
+          <Callout ton="info" titre="Le déploiement depuis un dépôt passe par l’assistant">
             Déployer depuis un dépôt passe par l’assistant : lecture du code, architecture, cible et
             ressources, environnements. Il pré-remplit ce projet et cet environnement.
           </Callout>
@@ -499,7 +529,7 @@ function TiroirCreation({
           <div className="rounded-[8px] border border-g-300 bg-g-050 p-3">
             <MicroLabel>Adresse attribuée automatiquement</MicroLabel>
             <CopyField value={sousDomaine} className="mt-1.5" />
-            <p className="mt-2 text-[11.5px] leading-relaxed text-g-500">
+            <p className="mt-2 text-[12px] leading-relaxed text-g-500">
               Certificat émis dès le premier déploiement. Vous pourrez brancher votre propre domaine
               ensuite, sans changer cette adresse.
             </p>

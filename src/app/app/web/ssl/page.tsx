@@ -194,7 +194,7 @@ export default function ListeCertificats() {
                     <td className="px-3 py-2.5">
                       <Link
                         href={`/app/web/ssl/${c.id}`}
-                        className="font-mono text-[12.5px] font-semibold text-ink hover:text-p-700"
+                        className="font-mono text-[13px] font-semibold text-ink hover:text-p-700"
                       >
                         {c.hote}
                       </Link>
@@ -210,8 +210,8 @@ export default function ListeCertificats() {
                       </Badge>
                     </td>
                     <td className="px-3 py-2.5 text-[12px] text-g-700">{c.emetteur}</td>
-                    <td className="px-3 py-2.5 text-[11.5px] text-g-700">{dateCourte(c.emisLe)}</td>
-                    <td className="px-3 py-2.5 text-[11.5px] text-g-700">{dateCourte(c.expire)}</td>
+                    <td className="px-3 py-2.5 text-[12px] text-g-700">{dateCourte(c.emisLe)}</td>
+                    <td className="px-3 py-2.5 text-[12px] text-g-700">{dateCourte(c.expire)}</td>
                     <td className="px-3 py-2.5">
                       <span
                         className={cn(
@@ -233,7 +233,7 @@ export default function ListeCertificats() {
                     <td className="px-3 py-2.5 text-right">
                       <Link
                         href={`/app/web/ssl/${c.id}`}
-                        className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+                        className="text-[12px] font-semibold text-p-700 hover:underline"
                       >
                         Gérer →
                       </Link>
@@ -287,13 +287,13 @@ export default function ListeCertificats() {
             >
               <p className="flex items-center gap-1.5 text-p-700">
                 <ShieldCheck size={14} />
-                <span className="text-[12.5px] font-bold text-ink">{o.nom}</span>
+                <span className="text-[13px] font-bold text-ink">{o.nom}</span>
               </p>
               <p className="tnum mt-1.5 text-[16px] font-bold text-ink">
                 {o.prix === 0 ? 'Inclus' : `${money(o.prix)}`}
                 {o.prix > 0 && <span className="text-[11px] font-semibold text-g-500"> / an</span>}
               </p>
-              <p className="mt-1.5 text-[11.5px] leading-relaxed text-g-700">{o.pour}</p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-g-700">{o.pour}</p>
               <dl className="mt-2 space-y-0.5 border-t border-g-100 pt-2 text-[11px]">
                 <div className="flex justify-between gap-2">
                   <dt className="text-g-500">Délai</dt>

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowDown, ArrowRight, ArrowUp, Lock, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { num, pct } from '@/lib/format'
 import { CLASSE_DONNEES_LABEL } from '@/lib/types'
@@ -97,7 +96,7 @@ export default function ResidenceDonnees() {
                   {MATRICE_RESIDENCE.map((l) => (
                     <tr key={l.classe} className="border-b border-g-100 last:border-0">
                       <td className="px-4 py-3">
-                        <span className="block text-[12.5px] font-semibold text-ink">
+                        <span className="block text-[13px] font-semibold text-ink">
                           {CLASSE_DONNEES_LABEL[l.classe]}
                         </span>
                         <span className="block text-[11px] text-g-500">{l.note}</span>
@@ -129,7 +128,7 @@ export default function ResidenceDonnees() {
                     key={m.id}
                     className="flex flex-wrap items-center justify-between gap-2 border-b border-g-100 pb-1.5 last:border-0"
                   >
-                    <span className="min-w-0 truncate text-[12.5px] text-ink">{m.nom}</span>
+                    <span className="min-w-0 truncate text-[13px] text-ink">{m.nom}</span>
                     <Badge tone={m.hebergement === 'souverain' ? 'ok' : 'warn'} size="sm">
                       {m.hebergement === 'souverain'
                         ? 'Toutes classes'

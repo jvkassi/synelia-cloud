@@ -297,7 +297,7 @@ export function VueDomaine({ id }: { id: string }) {
                 titre="Services associés"
                 sousTitre="Ce qui pourrait tourner sur ce nom."
               />
-              <ul className="space-y-2.5 text-[12.5px]">
+              <ul className="space-y-2.5 text-[13px]">
                 <Associe
                   libelle="Hébergement"
                   etat={h ? `${h.palier} · ${h.serveur.nom}` : 'Aucun'}
@@ -354,7 +354,7 @@ function Etat({
       <p className="mt-1.5">
         <Badge tone={ton}>{valeur}</Badge>
       </p>
-      <p className="mt-2 text-[11.5px] leading-snug text-g-700">{aide}</p>
+      <p className="mt-2 text-[12px] leading-snug text-g-700">{aide}</p>
     </div>
   )
 }
@@ -374,10 +374,10 @@ function Associe({
     <li className="flex items-center justify-between gap-2 border-b border-g-100 pb-2 last:border-0 last:pb-0">
       <span className="min-w-0">
         <span className="block truncate font-semibold text-ink">{libelle}</span>
-        <span className="block text-[11.5px] text-g-500">{etat}</span>
+        <span className="block text-[12px] text-g-500">{etat}</span>
       </span>
       {href ? (
-        <Link href={href} className="shrink-0 text-[12px] font-semibold text-p-700 hover:text-m-600">
+        <Link href={href} className="shrink-0 text-[12px] font-semibold text-p-700 hover:underline">
           {action} →
         </Link>
       ) : (

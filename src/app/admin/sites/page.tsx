@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Building, Cable, Fuel, Snowflake, Thermometer, Zap } from 'lucide-react'
+import { Cable, Thermometer } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { dateCourte, num, pct } from '@/lib/format'
 import { BACKENDS as BACKENDS_GRAINE, DATACENTERS } from '@/lib/mock'
@@ -190,7 +190,7 @@ export default function Sites() {
                             <span className="block font-mono text-[12px] font-semibold text-ink">
                               {b.code}
                             </span>
-                            <span className="block text-[10.5px] text-g-500">
+                            <span className="block text-[11px] text-g-500">
                               {BACKEND_LABEL[b.type]} · {b.hosts} hôtes
                             </span>
                           </span>
@@ -235,7 +235,7 @@ export default function Sites() {
                     <MicroLabel className="mt-3">Opérateurs raccordés</MicroLabel>
                     <ul className="space-y-1">
                       {c.operateurs.map((o) => (
-                        <li key={o} className="flex items-start gap-1.5 text-[11.5px] text-g-700">
+                        <li key={o} className="flex items-start gap-1.5 text-[12px] text-g-700">
                           <Cable size={11} className="mt-0.5 shrink-0 text-p-700" />
                           {o}
                         </li>
@@ -247,12 +247,10 @@ export default function Sites() {
             )
           })}
 
-          <Callout ton="violet" titre="42 kilomètres, ni plus ni moins">
-            Trop près, et un même sinistre naturel peut toucher les deux sites. Trop loin, et la
-            latence interdit la réplication synchrone, donc un objectif de perte de données proche de
-            zéro. Quarante-deux kilomètres, sur deux réseaux électriques distincts et deux chemins de
-            fibre séparés : c’est le compromis que nous avons retenu, et nous l’expliquons plutôt que
-            de le présenter comme une évidence.
+          <Callout ton="violet" titre="Deux sites à 42 kilomètres">
+            Plus près, un même sinistre naturel peut toucher les deux. Plus loin, la latence interdit
+            la réplication synchrone. Les deux sites sont sur deux réseaux électriques distincts et
+            deux chemins de fibre séparés.
           </Callout>
         </div>
       )}
@@ -280,8 +278,7 @@ export default function Sites() {
             <Card>
               <CardHeader
                 titre="Chaîne électrique"
-                sousTitre="Ce qui se passe quand le réseau public tombe — et il tombe."
-                actions={<Zap size={15} className="text-warn" />}
+                sousTitre="Ce qui se passe quand le réseau public tombe."
               />
               <div className="space-y-2">
                 {[
@@ -313,12 +310,12 @@ export default function Sites() {
                       x.ton === 'ok'
                         ? 'border-g-300'
                         : x.ton === 'info'
-                          ? 'border-info/40 bg-info-bg'
-                          : 'border-warn/40 bg-warn-bg',
+                          ? 'border-info/40'
+                          : 'border-warn/40',
                     )}
                   >
-                    <p className="text-[12.5px] font-semibold text-ink">{x.t}</p>
-                    <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">{x.d}</p>
+                    <p className="text-[13px] font-semibold text-ink">{x.t}</p>
+                    <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">{x.d}</p>
                   </div>
                 ))}
               </div>
@@ -332,8 +329,7 @@ export default function Sites() {
             <Card>
               <CardHeader
                 titre="Refroidissement"
-                sousTitre="Le climat ivoirien est chaud et humide : c’est la contrainte dimensionnante."
-                actions={<Snowflake size={15} className="text-info" />}
+                sousTitre="Le climat ivoirien, chaud et humide, est la contrainte dimensionnante."
               />
               <KeyValueList
                 colonnes={1}
@@ -346,14 +342,11 @@ export default function Sites() {
                   { cle: 'Refroidissement libre', valeur: 'Non applicable — la température extérieure ne descend jamais assez' },
                 ]}
               />
-              <Callout ton="warn" className="mt-4" titre="Pourquoi notre efficacité n’égale pas celle d’un site nordique">
+              <Callout ton="warn" className="mt-4" titre="1,42 sous climat tropical, 1,15 en Scandinavie">
                 <span className="inline-flex items-start gap-1.5">
                   <Thermometer size={13} className="mt-0.5 shrink-0" />
-                  Un centre de données en Scandinavie refroidit à l’air extérieur une bonne partie de
-                  l’année et atteint 1,15. Sous climat tropical, cette option n’existe pas : il faut
-                  produire du froid en permanence. Annoncer 1,2 à Abidjan serait un mensonge. 1,42 est
-                  un bon chiffre ici, et nous préférons expliquer pourquoi plutôt que de comparer ce
-                  qui n’est pas comparable.
+                  Le refroidissement à l’air extérieur n’est pas possible ici : il faut produire du
+                  froid toute l’année. Les deux chiffres ne se comparent pas directement.
                 </span>
               </Callout>
             </Card>
@@ -362,8 +355,7 @@ export default function Sites() {
           <Card>
             <CardHeader
               titre="Empreinte et sobriété"
-              sousTitre="Ce que nous mesurons, et ce que nous ne prétendons pas."
-              actions={<Fuel size={15} className="text-g-500" />}
+              sousTitre="Ce qui est mesuré, et à quelle fréquence."
             />
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               {[
@@ -395,10 +387,10 @@ export default function Sites() {
                 },
               ].map((x) => (
                 <div key={x.t} className="rounded-[8px] border border-g-300 p-3.5">
-                  <p className="text-[12.5px] font-bold text-ink">{x.t}</p>
+                  <p className="text-[13px] font-bold text-ink">{x.t}</p>
                   <ul className="mt-2 space-y-1.5">
                     {x.l.map((y) => (
-                      <li key={y} className="text-[11.5px] leading-relaxed text-g-700">
+                      <li key={y} className="text-[12px] leading-relaxed text-g-700">
                         · {y}
                       </li>
                     ))}
@@ -441,9 +433,9 @@ export default function Sites() {
                       <td className="px-3 py-2.5 font-mono text-[12px] font-semibold text-ink">
                         {x.l}
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-700">{x.o}</td>
-                      <td className="px-3 py-2.5 font-mono text-[11.5px] text-g-700">{x.c}</td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-500">{x.p}</td>
+                      <td className="px-3 py-2.5 text-[12px] text-g-700">{x.o}</td>
+                      <td className="px-3 py-2.5 font-mono text-[12px] text-g-700">{x.c}</td>
+                      <td className="px-3 py-2.5 text-[12px] text-g-500">{x.p}</td>
                       <td className="w-32 px-3 py-2.5">
                         <QuotaBar utilise={x.u} total={100} compact seuil={75} />
                       </td>
@@ -458,10 +450,9 @@ export default function Sites() {
               </table>
             </div>
             <Callout ton="warn" className="mt-4" titre="Grand-Bassam n’a qu’une seule arrivée Internet">
-              C’est une faiblesse assumée : le site de reprise sert d’abord à recevoir des sauvegardes
-              par la fibre dédiée, pas à servir du trafic public. Mais en cas de bascule prolongée, la
-              connectivité de Grand-Bassam devient un point unique de défaillance. Un second opérateur
-              est budgété pour le prochain trimestre.
+              Le site de reprise sert d’abord à recevoir des sauvegardes par la fibre dédiée, pas à
+              servir du trafic public. En cas de bascule prolongée, sa connectivité devient un point
+              unique de défaillance. Un second opérateur est budgété pour le prochain trimestre.
             </Callout>
           </Card>
 
@@ -479,11 +470,9 @@ export default function Sites() {
                   { cle: 'Trafic local', valeur: '68 % du trafic reste en Côte d’Ivoire' },
                 ]}
               />
-              <Callout ton="violet" className="mt-4" titre="Pourquoi le trafic local compte">
-                Un service hébergé en Europe fait faire un aller-retour transatlantique à chaque
-                requête d’un utilisateur abidjanais : 180 millisecondes au mieux. Hébergé ici et
-                échangé au point d’échange local, c’est 8 millisecondes. Sur une application
-                interactive, la différence est immédiatement perceptible.
+              <Callout ton="violet" className="mt-4" titre="8 ms en local, 180 ms via l’Europe">
+                Pour un utilisateur abidjanais, un service hébergé en Europe ajoute un aller-retour
+                transatlantique à chaque requête.
               </Callout>
             </Card>
 
@@ -501,7 +490,7 @@ export default function Sites() {
                   { d: 'Nord de la Virginie', ms: 186, ok: false },
                 ].map((x) => (
                   <div key={x.d} className="flex items-center gap-3">
-                    <span className="w-44 shrink-0 truncate text-[11.5px] text-ink">{x.d}</span>
+                    <span className="w-44 shrink-0 truncate text-[12px] text-ink">{x.d}</span>
                     <span className="relative h-2 flex-1 overflow-hidden rounded-full bg-g-100">
                       <span
                         className={cn(
@@ -513,7 +502,7 @@ export default function Sites() {
                     </span>
                     <span
                       className={cn(
-                        'tnum w-16 shrink-0 text-right text-[11.5px] font-semibold',
+                        'tnum w-16 shrink-0 text-right text-[12px] font-semibold',
                         x.ok ? 'text-ok' : 'text-warn',
                       )}
                     >
@@ -522,7 +511,7 @@ export default function Sites() {
                   </div>
                 ))}
               </div>
-              <p className="mt-3 text-[11.5px] leading-relaxed text-g-500">
+              <p className="mt-3 text-[12px] leading-relaxed text-g-500">
                 Ces chiffres sont l’argument central de la proximité, et ils sont vérifiables par
                 n’importe qui avec un simple ping. C’est le seul avantage concurrentiel qu’un
                 fournisseur international ne peut pas nous prendre.
@@ -585,12 +574,12 @@ export default function Sites() {
                   )}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <span className="min-w-0 text-[12.5px] font-semibold text-ink">{x.r}</span>
+                    <span className="min-w-0 text-[13px] font-semibold text-ink">{x.r}</span>
                     <Badge tone={x.dur ? 'violet' : 'neutral'} size="sm">
                       {x.dur ? 'Non contournable' : 'Ajustable'}
                     </Badge>
                   </div>
-                  <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{x.d}</p>
+                  <p className="mt-1 text-[12px] leading-relaxed text-g-700">{x.d}</p>
                 </div>
               ))}
             </div>
@@ -632,7 +621,7 @@ export default function Sites() {
                 <div key={x.q} className="rounded-[6px] border border-g-300 px-3 py-2.5">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="min-w-0 text-[12px] font-semibold text-ink">{x.d}</span>
-                    <span className="shrink-0 text-[10.5px] text-g-500">
+                    <span className="shrink-0 text-[11px] text-g-500">
                       {x.org} · {x.q}
                     </span>
                   </div>
@@ -640,7 +629,7 @@ export default function Sites() {
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-[11.5px] leading-relaxed text-g-500">
+            <p className="mt-3 text-[12px] leading-relaxed text-g-500">
               Un refus n’est jamais silencieux : le client voit la règle invoquée, et une alternative
               lui est proposée dans le même écran. Un refus sans explication, c’est un ticket de
               support garanti.

@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import {
-  Activity,
   Clock,
   Database,
   Download,
@@ -14,9 +13,6 @@ import {
   KeyRound,
   Plus,
   RefreshCw,
-  Server,
-  ShieldCheck,
-  ShoppingBag,
   Terminal,
   Trash2,
 } from 'lucide-react'
@@ -303,7 +299,7 @@ export function VueHebergement({ id }: { id: string }) {
                 Créez un enregistrement <span className="font-mono">A</span> vers{' '}
                 <span className="font-mono">{h.serveur.ip}</span> et un{' '}
                 <span className="font-mono">AAAA</span> vers{' '}
-                <span className="font-mono text-[11.5px]">{h.serveur.ipv6}</span>. Si votre zone est
+                <span className="font-mono text-[12px]">{h.serveur.ipv6}</span>. Si votre zone est
                 gérée chez nous, l’onglet DNS le fait en une action.
               </Callout>
             </Card>
@@ -324,7 +320,7 @@ export function VueHebergement({ id }: { id: string }) {
                     <li key={st.id} className="flex flex-wrap items-center gap-3 py-2.5 first:pt-0">
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-[12.5px] font-semibold text-ink">
+                          <span className="font-mono text-[13px] font-semibold text-ink">
                             {st.hote}
                           </span>
                           <Badge tone="neutral" size="sm">
@@ -359,7 +355,7 @@ export function VueHebergement({ id }: { id: string }) {
                             </Badge>
                           )}
                         </span>
-                        <span className="mt-1 block text-[11.5px] text-g-500">
+                        <span className="mt-1 block text-[12px] text-g-500">
                           <span className="font-mono">{st.racine}</span> ·{' '}
                           {(st.espaceMo / 1024).toFixed(2)} Go · {num(st.visitesMois)} visites ce mois
                         </span>
@@ -450,7 +446,7 @@ export function VueHebergement({ id }: { id: string }) {
                     <Link
                       key={a.l}
                       href={a.href}
-                      className="flex w-full items-center gap-2.5 rounded-[6px] border border-g-300 px-2.5 py-2 text-left text-[12.5px] font-semibold text-g-700 transition-colors hover:border-p-400 hover:bg-p-050 hover:text-p-700"
+                      className="flex w-full items-center gap-2.5 rounded-[6px] border border-g-300 px-2.5 py-2 text-left text-[13px] font-semibold text-g-700 transition-colors hover:border-p-400 hover:bg-p-050 hover:text-p-700"
                     >
                       <span className="text-p-700">{a.i}</span>
                       {a.l}
@@ -460,7 +456,7 @@ export function VueHebergement({ id }: { id: string }) {
                       key={a.l}
                       type="button"
                       onClick={() => setOnglet(a.o as string)}
-                      className="flex w-full items-center gap-2.5 rounded-[6px] border border-g-300 px-2.5 py-2 text-left text-[12.5px] font-semibold text-g-700 transition-colors hover:border-p-400 hover:bg-p-050 hover:text-p-700"
+                      className="flex w-full items-center gap-2.5 rounded-[6px] border border-g-300 px-2.5 py-2 text-left text-[13px] font-semibold text-g-700 transition-colors hover:border-p-400 hover:bg-p-050 hover:text-p-700"
                     >
                       <span className="text-p-700">{a.i}</span>
                       {a.l}
@@ -516,42 +512,37 @@ export function VueHebergement({ id }: { id: string }) {
                     titre="Ajouter un compte de transfert"
                     description="Un compte par intervenant, cantonné à son dossier. Le mot de passe n’est affiché qu’une fois."
                     champs={[
-                      { id: 'utilisateur', label: 'Identifiant', placeholder: 'agence-web', obligatoire: true },
+                      { id: 'utilisateur', label: 'Identifiant', placeholder: 'agence-web', obligatoire: true, demi: true },
+                      { id: 'motDePasse', label: 'Mot de passe', type: 'mot_de_passe', placeholder: 'Au moins 12 caractères', obligatoire: true, demi: true },
                       { id: 'racine', label: 'Dossier racine', placeholder: '/var/www/boutique', obligatoire: true },
-                      {
-                        id: 'protocole',
-                        label: 'Protocoles',
-                        type: 'select',
-                        demi: true,
-                        options: [
-                          { value: 'sftp', label: 'SFTP seulement (recommandé)' },
-                          { value: 'ftps', label: 'FTPS' },
-                          { value: 'ftp', label: 'FTP en clair' },
-                        ],
-                      },
+                      { id: 'sftp', label: 'SFTP', type: 'switch', demi: true, placeholder: 'Recommandé' },
+                      { id: 'ftps', label: 'FTPS', type: 'switch', demi: true, placeholder: 'Autorisé' },
+                      { id: 'ftp', label: 'FTP en clair', type: 'switch', demi: true, placeholder: 'Déconseillé' },
                       { id: 'quota', label: 'Quota', type: 'nombre', demi: true, min: 0, suffixe: 'Go' },
                     ]}
-                    valeursDepart={{ protocole: 'sftp', quota: 5, racine: '/var/www' }}
+                    valeursDepart={{ sftp: true, ftps: false, ftp: false, quota: 5, racine: '/var/www' }}
                     libelleValider="Créer le compte"
-                    operation={(v) => ({
-                      titre: `Compte ${v.utilisateur} créé`,
-                      detail:
-                        v.protocole === 'ftp'
+                    operation={(v) => {
+                      const protocoles = (['sftp', 'ftps', 'ftp'] as const).filter((p) => v[p])
+                      return {
+                        titre: `Compte ${v.utilisateur} créé`,
+                        detail: protocoles.includes('ftp')
                           ? 'FTP en clair transmet le mot de passe en clair : à réserver à un besoin ponctuel.'
-                          : 'Le mot de passe est affiché une seule fois.',
-                      effet: () =>
-                        tousComptes.creer({
-                          id: tousComptes.identifiant('cf'),
-                          hebergementId: h.id,
-                          utilisateur: String(v.utilisateur),
-                          protocoles: [v.protocole as 'ftp' | 'sftp' | 'ftps'],
-                          racine: String(v.racine),
-                          quotaGo: Number(v.quota) || null,
-                          utiliseGo: 0,
-                          clesSsh: 0,
-                          statut: 'actif',
-                        }),
-                    })}
+                          : 'Communiquez le mot de passe saisi à l’intervenant par un canal séparé.',
+                        effet: () =>
+                          tousComptes.creer({
+                            id: tousComptes.identifiant('cf'),
+                            hebergementId: h.id,
+                            utilisateur: String(v.utilisateur),
+                            protocoles: protocoles.length > 0 ? protocoles : ['sftp'],
+                            racine: String(v.racine),
+                            quotaGo: Number(v.quota) || null,
+                            utiliseGo: 0,
+                            clesSsh: 0,
+                            statut: 'actif',
+                          }),
+                      }
+                    }}
                   />
                 }
               />
@@ -560,7 +551,7 @@ export function VueHebergement({ id }: { id: string }) {
                   <li key={c.id} className="flex flex-wrap items-start gap-3 py-2.5 first:pt-0">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-[12.5px] font-semibold text-ink">
+                        <span className="font-mono text-[13px] font-semibold text-ink">
                           {c.utilisateur}
                         </span>
                         {c.protocoles.map((p) => (
@@ -577,7 +568,7 @@ export function VueHebergement({ id }: { id: string }) {
                           {c.statut === 'actif' ? 'Actif' : 'Suspendu'}
                         </Badge>
                       </div>
-                      <p className="mt-1 text-[11.5px] text-g-500">
+                      <p className="mt-1 text-[12px] text-g-500">
                         <span className="font-mono">{c.racine}</span> ·{' '}
                         {c.quotaGo === null
                           ? `${c.utiliseGo.toFixed(1)} Go, sans quota`
@@ -588,14 +579,25 @@ export function VueHebergement({ id }: { id: string }) {
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
-                      <BoutonAction
+                      <BoutonFormulaire
                         libelle="Remplacer le mot de passe"
-                        operation={{
-                          action: 'service.admin',
+                        action="service.admin"
+                        titre={`Remplacer le mot de passe de ${c.utilisateur}`}
+                        description="L’ancien mot de passe cesse de fonctionner immédiatement : prévenez l’intervenant."
+                        champs={[
+                          {
+                            id: 'motDePasse',
+                            label: 'Nouveau mot de passe',
+                            type: 'mot_de_passe',
+                            placeholder: 'Au moins 12 caractères',
+                            obligatoire: true,
+                          },
+                        ]}
+                        libelleValider="Remplacer"
+                        operation={() => ({
                           titre: `Mot de passe de ${c.utilisateur} remplacé`,
-                          detail:
-                            'Affiché une seule fois. L’ancien cesse de fonctionner immédiatement : prévenez l’intervenant.',
-                        }}
+                          detail: 'L’ancien cesse de fonctionner immédiatement : prévenez l’intervenant.',
+                        })}
                       />
                       <IconButton
                         label={`Supprimer ${c.utilisateur}`}
@@ -807,7 +809,7 @@ export function VueHebergement({ id }: { id: string }) {
                         {e.nom}
                       </span>
                       {e.requisePar && (
-                        <span className="block text-[10.5px] text-g-500">requise par {e.requisePar}</span>
+                        <span className="block text-[11px] text-g-500">requise par {e.requisePar}</span>
                       )}
                     </span>
                     {e.requisePar && e.active ? (
@@ -923,7 +925,7 @@ export function VueHebergement({ id }: { id: string }) {
                         <Badge tone="neutral" size="sm">
                           <span className="font-mono">{t.expression}</span>
                         </Badge>
-                        <span className="text-[11.5px] text-g-500">{t.lisible}</span>
+                        <span className="text-[12px] text-g-500">{t.lisible}</span>
                         <Badge tone={t.statut === 'ok' ? 'ok' : 'err'} size="sm" dot>
                           {t.statut === 'ok' ? 'Dernière exécution réussie' : 'Dernière exécution en échec'}
                         </Badge>
@@ -1185,7 +1187,7 @@ export function VueHebergement({ id }: { id: string }) {
                 }
                 mono
               />
-              <p className="mt-1.5 text-[11.5px] text-g-500">
+              <p className="mt-1.5 text-[12px] text-g-500">
                 La base n’écoute pas sur l’extérieur. Vos sites l’atteignent en local ; pour un accès
                 distant, il faut ouvrir un tunnel SSH.
               </p>

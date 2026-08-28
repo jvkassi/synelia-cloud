@@ -509,8 +509,11 @@ export interface Projet {
   nom: string
   description: string
   espaceId: string
+  /** Un projet est toujours un cluster Kubernetes dédié — jamais des machines virtuelles. */
+  clusterId: string
   cree: string
-  /** Un même projet se décline par environnement, chacun avec ses services. */
+  tags?: string[]
+  /** Un même projet se décline par environnement, chacun avec ses services. Un nouveau projet ne porte que « Production ». */
   environnements: string[]
   /** Variables partagées par tous les services du projet, par environnement. */
   variables: Array<{

@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import {
-  Copy,
   Download,
   ExternalLink,
   Globe,
@@ -166,7 +165,7 @@ export function VueService({ id }: { id: string }) {
               {service.ressources.diskGo} Go
             </Badge>
             <Badge tone="violet">{money(service.coutMensuel)}/mois</Badge>
-            <span className="text-[11.5px] text-g-500">
+            <span className="text-[12px] text-g-500">
               dernière modification {relatif(service.derniereMaj)}
             </span>
           </>
@@ -348,7 +347,7 @@ function Apercu({
                     href={`https://${d.hote}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex min-w-0 items-center gap-1.5 font-mono text-[12.5px] font-semibold text-ink hover:text-p-700"
+                    className="inline-flex min-w-0 items-center gap-1.5 font-mono text-[13px] font-semibold text-ink hover:text-p-700"
                   >
                     <span className="truncate">
                       {d.hote}
@@ -525,7 +524,7 @@ function Connexion({ service }: { service: ServiceProjet }) {
               </div>
             </div>
           ) : (
-            <p className="text-[12.5px] leading-relaxed text-g-700">
+            <p className="text-[13px] leading-relaxed text-g-700">
               La base n’est joignable que depuis le réseau privé du projet{' '}
               <span className="font-mono text-[12px]">{service.projetId}</span>. C’est le réglage
               recommandé : une application du même projet n’a pas besoin d’Internet pour parler à sa
@@ -538,7 +537,7 @@ function Connexion({ service }: { service: ServiceProjet }) {
       <div className="space-y-4">
         <Card>
           <CardHeader titre="Ce que le portail ne fait pas" />
-          <p className="text-[12.5px] leading-relaxed text-g-700">
+          <p className="text-[13px] leading-relaxed text-g-700">
             Il n’y a pas d’explorateur de tables ici, et il n’y en aura pas. Le portail donne la
             chaîne de connexion, la santé, les sauvegardes et les journaux lents. Pour interroger
             vos données, <span className="font-semibold">psql</span>,{' '}
@@ -609,7 +608,7 @@ function Sauvegardes({ service }: { service: ServiceProjet }) {
                 className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2.5"
               >
                 <span className="min-w-0">
-                  <span className="block text-[12.5px] font-semibold text-ink">
+                  <span className="block text-[13px] font-semibold text-ink">
                     {dateHeure(p.date)}
                   </span>
                   <span className="block text-[11px] text-g-500">
@@ -637,7 +636,7 @@ function Sauvegardes({ service }: { service: ServiceProjet }) {
 
         <Card>
           <CardHeader titre="Restauration à un instant précis" />
-          <p className="mb-3 text-[12.5px] leading-relaxed text-g-700">
+          <p className="mb-3 text-[13px] leading-relaxed text-g-700">
             Les journaux de transaction sont archivés en continu : au-delà des points quotidiens,
             vous pouvez viser une minute précise des {s.retentionJours} derniers jours.
           </p>
@@ -743,15 +742,15 @@ function Executions({ service }: { service: ServiceProjet }) {
                     <Badge tone={h.statut === 'ok' ? 'ok' : 'err'} dot size="sm">
                       {h.statut === 'ok' ? 'Succès' : 'Échec'}
                     </Badge>
-                    <span className="text-[12.5px] font-semibold text-ink">
+                    <span className="text-[13px] font-semibold text-ink">
                       {dateHeure(h.date)}
                     </span>
                   </span>
-                  <span className="tnum text-[11.5px] text-g-500">{duree(h.dureeS)}</span>
+                  <span className="tnum text-[12px] text-g-500">{duree(h.dureeS)}</span>
                 </div>
                 <p
                   className={cn(
-                    'mt-1.5 font-mono text-[11.5px] leading-relaxed',
+                    'mt-1.5 font-mono text-[12px] leading-relaxed',
                     h.statut === 'ok' ? 'text-g-700' : 'text-err',
                   )}
                 >
@@ -776,7 +775,7 @@ function Executions({ service }: { service: ServiceProjet }) {
               { cle: 'En clair', valeur: c.lisible },
               {
                 cle: 'Commande',
-                valeur: <span className="font-mono text-[11.5px]">{c.commande}</span>,
+                valeur: <span className="font-mono text-[12px]">{c.commande}</span>,
               },
               { cle: 'Prochaine exécution', valeur: dateHeure(c.prochaine) },
               { cle: 'Fuseau', valeur: 'UTC — affiché en heure d’Abidjan (UTC+0)' },
@@ -870,7 +869,7 @@ function FileAttente({ service }: { service: ServiceProjet }) {
                 className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2"
               >
                 <span className="min-w-0">
-                  <span className="block font-mono text-[11.5px] font-semibold text-ink">
+                  <span className="block font-mono text-[12px] font-semibold text-ink">
                     {m.id}
                   </span>
                   <span className="block text-[11px] text-err">{m.erreur}</span>
@@ -915,7 +914,7 @@ function Domaines({
 
   return (
     <div className="space-y-4">
-      <Callout ton="violet" titre="Une adresse offerte, et la vôtre quand vous voulez">
+      <Callout ton="violet" titre="Adresse offerte et domaine propre">
         {genere ? (
           <>
             Ce service répond déjà sur{' '}
@@ -1041,8 +1040,8 @@ export function LigneDomaine({
           className={cn(
             'mt-3 rounded-[6px] border p-3',
             d.verification.etat === 'echec'
-              ? 'border-err/40 bg-err-bg'
-              : 'border-warn/40 bg-warn-bg',
+              ? 'border-err/40'
+              : 'border-warn/40',
           )}
         >
           <p className="text-[12px] font-semibold text-ink">
@@ -1050,10 +1049,10 @@ export function LigneDomaine({
               ? 'La vérification DNS a échoué'
               : 'En attente de propagation DNS'}
           </p>
-          <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{d.verification.detail}</p>
+          <p className="mt-1 text-[12px] leading-relaxed text-g-700">{d.verification.detail}</p>
           <div className="mt-2.5 rounded-[6px] border border-g-300 bg-white p-2.5">
             <MicroLabel>Enregistrement à créer chez votre bureau d’enregistrement</MicroLabel>
-            <div className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[11.5px]">
+            <div className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 font-mono text-[12px]">
               <span className="text-g-500">Type</span>
               <span className="font-semibold text-ink">{d.verification.enregistrement.type}</span>
               <span className="text-g-500">Nom</span>
@@ -1082,7 +1081,7 @@ export function LigneDomaine({
               </span>
             )}
             {d.verification.correlationId && (
-              <span className="font-mono text-[10.5px] text-g-500">
+              <span className="font-mono text-[11px] text-g-500">
                 identifiant de corrélation {d.verification.correlationId}
               </span>
             )}
@@ -1270,7 +1269,7 @@ function TiroirDomaine({
               </div>
             </div>
           </Card>
-          <p className="text-[11.5px] leading-relaxed text-g-500">
+          <p className="text-[12px] leading-relaxed text-g-500">
             Vous préférez un CNAME ? Pointez vers{' '}
             <span className="font-mono">{ZONE_APPLICATIVE.zone}</span> — impossible en revanche sur
             un apex, où la norme DNS impose un enregistrement A.
@@ -1318,13 +1317,13 @@ function Deploiements({ service }: { service: ServiceProjet }) {
               {deploiements.map((d) => (
                 <tr key={d.id} className="border-b border-g-100 last:border-0">
                   <td className="px-3 py-2.5">
-                    <span className="font-mono text-[12.5px] font-semibold text-ink">
+                    <span className="font-mono text-[13px] font-semibold text-ink">
                       {d.version}
                     </span>
                     <span className="block text-[11px] text-g-500">{relatif(d.startedAt)}</span>
                   </td>
                   <td className="px-3 py-2.5">
-                    <span className="font-mono text-[11.5px] text-g-700">{d.commit ?? '—'}</span>
+                    <span className="font-mono text-[12px] text-g-700">{d.commit ?? '—'}</span>
                     <span className="block max-w-56 truncate text-[11px] text-g-500">
                       {d.commitMessage}
                     </span>
@@ -1363,7 +1362,7 @@ function Deploiements({ service }: { service: ServiceProjet }) {
                   <td className="px-3 py-2.5 text-right">
                     <Link
                       href="/app/applications/deploiements"
-                      className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+                      className="text-[12px] font-semibold text-p-700 hover:underline"
                     >
                       Détail →
                     </Link>
@@ -1376,7 +1375,7 @@ function Deploiements({ service }: { service: ServiceProjet }) {
       </Card>
       <p className="text-[12px] text-g-500">
         L’historique immuable de tous les déploiements, tous projets confondus, est sur{' '}
-        <Link href="/app/applications/deploiements" className="font-semibold text-p-700 hover:text-m-600">
+        <Link href="/app/applications/deploiements" className="font-semibold text-p-700 hover:underline">
           l’écran Déploiements
         </Link>
         .
@@ -1472,7 +1471,7 @@ function Variables({ service }: { service: ServiceProjet }) {
         </div>
         <Link
           href={`/app/applications/variables/${service.projetId}`}
-          className="mt-3 inline-block text-[12px] font-semibold text-p-700 hover:text-m-600"
+          className="mt-3 inline-block text-[12px] font-semibold text-p-700 hover:underline"
         >
           Gérer les variables du projet →
         </Link>
@@ -1551,7 +1550,7 @@ function Supervision({ service }: { service: ServiceProjet }) {
                 className="flex items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5 transition-colors hover:border-p-400 hover:bg-p-050"
               >
                 <span className="min-w-0">
-                  <span className="block text-[12.5px] font-semibold text-ink">{o.nom}</span>
+                  <span className="block text-[13px] font-semibold text-ink">{o.nom}</span>
                   <span className="block text-[11px] text-g-500">{o.phrase}</span>
                 </span>
                 <ExternalLink size={13} className="shrink-0 text-g-500" />
@@ -1682,7 +1681,7 @@ function Avance({ service }: { service: ServiceProjet }) {
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2.5">
               <span className="min-w-0">
-                <span className="block text-[12.5px] font-semibold text-ink">Arrêter</span>
+                <span className="block text-[13px] font-semibold text-ink">Arrêter</span>
                 <span className="block text-[11px] text-g-500">
                   Libère processeur et mémoire. Les volumes restent facturés.
                 </span>
@@ -1700,9 +1699,9 @@ function Avance({ service }: { service: ServiceProjet }) {
                 }}
               />
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-err/40 bg-err-bg px-3 py-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-err/40 px-3 py-2.5">
               <span className="min-w-0">
-                <span className="block text-[12.5px] font-semibold text-ink">Supprimer</span>
+                <span className="block text-[13px] font-semibold text-ink">Supprimer</span>
                 <span className="block text-[11px] text-g-700">
                   {service.type === 'base'
                     ? 'Détruit la base, ses volumes et ses sauvegardes hors rétention légale.'
@@ -1877,11 +1876,11 @@ function Sieges({ service }: { service: ServiceProjet }) {
           ].map((m) => (
             <li key={m.e} className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0">
               <span className="min-w-0">
-                <span className="block truncate text-[12.5px] font-semibold text-ink">{m.n}</span>
-                <span className="block truncate text-[11.5px] text-g-500">{m.e}</span>
+                <span className="block truncate text-[13px] font-semibold text-ink">{m.n}</span>
+                <span className="block truncate text-[12px] text-g-500">{m.e}</span>
               </span>
               <span className="flex shrink-0 items-center gap-2">
-                <span className="text-[11.5px] text-g-500">{m.u}</span>
+                <span className="text-[12px] text-g-500">{m.u}</span>
                 <Badge tone={m.u.startsWith('inactif') ? 'warn' : 'ok'} size="sm" dot>
                   Actif
                 </Badge>
@@ -1990,7 +1989,7 @@ function Versions({ service }: { service: ServiceProjet }) {
             <li key={h.v} className="flex flex-wrap items-start justify-between gap-2 py-2.5 first:pt-0">
               <span className="min-w-0">
                 <span className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-[12.5px] font-semibold text-ink">{h.v}</span>
+                  <span className="font-mono text-[13px] font-semibold text-ink">{h.v}</span>
                   {h.a && (
                     <Badge tone="ok" size="sm">
                       Déployée
@@ -1998,7 +1997,7 @@ function Versions({ service }: { service: ServiceProjet }) {
                   )}
                   <span className="text-[11px] text-g-500">{dateHeure(h.d)}</span>
                 </span>
-                <span className="mt-0.5 block text-[11.5px] leading-snug text-g-500">{h.n}</span>
+                <span className="mt-0.5 block text-[12px] leading-snug text-g-500">{h.n}</span>
               </span>
               {!h.a && (
                 <BoutonAction
@@ -2075,7 +2074,6 @@ function Reversibilite({ service }: { service: ServiceProjet }) {
         Les réglages que vous avez faits dans {modele.solution} suivent l’export. En revanche, ce
         que le portail ajoute autour — plan de sauvegarde, sondes de supervision, fédération
         d’identité — est propre à Synelia et devra être reconstruit chez votre nouvel hébergeur.
-        Nous le disons pour que la comparaison soit honnête.
       </Callout>
     </div>
   )

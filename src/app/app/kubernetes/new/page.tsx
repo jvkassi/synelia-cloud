@@ -253,15 +253,15 @@ export default function NouveauCluster() {
             </dl>
             <div className="mt-3 border-t border-g-100 pt-3">
               <MicroLabel className="mb-1.5">Impact sur le quota</MicroLabel>
-              <p className="tnum text-[11.5px] text-g-700">
+              <p className="tnum text-[12px] text-g-700">
                 vCPU : {espace.usage.vcpu} → {espace.usage.vcpu + vcpu} sur {espace.quota.vcpu}
               </p>
-              <p className="tnum text-[11.5px] text-g-700">
+              <p className="tnum text-[12px] text-g-700">
                 Mémoire : {num(espace.usage.ramGo)} → {num(espace.usage.ramGo + ram)} sur{' '}
                 {num(espace.quota.ramGo)} Go
               </p>
               {!quotaSuffisant && (
-                <p className="mt-1.5 text-[11.5px] font-semibold text-err">
+                <p className="mt-1.5 text-[12px] font-semibold text-err">
                   Quota insuffisant. Réduisez les pools ou étendez la capacité de l’espace.
                 </p>
               )}
@@ -333,7 +333,7 @@ export default function NouveauCluster() {
                     <span className="block font-mono text-[13px] font-semibold text-ink">
                       Kubernetes {v.nom}
                     </span>
-                    <span className="block text-[11.5px] text-g-500">{v.detail}</span>
+                    <span className="block text-[12px] text-g-500">{v.detail}</span>
                   </span>
                   {version === v.id && (
                     <Badge tone="violet" size="sm">
@@ -393,7 +393,7 @@ export default function NouveauCluster() {
                   )}
                 >
                   <span className="flex items-center justify-between gap-2">
-                    <span className="text-[13.5px] font-semibold text-ink">{o.titre}</span>
+                    <span className="text-[14px] font-semibold text-ink">{o.titre}</span>
                     <Badge tone={o.mode === 'ha' ? 'ok' : 'neutral'} size="sm">
                       {o.sla}
                     </Badge>
@@ -401,10 +401,10 @@ export default function NouveauCluster() {
                   <span className="mt-1 block text-[12px] font-semibold text-p-700">
                     {money(o.prix)} / mois
                   </span>
-                  <span className="mt-1.5 block text-[11.5px] leading-relaxed text-g-700">
+                  <span className="mt-1.5 block text-[12px] leading-relaxed text-g-700">
                     Pour : {o.pour}
                   </span>
-                  <span className="mt-1 block text-[11.5px] leading-relaxed text-g-500">
+                  <span className="mt-1 block text-[12px] leading-relaxed text-g-500">
                     {o.contre}
                   </span>
                 </button>
@@ -669,8 +669,8 @@ export default function NouveauCluster() {
                   key={p.id}
                   className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2"
                 >
-                  <span className="font-mono text-[12.5px] font-semibold text-ink">{p.nom}</span>
-                  <span className="text-[11.5px] text-g-700">
+                  <span className="font-mono text-[13px] font-semibold text-ink">{p.nom}</span>
+                  <span className="text-[12px] text-g-700">
                     {p.nodes} × {p.flavor} · {p.diskGo} Go
                     {p.autoscale ? ` · autoscaling ${p.min}→${p.max}` : ''}
                   </span>
@@ -703,9 +703,9 @@ export default function NouveauCluster() {
 function Petit({ cle, valeur, mono }: { cle: string; valeur: string; mono?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
-      <dt className="shrink-0 text-[11.5px] text-g-500">{cle}</dt>
+      <dt className="shrink-0 text-[12px] text-g-500">{cle}</dt>
       <dd
-        className={cn('truncate text-right text-[11.5px] font-semibold text-ink', mono && 'font-mono')}
+        className={cn('truncate text-right text-[12px] font-semibold text-ink', mono && 'font-mono')}
       >
         {valeur}
       </dd>

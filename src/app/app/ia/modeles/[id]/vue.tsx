@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { Globe2, MapPin } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { dateCourte, jetons, money, num } from '@/lib/format'
 import { FAMILLE_MODELE_LABEL, type FamilleModele, type ModeleIA } from '@/lib/types'
@@ -123,7 +122,7 @@ export function VueModele({ modeleId }: { modeleId: string }) {
                   <CardHeader titre="Ce à quoi il sert" />
                   <ul className="space-y-1.5">
                     {modele.usages.map((u) => (
-                      <li key={u} className="flex items-start gap-2 text-[12.5px] text-ink">
+                      <li key={u} className="flex items-start gap-2 text-[13px] text-ink">
                         <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-p-600" />
                         {u}
                       </li>
@@ -208,7 +207,7 @@ export function VueModele({ modeleId }: { modeleId: string }) {
                       const largeur = max > 0 ? (coutReference(m) / max) * 100 : 0
                       return (
                         <div key={m.id} className="flex flex-wrap items-center gap-3">
-                          <span className="w-full min-w-0 truncate text-[12.5px] text-ink sm:w-52">
+                          <span className="w-full min-w-0 truncate text-[13px] text-ink sm:w-52">
                             {m.nom}
                           </span>
                           <span className="flex min-w-0 flex-1 items-center gap-2">

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowDown, ArrowRight, ArrowUp, Lock, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { num, pct } from '@/lib/format'
 import { CLASSE_DONNEES_LABEL } from '@/lib/types'
@@ -79,7 +78,7 @@ export default function GardeFousReglages() {
               <Card key={g.id}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <span className="min-w-0">
-                    <span className="block text-[13.5px] font-bold text-ink">{g.nom}</span>
+                    <span className="block text-[14px] font-bold text-ink">{g.nom}</span>
                     <span className="mt-1 flex flex-wrap gap-1.5">
                       <Badge tone={TON_ACTION[g.action]} size="sm">
                         {LIBELLE_ACTION[g.action]}
@@ -96,7 +95,7 @@ export default function GardeFousReglages() {
                     <span className="type-micro block text-g-500">déclenchements 24 h</span>
                   </span>
                 </div>
-                <p className="mt-3 text-[12.5px] leading-relaxed text-g-500">{g.description}</p>
+                <p className="mt-3 text-[13px] leading-relaxed text-g-500">{g.description}</p>
                 <div className="mt-3 border-t border-g-100 pt-3">
                   <GatedAction autorise={peutModifier} message={refus('ia.routing.update')}>
                     <Switch

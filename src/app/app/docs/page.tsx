@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { BookOpen, ExternalLink, FileCode2, Search, Terminal } from 'lucide-react'
+import { BookOpen, ExternalLink, FileCode2, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ARTICLES_KB, SECTIONS_DOCS } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -124,7 +124,7 @@ export default function Docs() {
       <PageHeader
         fil={[{ label: 'Espace client', href: '/app' }, { label: 'Documentation' }]}
         titre="Documentation"
-        sousTitre="Guides pratiques, référence de l’API, interface en ligne de commande et fournisseur d’infrastructure déclarative. Nous documentons aussi ce que la plateforme ne fait pas : c’est souvent l’information la plus utile avant de s’engager."
+        sousTitre="Guides pratiques, référence de l’API, interface en ligne de commande et fournisseur d’infrastructure déclarative. Ce que la plateforme ne fait pas y est documenté aussi."
         actions={
           <ButtonLink variant="secondary" href="/docs" external iconAfter={<ExternalLink size={13} />}>
             Documentation publique
@@ -149,7 +149,7 @@ export default function Docs() {
           </Select>
         </div>
         {q.trim().length > 0 && (
-          <p className="mt-2.5 text-[11.5px] text-g-500">
+          <p className="mt-2.5 text-[12px] text-g-500">
             {articles.length} résultat{articles.length > 1 ? 's' : ''} pour «&nbsp;{q}&nbsp;»
           </p>
         )}
@@ -188,8 +188,8 @@ export default function Docs() {
                       {a.duree}
                     </Badge>
                   </div>
-                  <p className="mt-2 text-[12.5px] font-bold leading-snug text-ink">{a.titre}</p>
-                  <p className="mt-1.5 text-[11.5px] leading-relaxed text-g-700">{a.extrait}</p>
+                  <p className="mt-2 text-[13px] font-bold leading-snug text-ink">{a.titre}</p>
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-g-700">{a.extrait}</p>
                   <div className="mt-auto flex items-center justify-between gap-2 pt-3">
                     <Badge tone="violet" size="sm">
                       {a.theme}
@@ -204,7 +204,7 @@ export default function Docs() {
             {articles.length === 0 && (
               <div className="rounded-[8px] border border-dashed border-g-300 px-4 py-10 text-center">
                 <Search size={18} className="mx-auto text-g-300" />
-                <p className="mt-2 text-[12.5px] text-g-500">
+                <p className="mt-2 text-[13px] text-g-500">
                   Aucun guide ne correspond à cette recherche. Ouvrez un ticket : si la question
                   revient, elle devient un article.
                 </p>
@@ -282,11 +282,9 @@ export default function Docs() {
   "quota_apres": { "vcpu": "57/64", "ramGo": "226/256" }
 }`}
               />
-              <Callout ton="info" className="mt-3.5" titre="Pourquoi dry_run existe">
-                Une automatisation qui crée des ressources sans connaître leur coût produit des
-                factures que personne n’a décidées. Avec dry_run, votre pipeline peut refuser une
-                création qui dépasse un seuil, et le dire dans la revue de code plutôt que dans la
-                facture du mois suivant.
+              <Callout ton="info" className="mt-3.5" titre="À quoi sert dry_run">
+                L’appel renvoie le coût de la création sans rien créer : votre pipeline peut refuser
+                une ressource qui dépasse un seuil et le signaler dans la revue de code.
               </Callout>
             </Card>
           </div>
@@ -304,14 +302,14 @@ export default function Docs() {
                   >
                     <span
                       className={cn(
-                        'w-16 shrink-0 rounded-[4px] px-1.5 py-0.5 text-center font-mono text-[10.5px] font-bold',
+                        'w-16 shrink-0 rounded-[4px] px-1.5 py-0.5 text-center font-mono text-[11px] font-bold',
                         TON_METHODE[r.m],
                       )}
                     >
                       {r.m}
                     </span>
                     <span className="min-w-0 flex-1 font-mono text-[12px] text-ink">{r.r}</span>
-                    <span className="text-[11.5px] text-g-500">{r.d}</span>
+                    <span className="text-[12px] text-g-500">{r.d}</span>
                   </div>
                 ))}
               </div>
@@ -342,7 +340,7 @@ export default function Docs() {
                   <span className="w-10 shrink-0 font-mono text-[12px] font-bold text-p-700">
                     {x.c}
                   </span>
-                  <span className="text-[11.5px] leading-relaxed text-g-700">{x.d}</span>
+                  <span className="text-[12px] leading-relaxed text-g-700">{x.d}</span>
                 </div>
               ))}
             </div>
@@ -370,7 +368,6 @@ export default function Docs() {
               <CardHeader
                 titre="Installation"
                 sousTitre="Un seul binaire, sans dépendance. Le code source est publié."
-                actions={<Terminal size={15} className="text-p-700" />}
               />
               <MicroLabel className="mb-1.5">Linux et macOS</MicroLabel>
               <CodeBlock
@@ -625,12 +622,12 @@ Changements de coût :
                       { g: 'g2.medium', v: 8, r: '32 Go', u: 'Traitement d’images, encodage' },
                     ].map((x) => (
                       <tr key={x.g} className="border-b border-g-100 last:border-0">
-                        <td className="px-3 py-2 font-mono text-[11.5px] font-semibold text-ink">
+                        <td className="px-3 py-2 font-mono text-[12px] font-semibold text-ink">
                           {x.g}
                         </td>
-                        <td className="tnum px-3 py-2 text-[11.5px] text-g-700">{x.v}</td>
-                        <td className="tnum px-3 py-2 text-[11.5px] text-g-700">{x.r}</td>
-                        <td className="px-3 py-2 text-[11.5px] text-g-500">{x.u}</td>
+                        <td className="tnum px-3 py-2 text-[12px] text-g-700">{x.v}</td>
+                        <td className="tnum px-3 py-2 text-[12px] text-g-700">{x.r}</td>
+                        <td className="px-3 py-2 text-[12px] text-g-500">{x.u}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -681,9 +678,9 @@ Changements de coût :
                     <Badge tone="violet" size="sm">
                       {s.code}
                     </Badge>
-                    <span className="text-[12.5px] font-bold text-ink">{s.nom}</span>
+                    <span className="text-[13px] font-bold text-ink">{s.nom}</span>
                   </div>
-                  <p className="mt-1.5 text-[11.5px] leading-relaxed text-g-700">{s.d}</p>
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-g-700">{s.d}</p>
                 </div>
               ))}
             </div>
@@ -723,11 +720,11 @@ Changements de coût :
                 },
               ].map((x) => (
                 <div key={x.v} className="flex flex-wrap gap-3 border-b border-g-100 pb-2 last:border-0">
-                  <span className="w-16 shrink-0 font-mono text-[11.5px] font-bold text-p-700">
+                  <span className="w-16 shrink-0 font-mono text-[12px] font-bold text-p-700">
                     {x.v}
                   </span>
                   <span className="w-28 shrink-0 text-[11px] text-g-500">{x.d}</span>
-                  <span className="min-w-0 flex-1 text-[11.5px] text-ink">{x.c}</span>
+                  <span className="min-w-0 flex-1 text-[12px] text-ink">{x.c}</span>
                 </div>
               ))}
             </div>

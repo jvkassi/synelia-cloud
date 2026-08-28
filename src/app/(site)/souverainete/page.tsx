@@ -47,7 +47,7 @@ export default function Souverainete() {
                 id={i === 0 ? 'donnees' : i === 1 ? 'operations' : 'logiciel'}
                 className={cn(
                   'rounded-[14px] border-2 bg-white p-6',
-                  n.statut === 'ok' ? 'border-[#B7E3D0]' : 'border-[#EED9B0]',
+                  n.statut === 'ok' ? 'border-ok/25' : 'border-warn/25',
                 )}
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -91,7 +91,7 @@ export default function Souverainete() {
               loading="lazy"
               className="h-48 w-full object-cover sm:h-60"
             />
-            <figcaption className="bg-white px-5 py-3 text-[11.5px] leading-relaxed text-g-500">
+            <figcaption className="bg-white px-5 py-3 text-[12px] leading-relaxed text-g-500">
               Vue d’illustration. Chaque bascule de socle est planifiée avec vous, exercée à blanc
               sur une copie, et réversible jusqu’au basculement final.
             </figcaption>
@@ -169,7 +169,7 @@ export default function Souverainete() {
                 <ScrollText size={17} />
               </span>
               <h3 className="mt-3 type-h3">Onze rôles, une matrice publiée</h3>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-g-700">
+              <p className="mt-2 text-[13px] leading-relaxed text-g-700">
                 {MATRICE_RBAC.length} actions × {ROLES_ORDRE.length} rôles, avec trois niveaux :
                 autorisé, lecture seule, interdit. La matrice est visible dans votre espace client et
                 fournie en annexe contractuelle. Une action interdite n’est jamais masquée : elle est
@@ -181,7 +181,7 @@ export default function Souverainete() {
                 <AlertTriangle size={17} />
               </span>
               <h3 className="mt-3 type-h3">Les refus sont journalisés</h3>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-g-700">
+              <p className="mt-2 text-[13px] leading-relaxed text-g-700">
                 La plupart des journaux d’audit ne consignent que ce qui a réussi. Le nôtre consigne
                 aussi les tentatives refusées, avec l’acteur, l’action, la cible et le rôle
                 insuffisant. C’est ce qui permet de détecter une escalade de privilèges avant qu’elle
@@ -193,7 +193,7 @@ export default function Souverainete() {
                 <Check size={17} />
               </span>
               <h3 className="mt-3 type-h3">Nos accès aussi sont tracés</h3>
-              <p className="mt-2 text-[12.5px] leading-relaxed text-g-700">
+              <p className="mt-2 text-[13px] leading-relaxed text-g-700">
                 Les accès de nos ingénieurs sont nominatifs — jamais de compte partagé — soumis à une
                 élévation temporaire justifiée par un ticket, et apparaissent dans{' '}
                 <span className="font-semibold">votre</span> journal d’audit, pas seulement dans le
@@ -235,7 +235,7 @@ export default function Souverainete() {
                     ].includes(a.id),
                   ).map((a) => (
                     <tr key={a.id} className="border-b border-g-100 last:border-0">
-                      <td className="sticky left-0 z-10 bg-white px-3 py-2 text-[12.5px] text-ink">
+                      <td className="sticky left-0 z-10 bg-white px-3 py-2 text-[13px] text-ink">
                         {a.libelle}
                       </td>
                       {(['org_admin', 'espace_admin', 'project_owner', 'operator', 'compliance', 'read_only'] as const).map(
@@ -263,7 +263,7 @@ export default function Souverainete() {
                 </tbody>
               </table>
             </div>
-            <p className="mt-2.5 text-[11.5px] text-g-500">
+            <p className="mt-2.5 text-[12px] text-g-500">
               <span className="font-bold text-ok">●</span> autorisé ·{' '}
               <span className="font-bold text-warn">◐</span> lecture seule ·{' '}
               <span className="font-bold text-g-500">—</span> interdit
@@ -305,7 +305,7 @@ export default function Souverainete() {
                         {c.nom}
                       </Link>
                     </td>
-                    <td className="px-4 py-2.5 text-[12.5px] text-g-700">{c.solutionOSS}</td>
+                    <td className="px-4 py-2.5 text-[13px] text-g-700">{c.solutionOSS}</td>
                     <td className="px-4 py-2.5">
                       <span className="flex flex-wrap gap-1">
                         {c.reversibilite.formats.map((f) => (
@@ -315,7 +315,7 @@ export default function Souverainete() {
                         ))}
                       </span>
                     </td>
-                    <td className="tnum px-4 py-2.5 text-[12.5px] text-g-700">
+                    <td className="tnum px-4 py-2.5 text-[13px] text-g-700">
                       {c.reversibilite.delaiJours} j ouvrés
                     </td>
                     <td className="px-4 py-2.5">

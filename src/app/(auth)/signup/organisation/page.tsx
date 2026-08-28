@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowRight, Building2, Check, Store, X } from 'lucide-react'
+import { ArrowRight, Building2, Check, X } from 'lucide-react'
 import { cn, slugify } from '@/lib/utils'
 import { TVA_PCT } from '@/lib/format'
 import { PAYS, SECTEURS, TAILLES_ORG } from '@/lib/mock'
@@ -29,7 +29,7 @@ export default function CreationOrganisation() {
     <div className="space-y-6">
       <div>
         <h1 className="type-h1">Créer votre organisation</h1>
-        <p className="mt-2 text-[13.5px] leading-relaxed text-g-500">
+        <p className="mt-2 text-[14px] leading-relaxed text-g-500">
           C’est ici que naît votre tenant : l’enveloppe qui contiendra vos Espaces Cloud, vos
           applications, vos services et votre facturation.
         </p>
@@ -156,11 +156,11 @@ export default function CreationOrganisation() {
 function Recap({ cle, valeur, mono }: { cle: string; valeur: string; mono?: boolean }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-2">
-      <dt className="text-[11.5px] text-g-500">{cle}</dt>
+      <dt className="text-[12px] text-g-500">{cle}</dt>
       <dd
         className={cn(
           'min-w-0 text-right text-[12px] font-semibold text-ink',
-          mono && 'font-mono text-[11.5px]',
+          mono && 'font-mono text-[12px]',
         )}
       >
         {valeur}

@@ -1,14 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import {
-  AlertTriangle,
-  ArrowUpRight,
-  Building2,
-  Server,
-  ShieldAlert,
-  TicketCheck,
-} from 'lucide-react'
+import { AlertTriangle, Building2, ShieldAlert } from 'lucide-react'
 import { cn, seededSeries, trendSeries } from '@/lib/utils'
 import { dateHeure, goHumain, money, num, pct, relatif } from '@/lib/format'
 import {
@@ -42,7 +35,7 @@ export default function VuePlateforme() {
   const enSortie = BACKENDS.filter((b) => b.enSortie?.actif)
   const satures = BACKENDS.filter((b) => (b.saturation?.j30 ?? 0) > 85)
   const incidentsOuverts = INCIDENTS.filter((i) => i.statut !== 'resolu')
-  const jobsEchec = jobs.items.filter((j) => j.statut === 'failed')
+  const jobsEchec = jobs.items.filter((j) => j.statut === 'failed' || j.statut === 'rolled_back')
   const slaRisque = TICKETS_PLATEFORME.filter(
     (t) => (t.slaRestantMin ?? 9999) < 120 && !['resolu', 'ferme'].includes(t.statut),
   )
@@ -231,7 +224,7 @@ export default function VuePlateforme() {
           <div className="border-b border-g-100 px-4 py-3.5">
             <CardHeader
               titre="Organisations les plus consommatrices"
-              sousTitre="Par processeur alloué. Une organisation qui croît vite mérite un contact commercial avant qu’elle ne se heurte à un quota."
+              sousTitre="Par processeur alloué, avec la croissance sur trente jours."
               className="mb-0"
               actions={
                 <ButtonLink size="sm" variant="ghost" href="/admin/organisations">
@@ -259,12 +252,12 @@ export default function VuePlateforme() {
                     <td className="px-3 py-2.5">
                       <Link
                         href={`/admin/organisations/${o.id}`}
-                        className="flex items-center gap-2 text-[12.5px] font-semibold text-ink hover:text-p-700"
+                        className="flex items-center gap-2 text-[13px] font-semibold text-ink hover:text-p-700"
                       >
                         <Building2 size={12} className="shrink-0 text-g-500" />
                         {o.nom}
                       </Link>
-                      <span className="block pl-[20px] text-[10.5px] text-g-500">
+                      <span className="block pl-[20px] text-[11px] text-g-500">
                         {o.pays}
                         {o.secteur ? ` · ${o.secteur}` : ''}
                       </span>
@@ -328,14 +321,14 @@ export default function VuePlateforme() {
                   key={i.facture}
                   className={cn(
                     'rounded-[6px] border px-3 py-2.5',
-                    i.retardJours > 60 ? 'border-err/40 bg-err-bg' : 'border-warn/40 bg-warn-bg',
+                    i.retardJours > 60 ? 'border-err/40' : 'border-warn/40',
                   )}
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span className="min-w-0 truncate text-[12.5px] font-semibold text-ink">
+                    <span className="min-w-0 truncate text-[13px] font-semibold text-ink">
                       {i.org}
                     </span>
-                    <span className="tnum shrink-0 text-[12.5px] font-bold text-ink">
+                    <span className="tnum shrink-0 text-[13px] font-bold text-ink">
                       {money(i.montant)}
                     </span>
                   </div>
@@ -363,19 +356,19 @@ export default function VuePlateforme() {
             ) : (
               <div className="space-y-2">
                 {jobsEchec.map((j) => (
-                  <div key={j.id} className="rounded-[6px] border border-err/40 bg-err-bg px-3 py-2.5">
-                    <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-ink">
+                  <div key={j.id} className="rounded-[6px] border border-g-300 px-3 py-2.5">
+                    <p className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
                       <AlertTriangle size={12} className="shrink-0 text-err" />
                       {j.type}
                     </p>
-                    <p className="mt-0.5 font-mono text-[10.5px] text-g-700">{j.label}</p>
+                    <p className="mt-0.5 font-mono text-[11px] text-g-700">{j.label}</p>
                     <p className="mt-1 text-[11px] leading-relaxed text-g-700">
                       {j.erreur?.message ??
                         j.taches.find((t) => t.statut === 'failed')?.message ??
                         'Échec sans message détaillé'}
                     </p>
                     {j.erreur?.correlationId && (
-                      <p className="mt-1 font-mono text-[10px] text-g-500">
+                      <p className="mt-1 font-mono text-[11px] text-g-500">
                         {j.erreur.correlationId}
                       </p>
                     )}
@@ -387,7 +380,7 @@ export default function VuePlateforme() {
                           ton: 'info',
                           titre: `Reprise de « ${j.label} »`,
                           detail: 'La séquence repart à l’étape qui a échoué, pas depuis le début.',
-                          effet: () => reprendreJob(j.id, 'jobs-plateforme', JOBS_PLATEFORME),
+                          effet: () => reprendreJob(j.id),
                         }}
                       />
                       <BoutonAction
@@ -459,17 +452,17 @@ export default function VuePlateforme() {
                 <Link
                   key={t.id}
                   href="/admin/tickets"
-                  className="block rounded-[6px] border border-warn/40 bg-warn-bg px-3 py-2.5 transition-colors hover:border-warn"
+                  className="block rounded-[6px] border border-g-300 px-3 py-2.5 transition-colors hover:border-p-400"
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <span className="min-w-0 truncate text-[12px] font-semibold text-ink">
                       {t.sujet}
                     </span>
-                    <span className="tnum shrink-0 text-[11.5px] font-bold text-err">
+                    <span className="tnum shrink-0 text-[12px] font-bold text-err">
                       {t.slaRestantMin} min
                     </span>
                   </div>
-                  <p className="mt-0.5 text-[10.5px] text-g-700">
+                  <p className="mt-0.5 text-[11px] text-g-700">
                     <span className="font-mono">{t.numero}</span> ·{' '}
                     {t.assigneA ?? 'non assigné'} · {relatif(t.createdAt)}
                   </p>
@@ -498,8 +491,8 @@ export default function VuePlateforme() {
                     <ShieldAlert size={11} className="shrink-0 text-warn" />
                     {a.actor.nom}
                   </p>
-                  <p className="mt-0.5 font-mono text-[10.5px] text-p-700">{a.action}</p>
-                  <p className="mt-0.5 text-[10.5px] text-g-500">
+                  <p className="mt-0.5 font-mono text-[11px] text-p-700">{a.action}</p>
+                  <p className="mt-0.5 text-[11px] text-g-500">
                     {a.scope.label} · {relatif(a.ts)}
                   </p>
                 </div>
@@ -514,7 +507,6 @@ export default function VuePlateforme() {
           <CardHeader
             titre="Charge du support"
             sousTitre="File courante, toutes organisations."
-            actions={<TicketCheck size={15} className="text-p-700" />}
           />
           <div className="space-y-3">
             {[
@@ -554,7 +546,7 @@ export default function VuePlateforme() {
             {seededSeries('tickets-30j', 30, 2, 14).map((v, i) => (
               <span
                 key={i}
-                className={cn('flex-1 rounded-t-sm', v > 11 ? 'bg-warn' : 'bg-p-300')}
+                className="flex-1 rounded-t-sm bg-p-300"
                 style={{ height: `${6 + v * 4}px` }}
               />
             ))}
@@ -564,13 +556,6 @@ export default function VuePlateforme() {
           </ButtonLink>
         </Card>
       </div>
-
-      <Callout ton="violet" titre="Ce tableau de bord ne cache pas les mauvaises nouvelles">
-        Un socle en tension, un provisionnement en échec, un engagement en risque, un impayé : tout
-        est en haut de page, pas dans un onglet secondaire. Un tableau de bord d’exploitation qui
-        n’affiche que du vert ne sert à rien — il faut aller chercher l’information ailleurs, et
-        c’est précisément ce qui fait perdre du temps quand quelque chose va mal.
-      </Callout>
     </div>
   )
 }

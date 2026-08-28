@@ -93,7 +93,7 @@ export function SectionTitle({
       {chapeau && (
         <p
           className={cn(
-            'mt-3 text-[14.5px] leading-relaxed',
+            'mt-3 text-[15px] leading-relaxed',
             sombre ? 'text-p-300' : 'text-g-700',
             centre && 'mx-auto max-w-2xl',
           )}
@@ -214,7 +214,7 @@ export function AppelFinal({
         <h2 className="mx-auto max-w-2xl text-[26px] font-bold leading-tight [font-family:var(--font-display)] text-white sm:text-[32px]">
           {titre}
         </h2>
-        <p className="mx-auto mt-3 max-w-xl text-[14.5px] leading-relaxed text-p-300">{chapeau}</p>
+        <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-p-300">{chapeau}</p>
         <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
           <ButtonLink
             href={primaire.href}
@@ -256,7 +256,7 @@ export function Accordeon({
             />
           </summary>
           <div className="px-4 pb-4">
-            <p className="max-w-3xl text-[13.5px] leading-relaxed text-g-700">{it.reponse}</p>
+            <p className="max-w-3xl text-[14px] leading-relaxed text-g-700">{it.reponse}</p>
           </div>
         </details>
       ))}
@@ -284,7 +284,7 @@ export function ChiffreCle({
       >
         {valeur}
       </p>
-      <p className={cn('mt-1.5 text-[12.5px]', sombre ? 'text-white/80' : 'text-g-500')}>
+      <p className={cn('mt-1.5 text-[13px]', sombre ? 'text-white/80' : 'text-g-500')}>
         {libelle}
       </p>
     </div>
@@ -306,7 +306,7 @@ export function VisuelRack({ className }: { className?: string }) {
       <div className="rounded-[14px] border border-p-400/50 bg-p-800/60 p-3 backdrop-blur-sm">
         <div className="mb-2.5 flex items-center justify-between px-1">
           <span className="type-micro text-p-300">Site ABJ · Synertech Vallon</span>
-          <span className="flex items-center gap-1.5 text-[10.5px] font-semibold text-white">
+          <span className="flex items-center gap-1.5 text-[11px] font-semibold text-white">
             <span className="h-1.5 w-1.5 rounded-full bg-ok animate-pulse-dot" />
             En ligne
           </span>
@@ -337,7 +337,7 @@ export function VisuelRack({ className }: { className?: string }) {
             { l: 'Stockage', v: '57 %' },
           ].map((s) => (
             <div key={s.l}>
-              <p className="text-[10px] text-p-300">{s.l}</p>
+              <p className="text-[11px] text-p-300">{s.l}</p>
               <p className="tnum text-[13px] font-bold text-white">{s.v}</p>
             </div>
           ))}
@@ -346,7 +346,7 @@ export function VisuelRack({ className }: { className?: string }) {
       <div className="absolute -bottom-4 -right-4 hidden rounded-[10px] border border-p-400/50 bg-p-900 px-3 py-2 shadow-[0_8px_28px_rgba(0,0,0,.3)] sm:block">
         <p className="type-micro text-p-300">Latence inter-site</p>
         <p className="tnum text-[15px] font-bold text-white">4–6 ms</p>
-        <p className="text-[10px] text-p-300">ABJ ↔ GBM</p>
+        <p className="text-[11px] text-p-300">ABJ ↔ GBM</p>
       </div>
     </div>
   )
@@ -459,7 +459,7 @@ export function CarrouselLogos({
             className="flex w-40 shrink-0 items-center gap-2.5 rounded-[14px] border-2 border-encre-2/10 bg-creme px-3 py-2.5"
           >
             <SolutionLogo initiales={l.initiales} teinte={l.teinte} icone={l.icone} size="sm" />
-            <span className="truncate text-[12.5px] font-semibold text-encre-2">{l.nom}</span>
+            <span className="truncate text-[13px] font-semibold text-encre-2">{l.nom}</span>
           </div>
         ))}
       </div>
@@ -489,7 +489,7 @@ export function LienFleche({
       href={href}
       className={cn(
         'group inline-flex items-center gap-1.5 text-[13px] font-semibold transition-colors',
-        sombre ? 'text-p-300 hover:text-white' : 'text-p-700 hover:text-m-600',
+        sombre ? 'text-p-300 hover:text-white' : 'text-p-700 hover:underline',
       )}
     >
       {children}

@@ -207,7 +207,7 @@ export type ValeurChamp = string | number | boolean
 export interface ChampSpec {
   id: string
   label: string
-  type?: 'texte' | 'nombre' | 'select' | 'switch' | 'zone' | 'mono'
+  type?: 'texte' | 'nombre' | 'select' | 'switch' | 'zone' | 'mono' | 'mot_de_passe'
   options?: Array<{ value: string; label: string }>
   hint?: string
   placeholder?: string
@@ -332,7 +332,7 @@ export function ModaleFormulaire({
               />
             ) : (
               <Input
-                type={c.type === 'nombre' ? 'number' : 'text'}
+                type={c.type === 'nombre' ? 'number' : c.type === 'mot_de_passe' ? 'password' : 'text'}
                 value={String(valeurs[c.id] ?? '')}
                 placeholder={c.placeholder}
                 suffix={c.suffixe}

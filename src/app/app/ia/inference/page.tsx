@@ -101,12 +101,12 @@ export default function InferenceDediee() {
                       )}
                     >
                       <span className="min-w-0">
-                        <span className="block text-[12.5px] font-semibold text-ink">
+                        <span className="block text-[13px] font-semibold text-ink">
                           {g.gpu} · {g.vram}
                         </span>
                         <span className="block text-[11px] text-g-500">{g.convient}</span>
                       </span>
-                      <span className="tnum shrink-0 text-[12.5px] font-semibold text-ink">
+                      <span className="tnum shrink-0 text-[13px] font-semibold text-ink">
                         {money(g.coutHeure)}/h
                       </span>
                     </button>

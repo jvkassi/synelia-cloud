@@ -132,13 +132,13 @@ export default function Integrations() {
                       <span className="tnum flex h-5 w-5 items-center justify-center rounded-full bg-p-100 text-[11px] font-bold text-p-700">
                         {i + 1}
                       </span>
-                      <span className="text-[12.5px] font-semibold text-ink">{x.n}</span>
+                      <span className="text-[13px] font-semibold text-ink">{x.n}</span>
                     </span>
                     <Badge tone="neutral" size="sm">
                       {x.delai}
                     </Badge>
                   </span>
-                  <p className="mt-1.5 text-[11.5px] leading-relaxed text-g-500">{x.quoi}</p>
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-g-500">{x.quoi}</p>
                 </li>
               ))}
             </ol>

@@ -15,7 +15,7 @@ export default function SelectionOrganisation() {
     <div className="space-y-6">
       <div>
         <h1 className="type-h1">Choisir une organisation</h1>
-        <p className="mt-2 text-[13.5px] leading-relaxed text-g-500">
+        <p className="mt-2 text-[14px] leading-relaxed text-g-500">
           Vous appartenez à {MES_ORGANISATIONS.length} organisations. Votre rôle et donc vos droits
           diffèrent selon celle que vous ouvrez.
         </p>
@@ -37,8 +37,8 @@ export default function SelectionOrganisation() {
                 <Badge tone="violet" size="sm">
                   {ROLE_LABEL[role]}
                 </Badge>
-                <span className="text-[11.5px] text-g-500">{org.secteur ?? org.pays}</span>
-                <span className="text-[11.5px] text-g-500">
+                <span className="text-[12px] text-g-500">{org.secteur ?? org.pays}</span>
+                <span className="text-[12px] text-g-500">
                   {org.espaces ?? 0} Espace{(org.espaces ?? 0) > 1 ? 's' : ''} Cloud ·{' '}
                   {org.utilisateurs ?? 0} utilisateurs
                 </span>
@@ -63,7 +63,7 @@ export default function SelectionOrganisation() {
             <Plus size={18} />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[13.5px] font-bold text-ink group-hover:text-p-700">
+            <p className="text-[14px] font-bold text-ink group-hover:text-p-700">
               Créer une nouvelle organisation
             </p>
             <p className="mt-0.5 text-[12px] text-g-500">

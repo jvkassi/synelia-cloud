@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowRight, ExternalLink, GitCompare, RotateCcw, ShieldCheck, Upload } from 'lucide-react'
+import { ExternalLink, GitCompare, RotateCcw, Upload } from 'lucide-react'
 import { cn, seededSeries, surfaceMarque } from '@/lib/utils'
 import { MAINTENANT, dateCourte, num, relatif } from '@/lib/format'
 import { SITE_LABEL } from '@/lib/types'
@@ -232,7 +232,7 @@ export function VueApplication({ id }: { id: string }) {
                       className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0"
                     >
                       <span className="min-w-0">
-                        <span className="block truncate text-[12.5px] font-semibold text-ink">
+                        <span className="block truncate text-[13px] font-semibold text-ink">
                           {m.n}
                         </span>
                         <span className="block font-mono text-[11px] text-g-500">{m.v}</span>
@@ -246,7 +246,7 @@ export function VueApplication({ id }: { id: string }) {
                   ))}
               </ul>
             ) : (
-              <p className="text-[12.5px] text-g-500">Tout est à jour.</p>
+              <p className="text-[13px] text-g-500">Tout est à jour.</p>
             )}
             <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
               <Button
@@ -338,7 +338,7 @@ export function VueApplication({ id }: { id: string }) {
               </>
             ) : (
               <>
-                <p className="text-[12.5px] leading-relaxed text-g-700">
+                <p className="text-[13px] leading-relaxed text-g-700">
                   Aucune préproduction pour cette application. La créer clone les fichiers et la
                   base sur <span className="font-mono">{s.preproduction?.hote ?? `staging-${s.hote}`}</span>{' '}
                   sans toucher à la production.
@@ -391,8 +391,8 @@ export function VueApplication({ id }: { id: string }) {
                 { l: 'Fichiers et base', d: 'Pour une refonte, quand la production est gelée.' },
               ].map((x) => (
                 <div key={x.l} className="rounded-[6px] border border-g-300 px-3 py-2">
-                  <p className="text-[12.5px] font-semibold text-ink">{x.l}</p>
-                  <p className="text-[11.5px] text-g-500">{x.d}</p>
+                  <p className="text-[13px] font-semibold text-ink">{x.l}</p>
+                  <p className="text-[12px] text-g-500">{x.d}</p>
                 </div>
               ))}
             </div>
@@ -469,8 +469,8 @@ export function VueApplication({ id }: { id: string }) {
                   className="flex flex-wrap items-start justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2.5"
                 >
                   <span className="min-w-0">
-                    <span className="block text-[12.5px] font-semibold text-ink">{x.l}</span>
-                    <span className="block text-[11.5px] leading-snug text-g-500">{x.d}</span>
+                    <span className="block text-[13px] font-semibold text-ink">{x.l}</span>
+                    <span className="block text-[12px] leading-snug text-g-500">{x.d}</span>
                   </span>
                   <Badge tone={x.a ? 'ok' : 'warn'} size="sm">
                     {x.a ? 'Actif' : 'Inactif'}

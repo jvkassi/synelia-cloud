@@ -23,6 +23,7 @@ export const PROJETS: Projet[] = [
     description:
       'API métier, back-office interne et traitements de rapprochement bancaire. Le système le plus critique de l’organisation.',
     espaceId: 'ec-dba-01',
+    clusterId: 'k8s-prod',
     cree: '2025-03-11',
     environnements: ['Production', 'Préproduction', 'Développement'],
     variables: [
@@ -65,6 +66,7 @@ export const PROJETS: Projet[] = [
     nom: 'Présence web',
     description: 'Site institutionnel et pages de campagne, servis en statique derrière le cache.',
     espaceId: 'ec-dba-01',
+    clusterId: 'k8s-prod',
     cree: '2025-06-02',
     environnements: ['Production', 'Préproduction'],
     variables: [
@@ -90,6 +92,7 @@ export const PROJETS: Projet[] = [
     description:
       'Chaîne d’ingestion, entrepôt colonne et tableaux de bord métiers. Alimentée chaque nuit par un ETL.',
     espaceId: 'ec-dba-01',
+    clusterId: 'k8s-prod',
     cree: '2025-09-24',
     environnements: ['Production', 'Développement'],
     variables: [
@@ -114,6 +117,7 @@ export const PROJETS: Projet[] = [
     description:
       'Les solutions déployées depuis la bibliothèque de modèles : messagerie dédiée, ERP, GED. Chacune est une instance isolée, avec ses ressources et son plan de sauvegarde.',
     espaceId: 'ec-dba-01',
+    clusterId: 'k8s-prod',
     cree: '2026-02-04',
     environnements: ['Production'],
     variables: [
@@ -132,6 +136,7 @@ export const PROJETS: Projet[] = [
     description:
       'Runners d’intégration continue et bac à sable partagé de l’équipe produit. Rien de client ici.',
     espaceId: 'ec-dba-02',
+    clusterId: 'k8s-lab',
     cree: '2025-11-08',
     environnements: ['Production'],
     variables: [

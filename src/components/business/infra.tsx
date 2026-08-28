@@ -70,12 +70,12 @@ export function BackendGauge({
             {backend.souverain ? 'Socle open source' : 'Socle propriétaire'}
           </Badge>
           {backend.enSortie?.actif && (
-            <Badge tone="accent" size="sm">
+            <Badge tone="info" size="sm">
               En sortie · cible {dateCourte(backend.enSortie.cibleMigration)}
             </Badge>
           )}
           {backend.saturation && (
-            <span className="tnum text-[11.5px] text-g-500">
+            <span className="tnum text-[12px] text-g-500">
               Saturation projetée à 90 j : {pct(backend.saturation.j90)}
             </span>
           )}
@@ -157,7 +157,7 @@ export function PlacementSlider({
         return (
           <div key={p.backendId}>
             <div className="mb-1.5 flex items-baseline justify-between gap-2">
-              <span className="text-[12.5px] font-semibold text-g-700">
+              <span className="text-[13px] font-semibold text-g-700">
                 <span className="font-mono">{b.code}</span>
                 <span className="ml-1.5 font-normal text-g-500">{BACKEND_LABEL[b.type]}</span>
               </span>
@@ -183,7 +183,7 @@ export function PlacementSlider({
       <div className="flex items-center justify-between gap-3 border-t border-g-100 pt-3">
         <span
           className={cn(
-            'tnum text-[12.5px] font-semibold',
+            'tnum text-[13px] font-semibold',
             somme === 100 ? 'text-ok' : 'text-err',
           )}
         >
@@ -309,7 +309,7 @@ export function SlaGauge({
   return (
     <div className={cn('rounded-[8px] border border-g-300 bg-white p-3.5', className)}>
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[12.5px] font-semibold text-g-700">{composant}</span>
+        <span className="text-[13px] font-semibold text-g-700">{composant}</span>
         <span
           className={cn('tnum text-[13px] font-bold', conforme ? 'text-ok' : 'text-err')}
         >
@@ -400,7 +400,7 @@ export function Regle321({
           key={it.label}
           title={`${it.label} — ${it.ok ? 'conforme' : 'non conforme'}`}
           className={cn(
-            'inline-flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-white',
+            'inline-flex h-4 w-4 items-center justify-center rounded-full text-[11px] font-bold text-white',
             it.ok ? 'bg-ok' : 'bg-g-300',
           )}
         >
@@ -414,9 +414,9 @@ export function Regle321({
 /** Avertissement de rééquilibrage / migration. */
 export function AvertissementMigration({ lots, machines }: { lots: number; machines: number }) {
   return (
-    <div className="flex items-start gap-3 rounded-[8px] border-l-4 border-warn bg-warn-bg px-3.5 py-3">
+    <div className="flex items-start gap-3 rounded-[8px] border border-warn/40 bg-warn-bg px-3.5 py-3">
       <AlertTriangle size={15} className="mt-0.5 shrink-0 text-warn" />
-      <p className="text-[12.5px] leading-relaxed text-g-700">
+      <p className="text-[13px] leading-relaxed text-g-700">
         <span className="font-semibold text-ink">
           {machines} machines réparties en {lots} lots
         </span>{' '}

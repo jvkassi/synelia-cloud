@@ -1,13 +1,20 @@
 'use client'
 
-import { joursAvant } from '@/lib/mock'
-import { CERTIFICATS, TYPE_CERTIFICAT_LABEL } from '@/lib/mock'
+import { joursAvant, CERTIFICATS, TYPE_CERTIFICAT_LABEL, type Certificat } from '@/lib/mock'
+
 import type { Tone } from '@/components/ui/badge'
 import { CadreSection } from '@/components/app/cadre-section'
+import { useCollection } from '@/components/app/atelier'
 
-/** Panneau de la section — liste les certificats de l'organisation. */
+/**
+ * Panneau de la section — liste les certificats de l'organisation, depuis
+ * l'atelier : un renouvellement lancé depuis la fiche doit passer le badge à
+ * « Émission » ici aussi, et un certificat commandé doit apparaître.
+ */
 export function CadreSsl({ children }: { children: React.ReactNode }) {
-  const entrees = CERTIFICATS.map((c) => {
+  const certificats = useCollection<Certificat>('certificats', CERTIFICATS)
+
+  const entrees = certificats.items.map((c) => {
     const jours = joursAvant(c.expire)
     return {
       id: c.id,

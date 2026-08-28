@@ -127,14 +127,14 @@ export default function Reseau() {
                   {reseaux.map((r) => (
                     <tr key={r.id} className="border-b border-g-100 last:border-0 hover:bg-p-050/60">
                       <td className="px-3 py-2.5 text-[13px] font-medium text-ink">{r.nom}</td>
-                      <td className="px-3 py-2.5 font-mono text-[12.5px] text-ink">{r.cidr}</td>
-                      <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">{r.vlan}</td>
+                      <td className="px-3 py-2.5 font-mono text-[13px] text-ink">{r.cidr}</td>
+                      <td className="tnum px-3 py-2.5 text-[13px] text-g-700">{r.vlan}</td>
                       <td className="px-3 py-2.5">
                         <Badge tone={r.dnsInterne ? 'ok' : 'neutral'} size="sm">
                           {r.dnsInterne ? 'Actif' : 'Désactivé'}
                         </Badge>
                       </td>
-                      <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">{r.workloads}</td>
+                      <td className="tnum px-3 py-2.5 text-[13px] text-g-700">{r.workloads}</td>
                       <td className="px-3 py-2.5 text-right">
                         <span className="flex items-center justify-end gap-1">
                           <BoutonFormulaire
@@ -186,7 +186,7 @@ export default function Reseau() {
               </table>
             </div>
           )}
-          <p className="mt-3 border-t border-g-100 pt-3 text-[11.5px] leading-relaxed text-g-500">
+          <p className="mt-3 border-t border-g-100 pt-3 text-[12px] leading-relaxed text-g-500">
             Plage totale {espace.cidr} · {num(reseaux.length * 254)} adresses actuellement découpées
             sur les 1 024 disponibles. Le routage entre réseaux privés d’un même espace est
             automatique ; le filtrage se fait par groupe de sécurité.
@@ -270,10 +270,10 @@ export default function Reseau() {
                 <tbody>
                   {ips.map((ip) => (
                     <tr key={ip.id} className="border-b border-g-100 last:border-0">
-                      <td className="px-3 py-2.5 font-mono text-[12.5px] font-semibold text-ink">
+                      <td className="px-3 py-2.5 font-mono text-[13px] font-semibold text-ink">
                         {ip.adresse}
                       </td>
-                      <td className="px-3 py-2.5 font-mono text-[11.5px] text-g-700">
+                      <td className="px-3 py-2.5 font-mono text-[12px] text-g-700">
                         {ip.ptr ?? <span className="text-g-500">non configuré</span>}
                       </td>
                       <td className="px-3 py-2.5">
@@ -509,14 +509,14 @@ export default function Reseau() {
                             {r.direction === 'in' ? 'Entrée' : 'Sortie'}
                           </Badge>
                         </td>
-                        <td className="px-3 py-1.5 font-mono text-[11.5px] uppercase text-ink">
+                        <td className="px-3 py-1.5 font-mono text-[12px] uppercase text-ink">
                           {r.protocole}
                         </td>
-                        <td className="px-3 py-1.5 font-mono text-[11.5px] text-ink">
+                        <td className="px-3 py-1.5 font-mono text-[12px] text-ink">
                           {r.ports ?? 'tous'}
                         </td>
-                        <td className="px-3 py-1.5 font-mono text-[11.5px] text-g-700">{r.cible}</td>
-                        <td className="px-3 py-1.5 text-[11.5px] text-g-700">
+                        <td className="px-3 py-1.5 font-mono text-[12px] text-g-700">{r.cible}</td>
+                        <td className="px-3 py-1.5 text-[12px] text-g-700">
                           {r.description ?? '—'}
                         </td>
                         <td className="px-3 py-1.5 text-right">
@@ -781,7 +781,7 @@ export default function Reseau() {
                     <Badge tone={t.statut === 'up' ? 'ok' : 'err'} dot size="sm">
                       {t.statut === 'up' ? 'Service actif' : 'Service arrêté'}
                     </Badge>
-                    <span className="text-[11.5px] text-g-500">
+                    <span className="text-[12px] text-g-500">
                       Pool d’adresses clientes : 10.99.0.0/24
                     </span>
                   </div>
@@ -795,7 +795,7 @@ export default function Reseau() {
                         )}
                       >
                         <span className="min-w-0">
-                          <span className="block font-mono text-[12.5px] font-semibold text-ink">
+                          <span className="block font-mono text-[13px] font-semibold text-ink">
                             {p.nom}
                           </span>
                           <span className="block text-[11px] text-g-500">
@@ -852,7 +852,7 @@ export default function Reseau() {
                   </div>
                 </div>
               ))}
-            <p className="mt-3 border-t border-g-100 pt-3 text-[11.5px] leading-relaxed text-g-500">
+            <p className="mt-3 border-t border-g-100 pt-3 text-[12px] leading-relaxed text-g-500">
               La révocation est immédiate : le certificat client est ajouté à la liste de révocation
               et la session en cours est coupée. C’est la procédure à appliquer au départ d’un
               collaborateur ou à la fin d’une mission de prestataire.

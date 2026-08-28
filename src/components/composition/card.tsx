@@ -43,7 +43,7 @@ export function CardHeader({
     <div className={cn('mb-3.5 flex flex-wrap items-start justify-between gap-x-4 gap-y-2', className)}>
       <div className="min-w-0 flex-1">
         <h3 className="type-h3">{titre}</h3>
-        {sousTitre && <p className="mt-0.5 text-[12.5px] text-g-500">{sousTitre}</p>}
+        {sousTitre && <p className="mt-0.5 text-[13px] text-g-500">{sousTitre}</p>}
       </div>
       {/* `flex-wrap` sans `shrink-0` : un groupe d'actions large descend sous
           le titre au lieu de pousser la carte hors de l'écran. */}
@@ -105,7 +105,7 @@ export function PageHeader({
         <div className="min-w-0">
           <h1 className="type-h1">{titre}</h1>
           {sousTitre && (
-            <p className="mt-1 max-w-3xl text-[13.5px] leading-relaxed text-g-500">{sousTitre}</p>
+            <p className="mt-1 max-w-3xl text-[14px] leading-relaxed text-g-500">{sousTitre}</p>
           )}
           {meta && <div className="mt-2.5 flex flex-wrap items-center gap-2">{meta}</div>}
         </div>
@@ -143,7 +143,16 @@ export function KeyValueList({
   )
 }
 
-/** Bloc de mise en valeur (callout). */
+/**
+ * Bloc de mise en valeur (callout).
+ *
+ * Trois niveaux de bruit visuel, et pas cinq : un aparté (`violet`) n'a pas à
+ * peser autant qu'une alerte. Un bandeau de couleur pleine avec un liséré de
+ * 4 px conviendrait s'il y en avait un par écran ; il y en a plus de quatre
+ * cents, et la page finissait en planche de surligneurs. Le fond teinté reste
+ * donc aux tons qui demandent une action — `warn` et `err` — et la bordure
+ * descend à 1 px partout.
+ */
 export function Callout({
   ton = 'info',
   titre,
@@ -158,19 +167,20 @@ export function Callout({
   action?: ReactNode
 }) {
   const styles = {
-    info: 'border-l-info bg-info-bg',
-    ok: 'border-l-ok bg-ok-bg',
-    warn: 'border-l-warn bg-warn-bg',
-    err: 'border-l-err bg-err-bg',
-    violet: 'border-l-p-600 bg-p-050',
+    info: 'rounded-[8px] border border-g-300 bg-g-050 px-3.5 py-3',
+    ok: 'rounded-[8px] border border-ok/30 bg-ok-bg px-3.5 py-3',
+    warn: 'rounded-[8px] border border-warn/40 bg-warn-bg px-3.5 py-3',
+    err: 'rounded-[8px] border border-err/40 bg-err-bg px-3.5 py-3',
+    // Aparté : un filet violet clair, pas de fond. Le texte reste du texte.
+    violet: 'border-l-2 border-p-300 pl-3.5',
   }[ton]
   return (
-    <div className={cn('rounded-[8px] border-l-4 px-4 py-3', styles, className)}>
+    <div className={cn(styles, className)}>
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           {titre && <p className="text-[13px] font-semibold text-ink">{titre}</p>}
           {children && (
-            <div className={cn('text-[12.5px] leading-relaxed text-g-700', titre && 'mt-1')}>
+            <div className={cn('text-[13px] leading-relaxed text-g-700', titre && 'mt-1')}>
               {children}
             </div>
           )}
@@ -214,7 +224,7 @@ export function NavCard({
         <div className="min-w-0 flex-1">
           <h3 className="type-h3 group-hover:text-p-700">{titre}</h3>
           {description && (
-            <p className="mt-1 text-[12.5px] leading-relaxed text-g-500">{description}</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-g-500">{description}</p>
           )}
           {meta && <div className="mt-2.5">{meta}</div>}
         </div>

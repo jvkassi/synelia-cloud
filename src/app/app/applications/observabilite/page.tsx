@@ -78,7 +78,7 @@ export default function ObservabiliteTousProjets() {
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-[13px] font-bold text-ink">{p.nom}</span>
-                    <span className="block text-[11.5px] text-g-500">
+                    <span className="block text-[12px] text-g-500">
                       {services.length} service{services.length > 1 ? 's' : ''} ·{' '}
                       {p.environnements.join(', ')}
                     </span>

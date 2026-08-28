@@ -290,15 +290,15 @@ export default function NouvellesVms() {
             </dl>
             <div className="mt-3 border-t border-g-100 pt-3">
               <MicroLabel className="mb-1.5">Impact sur le quota</MicroLabel>
-              <p className="tnum text-[11.5px] text-g-700">
+              <p className="tnum text-[12px] text-g-700">
                 vCPU : {espace.usage.vcpu} → {espace.usage.vcpu + totalVcpu} sur {espace.quota.vcpu}
               </p>
-              <p className="tnum text-[11.5px] text-g-700">
+              <p className="tnum text-[12px] text-g-700">
                 Mémoire : {num(espace.usage.ramGo)} → {num(espace.usage.ramGo + totalRam)} sur{' '}
                 {num(espace.quota.ramGo)} Go
               </p>
               {!quotaSuffisant && (
-                <p className="mt-1.5 text-[11.5px] font-semibold text-err">
+                <p className="mt-1.5 text-[12px] font-semibold text-err">
                   Quota insuffisant. Réduisez le nombre de machines ou étendez la capacité de
                   l’espace.
                 </p>
@@ -377,7 +377,7 @@ export default function NouvellesVms() {
                   <span className="text-p-700">{m.icone}</span>
                   <span className="type-h3">{m.titre}</span>
                 </span>
-                <p className="mt-2.5 text-[12.5px] leading-relaxed text-g-700">{m.texte}</p>
+                <p className="mt-2.5 text-[13px] leading-relaxed text-g-700">{m.texte}</p>
               </button>
             ))}
           </div>
@@ -498,7 +498,7 @@ export default function NouvellesVms() {
                       </span>
                       <span className="tnum mt-2 block text-[14px] font-bold text-p-700">
                         {money(f.prix)}
-                        <span className="text-[10.5px] font-semibold text-g-500">/mois</span>
+                        <span className="text-[11px] font-semibold text-g-500">/mois</span>
                       </span>
                     </button>
                   ))}
@@ -694,7 +694,7 @@ export default function NouvellesVms() {
               rows={14}
               aria-label="cloud-init"
             />
-            <p className="mt-2 text-[11.5px] text-g-500">
+            <p className="mt-2 text-[12px] text-g-500">
               Les clés SSH du trousseau de l’organisation sont injectées automatiquement en plus de
               celles déclarées ici. Ne placez jamais de secret en clair dans ce champ : utilisez le
               coffre de secrets et référencez-le.
@@ -763,22 +763,22 @@ export default function NouvellesVms() {
                 <tbody>
                   {machinesACreer.map((m) => (
                     <tr key={m.nom} className="border-b border-g-100 last:border-0">
-                      <td className="px-3 py-2 font-mono text-[12.5px] text-ink">{m.nom}</td>
-                      <td className="px-3 py-2 text-[12.5px] text-g-700">
+                      <td className="px-3 py-2 font-mono text-[13px] text-ink">{m.nom}</td>
+                      <td className="px-3 py-2 text-[13px] text-g-700">
                         {[...IMAGES_SYNELIA, ...IMAGES_PRIVEES].find((i) => i.id === m.image)?.nom}
                       </td>
-                      <td className="tnum px-3 py-2 text-[12.5px] text-g-700">{m.vcpu}</td>
-                      <td className="tnum px-3 py-2 text-[12.5px] text-g-700">{m.ram} Go</td>
-                      <td className="tnum px-3 py-2 text-[12.5px] text-g-700">{num(m.disk)} Go</td>
+                      <td className="tnum px-3 py-2 text-[13px] text-g-700">{m.vcpu}</td>
+                      <td className="tnum px-3 py-2 text-[13px] text-g-700">{m.ram} Go</td>
+                      <td className="tnum px-3 py-2 text-[13px] text-g-700">{num(m.disk)} Go</td>
                     </tr>
                   ))}
                   <tr className="border-t border-g-300 bg-g-050">
-                    <td colSpan={2} className="px-3 py-2 text-[12.5px] font-semibold text-g-700">
+                    <td colSpan={2} className="px-3 py-2 text-[13px] font-semibold text-g-700">
                       Total
                     </td>
-                    <td className="tnum px-3 py-2 text-[12.5px] font-bold text-ink">{totalVcpu}</td>
-                    <td className="tnum px-3 py-2 text-[12.5px] font-bold text-ink">{totalRam} Go</td>
-                    <td className="tnum px-3 py-2 text-[12.5px] font-bold text-ink">
+                    <td className="tnum px-3 py-2 text-[13px] font-bold text-ink">{totalVcpu}</td>
+                    <td className="tnum px-3 py-2 text-[13px] font-bold text-ink">{totalRam} Go</td>
+                    <td className="tnum px-3 py-2 text-[13px] font-bold text-ink">
                       {num(totalDisk)} Go
                     </td>
                   </tr>
@@ -844,9 +844,9 @@ export default function NouvellesVms() {
 function Petit({ cle, valeur, mono }: { cle: string; valeur: string; mono?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
-      <dt className="shrink-0 text-[11.5px] text-g-500">{cle}</dt>
+      <dt className="shrink-0 text-[12px] text-g-500">{cle}</dt>
       <dd
-        className={cn('truncate text-right text-[11.5px] font-semibold text-ink', mono && 'font-mono')}
+        className={cn('truncate text-right text-[12px] font-semibold text-ink', mono && 'font-mono')}
       >
         {valeur}
       </dd>

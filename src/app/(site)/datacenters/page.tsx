@@ -93,7 +93,7 @@ export default function Datacenters() {
               ))}
             </div>
           </div>
-          <p className="mt-5 text-[11.5px] leading-relaxed text-g-500">
+          <p className="mt-5 text-[12px] leading-relaxed text-g-500">
             Vues d’illustration. Une visite accompagnée se demande depuis votre espace client ; les
             salles ne se photographient pas librement.
           </p>
@@ -142,7 +142,7 @@ export default function Datacenters() {
                 x="300"
                 y="89"
                 textAnchor="middle"
-                className="fill-[color:var(--color-p-700)] text-[10px] font-semibold"
+                className="fill-[color:var(--color-p-700)] text-[11px] font-semibold"
               >
                 4–6 ms · 2 chemins
               </text>
@@ -150,7 +150,7 @@ export default function Datacenters() {
                 x="300"
                 y="118"
                 textAnchor="middle"
-                className="fill-[color:var(--color-g-500)] text-[9.5px]"
+                className="fill-[color:var(--color-g-500)] text-[11px]"
               >
                 réplication de sauvegarde et PRA
               </text>
@@ -169,16 +169,16 @@ export default function Datacenters() {
                 <text x="107" y="56" textAnchor="middle" className="fill-[color:var(--color-ink)] text-[12px] font-bold">
                   ABJ
                 </text>
-                <text x="107" y="72" textAnchor="middle" className="fill-[color:var(--color-g-700)] text-[9.5px]">
+                <text x="107" y="72" textAnchor="middle" className="fill-[color:var(--color-g-700)] text-[11px]">
                   Synertech Vallon
                 </text>
-                <text x="107" y="86" textAnchor="middle" className="fill-[color:var(--color-g-500)] text-[9px]">
+                <text x="107" y="86" textAnchor="middle" className="fill-[color:var(--color-g-500)] text-[11px]">
                   Cocody, Abidjan
                 </text>
-                <text x="107" y="108" textAnchor="middle" className="fill-[color:var(--color-p-700)] text-[9.5px] font-semibold">
+                <text x="107" y="108" textAnchor="middle" className="fill-[color:var(--color-p-700)] text-[11px] font-semibold">
                   Site de production
                 </text>
-                <text x="107" y="124" textAnchor="middle" className="fill-[color:var(--color-g-500)] text-[9px]">
+                <text x="107" y="124" textAnchor="middle" className="fill-[color:var(--color-g-500)] text-[11px]">
                   640 m² · 1,2 MW · 4 opérateurs
                 </text>
               </g>
@@ -197,21 +197,21 @@ export default function Datacenters() {
                 <text x="492" y="56" textAnchor="middle" className="fill-[color:var(--color-ink)] text-[12px] font-bold">
                   GBM
                 </text>
-                <text x="492" y="72" textAnchor="middle" className="fill-[color:var(--color-g-700)] text-[9.5px]">
+                <text x="492" y="72" textAnchor="middle" className="fill-[color:var(--color-g-700)] text-[11px]">
                   Parc VITIB
                 </text>
-                <text x="492" y="86" textAnchor="middle" className="fill-[color:var(--color-g-500)] text-[9px]">
+                <text x="492" y="86" textAnchor="middle" className="fill-[color:var(--color-g-500)] text-[11px]">
                   Grand-Bassam
                 </text>
-                <text x="492" y="108" textAnchor="middle" className="fill-[color:var(--color-m-600)] text-[9.5px] font-semibold">
+                <text x="492" y="108" textAnchor="middle" className="fill-[color:var(--color-m-600)] text-[11px] font-semibold">
                   Site de repli
                 </text>
-                <text x="492" y="124" textAnchor="middle" className="fill-[color:var(--color-g-500)] text-[9px]">
+                <text x="492" y="124" textAnchor="middle" className="fill-[color:var(--color-g-500)] text-[11px]">
                   420 m² · 800 kW · 3 opérateurs
                 </text>
               </g>
 
-              <text x="300" y="168" textAnchor="middle" className="fill-[color:var(--color-g-500)] text-[9.5px]">
+              <text x="300" y="168" textAnchor="middle" className="fill-[color:var(--color-g-500)] text-[11px]">
                 Environ 45 km · aucune réplication hors du territoire ivoirien sans demande écrite
               </text>
             </svg>
@@ -383,7 +383,7 @@ export default function Datacenters() {
             ].map((x) => (
               <Card key={x.t}>
                 <h3 className="type-h3">{x.t}</h3>
-                <p className="mt-1.5 text-[12.5px] leading-relaxed text-g-700">{x.d}</p>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-g-700">{x.d}</p>
               </Card>
             ))}
           </div>
@@ -415,8 +415,8 @@ function Bloc({
         {icone}
       </span>
       <div className="min-w-0">
-        <p className="text-[12.5px] font-semibold text-ink">{titre}</p>
-        <p className="mt-0.5 text-[12.5px] leading-relaxed text-g-700">{texte}</p>
+        <p className="text-[13px] font-semibold text-ink">{titre}</p>
+        <p className="mt-0.5 text-[13px] leading-relaxed text-g-700">{texte}</p>
       </div>
     </div>
   )

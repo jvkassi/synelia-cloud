@@ -37,7 +37,7 @@ export default function StockageObjet() {
           {/* Pas de lien ici : le DataTable enveloppe déjà la première colonne
               dans le lien de la ligne, et deux <a> imbriqués sont du HTML
               invalide — React refuse alors d'hydrater la table. */}
-          <span className="block font-mono text-[12.5px] font-semibold text-ink">{b.nom}</span>
+          <span className="block font-mono text-[13px] font-semibold text-ink">{b.nom}</span>
           <span className="block text-[11px] text-g-500">
             {b.policy === 'prive'
               ? 'Privé'
@@ -134,7 +134,7 @@ export default function StockageObjet() {
       rendu: (b) => (
         <Link
           href={`/app/objet/${b.id}`}
-          className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+          className="text-[12px] font-semibold text-p-700 hover:underline"
         >
           Ouvrir →
         </Link>
@@ -303,7 +303,7 @@ export default function StockageObjet() {
                 className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
               >
                 <span className="min-w-0">
-                  <span className="block font-mono text-[12.5px] font-semibold text-ink">
+                  <span className="block font-mono text-[13px] font-semibold text-ink">
                     {c.nom}
                   </span>
                   <span className="block text-[11px] text-g-500">
@@ -348,7 +348,7 @@ export default function StockageObjet() {
               </div>
             ))}
           </div>
-          <p className="mt-3 border-t border-g-100 pt-3 text-[11.5px] leading-relaxed text-g-500">
+          <p className="mt-3 border-t border-g-100 pt-3 text-[12px] leading-relaxed text-g-500">
             Donnez à chaque usage sa propre clé, avec la portée la plus étroite possible. Une clé
             d’écriture sur le bucket de sauvegarde ne doit jamais pouvoir supprimer d’objet — le
             verrouillage WORM l’en empêche de toute façon.
@@ -379,7 +379,7 @@ aws --endpoint-url $S3_ENDPOINT s3 sync ./exports \\
 # rclone fonctionne également
 rclone copy ./medias synelia:dba-medias-publics --progress`}
           />
-          <p className="mt-3 text-[11.5px] leading-relaxed text-g-500">
+          <p className="mt-3 text-[12px] leading-relaxed text-g-500">
             La compatibilité couvre les opérations sur les objets, le versioning, le cycle de vie, le
             verrouillage d’objet et les téléversements multipartites. Endpoints :{' '}
             <span className="font-mono">s3.abj.synelia.cloud</span> et{' '}
@@ -388,12 +388,10 @@ rclone copy ./medias synelia:dba-medias-publics --progress`}
         </Card>
       </div>
 
-      <Callout ton="violet" titre="Le verrouillage WORM, expliqué sans détour">
+      <Callout ton="violet" titre="Ce que fait le verrouillage WORM">
         Une fois la rétention posée sur un objet, ni vous, ni nos administrateurs, ni un attaquant
         ayant obtenu vos droits ne peuvent la raccourcir ou supprimer l’objet avant son expiration.
-        C’est contraignant — et c’est précisément l’intérêt. Un rançongiciel qui chiffre vos serveurs
-        et tente d’effacer vos sauvegardes échoue sur un bucket verrouillé. Aucune autre mesure ne
-        garantit cela.
+        Un rançongiciel qui tente d’effacer vos sauvegardes échoue sur un bucket verrouillé.
       </Callout>
     </div>
   )

@@ -205,13 +205,13 @@ export function VueBucket({ id }: { id: string }) {
                           ) : (
                             <File size={14} className="shrink-0 text-g-500" />
                           )}
-                          <span className="font-mono text-[12.5px] text-ink">{e.nom}</span>
+                          <span className="font-mono text-[13px] text-ink">{e.nom}</span>
                         </span>
                       </td>
-                      <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">
+                      <td className="tnum px-3 py-2.5 text-[13px] text-g-700">
                         {goHumain(e.taille)}
                       </td>
-                      <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">
+                      <td className="tnum px-3 py-2.5 text-[13px] text-g-700">
                         {e.type === 'dossier' ? num(e.objets) : '—'}
                       </td>
                       <td className="px-3 py-2.5 text-[12px] text-g-700">
@@ -484,7 +484,7 @@ export function VueBucket({ id }: { id: string }) {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <span className="min-w-0">
                       <span className="block text-[13px] font-semibold text-ink">{r.nom}</span>
-                      <span className="mt-0.5 block text-[11.5px] text-g-500">
+                      <span className="mt-0.5 block text-[12px] text-g-500">
                         Préfixe <span className="font-mono">{r.prefixe}</span> · {r.action} ·{' '}
                         {r.apres}
                       </span>
@@ -526,7 +526,7 @@ export function VueBucket({ id }: { id: string }) {
       {/* WORM */}
       {onglet === 'worm' && (
         <div className="space-y-4">
-          <Card className={bucket.objectLock?.actif ? 'border-[#B7E3D0]' : undefined}>
+          <Card className={bucket.objectLock?.actif ? 'border-ok/25' : undefined}>
             <CardHeader
               titre={
                 <span className="flex items-center gap-2">
@@ -544,11 +544,11 @@ export function VueBucket({ id }: { id: string }) {
               }
             />
 
-            <div className="rounded-[8px] border-l-4 border-p-600 bg-p-050 px-4 py-3.5">
+            <div className="border-l-2 border-p-300 pl-3.5">
               <p className="text-[13px] font-semibold text-ink">
                 C’est votre protection anti-rançongiciel
               </p>
-              <p className="mt-1.5 text-[12.5px] leading-relaxed text-g-700">
+              <p className="mt-1.5 text-[13px] leading-relaxed text-g-700">
                 Un attaquant qui compromet un compte administrateur peut chiffrer vos serveurs, puis
                 tenter d’effacer vos sauvegardes pour vous forcer à payer. Sur un bucket verrouillé,
                 cette seconde étape échoue : ni lui, ni vous, ni nos propres équipes ne pouvons
@@ -735,7 +735,7 @@ export function VueBucket({ id }: { id: string }) {
                   className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                 >
                   <span className="min-w-0">
-                    <span className="block font-mono text-[12.5px] font-semibold text-ink">
+                    <span className="block font-mono text-[13px] font-semibold text-ink">
                       {c.nom}
                     </span>
                     <span className="block text-[11px] text-g-500">

@@ -82,7 +82,7 @@ export function BadgeSuperAdmin() {
   return (
     // Masqué sur les écrans étroits : la barre supérieure n'a pas la place et
     // le fond sombre suffit déjà à distinguer l'espace super admin.
-    <span className="hidden rounded-[4px] border border-p-400/60 bg-white/10 px-1.5 py-0.5 text-[9.5px] font-bold tracking-[.08em] text-p-300 sm:inline-block">
+    <span className="hidden rounded-[4px] border border-p-400/60 bg-white/10 px-1.5 py-0.5 text-[11px] font-bold tracking-[.08em] text-p-300 sm:inline-block">
       SUPER ADMIN
     </span>
   )

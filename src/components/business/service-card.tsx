@@ -89,7 +89,7 @@ export function ServiceCard({
       </div>
 
       {service.versionDisponible && (
-        <p className="mt-2.5 text-[11.5px] text-m-600">
+        <p className="mt-2.5 text-[12px] text-m-600">
           Version {service.versionDisponible} disponible
         </p>
       )}
@@ -107,7 +107,7 @@ export function ServiceCard({
             Ouvrir
           </ButtonLink>
         ) : (
-          <span className="flex-1 rounded-[6px] bg-g-100 px-3 py-1.5 text-center text-[12.5px] font-semibold text-g-500">
+          <span className="flex-1 rounded-[6px] bg-g-100 px-3 py-1.5 text-center text-[13px] font-semibold text-g-500">
             {service.statut === 'provisioning' ? 'Provisioning en cours' : 'Indisponible'}
           </span>
         )}
@@ -134,7 +134,7 @@ function Meta({ cle, valeur, mono }: { cle: string; valeur: string; mono?: boole
   return (
     <div className="min-w-0">
       <dt className="type-micro text-g-500">{cle}</dt>
-      <dd className={cn('mt-0.5 truncate text-[12.5px] text-ink', mono && 'font-mono text-[12px]')}>
+      <dd className={cn('mt-0.5 truncate text-[13px] text-ink', mono && 'font-mono text-[12px]')}>
         {valeur}
       </dd>
     </div>
@@ -182,8 +182,8 @@ export function CatalogCard({
         </Badge>
       </div>
       <h3 className="type-h3 mt-3">{service.nom}</h3>
-      <p className="mt-0.5 text-[11.5px] font-semibold text-encre-2/55">{service.solutionOSS}</p>
-      <p className="mt-2 line-clamp-2 flex-1 text-[12.5px] leading-relaxed text-encre-2/70">
+      <p className="mt-0.5 text-[12px] font-semibold text-encre-2/55">{service.solutionOSS}</p>
+      <p className="mt-2 line-clamp-2 flex-1 text-[13px] leading-relaxed text-encre-2/70">
         {service.pitch}
       </p>
       <div className="mt-3.5 flex items-end justify-between gap-2 border-t border-encre-2/10 pt-3">
@@ -244,7 +244,7 @@ export function AppLauncherTile({
         <h3 className="text-[15px] font-bold [font-family:var(--font-display)] text-ink group-hover:text-m-600">
           {service.nom}
         </h3>
-        <p className="mt-0.5 text-[12.5px] text-g-500">
+        <p className="mt-0.5 text-[13px] text-g-500">
           {catalogue?.pitch ?? service.domaine}
         </p>
       </div>

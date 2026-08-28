@@ -80,7 +80,7 @@ export default function VariablesTousProjets() {
                 >
                   <span className="min-w-0">
                     <span className="block truncate text-[13px] font-bold text-ink">{p.nom}</span>
-                    <span className="block text-[11.5px] text-g-500">
+                    <span className="block text-[12px] text-g-500">
                       {p.environnements.join(', ')}
                     </span>
                   </span>
@@ -110,8 +110,8 @@ export default function VariablesTousProjets() {
           <ul className="divide-y divide-g-100">
             {partagees.map(([cle, projets]) => (
               <li key={cle} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                <span className="font-mono text-[12.5px] font-semibold text-ink">{cle}</span>
-                <span className="text-[11.5px] text-g-500">{projets.join(' · ')}</span>
+                <span className="font-mono text-[13px] font-semibold text-ink">{cle}</span>
+                <span className="text-[12px] text-g-500">{projets.join(' · ')}</span>
               </li>
             ))}
           </ul>

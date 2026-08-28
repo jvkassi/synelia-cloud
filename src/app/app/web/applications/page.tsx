@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ExternalLink, Globe, Plus, ShieldCheck } from 'lucide-react'
+import { ExternalLink, Plus } from 'lucide-react'
 import { cn, surfaceMarque } from '@/lib/utils'
 import type { SiteWeb } from '@/lib/types'
 import { num, relatif } from '@/lib/format'
@@ -166,7 +166,7 @@ export default function ListeApplications() {
                 titre={
                   <span className="flex items-center gap-2.5">
                     <span
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[10px] font-bold"
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[6px] text-[11px] font-bold"
                       style={{ background: surface.fond, color: surface.texte }}
                     >
                       {TYPE_SITE_LABEL[s.type].slice(0, 2).toUpperCase()}
@@ -211,7 +211,7 @@ export default function ListeApplications() {
                 </div>
                 <div>
                   <dt className="type-micro text-g-500">Serveur</dt>
-                  <dd className="mt-0.5 truncate font-mono text-[11.5px] text-g-700">
+                  <dd className="mt-0.5 truncate font-mono text-[12px] text-g-700">
                     {h ? nomServi(h) : '—'}
                   </dd>
                 </div>
@@ -308,14 +308,14 @@ export default function ListeApplications() {
                 className="rounded-[8px] border border-g-300 bg-white p-3 text-left transition-colors hover:border-p-400 hover:bg-p-050"
               >
                 <span
-                  className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[10px] font-bold"
+                  className="flex h-8 w-8 items-center justify-center rounded-[6px] text-[11px] font-bold"
                   style={{ background: surface.fond, color: surface.texte }}
                 >
                   {c.nom.slice(0, 2).toUpperCase()}
                 </span>
-                <span className="mt-2 block text-[12.5px] font-bold text-ink">{c.nom}</span>
+                <span className="mt-2 block text-[13px] font-bold text-ink">{c.nom}</span>
                 <span className="mt-0.5 block text-[11px] leading-snug text-g-500">{c.phrase}</span>
-                <span className="mt-1.5 block text-[10.5px] text-g-500">PHP {c.php}</span>
+                <span className="mt-1.5 block text-[11px] text-g-500">PHP {c.php}</span>
               </button>
             )
           })}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ExternalLink, Pencil, Plus, Share2, Trash2 } from 'lucide-react'
+import { ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react'
 import { money, relatif } from '@/lib/format'
 import { DRIVES, type DriveDomaine } from '@/lib/mock'
 import { configurationDuService } from '@/lib/configurations'
@@ -190,7 +190,7 @@ export function VueDrive({ id }: { id: string }) {
                       className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5"
                     >
                       <span className="min-w-0">
-                        <span className="block truncate text-[12.5px] font-semibold text-ink">
+                        <span className="block truncate text-[13px] font-semibold text-ink">
                           {u.nom}
                         </span>
                         <span className="tnum block truncate text-[11px] text-g-500">
@@ -325,7 +325,7 @@ export function VueDrive({ id }: { id: string }) {
                       key={x.t}
                       className="flex items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2"
                     >
-                      <span className="text-[12.5px] text-g-700">{x.t}</span>
+                      <span className="text-[13px] text-g-700">{x.t}</span>
                       <Badge tone={x.ton} size="sm">
                         {x.n}
                       </Badge>

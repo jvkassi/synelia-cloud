@@ -132,6 +132,36 @@ plus les liens de sortie vers Centreon, Grafana et VictoriaLogs.
 **Le magenta `#C0297A` est réservé à trois usages** : le mot d'accroche d'un
 héros de la vitrine, le bouton `Ouvrir` d'un service managé, les libellés de flux
 SSO. Sur fond violet foncé, utiliser `m-400` — `m-600` n'y tient pas le contraste.
+Le survol d'un lien souligne (`hover:underline`), il ne passe pas au magenta :
+c'était le quatrième usage, non prévu, et il était partout.
+
+**La couleur d'un pavé se paie.** Trois niveaux de bruit, pas cinq :
+
+| Ton | Rendu | Pour quoi |
+|---|---|---|
+| `violet` | filet `border-l-2 border-p-300`, aucun fond | un aparté, une règle du produit |
+| `info` · `ok` | bordure 1 px, fond `g-050` / `ok-bg` | un fait qui compte |
+| `warn` · `err` | bordure 1 px, fond teinté | ce qui demande une action |
+
+Jamais de liséré de 4 px, jamais de fond teinté sur chaque élément d'une liste :
+dans une liste, la couleur va au chiffre ou au badge, la ligne reste neutre. Un
+`bg-*-bg` répété vingt fois ne hiérarchise plus rien — il reste une planche de
+surligneurs. Les pastels de bordure passent par les jetons (`border-ok/25`), pas
+par un hexadécimal en dur.
+
+**Pas de texte qui plaide.** Un pavé dit un fait, un seuil, un mécanisme, puis
+s'arrête. Les titres rhétoriques (« Pourquoi nous publions… », « Une sauvegarde
+jamais restaurée est une hypothèse ») et la phrase de morale finale — celle qui
+explique que l'inverse serait malhonnête — ont été retirés de l'espace
+fournisseur : ils disaient du bien de la maquette, pas de l'état de la
+plateforme. Aucune icône décorative dans l'emplacement `actions` d'un
+`CardHeader` : cet emplacement est celui d'un bouton.
+
+**Cinq corps pour le petit texte** : 11, 12, 13, 14, 15 px, et rien entre. Il y
+en avait onze, demi-pixels compris — `text-[11.5px]` voisinait `text-[12px]` et
+`text-[12.5px]` dans la même carte, ce qui ne se décide pas, ça s'accumule. Les
+corps d'affichage (16 px et au-delà) restent libres, ils sont peu nombreux et
+chacun a une raison.
 
 **Cinq états par écran** : chargement en squelettes, vide avec une phrase qui
 explique la valeur, erreur avec identifiant de corrélation copiable, droits
@@ -187,6 +217,18 @@ Deux pièges :
 - **Une entité affichée dans un tiroir doit être relue depuis la collection**
   (par identifiant), pas capturée à l'ouverture : sinon le tiroir montre l'état
   d'avant la modification.
+- **Un panneau latéral lit la collection, jamais la graine.** Tous les `cadre.tsx`
+  importaient directement `ESPACES`, `ORGANISATIONS`, `CERTIFICATS`… : on créait
+  un Espace Cloud, il apparaissait dans la liste de droite et pas dans le
+  sélecteur de gauche — donc on ne pouvait pas y travailler. Même chose pour un
+  état : une messagerie activée restait « À activer » dans le panneau. Le motif
+  est celui décrit juste en dessous — le sélecteur donne le périmètre, la
+  collection donne l'état. Et une ressource fraîchement créée n'est pas
+  « suspendue » : nommez l'état `provisioning` pour ce qu'il est.
+- **Une tuile de synthèse se somme depuis la collection.** `/app/espaces`
+  affichait le plafond figé de `SYNTHESE_CLIENT` : créer un Espace de 48 vCPU ne
+  bougeait pas le « 66/96 » posé juste au-dessus de la liste où il venait
+  d'apparaître.
 
 Les lectures des sélecteurs de `src/lib/mock/` (`vmsDeLEspace`, `messageriesDeLOrg`…)
 donnent le **périmètre** ; l'état vient de l'atelier. Le motif est :
@@ -249,6 +291,32 @@ Trois raisons, et ce sont trois règles à tenir :
 étapes déjà réussies ne sont pas rejouées. Et `effetFinal` ne s'applique qu'en
 cas de succès — un renouvellement de certificat qui échoue laisse le certificat
 « en émission », il ne le marque pas actif.
+
+**Tout type de job du jeu de données doit avoir son entrée au catalogue.**
+`reprendreJob` cherche `workflowById(job.type)` et rend `false` s'il ne trouve
+rien : les deux jobs figés en échec — la souscription CRM et la migration
+inter-backend, précisément ceux sur lesquels on clique « Reprendre » en
+démonstration — avaient des types absents du catalogue
+(`marketplace.provision`, `espace.migrate`). Le bouton notifiait une reprise qui
+n'avait pas lieu, et le job restait en échec. Si vous ajoutez un job à
+`mock/ops.ts`, ajoutez son workflow, avec autant d'étapes que le job en porte.
+Les écrans masquent désormais le bouton quand le type est inconnu, mais un
+bouton masqué reste une promesse manquante.
+
+**La portée du workflow décide de la collection.** `lancerJob` range le job dans
+`jobs` ou `jobs-plateforme` selon `def.portee` : sans cela une opération lancée
+depuis l'espace fournisseur atterrissait dans le centre de tâches du client,
+invisible là où on venait de la déclencher. Corollaire : la `portee` doit dire
+vrai. `compte.cloture` était déclarée cliente alors que seul le super admin
+l'ouvre, et l'export de conformité des sauvegardes emprunte désormais
+`export.conformite` (client) au lieu d'`export.plateforme`.
+
+**Une page de suivi ne raconte pas l'histoire d'un autre workflow.**
+`/app/taches/[id]` affichait « le bouton *Ouvrir* de sa carte » et « les sept
+tâches de l'orchestrateur du marketplace » pour les 41 workflows : un
+redémarrage de machine s'achevait sur une phrase parlant d'un service managé.
+Les phrases viennent de `def.lancement` / `def.fin`, et la carte des sept tâches
+ne s'affiche que pour un job `marketplace.*`.
 
 La forme sans catalogue (`etapes: string[]` au site d'appel) reste disponible et
 reste juste quand les étapes **dépendent d'un choix de l'utilisateur** : la
@@ -511,6 +579,12 @@ page hors de l'écran. 293 grilles avaient ce défaut.
 **Liens imbriqués.** `DataTable` enveloppe la première colonne visible dans le
 lien de la ligne quand `href` est fourni : son `rendu` ne doit pas contenir de
 lien, deux ancres imbriquées étant du HTML que React refuse d'hydrater.
+
+**Casse et boutons.** La feuille de style du navigateur pose
+`text-transform: none` sur un bouton, et rien dans la base ne la contredit : un
+en-tête de tableau triable perdait l'uppercase de `type-micro` et « Plan »
+côtoyait « DESTINATIONS » dans la même ligne. Un bouton placé dans un conteneur
+qui transforme la casse doit la redéclarer.
 
 **Hooks.** Jamais de `useState` après un retour anticipé.
 

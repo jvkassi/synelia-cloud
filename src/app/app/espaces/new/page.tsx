@@ -253,7 +253,7 @@ export default function NouvelEspace() {
                   <Server size={16} className="text-p-700" />
                   <span className="type-h3">{SITE_LABEL[s]}</span>
                 </span>
-                <p className="mt-2.5 text-[12.5px] leading-relaxed text-g-700">
+                <p className="mt-2.5 text-[13px] leading-relaxed text-g-700">
                   {s === 'ABJ'
                     ? 'Site principal, 640 m² de salle blanche, 1,2 MW installés, quatre opérateurs. Capacité la plus importante et connectivité la plus dense. Recommandé pour la production.'
                     : 'Parc technologique VITIB en zone franche, 420 m², 800 kW installés. Site de repli PRA et destination des sauvegardes immuables. Recommandé pour séparer physiquement une charge de votre production.'}
@@ -322,7 +322,7 @@ export default function NouvelEspace() {
                 />
               </Field>
             </div>
-            <p className="mt-2.5 text-[11.5px] leading-relaxed text-g-500">
+            <p className="mt-2.5 text-[12px] leading-relaxed text-g-500">
               La plage proposée ne chevauche aucune de vos plages existantes (
               {ESPACES.map((e) => e.cidr).join(', ')}), ce qui rend le peering possible sans
               renumérotation. Un /22 offre 1 024 adresses, soit environ quatre réseaux privés de 254
@@ -386,7 +386,7 @@ export default function NouvelEspace() {
                 <option value="aucun">Aucun plan (déconseillé)</option>
               </Select>
             </Field>
-            <p className="mt-2 text-[11.5px] leading-relaxed text-g-500">
+            <p className="mt-2 text-[12px] leading-relaxed text-g-500">
               Le plan s’appliquera automatiquement à toute ressource créée dans cet espace portant
               l’étiquette correspondante. Vous pourrez le modifier à tout moment.
             </p>
@@ -490,10 +490,10 @@ export default function NouvelEspace() {
 function Petit({ cle, valeur, mono }: { cle: string; valeur: string; mono?: boolean }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-2">
-      <dt className="shrink-0 text-[11.5px] text-g-500">{cle}</dt>
+      <dt className="shrink-0 text-[12px] text-g-500">{cle}</dt>
       <dd
         className={cn(
-          'min-w-0 text-right text-[11.5px] font-semibold text-ink',
+          'min-w-0 text-right text-[12px] font-semibold text-ink',
           mono && 'font-mono',
         )}
       >

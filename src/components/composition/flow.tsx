@@ -38,7 +38,7 @@ export function Timeline({
           />
           <div className="flex flex-wrap items-baseline justify-between gap-x-3">
             <p className="text-[13px] text-ink">{e.titre}</p>
-            <span className="tnum shrink-0 text-[11.5px] text-g-500">{e.horodatage}</span>
+            <span className="tnum shrink-0 text-[12px] text-g-500">{e.horodatage}</span>
           </div>
           {e.detail && <p className="mt-0.5 text-[12px] text-g-500">{e.detail}</p>}
         </li>
@@ -78,7 +78,7 @@ export function Stepper({
             >
               <span
                 className={cn(
-                  'tnum flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11.5px] font-bold',
+                  'tnum flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-bold',
                   passee
                     ? 'bg-ok text-white'
                     : active
@@ -90,7 +90,7 @@ export function Stepper({
               </span>
               <span
                 className={cn(
-                  'whitespace-nowrap text-[12.5px] font-semibold',
+                  'whitespace-nowrap text-[13px] font-semibold',
                   active ? 'text-p-700' : passee ? 'text-g-700' : 'text-g-500',
                 )}
               >
@@ -142,14 +142,14 @@ export function CostPreview({
         <ul className="space-y-1.5">
           {lignes.map((l) => (
             <li key={l.libelle} className="flex items-baseline justify-between gap-3">
-              <span className="min-w-0 text-[12.5px] text-g-700">
+              <span className="min-w-0 text-[13px] text-g-700">
                 {l.libelle}
                 {l.quantite !== undefined && (
                   <span className="tnum text-g-500"> × {l.quantite}</span>
                 )}
-                {l.detail && <span className="block text-[11.5px] text-g-500">{l.detail}</span>}
+                {l.detail && <span className="block text-[12px] text-g-500">{l.detail}</span>}
               </span>
-              <span className="tnum shrink-0 text-[12.5px] font-semibold text-ink">
+              <span className="tnum shrink-0 text-[13px] font-semibold text-ink">
                 {money(l.montant)}
               </span>
             </li>
@@ -177,7 +177,7 @@ export function CostPreview({
         {!compact && (
           <div className="mt-3 flex gap-2 rounded-[6px] bg-white px-3 py-2">
             <Info size={13} className="mt-0.5 shrink-0 text-info" />
-            <p className="text-[11.5px] leading-relaxed text-g-700">
+            <p className="text-[12px] leading-relaxed text-g-700">
               Prorata du mois en cours :{' '}
               <span className="tnum font-semibold text-ink">{money(pro)}</span>, ajouté à votre
               prochaine facture. La facturation complète démarre au 1<sup>er</sup> du mois suivant.
@@ -200,10 +200,10 @@ function Ligne({
 }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <span className="text-[12.5px] text-g-700">{libelle}</span>
+      <span className="text-[13px] text-g-700">{libelle}</span>
       <span
         className={cn(
-          'tnum text-[12.5px] font-semibold',
+          'tnum text-[13px] font-semibold',
           ton === 'ok' ? 'text-ok' : 'text-ink',
         )}
       >

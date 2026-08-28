@@ -55,7 +55,7 @@ export function SparkChart({
   return (
     <div className={className}>
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
-        <span className="text-[12.5px] font-semibold text-g-700">{titre}</span>
+        <span className="text-[13px] font-semibold text-g-700">{titre}</span>
         <span className="tnum text-[13px] font-bold text-ink">
           {dernier}
           <span className="text-[11px] font-semibold text-g-500"> {unite}</span>
@@ -170,7 +170,7 @@ export function GrilleSparkCharts({
               />
             ))}
           </div>
-          <div className="mt-1 flex justify-between text-[10.5px] text-g-500">
+          <div className="mt-1 flex justify-between text-[11px] text-g-500">
             {LEGENDE[periode].map((l) => (
               <span key={l}>{l}</span>
             ))}
@@ -208,7 +208,7 @@ export function LiensSortie({
           href={l.href}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-[12px] font-semibold text-p-700 transition-colors hover:text-m-600"
+          className="inline-flex items-center gap-1 text-[12px] font-semibold text-p-700 transition-colors hover:underline"
         >
           {l.libelle}
           <ExternalLink size={11} />
@@ -254,8 +254,8 @@ export function EventList({
               {libelles[e.gravite]}
             </Badge>
             <div className="min-w-0 flex-1">
-              <p className="text-[12.5px] leading-snug text-ink">{e.message}</p>
-              <p className="mt-0.5 text-[11.5px] text-g-500">
+              <p className="text-[13px] leading-snug text-ink">{e.message}</p>
+              <p className="mt-0.5 text-[12px] text-g-500">
                 {e.ressource}
                 {e.site && ` · ${e.site}`} · {relatif(e.ts)}
               </p>
@@ -268,7 +268,7 @@ export function EventList({
           href={hrefSortie}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 inline-flex items-center gap-1 border-t border-g-100 pt-3 text-[12px] font-semibold text-p-700 transition-colors hover:text-m-600"
+          className="mt-3 inline-flex items-center gap-1 border-t border-g-100 pt-3 text-[12px] font-semibold text-p-700 transition-colors hover:underline"
         >
           {lienSortie}
           <ArrowUpRight size={12} />
@@ -313,7 +313,7 @@ export function LogPeek({
   return (
     <div className={className}>
       <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[12.5px] font-semibold text-g-700">{titre}</span>
+        <span className="text-[13px] font-semibold text-g-700">{titre}</span>
         <div className="flex items-center gap-2">
           <SearchInput
             placeholder="Filtrer…"
@@ -325,7 +325,7 @@ export function LogPeek({
             href={hrefSortie}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 whitespace-nowrap text-[12px] font-semibold text-p-700 hover:text-m-600"
+            className="inline-flex items-center gap-1 whitespace-nowrap text-[12px] font-semibold text-p-700 hover:underline"
           >
             Ouvrir dans VictoriaLogs
             <ExternalLink size={11} />

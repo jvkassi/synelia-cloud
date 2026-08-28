@@ -66,22 +66,22 @@ export default function Equipe() {
                 <p className="mt-4 text-[15px] font-bold leading-tight [font-family:var(--font-display)] text-ink">
                   {m.nom}
                 </p>
-                <p className="mt-1 text-[12.5px] font-semibold text-p-700">{m.role}</p>
-                <p className="mt-3 flex-1 text-[12.5px] leading-relaxed text-g-700">{m.texte}</p>
+                <p className="mt-1 text-[13px] font-semibold text-p-700">{m.role}</p>
+                <p className="mt-3 flex-1 text-[13px] leading-relaxed text-g-700">{m.texte}</p>
                 <dl className="mt-4 space-y-1.5 border-t border-g-100 pt-3">
                   <div className="flex items-center gap-1.5">
                     <MapPin size={12} className="shrink-0 text-g-500" aria-hidden />
                     <dt className="sr-only">Site</dt>
-                    <dd className="text-[11.5px] text-g-500">{m.site}</dd>
+                    <dd className="text-[12px] text-g-500">{m.site}</dd>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Clock size={12} className="shrink-0 text-g-500" aria-hidden />
                     <dt className="sr-only">Dans l’équipe depuis</dt>
-                    <dd className="tnum text-[11.5px] text-g-500">Depuis {m.depuis}</dd>
+                    <dd className="tnum text-[12px] text-g-500">Depuis {m.depuis}</dd>
                   </div>
                   <div>
                     <dt className="sr-only">Langues</dt>
-                    <dd className="text-[11.5px] text-g-500">{m.langues.join(' · ')}</dd>
+                    <dd className="text-[12px] text-g-500">{m.langues.join(' · ')}</dd>
                   </div>
                 </dl>
               </li>
@@ -97,7 +97,7 @@ export default function Equipe() {
                   className="flex items-baseline justify-between gap-4 rounded-[10px] border border-p-300 bg-p-050 px-5 py-4"
                 >
                   <div>
-                    <p className="text-[13.5px] font-bold [font-family:var(--font-display)] text-ink">
+                    <p className="text-[14px] font-bold [font-family:var(--font-display)] text-ink">
                       {site}
                     </p>
                     <p className="mt-1 text-[12px] text-g-700">
@@ -137,7 +137,7 @@ export default function Equipe() {
               loading="lazy"
               className="h-52 w-full object-cover sm:h-64"
             />
-            <figcaption className="bg-white px-5 py-3 text-[11.5px] leading-relaxed text-g-500">
+            <figcaption className="bg-white px-5 py-3 text-[12px] leading-relaxed text-g-500">
               Vue d’illustration du poste de supervision d’Abidjan. Les tableaux affichés sont ceux
               de Centreon et Grafana, dont les liens de sortie figurent dans votre espace client.
             </figcaption>

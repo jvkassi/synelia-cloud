@@ -150,7 +150,7 @@ export default function Accueil() {
                 {['Abidjan', 'Grand-Bassam', '4 ms entre les deux'].map((t, n) => (
                   <span
                     key={t}
-                    className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-bold ${PASTILLES[n]} ${
+                    className={`rounded-full px-3.5 py-1.5 text-[13px] font-bold ${PASTILLES[n]} ${
                       n === 2 ? 'text-encre-2' : TEINTES[n]
                     }`}
                   >
@@ -244,7 +244,7 @@ export default function Accueil() {
                 >
                   {c.valeur}
                 </dt>
-                <dd className="mt-2 text-[12.5px] leading-snug text-encre-2/65">{c.libelle}</dd>
+                <dd className="mt-2 text-[13px] leading-snug text-encre-2/65">{c.libelle}</dd>
               </div>
             ))}
           </dl>
@@ -272,7 +272,7 @@ export default function Accueil() {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <span
-                      className={`rounded-full px-3 py-1 text-[11.5px] font-bold uppercase tracking-wider ${PASTILLES[n]} ${TEINTES[n]}`}
+                      className={`rounded-full px-3 py-1 text-[12px] font-bold uppercase tracking-wider ${PASTILLES[n]} ${TEINTES[n]}`}
                     >
                       {n === 0 ? 'Pour les techniques' : 'Pour les métiers'}
                     </span>
@@ -281,7 +281,7 @@ export default function Accueil() {
                   <h3 className="mt-3 text-[26px] font-black leading-tight [font-family:var(--font-display)] text-encre-2">
                     {p.titre}
                   </h3>
-                  <p className="mt-3 text-[14.5px] leading-relaxed text-encre-2/70">{p.accroche}</p>
+                  <p className="mt-3 text-[15px] leading-relaxed text-encre-2/70">{p.accroche}</p>
                   <ul className="mt-6 flex-1 space-y-2.5">
                     {p.items.map((it) => (
                       <li key={it} className="flex items-start gap-2.5">
@@ -298,7 +298,7 @@ export default function Accueil() {
                     <span className="text-[13px] font-bold text-encre-2/55">{p.prix}</span>
                     <Link
                       href={p.cta.href}
-                      className={`inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-[14.5px] font-bold text-creme transition-transform hover:-translate-y-1 ${FONDS[n]}`}
+                      className={`inline-flex items-center gap-2 rounded-full px-6 py-3.5 text-[15px] font-bold text-creme transition-transform hover:-translate-y-1 ${FONDS[n]}`}
                     >
                       {p.cta.libelle} <ArrowRight size={16} />
                     </Link>
@@ -343,14 +343,14 @@ export default function Accueil() {
                 <h3 className="mt-1 text-[16px] font-bold leading-snug [font-family:var(--font-display)] text-encre-2">
                   {c.nom}
                 </h3>
-                <p className="mt-2 flex-1 text-[12.5px] leading-relaxed text-encre-2/60">
+                <p className="mt-2 flex-1 text-[13px] leading-relaxed text-encre-2/60">
                   {c.phrase}
                 </p>
                 <p
-                  className={`mt-4 flex items-center gap-1.5 text-[14.5px] font-black [font-family:var(--font-display)] ${TEINTES[n % 4]}`}
+                  className={`mt-4 flex items-center gap-1.5 text-[15px] font-black [font-family:var(--font-display)] ${TEINTES[n % 4]}`}
                 >
                   {c.prix.toLocaleString('fr-FR')} F
-                  <span className="text-[11.5px] font-semibold opacity-70">{c.unite}</span>
+                  <span className="text-[12px] font-semibold opacity-70">{c.unite}</span>
                   <ArrowRight
                     size={15}
                     className="ml-auto transition-transform group-hover:translate-x-1"
@@ -384,7 +384,7 @@ export default function Accueil() {
               <div className="mt-7 flex flex-wrap items-center gap-4">
                 <Link
                   href="/entreprises#contact"
-                  className="inline-flex items-center gap-2 rounded-full bg-p-700 px-6 py-3.5 text-[14.5px] font-bold text-creme transition-transform hover:-translate-y-1"
+                  className="inline-flex items-center gap-2 rounded-full bg-p-700 px-6 py-3.5 text-[15px] font-bold text-creme transition-transform hover:-translate-y-1"
                 >
                   {BLOC_PRA.cta} <ArrowRight size={16} />
                 </Link>
@@ -402,7 +402,7 @@ export default function Accueil() {
                   >
                     {i.valeur}
                   </p>
-                  <p className="mt-2 text-[12.5px] leading-snug text-encre-2/70">{i.libelle}</p>
+                  <p className="mt-2 text-[13px] leading-snug text-encre-2/70">{i.libelle}</p>
                   <p className="mt-3 inline-block rounded-full bg-ok-bg px-2.5 py-1 text-[11px] font-bold text-ok">
                     {i.cible}
                   </p>
@@ -473,7 +473,7 @@ export default function Accueil() {
                       className="h-28 w-full object-cover"
                     />
                     <figcaption className="p-4">
-                      <p className="text-[13.5px] font-bold [font-family:var(--font-display)] text-encre-2">
+                      <p className="text-[14px] font-bold [font-family:var(--font-display)] text-encre-2">
                         {c.titre}
                       </p>
                       <p className="mt-1 text-[12px] leading-snug text-encre-2/65">{c.detail}</p>
@@ -481,7 +481,7 @@ export default function Accueil() {
                   </figure>
                 ))}
               </div>
-              <p className="mt-4 text-[11.5px] leading-relaxed text-encre-2/50">
+              <p className="mt-4 text-[12px] leading-relaxed text-encre-2/50">
                 Vues d’illustration. Les visites de site se demandent depuis votre espace client.
               </p>
             </div>
@@ -530,7 +530,7 @@ export default function Accueil() {
                   <span className={`tnum mr-1.5 ${TEINTES[n]}`}>0{n + 1}</span>
                   {b.titre}
                 </h3>
-                <p className="mt-2.5 flex-1 text-[13.5px] leading-relaxed text-encre-2/70">
+                <p className="mt-2.5 flex-1 text-[14px] leading-relaxed text-encre-2/70">
                   {b.texte}
                 </p>
                 <div className="mt-4">
@@ -579,7 +579,7 @@ export default function Accueil() {
               loading="lazy"
               className="h-52 w-full object-cover sm:h-64"
             />
-            <figcaption className="bg-creme px-5 py-3.5 text-[11.5px] leading-relaxed text-encre-2/55">
+            <figcaption className="bg-creme px-5 py-3.5 text-[12px] leading-relaxed text-encre-2/55">
               Vue d’illustration. Les services du marketplace s’ouvrent dans leur propre interface —
               nous ne la réimplémentons pas, nous vous y menons par une redirection SSO.
             </figcaption>
@@ -610,7 +610,7 @@ export default function Accueil() {
                 className="flex flex-col rounded-[24px] bg-creme-2 p-6"
               >
                 <span
-                  className={`self-start rounded-full px-3 py-1 text-[11.5px] font-bold ${PASTILLES[n % 4]} ${TEINTES[n % 4]}`}
+                  className={`self-start rounded-full px-3 py-1 text-[12px] font-bold ${PASTILLES[n % 4]} ${TEINTES[n % 4]}`}
                 >
                   {e.jalon}
                 </span>
@@ -620,7 +620,7 @@ export default function Accueil() {
                 <p className="mt-2.5 flex-1 text-[13px] leading-relaxed text-encre-2/70">
                   {e.texte}
                 </p>
-                <p className="mt-4 border-t-2 border-encre-2/10 pt-3 text-[11.5px] font-bold text-encre-2/55">
+                <p className="mt-4 border-t-2 border-encre-2/10 pt-3 text-[12px] font-bold text-encre-2/55">
                   {e.livrable}
                 </p>
               </li>
@@ -643,7 +643,7 @@ export default function Accueil() {
               <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-encre-2/80">
                 {ETUDES_CAS[0].texte}
               </p>
-              <p className="mt-5 text-[12.5px] font-bold uppercase tracking-wider text-encre-2/65">
+              <p className="mt-5 text-[13px] font-bold uppercase tracking-wider text-encre-2/65">
                 {ETUDES_CAS[0].client}
               </p>
             </div>

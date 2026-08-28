@@ -106,7 +106,7 @@ export default function BackupTousProjets() {
                     >
                       {p.nom}
                     </Link>
-                    <span className="block text-[11.5px] text-g-500">
+                    <span className="block text-[12px] text-g-500">
                       {aEtat.length} service{aEtat.length > 1 ? 's' : ''} à état ·{' '}
                       {services.length - aEtat.length} sans état
                     </span>
@@ -134,16 +134,16 @@ export default function BackupTousProjets() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Callout ton="violet" titre="Deux endroits, deux questions">
           Ici on répond à « ce projet est-il protégé, et jusqu’où puis-je revenir ? ».{' '}
-          <Link href="/app/sauvegarde" className="font-semibold text-p-700 hover:text-m-600">
+          <Link href="/app/sauvegarde" className="font-semibold text-p-700 hover:underline">
             Sauvegardes &amp; PRA
           </Link>{' '}
           répond à « quels plans couvrent quoi, et que montre-t-on à un auditeur ? » — plans
           réutilisables, restauration granulaire, conformité 3-2-1.
         </Callout>
-        <Callout ton="info" titre="Immuable veut dire immuable">
+        <Callout ton="info" titre="Ce que la rétention interdit">
           Un point écrit ne peut être ni modifié ni supprimé avant la fin de sa rétention, ni par
-          vous, ni par nous. C’est ce qui le rend utile face à un rançongiciel : un attaquant qui
-          obtient vos droits n’obtient pas le droit d’effacer vos sauvegardes.
+          vous, ni par nous — un attaquant qui obtient vos droits n’obtient pas celui d’effacer vos
+          sauvegardes.
         </Callout>
       </div>
     </div>

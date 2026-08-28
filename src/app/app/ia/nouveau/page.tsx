@@ -155,7 +155,7 @@ export default function NouvelAgent() {
           { label: 'Nouvel agent' },
         ]}
         titre="Créer un agent"
-        sousTitre="Quatre étapes. Les trois premières décrivent ce que l’agent sait faire ; la quatrième décrit ce qu’il n’a pas le droit de faire — c’est celle qui décide s’il tiendra en production."
+        sousTitre="Quatre étapes : les trois premières décrivent ce que l’agent sait faire, la quatrième ce qu’il n’a pas le droit de faire."
       />
 
       <WizardShell
@@ -251,7 +251,7 @@ export default function NouvelAgent() {
                     <span className="mt-1 block text-[12px] leading-relaxed text-g-500">
                       {t.resume}
                     </span>
-                    <span className="mt-2 block border-t border-g-100 pt-2 text-[11.5px] text-g-700">
+                    <span className="mt-2 block border-t border-g-100 pt-2 text-[12px] text-g-700">
                       {t.consequence}
                     </span>
                   </button>
@@ -280,13 +280,13 @@ export default function NouvelAgent() {
                     )}
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-[12.5px] font-semibold text-ink">
+                      <span className="block truncate text-[13px] font-semibold text-ink">
                         {x.nom}
                       </span>
                       <span className="block truncate text-[11px] text-g-500">{x.residence}</span>
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
-                      <span className="tnum text-[11.5px] text-g-500">
+                      <span className="tnum text-[12px] text-g-500">
                         {money(x.prixEntree)} / {money(x.prixSortie)}
                       </span>
                       <Badge tone={x.hebergement === 'souverain' ? 'ok' : 'warn'} size="sm">
@@ -350,7 +350,7 @@ export default function NouvelAgent() {
                     <Checkbox
                       checked={outils.includes(o.id)}
                       onChange={() => bascule(outils, setOutils, o.id)}
-                      label={<span className="font-mono text-[12.5px]">{o.nom}</span>}
+                      label={<span className="font-mono text-[13px]">{o.nom}</span>}
                       description={o.description}
                       className="min-w-0 flex-1"
                     />
@@ -377,7 +377,7 @@ export default function NouvelAgent() {
                 sousTitre="Sans base, l’agent répond avec ce que le modèle a appris — donc jamais avec vos procédures."
               />
               {basesEspace.length === 0 ? (
-                <p className="text-[12.5px] text-g-500">
+                <p className="text-[13px] text-g-500">
                   Aucune base sur cet espace. L’agent pourra être créé, mais il ne citera rien.
                 </p>
               ) : (
@@ -387,7 +387,7 @@ export default function NouvelAgent() {
                       key={b.id}
                       checked={bases.includes(b.id)}
                       onChange={() => bascule(bases, setBases, b.id)}
-                      label={<span className="font-mono text-[12.5px]">{b.nom}</span>}
+                      label={<span className="font-mono text-[13px]">{b.nom}</span>}
                       description={`${num(b.documents)} documents · ${b.source.libelle}`}
                     />
                   ))}
@@ -459,7 +459,7 @@ export default function NouvelAgent() {
               </div>
               <div className="mt-4 border-t border-g-100 pt-4">
                 <MicroLabel className="mb-2">Ce qui se passe après la création</MicroLabel>
-                <ol className="space-y-1.5 text-[12.5px] text-g-700">
+                <ol className="space-y-1.5 text-[13px] text-g-700">
                   {[
                     'L’agent est créé en brouillon, sans aucun canal ouvert',
                     'Vous constituez son jeu d’épreuves : une question, une réponse attendue',
@@ -467,7 +467,7 @@ export default function NouvelAgent() {
                     'À la publication, la bascule se fait sur 10 % du trafic pendant trente minutes',
                   ].map((x, i) => (
                     <li key={x} className="flex items-start gap-2">
-                      <span className="tnum mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-p-100 text-[10px] font-bold text-p-700">
+                      <span className="tnum mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-p-100 text-[11px] font-bold text-p-700">
                         {i + 1}
                       </span>
                       {x}

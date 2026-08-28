@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Download, Plus, ShieldAlert, Trash2 } from 'lucide-react'
+import { Download, Plus, Trash2 } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { dateCourte, goHumain, num, pct } from '@/lib/format'
 import { SITE_LABEL, ROLE_LABEL, type Role } from '@/lib/types'
@@ -683,7 +683,7 @@ users:
                   className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                 >
                   <span className="min-w-0">
-                    <span className="block font-mono text-[12.5px] font-semibold text-ink">
+                    <span className="block font-mono text-[13px] font-semibold text-ink">
                       {nom}
                     </span>
                     <span className="block text-[11px] text-g-500">
@@ -790,9 +790,9 @@ users:
                 <tbody>
                   {IMAGES_REGISTRE.map((i) => (
                     <tr key={i.depot} className="border-b border-g-100 last:border-0">
-                      <td className="px-3 py-2.5 font-mono text-[12.5px] text-ink">{i.depot}</td>
-                      <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">{i.etiquettes}</td>
-                      <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">
+                      <td className="px-3 py-2.5 font-mono text-[13px] text-ink">{i.depot}</td>
+                      <td className="tnum px-3 py-2.5 text-[13px] text-g-700">{i.etiquettes}</td>
+                      <td className="tnum px-3 py-2.5 text-[13px] text-g-700">
                         {goHumain(i.taille)}
                       </td>
                       <td className="px-3 py-2.5">
@@ -869,7 +869,7 @@ users:
                         </Badge>
                       </td>
                       <td className="px-3 py-2.5 font-mono text-[12px] text-ink">{m.k8s}</td>
-                      <td className="px-3 py-2.5 text-[12.5px] text-g-700">{m.namespaces}</td>
+                      <td className="px-3 py-2.5 text-[13px] text-g-700">{m.namespaces}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -892,7 +892,7 @@ users:
                   className="flex flex-wrap items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
                 >
                   <span className="min-w-0">
-                    <span className="block font-mono text-[12.5px] font-semibold text-ink">
+                    <span className="block font-mono text-[13px] font-semibold text-ink">
                       {ns}
                     </span>
                     <span className="block text-[11px] text-g-500">

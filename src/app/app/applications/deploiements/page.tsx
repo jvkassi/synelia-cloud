@@ -168,7 +168,7 @@ export default function Deploiements() {
                   <span className="block min-w-0">
                     <Link
                       href={hrefDuService(d.appId)}
-                      className="block truncate font-mono text-[12.5px] font-semibold text-ink hover:text-p-700"
+                      className="block truncate font-mono text-[13px] font-semibold text-ink hover:text-p-700"
                     >
                       {appById(d.appId)?.nom ?? d.appId}
                     </Link>
@@ -212,7 +212,7 @@ export default function Deploiements() {
                 cle: (d) => d.findings.length,
                 rendu: (d) => {
                   if (d.findings.length === 0)
-                    return <span className="text-[11.5px] text-g-500">—</span>
+                    return <span className="text-[12px] text-g-500">—</span>
                   const crit = d.findings.filter((f) => f.severite === 'eleve').length
                   return (
                     <span className="flex items-center justify-center gap-1">
@@ -253,7 +253,7 @@ export default function Deploiements() {
                 rendu: (d) => (
                   <span className="block text-right">
                     <span className="block text-[12px] text-ink">{relatif(d.startedAt)}</span>
-                    <span className="block text-[10.5px] text-g-500">{dateHeure(d.startedAt)}</span>
+                    <span className="block text-[11px] text-g-500">{dateHeure(d.startedAt)}</span>
                   </span>
                 ),
               },
@@ -354,9 +354,8 @@ export default function Deploiements() {
           d’heure.
         </Callout>
         <Callout ton="info" titre="L’historique ne se réécrit pas">
-          Un déploiement annulé reste dans l’historique, avec son motif et son auteur. C’est ce qui
-          permet, six mois plus tard, de répondre à la question « qu’est-ce qui tournait le 12 mars à
-          14 h ? » sans reconstituer les faits de mémoire.
+          Un déploiement annulé reste dans l’historique, avec son motif et son auteur. Chaque
+          révision garde le condensat de l’image déployée.
         </Callout>
       </div>
     </div>

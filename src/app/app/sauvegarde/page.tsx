@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { Download, FileDown, Plus, RotateCcw, Shield, Trash2 } from 'lucide-react'
+import { Download, FileDown, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateCourte, dateHeure, dureeMin, goHumain, num, pct } from '@/lib/format'
 import { SITE_COURT } from '@/lib/types'
@@ -331,11 +331,10 @@ function OngletPlans() {
         </div>
       </Card>
 
-      <Callout ton="violet" titre="Pourquoi l’immuabilité change tout">
-        Un point de restauration sous rétention WORM ne peut être supprimé ni raccourci par personne
-        — ni par un attaquant ayant obtenu des droits d’administration, ni par nos propres équipes.
-        C’est la seule protection qui résiste à une compromission de compte privilégié, et c’est ce
-        qui distingue une sauvegarde d’une simple copie.
+      <Callout ton="violet" titre="Ce que la rétention WORM interdit">
+        Un point de restauration sous rétention ne peut être supprimé ni raccourci — ni par un
+        attaquant ayant obtenu des droits d’administration, ni par nos propres équipes. C’est la seule
+        protection qui résiste à la compromission d’un compte privilégié.
       </Callout>
 
       <Drawer
@@ -540,7 +539,7 @@ function OngletPoints() {
       id: 'destination',
       entete: 'Destination',
       cle: (p) => p.destination,
-      rendu: (p) => <span className="font-mono text-[11.5px]">{p.destination}</span>,
+      rendu: (p) => <span className="font-mono text-[12px]">{p.destination}</span>,
       masquable: true,
     },
     {
@@ -822,7 +821,7 @@ function AssistantRestauration() {
                       )}
                     >
                       <span className="min-w-0">
-                        <span className="block text-[12.5px] font-semibold text-ink">
+                        <span className="block text-[13px] font-semibold text-ink">
                           {dateHeure(p.date)}
                         </span>
                         <span className="block text-[11px] text-g-500">
@@ -857,7 +856,7 @@ function AssistantRestauration() {
                       onChange={(e) => setPitr(e.target.value)}
                     />
                   </Field>
-                  <p className="mt-2 text-[11.5px] text-g-500">
+                  <p className="mt-2 text-[12px] text-g-500">
                     Fenêtre disponible : du {dateCourte('2026-08-05')} au {dateCourte('2026-08-19')}.
                     Utile pour revenir juste avant une suppression accidentelle sans perdre les
                     écritures qui l’ont précédée.
@@ -1152,7 +1151,7 @@ function OngletConformite() {
                   titre: 'Rapport de conformité exporté',
                   detail:
                     'PDF horodaté : état de protection, RPO constaté, règle 3-2-1 et dernier test de restauration par ressource.',
-                  job: { workflow: 'export.plateforme', cible: 'conformité des sauvegardes' },
+                  job: { workflow: 'export.conformite', cible: 'conformité des sauvegardes' },
                 }}
               />
             }
@@ -1214,8 +1213,8 @@ function OngletConformite() {
 function Petit({ cle, valeur }: { cle: string; valeur: string }) {
   return (
     <div className="flex items-baseline justify-between gap-2">
-      <dt className="shrink-0 text-[11.5px] text-g-500">{cle}</dt>
-      <dd className="truncate text-right text-[11.5px] font-semibold text-ink">{valeur}</dd>
+      <dt className="shrink-0 text-[12px] text-g-500">{cle}</dt>
+      <dd className="truncate text-right text-[12px] font-semibold text-ink">{valeur}</dd>
     </div>
   )
 }
@@ -1287,7 +1286,7 @@ function OngletReprise() {
                 />
               </div>
               {dernier && (
-                <p className="mt-3 border-t border-g-100 pt-2.5 text-[11.5px] text-g-500">
+                <p className="mt-3 border-t border-g-100 pt-2.5 text-[12px] text-g-500">
                   Dernier exercice {dernier.type === 'test' ? 'de test' : 'réel'} le {dernier.date} —{' '}
                   {dernier.succes ? 'réussi' : 'échoué'}, RTO constaté {dernier.rtoConstateMin} min.
                 </p>

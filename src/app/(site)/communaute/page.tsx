@@ -99,7 +99,7 @@ export default function Communaute() {
                       className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-p-600"
                       aria-hidden
                     />
-                    <span className="text-[13.5px] leading-relaxed text-g-700">{x}</span>
+                    <span className="text-[14px] leading-relaxed text-g-700">{x}</span>
                   </li>
                 ))}
               </ul>
@@ -139,10 +139,10 @@ export default function Communaute() {
                 className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
               >
                 <div className="min-w-0">
-                  <p className="text-[13.5px] font-bold [font-family:var(--font-display)] text-ink">
+                  <p className="text-[14px] font-bold [font-family:var(--font-display)] text-ink">
                     {c.projet}
                   </p>
-                  <p className="mt-1 text-[12.5px] leading-relaxed text-g-700">{c.apport}</p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-g-700">{c.apport}</p>
                 </div>
                 <Badge tone={ETATS_OSS[c.etat] ?? 'neutral'} size="sm" className="self-start sm:self-center">
                   {c.etat}

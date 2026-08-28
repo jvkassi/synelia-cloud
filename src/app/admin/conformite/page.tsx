@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CalendarClock, Download, FileCheck2, ShieldAlert, TestTubeDiagonal } from 'lucide-react'
+import { Download, FileCheck2, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateCourte, dureeMin, MAINTENANT, num, pct } from '@/lib/format'
 import { telechargerCsv } from '@/lib/export'
@@ -276,9 +276,7 @@ export default function Conformite() {
                 `${e.org} (${e.plan}) — ${dureeMin(e.rtoConstate)} constatées pour ${dureeMin(e.rtoCible)} engagées`,
             )
             .join(' · ')}
-          . Nous le publions plutôt que de le taire : un objectif de reprise dépassé lors d’un exercice
-          est une information précieuse, et bien préférable à le découvrir lors d’un vrai sinistre.
-          L’écart a été analysé et un plan de correction est en cours.
+          . L’écart a été analysé et un plan de correction est en cours.
         </Callout>
       )}
 
@@ -318,20 +316,17 @@ export default function Conformite() {
 
       {onglet === 'restauration' && (
         <div className="space-y-4">
-          <Callout ton="violet" titre="Une sauvegarde jamais restaurée est une hypothèse">
-            Chaque mois, nous tirons au sort 10 % du parc et nous restaurons réellement. Pas une
-            vérification d’intégrité de l’archive : une restauration complète, avec démarrage du
-            système et vérification que les données sont là. C’est le seul test qui prouve quelque
-            chose, et c’est aussi celui qui trouve des problèmes.
+          <Callout ton="violet" titre="Restauration réelle de 10 % du parc chaque mois">
+            Le tirage est aléatoire, et le test va jusqu’au démarrage du système restauré : ce n’est
+            pas une vérification d’intégrité d’archive.
           </Callout>
 
           <Card padding={false}>
             <div className="border-b border-g-100 px-4 py-3.5">
               <CardHeader
                 titre="Campagnes de test"
-                sousTitre="Échantillon tiré au sort, pas choisi. Choisir les ressources à tester revient à ne tester que ce qui marche."
+                sousTitre="Échantillon tiré au sort, sans sélection manuelle."
                 className="mb-0"
-                actions={<TestTubeDiagonal size={15} className="text-p-700" />}
               />
             </div>
             <div className="overflow-x-auto">
@@ -352,10 +347,10 @@ export default function Conformite() {
                     const taux = Math.round((t.succes / Math.max(1, t.executes)) * 1000) / 10
                     return (
                       <tr key={t.id} className="border-b border-g-100 last:border-0">
-                        <td className="px-3 py-2.5 text-[12.5px] font-semibold text-ink">
+                        <td className="px-3 py-2.5 text-[13px] font-semibold text-ink">
                           {t.periode}
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">{t.perimetre}</td>
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">{t.perimetre}</td>
                         <td className="tnum px-3 py-2.5 text-[12px] text-g-700">{t.planifies}</td>
                         <td className="tnum px-3 py-2.5 text-[12px] text-g-700">{t.executes}</td>
                         <td className="tnum px-3 py-2.5 text-[12px] font-semibold text-ok">
@@ -367,7 +362,7 @@ export default function Conformite() {
                               {t.echecs}
                             </Badge>
                           ) : (
-                            <span className="text-[11.5px] text-g-500">0</span>
+                            <span className="text-[12px] text-g-500">0</span>
                           )}
                         </td>
                         <td className="px-3 py-2.5">
@@ -403,7 +398,7 @@ export default function Conformite() {
             <Card>
               <CardHeader
                 titre="Échecs de restauration analysés"
-                sousTitre="Un échec en test est un problème trouvé avant qu’il ne compte."
+                sousTitre="Cause, correction apportée, et organisation concernée."
               />
               <div className="space-y-2">
                 {[
@@ -420,15 +415,15 @@ export default function Conformite() {
                     c: 'Le plan de sauvegarde de cette application groupe désormais base et fichiers dans une même transaction.',
                   },
                 ].map((x) => (
-                  <div key={x.r} className="rounded-[6px] border border-err/40 bg-err-bg px-3 py-2.5">
+                  <div key={x.r} className="rounded-[6px] border border-g-300 px-3 py-2.5">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="min-w-0 text-[12.5px] font-semibold text-ink">{x.r}</span>
+                      <span className="min-w-0 text-[13px] font-semibold text-ink">{x.r}</span>
                       <Badge tone="neutral" size="sm">
                         {x.org}
                       </Badge>
                     </div>
-                    <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{x.d}</p>
-                    <p className="mt-1.5 rounded-[5px] bg-white px-2.5 py-1.5 text-[11.5px] leading-relaxed text-ink">
+                    <p className="mt-1 text-[12px] leading-relaxed text-g-700">{x.d}</p>
+                    <p className="mt-1.5 rounded-[5px] bg-white px-2.5 py-1.5 text-[12px] leading-relaxed text-ink">
                       Correction apportée : {x.c}
                     </p>
                   </div>
@@ -513,7 +508,7 @@ export default function Conformite() {
             <div className="border-b border-g-100 px-4 py-3.5">
               <CardHeader
                 titre="Exercices de reprise d’activité"
-                sousTitre="Bascule réelle en réseau isolé, chronométrée. Nous publions le temps constaté, y compris quand il dépasse l’objectif."
+                sousTitre="Bascule réelle en réseau isolé, chronométrée. Le temps constaté est publié même lorsqu’il dépasse l’objectif."
                 className="mb-0"
               />
             </div>
@@ -535,9 +530,9 @@ export default function Conformite() {
                     const ecart = e.rtoConstate - e.rtoCible
                     return (
                       <tr key={`${e.org}-${e.date}`} className="border-b border-g-100 last:border-0">
-                        <td className="px-3 py-2.5 text-[12.5px] font-semibold text-ink">{e.org}</td>
-                        <td className="px-3 py-2.5 font-mono text-[11.5px] text-g-700">{e.plan}</td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                        <td className="px-3 py-2.5 text-[13px] font-semibold text-ink">{e.org}</td>
+                        <td className="px-3 py-2.5 font-mono text-[12px] text-g-700">{e.plan}</td>
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">
                           {dateCourte(e.date)}
                         </td>
                         <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
@@ -595,8 +590,8 @@ export default function Conformite() {
                     ].map((x) => (
                       <div key={x.e}>
                         <div className="flex items-baseline justify-between gap-3">
-                          <span className="min-w-0 text-[11.5px] text-ink">{x.e}</span>
-                          <span className="tnum shrink-0 text-[11.5px]">
+                          <span className="min-w-0 text-[12px] text-ink">{x.e}</span>
+                          <span className="tnum shrink-0 text-[12px]">
                             <span
                               className={cn(
                                 'font-semibold',
@@ -624,20 +619,20 @@ export default function Conformite() {
                 <div>
                   <MicroLabel className="mb-2">Cause et correction</MicroLabel>
                   <div className="space-y-2">
-                    <div className="rounded-[6px] border border-err/40 bg-err-bg px-3 py-2.5">
+                    <div className="rounded-[6px] border border-g-300 px-3 py-2.5">
                       <p className="text-[12px] font-semibold text-ink">
                         Cause : restauration séquentielle des volumes
                       </p>
-                      <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">
+                      <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">
                         Les huit volumes du plan ont été restaurés l’un après l’autre au lieu d’être
                         traités en parallèle. Dix-neuf minutes perdues, uniquement d’attente.
                       </p>
                     </div>
-                    <div className="rounded-[6px] border border-ok/40 bg-ok-bg px-3 py-2.5">
+                    <div className="rounded-[6px] border border-g-300 px-3 py-2.5">
                       <p className="text-[12px] font-semibold text-ink">
                         Correction : parallélisation de la restauration
                       </p>
-                      <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">
+                      <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">
                         Déployée le 14 juin. Sur un test à blanc mené depuis, la même étape prend 21
                         minutes au lieu de 54. Le prochain exercice réel est prévu en septembre pour
                         confirmer.
@@ -645,7 +640,7 @@ export default function Conformite() {
                     </div>
                     <div className="rounded-[6px] border border-g-300 px-3 py-2.5">
                       <p className="text-[12px] font-semibold text-ink">Client informé</p>
-                      <p className="mt-0.5 text-[11.5px] leading-relaxed text-g-700">
+                      <p className="mt-0.5 text-[12px] leading-relaxed text-g-700">
                         Le rapport d’exercice, avec le dépassement et son analyse, a été remis au client
                         sous cinq jours ouvrés. Nous n’avons pas attendu qu’il le demande.
                       </p>
@@ -656,12 +651,6 @@ export default function Conformite() {
             </Card>
           ))}
 
-          <Callout ton="violet" titre="Pourquoi publier un exercice raté">
-            Un fournisseur qui n’affiche que des exercices réussis n’en fait probablement pas beaucoup,
-            ou ne les chronomètre pas honnêtement. Un objectif de reprise dépassé de 26 minutes lors
-            d’un exercice, analysé et corrigé, vaut infiniment mieux qu’un tableau tout vert qui
-            s’effondre le jour d’un vrai sinistre.
-          </Callout>
         </div>
       )}
 
@@ -671,7 +660,7 @@ export default function Conformite() {
             <div className="border-b border-g-100 px-4 py-3.5">
               <CardHeader
                 titre="Vulnérabilités par gravité"
-                sousTitre="Ouvertes, corrigées sur 30 jours, et délai moyen de correction. Nous affichons le nombre de vulnérabilités faibles ouvertes, même s’il est élevé : les masquer donnerait une image fausse."
+                sousTitre="Ouvertes, corrigées sur 30 jours, et délai moyen de correction, sévérité faible incluse."
                 className="mb-0"
               />
             </div>
@@ -738,7 +727,7 @@ export default function Conformite() {
                         <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
                           {x.delaiMoyenJours} jours
                         </td>
-                        <td className="tnum px-3 py-2.5 text-[11.5px] text-g-500">
+                        <td className="tnum px-3 py-2.5 text-[12px] text-g-500">
                           {engagement} jours
                         </td>
                         <td className="px-3 py-2.5">
@@ -754,7 +743,7 @@ export default function Conformite() {
             </div>
             {cveCritiques === 0 && (
               <div className="border-t border-g-100 px-4 py-3">
-                <p className="flex items-start gap-1.5 text-[11.5px] leading-relaxed text-g-700">
+                <p className="flex items-start gap-1.5 text-[12px] leading-relaxed text-g-700">
                   <ShieldAlert size={13} className="mt-0.5 shrink-0 text-ok" />
                   Aucune vulnérabilité critique ouverte. Les trois corrigées ce mois-ci l’ont été en
                   deux jours en moyenne, hors fenêtre de maintenance habituelle : une vulnérabilité
@@ -769,7 +758,6 @@ export default function Conformite() {
               <CardHeader
                 titre="Fenêtres de correctifs"
                 sousTitre="Les correctifs non critiques sont regroupés dans des fenêtres annoncées à l’avance."
-                actions={<CalendarClock size={15} className="text-p-700" />}
               />
               <div className="space-y-2">
                 {c.fenetresPatching.map((f) => (
@@ -777,11 +765,11 @@ export default function Conformite() {
                     key={f.id}
                     className={cn(
                       'flex flex-wrap items-center justify-between gap-3 rounded-[6px] border px-3 py-2.5',
-                      f.statut === 'terminée' ? 'border-g-300' : 'border-info/40 bg-info-bg',
+                      f.statut === 'terminée' ? 'border-g-300' : 'border-info/40',
                     )}
                   >
                     <span className="min-w-0">
-                      <span className="block text-[12.5px] font-semibold text-ink">
+                      <span className="block text-[13px] font-semibold text-ink">
                         {f.perimetre}
                       </span>
                       <span className="block font-mono text-[11px] text-g-700">{f.fenetre}</span>
@@ -836,9 +824,9 @@ export default function Conformite() {
                       <Badge tone={x.t} dot size="sm">
                         {x.g}
                       </Badge>
-                      <span className="tnum text-[12.5px] font-bold text-ink">{x.d}</span>
+                      <span className="tnum text-[13px] font-bold text-ink">{x.d}</span>
                     </div>
-                    <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{x.q}</p>
+                    <p className="mt-1 text-[12px] leading-relaxed text-g-700">{x.q}</p>
                   </div>
                 ))}
               </div>
@@ -887,13 +875,13 @@ export default function Conformite() {
                             {a.type}
                           </Badge>
                         </td>
-                        <td className="px-3 py-2.5 text-[12.5px] font-semibold text-ink">
+                        <td className="px-3 py-2.5 text-[13px] font-semibold text-ink">
                           {a.perimetre}
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">
                           {dateCourte(a.date)}
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">{a.auditeur}</td>
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">{a.auditeur}</td>
                         <td className="tnum px-3 py-2.5 text-[12px] text-g-700">{a.constats}</td>
                         <td className="px-3 py-2.5">
                           {a.ouverts > 0 ? (
@@ -917,7 +905,7 @@ export default function Conformite() {
                                 style={{ width: `${taux}%` }}
                               />
                             </span>
-                            <span className="tnum shrink-0 text-[11.5px] font-semibold text-ink">
+                            <span className="tnum shrink-0 text-[12px] font-semibold text-ink">
                               {pct(taux)}
                             </span>
                           </span>
@@ -960,9 +948,9 @@ export default function Conformite() {
                     b: 'Le test de janvier portait sur le portail, pas sur l’API. Un test dédié est planifié au quatrième trimestre.',
                   },
                 ].map((x) => (
-                  <div key={x.c} className="rounded-[6px] border border-warn/40 bg-warn-bg px-3 py-2.5">
+                  <div key={x.c} className="rounded-[6px] border border-g-300 px-3 py-2.5">
                     <div className="flex flex-wrap items-start justify-between gap-2">
-                      <span className="min-w-0 text-[12.5px] font-semibold text-ink">{x.c}</span>
+                      <span className="min-w-0 text-[13px] font-semibold text-ink">{x.c}</span>
                       <span className="flex shrink-0 items-center gap-1.5">
                         <Badge tone="neutral" size="sm">
                           {x.g}
@@ -972,8 +960,8 @@ export default function Conformite() {
                         </Badge>
                       </span>
                     </div>
-                    <p className="mt-0.5 text-[10.5px] text-g-500">{x.a}</p>
-                    <p className="mt-1 rounded-[5px] bg-white px-2.5 py-1.5 text-[11.5px] leading-relaxed text-ink">
+                    <p className="mt-0.5 text-[11px] text-g-500">{x.a}</p>
+                    <p className="mt-1 rounded-[5px] bg-white px-2.5 py-1.5 text-[12px] leading-relaxed text-ink">
                       {x.b}
                     </p>
                   </div>
@@ -1018,19 +1006,19 @@ export default function Conformite() {
                     className={cn(
                       'rounded-[6px] border px-3 py-2.5',
                       x.ton === 'warn'
-                        ? 'border-warn/40 bg-warn-bg'
+                        ? 'border-warn/40'
                         : x.ton === 'info'
-                          ? 'border-info/40 bg-info-bg'
+                          ? 'border-info/40'
                           : 'border-g-300',
                     )}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-[12.5px] font-bold text-ink">{x.t}</span>
+                      <span className="text-[13px] font-bold text-ink">{x.t}</span>
                       <Badge tone={x.ton} size="sm">
                         {x.e}
                       </Badge>
                     </div>
-                    <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{x.d}</p>
+                    <p className="mt-1 text-[12px] leading-relaxed text-g-700">{x.d}</p>
                   </div>
                 ))}
               </div>
@@ -1096,9 +1084,9 @@ export default function Conformite() {
                   <span className="min-w-0">
                     <span className="text-[12px] font-semibold text-ink">{x.attestation}</span>
                     <span className="ml-2 text-[11px] text-g-700">— {x.org}</span>
-                    <span className="block text-[10.5px] text-g-500">{x.motif}</span>
+                    <span className="block text-[11px] text-g-500">{x.motif}</span>
                   </span>
-                  <span className="shrink-0 text-[10.5px] text-g-500">
+                  <span className="shrink-0 text-[11px] text-g-500">
                     {x.qui} · {dateCourte(x.date)}
                   </span>
                 </div>
@@ -1237,7 +1225,7 @@ export default function Conformite() {
                 {(MODELES_ATTESTATION[modele]?.affirme ?? []).map((x) => (
                   <li
                     key={x}
-                    className="rounded-[6px] border border-ok/40 bg-ok-bg px-3 py-2 text-[12px] leading-relaxed text-ink"
+                    className="rounded-[6px] border border-ok/30 bg-ok-bg px-3 py-2 text-[12px] leading-relaxed text-ink"
                   >
                     {x}
                   </li>

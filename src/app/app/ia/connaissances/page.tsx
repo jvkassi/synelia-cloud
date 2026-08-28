@@ -77,15 +77,15 @@ export default function Connaissances() {
           {CONNECTEURS_CONNAISSANCE.map((c) => (
             <div key={c.id} className="rounded-[8px] border border-g-300 px-3 py-2.5">
               <div className="flex items-start justify-between gap-2">
-                <span className="min-w-0 truncate text-[12.5px] font-semibold text-ink">
+                <span className="min-w-0 truncate text-[13px] font-semibold text-ink">
                   {c.nom}
                 </span>
                 <Badge tone={c.etat === 'disponible' ? 'ok' : 'info'} size="sm">
                   {c.etat === 'disponible' ? 'Disponible' : 'Aperçu'}
                 </Badge>
               </div>
-              <p className="mt-1 font-mono text-[10.5px] text-g-500">{c.formats}</p>
-              <p className="mt-1.5 text-[11.5px] leading-relaxed text-g-500">{c.note}</p>
+              <p className="mt-1 font-mono text-[11px] text-g-500">{c.formats}</p>
+              <p className="mt-1.5 text-[12px] leading-relaxed text-g-500">{c.note}</p>
             </div>
           ))}
         </div>

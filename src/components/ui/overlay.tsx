@@ -31,7 +31,7 @@ export function Tooltip({
       <span
         role="tooltip"
         className={cn(
-          'pointer-events-none absolute z-50 hidden w-max max-w-64 rounded-[6px] bg-p-900 px-2.5 py-1.5 text-[11.5px] font-medium leading-snug text-white shadow-[0_4px_16px_rgba(43,27,77,.28)] group-hover/tt:block',
+          'pointer-events-none absolute z-50 hidden w-max max-w-64 rounded-[6px] bg-p-900 px-2.5 py-1.5 text-[12px] font-medium leading-snug text-white shadow-[0_4px_16px_rgba(43,27,77,.28)] group-hover/tt:block',
           pos,
         )}
       >
@@ -303,13 +303,13 @@ export function ConfirmDialog({
       }
     >
       <div className="space-y-4">
-        <div className="flex gap-3 rounded-[8px] border-l-4 border-err bg-err-bg px-3.5 py-3">
+        <div className="flex gap-3 rounded-[8px] border border-err/40 bg-err-bg px-3.5 py-3">
           <AlertTriangle size={16} className="mt-0.5 shrink-0 text-err" />
           <div>
             <p className="text-[13px] font-semibold text-ink">Cette action est irréversible.</p>
             <ul className="mt-1.5 space-y-1">
               {pertes.map((p) => (
-                <li key={p} className="text-[12.5px] text-g-700">
+                <li key={p} className="text-[13px] text-g-700">
                   · {p}
                 </li>
               ))}
@@ -317,7 +317,7 @@ export function ConfirmDialog({
           </div>
         </div>
         <div>
-          <p className="mb-1.5 text-[12.5px] text-g-700">
+          <p className="mb-1.5 text-[13px] text-g-700">
             Saisissez{' '}
             <code className="rounded bg-g-100 px-1.5 py-0.5 font-mono text-[12px] font-semibold text-ink">
               {ressource}

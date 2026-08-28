@@ -249,11 +249,10 @@ export default function Observabilite() {
             </Card>
           </div>
 
-          <Callout ton="violet" titre="Pourquoi nous n’avons pas construit de constructeur de requêtes">
-            Écrire une requête de journaux se fait dans un outil qui sait tout faire : autocomplétion
-            des champs, agrégations, sauvegarde des recherches, corrélation. Le reconstruire à moitié
-            dans un portail ne rend service à personne. Nous vous amenons jusqu’au bon écran, déjà
-            filtré sur votre organisation et sur la fenêtre de temps que vous regardiez.
+          <Callout ton="violet" titre="Pas de constructeur de requêtes ici">
+            L’écriture des requêtes se fait dans VictoriaLogs — autocomplétion des champs,
+            agrégations, recherches sauvegardées. Les liens de sortie de cet écran y arrivent déjà
+            filtrés sur votre organisation et sur la fenêtre de temps affichée.
           </Callout>
         </div>
       )}
@@ -295,7 +294,7 @@ export default function Observabilite() {
                           {v.nom}
                         </Link>
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-700">Machine virtuelle</td>
+                      <td className="px-3 py-2.5 text-[12px] text-g-700">Machine virtuelle</td>
                       <td className="px-3 py-2.5 font-mono text-[11px] text-g-500">
                         {SITE_COURT[v.site]} · {v.flavor ?? `${v.vcpu} vCPU / ${v.ramGo} Go`}
                       </td>
@@ -332,7 +331,7 @@ export default function Observabilite() {
                             {app?.nom} / {e.nom}
                           </Link>
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">
                           {app?.cible === 'k8s' ? 'Namespace Kubernetes' : 'Machines dédiées'}
                         </td>
                         <td className="px-3 py-2.5 font-mono text-[11px] text-g-500">
@@ -411,14 +410,14 @@ export default function Observabilite() {
                   className={cn(
                     'flex flex-wrap items-start justify-between gap-3 rounded-[6px] border px-3 py-2.5',
                     e.gravite === 'critique'
-                      ? 'border-err/40 bg-err-bg'
+                      ? 'border-err/40'
                       : e.gravite === 'majeure'
-                        ? 'border-warn/40 bg-warn-bg'
+                        ? 'border-warn/40'
                         : 'border-g-300',
                   )}
                 >
                   <span className="min-w-0">
-                    <span className="block text-[12.5px] font-semibold text-ink">{e.message}</span>
+                    <span className="block text-[13px] font-semibold text-ink">{e.message}</span>
                     <span className="block text-[11px] text-g-500">
                       {e.ressource} · {dateHeure(e.ts)} · {relatif(e.ts)}
                     </span>
@@ -515,13 +514,13 @@ export default function Observabilite() {
                 <tbody>
                   {alertes.items.map((r) => (
                     <tr key={r.id} className="border-b border-g-100 last:border-0">
-                      <td className="px-3 py-2.5 text-[12.5px] font-semibold text-ink">
+                      <td className="px-3 py-2.5 text-[13px] font-semibold text-ink">
                         {r.metrique}
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-700">{r.cible}</td>
-                      <td className="px-3 py-2.5 font-mono text-[11.5px] text-g-700">
+                      <td className="px-3 py-2.5 text-[12px] text-g-700">{r.cible}</td>
+                      <td className="px-3 py-2.5 font-mono text-[12px] text-g-700">
                         {r.seuil}
-                        <span className="block font-sans text-[10.5px] text-g-500">
+                        <span className="block font-sans text-[11px] text-g-500">
                           {r.plage}
                           {r.escalade ? ` · escalade ${r.escalade}` : ''}
                         </span>
@@ -716,7 +715,7 @@ function Jauge({ valeur, seuil }: { valeur: number; seuil: number }) {
       </span>
       <span
         className={cn(
-          'tnum text-[11.5px] font-semibold',
+          'tnum text-[12px] font-semibold',
           valeur >= seuil ? 'text-err' : valeur === 0 ? 'text-g-500' : 'text-g-700',
         )}
       >

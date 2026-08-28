@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { Globe, Plus, RefreshCw, ShieldCheck } from 'lucide-react'
+import { Plus, RefreshCw, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MAINTENANT, dateCourte, relatif } from '@/lib/format'
 import type { DomaineApplicatif, ServiceProjet } from '@/lib/types'
@@ -54,7 +54,7 @@ export default function Routage() {
       cle: (d) => d.hote,
       rendu: (d) => (
         <span className="block">
-          <span className="block font-mono text-[12.5px] font-semibold text-ink">
+          <span className="block font-mono text-[13px] font-semibold text-ink">
             {d.hote}
             {d.chemin !== '/' && <span className="text-g-500">{d.chemin}</span>}
           </span>
@@ -129,7 +129,7 @@ export default function Routage() {
             )}
           </span>
         ) : (
-          <span className="text-[11.5px] text-g-500">sans objet</span>
+          <span className="text-[12px] text-g-500">sans objet</span>
         ),
     },
     {
@@ -141,7 +141,7 @@ export default function Routage() {
         return svc ? (
           <Link
             href={`/app/applications/projets/${svc.projetId}/${svc.id}`}
-            className="text-[12px] font-semibold text-p-700 hover:text-m-600"
+            className="text-[12px] font-semibold text-p-700 hover:underline"
           >
             Gérer →
           </Link>
@@ -226,10 +226,9 @@ export default function Routage() {
               ]}
             />
           </div>
-          <Callout ton="violet" className="mt-3.5" titre="Pourquoi c’est offert">
-            Votre première mise en ligne ne doit pas dépendre d’un achat de domaine ni d’un délai de
-            propagation. Vous déployez, l’adresse répond en HTTPS, et vous branchez votre domaine
-            quand il est prêt — sans redéployer.
+          <Callout ton="violet" className="mt-3.5" titre="Ce que l’adresse offerte permet">
+            Déployer sans acheter de domaine ni attendre une propagation : l’adresse répond en HTTPS
+            tout de suite, et votre domaine se branche ensuite sans redéploiement.
           </Callout>
         </Card>
 
@@ -242,7 +241,7 @@ export default function Routage() {
             {ZONE_APPLICATIVE.ingress.map((i) => (
               <div key={i.site} className="rounded-[8px] border border-g-300 p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[12.5px] font-bold text-ink">{SITE_LABEL[i.site]}</span>
+                  <span className="text-[13px] font-bold text-ink">{SITE_LABEL[i.site]}</span>
                   <Badge tone="neutral" size="sm">
                     {i.site}
                   </Badge>
@@ -260,7 +259,7 @@ export default function Routage() {
               </div>
             ))}
           </div>
-          <p className="mt-3 text-[11.5px] leading-relaxed text-g-500">
+          <p className="mt-3 text-[12px] leading-relaxed text-g-500">
             Un sous-domaine peut aussi pointer par CNAME vers{' '}
             <span className="font-mono">{ZONE_APPLICATIVE.zone}</span>. Sur un apex — le domaine nu,
             sans <span className="font-mono">www</span> — la norme DNS l’interdit : il faut un
@@ -282,14 +281,14 @@ export default function Routage() {
                 className={cn(
                   'rounded-[8px] border p-3',
                   d.verification!.etat === 'echec'
-                    ? 'border-err/40 bg-err-bg'
-                    : 'border-warn/40 bg-warn-bg',
+                    ? 'border-err/40'
+                    : 'border-warn/40',
                 )}
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <span className="min-w-0">
                     <span className="block font-mono text-[13px] font-bold text-ink">{d.hote}</span>
-                    <span className="block text-[11.5px] leading-relaxed text-g-700">
+                    <span className="block text-[12px] leading-relaxed text-g-700">
                       {d.verification!.detail}
                     </span>
                   </span>
@@ -300,7 +299,7 @@ export default function Routage() {
 
                 <div className="mt-2.5 rounded-[6px] border border-g-300 bg-white p-2.5">
                   <MicroLabel>Enregistrement attendu</MicroLabel>
-                  <div className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-mono text-[11.5px]">
+                  <div className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-mono text-[12px]">
                     <span className="text-g-500">Type</span>
                     <span className="font-semibold text-ink">
                       {d.verification!.enregistrement.type}
@@ -341,7 +340,7 @@ export default function Routage() {
                     </span>
                   )}
                   {d.verification!.correlationId && (
-                    <span className="font-mono text-[10.5px] text-g-500">
+                    <span className="font-mono text-[11px] text-g-500">
                       identifiant de corrélation {d.verification!.correlationId}
                     </span>
                   )}
@@ -425,7 +424,7 @@ export default function Routage() {
                     enregistrements chez nous, voyez{' '}
                     <Link
                       href="/app/web"
-                      className="font-semibold text-p-700 hover:text-m-600"
+                      className="font-semibold text-p-700 hover:underline"
                     >
                       Domaines &amp; DNS
                     </Link>
@@ -658,11 +657,11 @@ function TiroirBranchement({ open, onClose }: { open: boolean; onClose: () => vo
           )}
 
           <div className="rounded-[8px] border border-g-300 bg-g-050 p-3">
-            <span className="flex items-center gap-2 text-[12.5px] font-semibold text-ink">
+            <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
               <ShieldCheck size={14} className="text-p-700" />
               Après vérification
             </span>
-            <ul className="mt-1.5 space-y-1 text-[11.5px] leading-relaxed text-g-700">
+            <ul className="mt-1.5 space-y-1 text-[12px] leading-relaxed text-g-700">
               <li>Le certificat est émis dans la minute, sans intervention.</li>
               <li>
                 Le domaine apparaît sur{' '}

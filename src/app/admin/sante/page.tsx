@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { AlertTriangle, Megaphone, RefreshCw, Send } from 'lucide-react'
+import { Megaphone, RefreshCw, Send } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { dateHeure, duree, num, pct, relatif } from '@/lib/format'
 import {
@@ -64,15 +64,17 @@ export default function SantePlateforme() {
     (['ABJ', 'GBM'] as const).some((x) => s.etats[x] !== 'operationnel')
   const degrades = STATUT_SERVICES.filter(nonOperationnel)
   const incidentsOuverts = incidents.items.filter((i) => i.statut !== 'resolu')
-  const jobsEchec = jobs.items.filter((j) => j.statut === 'failed')
-  const jobsEnCours = JOBS_PLATEFORME.filter((j) => j.statut === 'running' || j.statut === 'queued')
+  // Un job annulé après échec est reprenable comme un échec sec : la migration
+  // inter-backend fait un rollback, elle se retrouverait sinon sans reprise.
+  const jobsEchec = jobs.items.filter((j) => j.statut === 'failed' || j.statut === 'rolled_back')
+  const jobsEnCours = jobs.items.filter((j) => j.statut === 'running' || j.statut === 'queued')
   const soclesHs = BACKENDS.filter((b) => b.statut !== 'en_ligne')
 
   return (
     <div className="space-y-5">
       <PageHeader
         titre="Santé de la plateforme"
-        sousTitre="Ce que nous voyons, et ce que nous publions. La page de statut publique est alimentée depuis cet écran : nous ne maintenons pas deux vérités différentes, une pour nous et une pour les clients."
+        sousTitre="Incidents, socles, provisionnements et alertes. La page de statut publique est alimentée depuis cet écran."
         actions={
           <>
             <ButtonLink variant="secondary" external href="/statut">
@@ -105,8 +107,7 @@ export default function SantePlateforme() {
       {incidentsOuverts.length > 0 && (
         <Callout ton="err" titre={`${incidentsOuverts.length} incident${incidentsOuverts.length > 1 ? 's' : ''} en cours`}>
           {incidentsOuverts.map((i) => i.titre).join(' · ')}. Chaque incident ouvert doit porter une
-          communication publique à jour : un client qui constate une panne sans rien lire sur la page
-          de statut ouvre un ticket, ce qui charge le support au pire moment.
+          communication publique à jour sur la page de statut.
         </Callout>
       )}
 
@@ -170,8 +171,8 @@ export default function SantePlateforme() {
                 <tbody>
                   {STATUT_SERVICES.map((s) => (
                     <tr key={s.nom} className="border-b border-g-100 last:border-0">
-                      <td className="px-3 py-2.5 text-[12.5px] font-semibold text-ink">{s.nom}</td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-500">{s.categorie}</td>
+                      <td className="px-3 py-2.5 text-[13px] font-semibold text-ink">{s.nom}</td>
+                      <td className="px-3 py-2.5 text-[12px] text-g-500">{s.categorie}</td>
                       <td className="px-3 py-2.5">
                         <HealthBadge
                           etat={s.etats.ABJ === 'panne' ? 'erreur' : s.etats.ABJ}
@@ -234,10 +235,9 @@ export default function SantePlateforme() {
             ]}
           />
 
-          <Callout ton="violet" titre="La mesure vient de l’extérieur">
-            La disponibilité affichée est mesurée depuis trois points de contrôle indépendants, hors
-            de nos réseaux. Se mesurer depuis sa propre infrastructure revient à ne pas voir les
-            pannes de connectivité, qui sont précisément celles que le client subit.
+          <Callout ton="violet" titre="Mesure depuis trois points de contrôle externes">
+            La disponibilité affichée est mesurée hors de nos réseaux, ce qui inclut les pannes de
+            connectivité dans le calcul.
           </Callout>
         </div>
       )}
@@ -424,13 +424,13 @@ export default function SantePlateforme() {
                           </Badge>
                         )}
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                      <td className="px-3 py-2.5 text-[12px] text-g-700">
                         {BACKEND_LABEL[b.type]}
                       </td>
-                      <td className="px-3 py-2.5 text-[11.5px] text-g-700">{SITE_COURT[b.site]}</td>
+                      <td className="px-3 py-2.5 text-[12px] text-g-700">{SITE_COURT[b.site]}</td>
                       <td className="tnum px-3 py-2.5 text-[12px] text-g-700">{b.hosts}</td>
                       <td className="px-3 py-2.5">
-                        <span className="tnum text-[11.5px] text-g-700">
+                        <span className="tnum text-[12px] text-g-700">
                           {num(b.capacite.vcpu)}
                           <span className="ml-1.5 font-semibold text-ink">
                             {pct(b.usage.vcpuPct)}
@@ -438,13 +438,13 @@ export default function SantePlateforme() {
                         </span>
                       </td>
                       <td className="px-3 py-2.5">
-                        <span className="tnum text-[11.5px] text-g-700">
+                        <span className="tnum text-[12px] text-g-700">
                           {num(b.capacite.ramGo)} Go
                           <span className="ml-1.5 font-semibold text-ink">{pct(b.usage.ramPct)}</span>
                         </span>
                       </td>
                       <td className="px-3 py-2.5">
-                        <span className="tnum text-[11.5px] text-g-700">
+                        <span className="tnum text-[12px] text-g-700">
                           {num(b.capacite.stockageTo)} To
                           <span className="ml-1.5 font-semibold text-ink">
                             {pct(b.usage.stockagePct)}
@@ -484,9 +484,9 @@ export default function SantePlateforme() {
       {onglet === 'jobs' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-            <StatTile libelle="En file" valeur={JOBS_PLATEFORME.filter((j) => j.statut === 'queued').length} ton="info" />
-            <StatTile libelle="En cours" valeur={JOBS_PLATEFORME.filter((j) => j.statut === 'running').length} ton="info" />
-            <StatTile libelle="Terminés" valeur={JOBS_PLATEFORME.filter((j) => j.statut === 'done').length} ton="ok" />
+            <StatTile libelle="En file" valeur={jobs.items.filter((j) => j.statut === 'queued').length} ton="info" />
+            <StatTile libelle="En cours" valeur={jobs.items.filter((j) => j.statut === 'running').length} ton="info" />
+            <StatTile libelle="Terminés" valeur={jobs.items.filter((j) => j.statut === 'done').length} ton="ok" />
             <StatTile
               libelle="En échec"
               valeur={jobsEchec.length}
@@ -520,8 +520,7 @@ export default function SantePlateforme() {
                               titre: 'Reprise déclenchée',
                               detail:
                                 'Le provisionnement repart de l’étape échouée. Aucune ressource déjà créée n’est recréée.',
-                              effet: () =>
-                                reprendreJob(j.id, 'jobs-plateforme', JOBS_PLATEFORME),
+                              effet: () => reprendreJob(j.id),
                             })
                           }
                         >
@@ -557,8 +556,8 @@ export default function SantePlateforme() {
               </div>
               <Callout ton="warn" className="mt-4" titre="Une annulation nettoie les ressources partielles">
                 Un provisionnement interrompu peut avoir créé un réseau, un volume ou une entrée DNS.
-                L’annulation les supprime dans l’ordre inverse de leur création, pour ne pas laisser de
-                ressources orphelines facturées à un client qui n’a rien obtenu.
+                L’annulation les supprime dans l’ordre inverse de leur création, sans laisser de
+                ressource orpheline facturée.
               </Callout>
             </Card>
           )}
@@ -590,17 +589,17 @@ export default function SantePlateforme() {
                   </tr>
                 </thead>
                 <tbody>
-                  {JOBS_PLATEFORME.map((j) => (
+                  {jobs.items.map((j) => (
                     <tr key={j.id} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2 text-[12px] font-semibold text-ink">{j.type}</td>
                       <td className="px-3 py-2 font-mono text-[11px] text-g-700">{j.label}</td>
-                      <td className="px-3 py-2 text-[11.5px] text-g-700">
+                      <td className="px-3 py-2 text-[12px] text-g-700">
                         {j.taches.filter((t) => t.statut === 'ok').length}/{j.taches.length}
                       </td>
-                      <td className="tnum px-3 py-2 text-[11.5px] text-g-700">
+                      <td className="tnum px-3 py-2 text-[12px] text-g-700">
                         {j.dureeS ? duree(j.dureeS) : '—'}
                       </td>
-                      <td className="px-3 py-2 text-[11.5px] text-g-500">{relatif(j.startedAt)}</td>
+                      <td className="px-3 py-2 text-[12px] text-g-500">{relatif(j.startedAt)}</td>
                       <td className="px-3 py-2">
                         <Badge
                           tone={
@@ -656,7 +655,7 @@ export default function SantePlateforme() {
           <Card>
             <CardHeader
               titre="Bruit d’alerte"
-              sousTitre="Une règle qui se déclenche sans incident associé finit par être ignorée. Nous les traquons."
+              sousTitre="Règles qui se déclenchent sans incident associé."
             />
             <div className="space-y-2">
               {[
@@ -691,11 +690,11 @@ export default function SantePlateforme() {
                     key={x.r}
                     className={cn(
                       'rounded-[6px] border px-3 py-2.5',
-                      bruit ? 'border-warn/40 bg-warn-bg' : 'border-g-300',
+                      bruit ? 'border-warn/40' : 'border-g-300',
                     )}
                   >
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <span className="min-w-0 text-[12.5px] font-semibold text-ink">{x.r}</span>
+                      <span className="min-w-0 text-[13px] font-semibold text-ink">{x.r}</span>
                       <span className="flex shrink-0 items-center gap-1.5">
                         <Badge tone="neutral" size="sm">
                           {x.n} déclenchements
@@ -705,7 +704,7 @@ export default function SantePlateforme() {
                         </Badge>
                       </span>
                     </div>
-                    <p className="mt-1 text-[11.5px] leading-relaxed text-g-700">{x.d}</p>
+                    <p className="mt-1 text-[12px] leading-relaxed text-g-700">{x.d}</p>
                     {bruit && (
                       <BoutonFormulaire
                         libelle="Ajuster le seuil"
@@ -739,14 +738,6 @@ export default function SantePlateforme() {
                 )
               })}
             </div>
-            <Callout ton="violet" className="mt-4" titre="Une alerte ignorée est pire que pas d’alerte">
-              <span className="inline-flex items-start gap-1.5">
-                <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-                Quand une équipe s’habitue à voir passer une alerte sans conséquence, elle finit par
-                ne plus lire les autres. Réviser les seuils n’est pas de la cosmétique : c’est ce qui
-                garde le signal audible.
-              </span>
-            </Callout>
           </Card>
         </div>
       )}

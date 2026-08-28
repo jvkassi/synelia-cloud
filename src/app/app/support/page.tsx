@@ -206,7 +206,7 @@ export default function Support() {
                   rendu: (t) => (
                     <span className="block min-w-0">
                       <span className="block font-mono text-[11px] text-g-500">{t.numero}</span>
-                      <span className="block truncate text-[12.5px] font-semibold text-ink">
+                      <span className="block truncate text-[13px] font-semibold text-ink">
                         {t.sujet}
                       </span>
                     </span>
@@ -239,7 +239,7 @@ export default function Support() {
                   masquable: true,
                   rendu: (t) =>
                     t.ressourcesLiees.length === 0 ? (
-                      <span className="text-[11.5px] text-g-500">—</span>
+                      <span className="text-[12px] text-g-500">—</span>
                     ) : (
                       <span className="flex flex-wrap gap-1">
                         {t.ressourcesLiees.slice(0, 2).map((r) => (
@@ -262,7 +262,7 @@ export default function Support() {
                   cle: (t) => t.slaRestantMin ?? 99999,
                   rendu: (t) =>
                     t.slaRestantMin === undefined ? (
-                      <span className="text-[11.5px] text-g-500">—</span>
+                      <span className="text-[12px] text-g-500">—</span>
                     ) : (
                       <span
                         className={cn(
@@ -271,7 +271,7 @@ export default function Support() {
                         )}
                       >
                         {dureeMin(t.slaRestantMin)}
-                        <span className="block text-[10px] font-normal text-g-500">restantes</span>
+                        <span className="block text-[11px] font-normal text-g-500">restantes</span>
                       </span>
                     ),
                 },
@@ -281,7 +281,7 @@ export default function Support() {
                   cle: (t) => t.assigneA ?? '',
                   masquable: true,
                   rendu: (t) => (
-                    <span className="text-[11.5px] text-g-700">{t.assigneA ?? 'Non assigné'}</span>
+                    <span className="text-[12px] text-g-700">{t.assigneA ?? 'Non assigné'}</span>
                   ),
                 },
                 {
@@ -299,7 +299,7 @@ export default function Support() {
                   aligne: 'right',
                   cle: (t) => t.createdAt,
                   rendu: (t) => (
-                    <span className="text-[11.5px] text-g-500">{relatif(t.createdAt)}</span>
+                    <span className="text-[12px] text-g-500">{relatif(t.createdAt)}</span>
                   ),
                 },
               ]}
@@ -321,7 +321,7 @@ export default function Support() {
               <div className="flex justify-center py-2">
                 <GaugeCircle valeur={99.94} min={99} max={100} cible={99.9} libelle="Constatée" />
               </div>
-              <p className="mt-2 text-center text-[11.5px] leading-relaxed text-g-500">
+              <p className="mt-2 text-center text-[12px] leading-relaxed text-g-500">
                 Mesurée depuis l’extérieur, sur trois points de contrôle indépendants. Nous ne
                 mesurons pas notre disponibilité depuis notre propre réseau.
               </p>
@@ -364,10 +364,10 @@ export default function Support() {
                               {pct(e.constate, 2)}
                             </Badge>
                           </td>
-                          <td className="tnum px-3 py-2 text-[11.5px] text-g-700">
+                          <td className="tnum px-3 py-2 text-[12px] text-g-700">
                             {dureeMin(e.reponseCritique)}
                           </td>
-                          <td className="tnum px-3 py-2 text-[11.5px] text-g-700">
+                          <td className="tnum px-3 py-2 text-[12px] text-g-700">
                             {dureeMin(e.resolutionCritique)}
                           </td>
                         </tr>
@@ -417,10 +417,10 @@ export default function Support() {
                           {pct(c.dispoConstatee, 2)}
                         </Badge>
                       </td>
-                      <td className="tnum px-3 py-2 text-[11.5px] text-g-700">
+                      <td className="tnum px-3 py-2 text-[12px] text-g-700">
                         {pct(c.engagement, 2)}
                       </td>
-                      <td className="tnum px-3 py-2 text-[12.5px] font-bold text-ok">
+                      <td className="tnum px-3 py-2 text-[13px] font-bold text-ok">
                         {money(c.credit)}
                       </td>
                       <td className="px-3 py-2">
@@ -434,7 +434,7 @@ export default function Support() {
               </table>
             </div>
             <div className="border-t border-g-100 px-4 py-3">
-              <p className="text-[11.5px] leading-relaxed text-g-500">
+              <p className="text-[12px] leading-relaxed text-g-500">
                 L’avoir est proportionnel à l’écart entre l’engagement et le constaté, appliqué sur la
                 part d’abonnement du composant concerné. Il vient en déduction de votre facture
                 suivante, sans démarche de votre part.
@@ -442,11 +442,9 @@ export default function Support() {
             </div>
           </Card>
 
-          <Callout ton="violet" titre="Pourquoi nous calculons les avoirs nous-mêmes">
-            Beaucoup de fournisseurs exigent une réclamation écrite dans un délai court, en sachant
-            très bien que la plupart des clients ne la feront pas. Nous trouvons cette pratique
-            malhonnête : si nous ne tenons pas notre engagement, c’est à nous de le constater et de le
-            créditer.
+          <Callout ton="violet" titre="Avoir calculé sans réclamation de votre part">
+            Un engagement non tenu est constaté de notre côté et crédité sur la facture suivante. Vous
+            n’avez ni formulaire à remplir ni délai à respecter.
           </Callout>
         </div>
       )}
@@ -460,7 +458,7 @@ export default function Support() {
                 type="button"
                 onClick={() => setTheme(t)}
                 className={cn(
-                  'rounded-full border px-2.5 py-1 text-[11.5px] font-semibold transition-colors',
+                  'rounded-full border px-2.5 py-1 text-[12px] font-semibold transition-colors',
                   theme === t
                     ? 'border-p-700 bg-p-700 text-white'
                     : 'border-g-300 text-g-700 hover:border-p-400',
@@ -572,8 +570,8 @@ export default function Support() {
                       {i + 1}
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-[12.5px] font-semibold text-ink">{x.t}</span>
-                      <span className="block text-[11.5px] leading-relaxed text-g-500">{x.d}</span>
+                      <span className="block text-[13px] font-semibold text-ink">{x.t}</span>
+                      <span className="block text-[12px] leading-relaxed text-g-500">{x.d}</span>
                     </span>
                   </li>
                 ))}
@@ -608,7 +606,7 @@ export default function Support() {
                     <Badge tone={TON_GRAVITE[x.g]} dot size="sm">
                       {LIBELLE_GRAVITE[x.g]}
                     </Badge>
-                    <p className="mt-1.5 text-[11.5px] leading-relaxed text-g-700">{x.d}</p>
+                    <p className="mt-1.5 text-[12px] leading-relaxed text-g-700">{x.d}</p>
                   </div>
                 ))}
               </div>

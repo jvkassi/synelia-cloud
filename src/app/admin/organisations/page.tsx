@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Building2, Plus, ShieldAlert, UserCog } from 'lucide-react'
+import { Building2, Plus, UserCog } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateCourte, MAINTENANT, money, num, relatif } from '@/lib/format'
 import { ELEVATIONS, EQUIPE_SYNELIA, IMPAYES, ORGANISATIONS, USERS } from '@/lib/mock'
@@ -198,7 +198,7 @@ export default function Organisations() {
                       <Building2 size={13} />
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate text-[12.5px] font-semibold text-ink">
+                      <span className="block truncate text-[13px] font-semibold text-ink">
                         {o.nom}
                       </span>
                       <span className="block truncate text-[11px] text-g-500">
@@ -214,7 +214,7 @@ export default function Organisations() {
                 entete: 'Secteur',
                 cle: (o) => o.secteur ?? '',
                 rendu: (o) => (
-                  <span className="text-[11.5px] text-g-700">{o.secteur ?? '—'}</span>
+                  <span className="text-[12px] text-g-700">{o.secteur ?? '—'}</span>
                 ),
               },
               {
@@ -223,7 +223,7 @@ export default function Organisations() {
                 cle: (o) => o.tenantPlan ?? '',
                 masquable: true,
                 rendu: (o) => (
-                  <span className="text-[11.5px] text-g-700">{o.tenantPlan ?? '—'}</span>
+                  <span className="text-[12px] text-g-700">{o.tenantPlan ?? '—'}</span>
                 ),
               },
               {
@@ -299,7 +299,7 @@ export default function Organisations() {
                 masquable: true,
                 masqueeParDefaut: true,
                 rendu: (o) => (
-                  <span className="text-[11.5px] text-g-500">{dateCourte(o.createdAt)}</span>
+                  <span className="text-[12px] text-g-500">{dateCourte(o.createdAt)}</span>
                 ),
               },
               {
@@ -381,17 +381,9 @@ export default function Organisations() {
       </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Callout ton="violet" titre="Le cloisonnement s’applique aussi à nous">
-          Un membre de nos équipes ne voit pas les données d’une organisation sans élévation
-          nominative, bornée dans le temps, et visible dans le journal d’audit du client. Ce n’est pas
-          une politique interne que nous vous demandons de croire : c’est le mécanisme technique, et
-          le client le constate lui-même dans son propre journal.
-        </Callout>
         <Callout ton="info" titre="Suspendre n’est jamais automatique">
           Aucun impayé, aucun dépassement de quota, aucun signalement d’abus ne suspend une
-          organisation sans décision humaine. Couper le service d’une entreprise, c’est arrêter son
-          activité : cela mérite un nom, une date et un motif consignés, pas un traitement par lot
-          nocturne.
+          organisation sans décision humaine, consignée avec un nom, une date et un motif.
         </Callout>
       </div>
 

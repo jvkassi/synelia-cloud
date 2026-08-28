@@ -106,7 +106,7 @@ export function VueMessagerie({ id }: { id: string }) {
         <Card>
           <EmptyState
             titre="La messagerie n’est pas activée sur ce domaine"
-            phrase={`L’activation crée les boîtes, pose MX, SPF, DKIM et DMARC dans la zone de ${m.domaine}, et déclare le client SSO. Comptez ${money(m.prixSiege)} par boîte et par mois, facturés au prorata.`}
+            phrase={`L’activation réserve les boîtes, pose MX, SPF, DKIM et DMARC dans la zone de ${m.domaine}, et déclare le client SSO. Comptez ${money(m.prixSiege)} par boîte et par mois, facturés au prorata.`}
             action={{ libelle: 'Retour aux messageries', href: '/app/web/emails' }}
           />
         </Card>
@@ -163,7 +163,7 @@ export function VueMessagerie({ id }: { id: string }) {
                             formateur={(v) => `${v.toFixed(1)} Go`}
                           />
                         </td>
-                        <td className="px-3 py-2.5 text-[11.5px] text-g-700">
+                        <td className="px-3 py-2.5 text-[12px] text-g-700">
                           {b.derniereConnexion ? relatif(b.derniereConnexion) : 'jamais'}
                         </td>
                         <td className="px-3 py-2.5">
@@ -257,7 +257,7 @@ export function VueMessagerie({ id }: { id: string }) {
                 <ul className="divide-y divide-g-100">
                   {m.alias.map((a) => (
                     <li key={a.de} className="py-2.5 first:pt-0">
-                      <p className="font-mono text-[12.5px] font-semibold text-ink">{a.de}</p>
+                      <p className="font-mono text-[13px] font-semibold text-ink">{a.de}</p>
                       <p className="mt-0.5 font-mono text-[11px] text-g-500">
                         → {a.vers.join(', ')}
                       </p>
@@ -307,7 +307,7 @@ export function VueMessagerie({ id }: { id: string }) {
                   }
                 />
                 {m.redirections.length === 0 ? (
-                  <p className="text-[12.5px] text-g-500">Aucune redirection.</p>
+                  <p className="text-[13px] text-g-500">Aucune redirection.</p>
                 ) : (
                   <ul className="divide-y divide-g-100">
                     {m.redirections.map((r) => (
@@ -316,7 +316,7 @@ export function VueMessagerie({ id }: { id: string }) {
                         className="flex flex-wrap items-center justify-between gap-2 py-2.5 first:pt-0"
                       >
                         <span className="min-w-0">
-                          <span className="block truncate font-mono text-[12.5px] font-semibold text-ink">
+                          <span className="block truncate font-mono text-[13px] font-semibold text-ink">
                             {r.de}
                           </span>
                           <span className="block truncate font-mono text-[11px] text-g-500">
@@ -369,8 +369,8 @@ export function VueMessagerie({ id }: { id: string }) {
                       className="flex flex-wrap items-start justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2.5"
                     >
                       <span className="min-w-0">
-                        <span className="block text-[12.5px] font-bold text-ink">{x.nom}</span>
-                        <span className="block text-[11.5px] leading-snug text-g-500">{x.quoi}</span>
+                        <span className="block text-[13px] font-bold text-ink">{x.nom}</span>
+                        <span className="block text-[12px] leading-snug text-g-500">{x.quoi}</span>
                       </span>
                       <Badge
                         tone={
@@ -559,7 +559,7 @@ export function VueMessagerie({ id }: { id: string }) {
                 placeholder="prenom.nom"
                 className="min-w-0 flex-1"
               />
-              <span className="shrink-0 font-mono text-[12.5px] text-g-500">@{m.domaine}</span>
+              <span className="shrink-0 font-mono text-[13px] text-g-500">@{m.domaine}</span>
             </div>
           </Field>
           <Field label="Titulaire">

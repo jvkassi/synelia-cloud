@@ -148,7 +148,7 @@ function BarreUnivers({
           width="w-64"
           label="Changer d’univers"
           trigger={() => (
-            <span className="flex max-w-full items-center gap-1.5 rounded-[6px] bg-white/10 px-2.5 py-1.5 text-[12.5px] font-semibold text-white">
+            <span className="flex max-w-full items-center gap-1.5 rounded-[6px] bg-white/10 px-2.5 py-1.5 text-[13px] font-semibold text-white">
               <span className="truncate">{courant.nom}</span>
               <ChevronDown size={13} className="shrink-0 text-p-300" />
             </span>
@@ -251,7 +251,7 @@ function BarreSections({
             <Link
               href={hrefSection(s, pathname, lesProjets.items)}
               className={cn(
-                'relative flex items-center whitespace-nowrap px-3 py-2.5 text-[12.5px] font-semibold transition-colors',
+                'relative flex items-center whitespace-nowrap px-3 py-2.5 text-[13px] font-semibold transition-colors',
                 s.href === active?.href
                   ? 'text-p-700 after:absolute after:inset-x-2 after:bottom-0 after:h-[2px] after:bg-p-700'
                   : 'text-g-500 hover:text-g-700',
@@ -287,7 +287,7 @@ function SelecteurContexte({ avecEspace }: { avecEspace: boolean }) {
       label={avecEspace ? 'Changer d’organisation ou d’Espace Cloud' : 'Changer d’organisation'}
       trigger={() => (
         <span
-          className="flex shrink-0 items-center gap-1.5 rounded-[6px] border border-white/15 bg-white/10 px-2 py-1.5 text-[11.5px] font-semibold text-p-300 transition-colors hover:bg-white/15"
+          className="flex shrink-0 items-center gap-1.5 rounded-[6px] border border-white/15 bg-white/10 px-2 py-1.5 text-[12px] font-semibold text-p-300 transition-colors hover:bg-white/15"
           title={avecEspace ? `${ORG_COURANTE.nom} · ${espace.code}` : ORG_COURANTE.nom}
         >
           <Building2 size={12} className="shrink-0" />
@@ -330,7 +330,7 @@ function SelecteurContexte({ avecEspace }: { avecEspace: boolean }) {
                 <span className="block truncate text-[13px] font-semibold text-ink">
                   {m.org.nom}
                 </span>
-                <span className="block text-[11.5px] text-g-500">{ROLE_LABEL[m.role]}</span>
+                <span className="block text-[12px] text-g-500">{ROLE_LABEL[m.role]}</span>
               </span>
               {m.org.id === ORG_COURANTE.id && (
                 <Badge tone="violet" size="sm">
@@ -358,8 +358,8 @@ function SelecteurContexte({ avecEspace }: { avecEspace: boolean }) {
                     e.id === espace.id && 'bg-p-050',
                   )}
                 >
-                  <span className="font-mono text-[12.5px] font-semibold text-ink">{e.code}</span>
-                  <span className="text-[11.5px] text-g-500">{e.site}</span>
+                  <span className="font-mono text-[13px] font-semibold text-ink">{e.code}</span>
+                  <span className="text-[12px] text-g-500">{e.site}</span>
                 </button>
               ))}
             </>
@@ -368,7 +368,7 @@ function SelecteurContexte({ avecEspace }: { avecEspace: boolean }) {
           <Link
             href="/select-organisation"
             onClick={close}
-            className="mt-1 block border-t border-g-100 px-2 pt-2 text-[12px] font-semibold text-p-700 hover:text-m-600"
+            className="mt-1 block border-t border-g-100 px-2 pt-2 text-[12px] font-semibold text-p-700 hover:underline"
           >
             Voir toutes les organisations →
           </Link>
@@ -400,7 +400,7 @@ function CentreDeTaches({ superAdmin }: { superAdmin: boolean }) {
         >
           <ListChecks size={16} />
           {enCours.length > 0 && (
-            <span className="tnum absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-m-600 px-1 text-[9.5px] font-bold text-white">
+            <span className="tnum absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-m-600 px-1 text-[11px] font-bold text-white">
               {enCours.length}
             </span>
           )}
@@ -411,7 +411,7 @@ function CentreDeTaches({ superAdmin }: { superAdmin: boolean }) {
         <div>
           <div className="flex items-center justify-between border-b border-g-100 px-3 py-2.5">
             <p className="text-[13px] font-bold text-ink">Centre de tâches</p>
-            <span className="tnum text-[11.5px] text-g-500">
+            <span className="tnum text-[12px] text-g-500">
               {enCours.length} en cours · {echecs.length} en échec
             </span>
           </div>
@@ -421,12 +421,17 @@ function CentreDeTaches({ superAdmin }: { superAdmin: boolean }) {
               return (
                 <Link
                   key={j.id}
-                  href={superAdmin ? '/admin' : `/app/taches/${j.id}`}
+                  // L'espace fournisseur suit ses provisionnements depuis
+                  // l'onglet du même nom de la santé plateforme : il n'a pas de
+                  // page par job, mais l'écran qui les porte tous vaut mieux que
+                  // le tableau de bord, où l'on ne retrouve pas celui qu'on
+                  // vient de cliquer.
+                  href={superAdmin ? '/admin/sante' : `/app/taches/${j.id}`}
                   onClick={close}
                   className="block px-3 py-2 transition-colors hover:bg-p-050"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-ink">
+                    <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">
                       {j.label}
                     </p>
                     <Badge
@@ -462,7 +467,7 @@ function CentreDeTaches({ superAdmin }: { superAdmin: boolean }) {
                         style={{ width: `${Math.round((faites / j.taches.length) * 100)}%` }}
                       />
                     </div>
-                    <span className="tnum shrink-0 text-[10.5px] text-g-500">
+                    <span className="tnum shrink-0 text-[11px] text-g-500">
                       {faites}/{j.taches.length}
                     </span>
                   </div>
@@ -474,7 +479,7 @@ function CentreDeTaches({ superAdmin }: { superAdmin: boolean }) {
             <Link
               href="/app/taches"
               onClick={close}
-              className="block border-t border-g-100 px-3 py-2 text-[12px] font-semibold text-p-700 hover:text-m-600"
+              className="block border-t border-g-100 px-3 py-2 text-[12px] font-semibold text-p-700 hover:underline"
             >
               Ouvrir le centre de tâches →
             </Link>
@@ -515,9 +520,9 @@ function NotificationsPopover() {
                   )}
                 />
                 <div className="min-w-0">
-                  <p className="text-[12.5px] font-medium leading-snug text-ink">{n.titre}</p>
-                  <p className="mt-0.5 text-[11.5px] text-g-500">{n.detail}</p>
-                  <p className="mt-0.5 text-[10.5px] text-g-500">{relatif(n.ts)}</p>
+                  <p className="text-[13px] font-medium leading-snug text-ink">{n.titre}</p>
+                  <p className="mt-0.5 text-[12px] text-g-500">{n.detail}</p>
+                  <p className="mt-0.5 text-[11px] text-g-500">{relatif(n.ts)}</p>
                 </div>
               </div>
             </div>
@@ -557,7 +562,7 @@ function MenuCompte({ superAdmin }: { superAdmin: boolean }) {
               <p className="truncate text-[13px] font-semibold text-ink">
                 {UTILISATEUR_COURANT.nom}
               </p>
-              <p className="truncate text-[11.5px] text-g-500">{UTILISATEUR_COURANT.email}</p>
+              <p className="truncate text-[12px] text-g-500">{UTILISATEUR_COURANT.email}</p>
             </div>
           </div>
 
@@ -574,7 +579,7 @@ function MenuCompte({ superAdmin }: { superAdmin: boolean }) {
                   type="button"
                   onClick={() => setRole(r as Role)}
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[12.5px] transition-colors hover:bg-p-050',
+                    'flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[13px] transition-colors hover:bg-p-050',
                     r === role ? 'bg-p-050 font-semibold text-p-700' : 'text-ink',
                   )}
                 >
@@ -624,7 +629,7 @@ function MenuCompte({ superAdmin }: { superAdmin: boolean }) {
                     detail: 'Les ressources créées ou supprimées pendant la session sont revenues à leur état d’origine.',
                   })
                 }}
-                className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[12.5px] text-ink transition-colors hover:bg-p-050"
+                className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[13px] text-ink transition-colors hover:bg-p-050"
               >
                 <span className="text-g-500">
                   <RotateCcw size={13} />
@@ -657,7 +662,7 @@ function MenuLien({
     <Link
       href={href}
       onClick={onClick}
-      className="flex items-center gap-2 rounded-[6px] px-2 py-1.5 text-[12.5px] text-ink transition-colors hover:bg-p-050"
+      className="flex items-center gap-2 rounded-[6px] px-2 py-1.5 text-[13px] text-ink transition-colors hover:bg-p-050"
     >
       <span className="text-g-500">{icone}</span>
       {children}
