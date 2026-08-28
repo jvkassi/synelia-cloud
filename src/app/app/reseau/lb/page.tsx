@@ -6,7 +6,7 @@ import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money, num, pct } from '@/lib/format'
 import type { LoadBalancer } from '@/lib/types'
-import { LOAD_BALANCERS, PUBLIC_IPS, VMS } from '@/lib/mock'
+import { K8S_CLUSTERS, LOAD_BALANCERS, PUBLIC_IPS, VMS } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -256,6 +256,11 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
 
   const ipsLibres = PUBLIC_IPS.filter((i) => i.espaceId === espace.id && !i.attachedTo)
   const vmsEspace = VMS.filter((v) => v.espaceId === espace.id)
+  const k8sEspace = K8S_CLUSTERS.filter((k) => k.espaceId === espace.id)
+  const catalogueCibles = [
+    ...vmsEspace.map((v) => ({ id: v.id, label: v.nom, detail: `${v.ips.find((i) => i.type === 'privee')?.adresse} · ${v.os}` })),
+    ...k8sEspace.map((k) => ({ id: `${k.id}/ingress`, label: `k8s · ${k.nom}`, detail: `Cluster Kubernetes · ${k.version}` })),
+  ]
 
   const lignesCout = [
     { libelle: `Load balancer ${layer.toUpperCase()}`, detail: nom, montant: 18000 },
@@ -314,7 +319,7 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
                   ],
                   pool: cibles.map((cible) => ({
                     targetId: cible,
-                    targetLabel: vmsEspace.find((v) => v.id === cible)?.nom ?? cible,
+                    targetLabel: catalogueCibles.find((c) => c.id === cible)?.label ?? cible,
                     poids: 10,
                     sante: 'drain' as const,
                   })),
@@ -581,33 +586,31 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
               sousTitre="Machines virtuelles ou workloads Kubernetes. Le mélange est possible — utile pendant une migration."
             />
             <div className="space-y-2">
-              {vmsEspace.map((v) => (
+              {catalogueCibles.map((c) => (
                 <label
-                  key={v.id}
+                  key={c.id}
                   className={cn(
                     'flex cursor-pointer items-center gap-3 rounded-[6px] border px-3 py-2 transition-colors',
-                    cibles.includes(v.id) ? 'border-p-300 bg-p-050' : 'border-g-300 hover:bg-g-050',
+                    cibles.includes(c.id) ? 'border-p-300 bg-p-050' : 'border-g-300 hover:bg-g-050',
                   )}
                 >
                   <input
                     type="checkbox"
-                    checked={cibles.includes(v.id)}
+                    checked={cibles.includes(c.id)}
                     onChange={() =>
                       setCibles((p) =>
-                        p.includes(v.id) ? p.filter((x) => x !== v.id) : [...p, v.id],
+                        p.includes(c.id) ? p.filter((x) => x !== c.id) : [...p, c.id],
                       )
                     }
                     className="h-3.5 w-3.5 accent-[#4B2882]"
                   />
                   <span className="min-w-0 flex-1">
                     <span className="block font-mono text-[13px] font-medium text-ink">
-                      {v.nom}
+                      {c.label}
                     </span>
-                    <span className="block text-[11px] text-g-500">
-                      {v.ips.find((i) => i.type === 'privee')?.adresse} · {v.os}
-                    </span>
+                    <span className="block text-[11px] text-g-500">{c.detail}</span>
                   </span>
-                  {cibles.includes(v.id) && (
+                  {cibles.includes(c.id) && (
                     <span className="flex shrink-0 items-center gap-2">
                       <span className="text-[11px] text-g-500">Poids</span>
                       <Input
@@ -620,6 +623,11 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
                   )}
                 </label>
               ))}
+              {catalogueCibles.length === 0 && (
+                <p className="py-4 text-center text-[13px] text-g-500">
+                  Aucune machine ni cluster Kubernetes dans cet Espace.
+                </p>
+              )}
             </div>
           </Card>
 
