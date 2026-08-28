@@ -144,7 +144,7 @@ export default function AccueilApplications() {
         titre="Applications"
         sousTitre="Vos projets applicatifs et tout ce qui tourne dedans. Chaque section pose une question différente sur le même objet — le projet — et le panneau de gauche sert à le choisir une fois pour toutes."
         actions={
-          <ButtonLink href="/app/applications/projets?creer=1" iconBefore={<GitBranch size={14} />}>
+          <ButtonLink href="/app/applications/projets/nouveau" iconBefore={<GitBranch size={14} />}>
             Nouveau projet
           </ButtonLink>
         }

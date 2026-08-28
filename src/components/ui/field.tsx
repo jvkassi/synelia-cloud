@@ -2,7 +2,7 @@
 
 import type { ComponentProps, ReactNode } from 'react'
 import { useId, useState } from 'react'
-import { Check, ChevronDown, Search } from 'lucide-react'
+import { Check, ChevronDown, Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const FIELD =
@@ -96,6 +96,72 @@ export function SearchInput({
 
 export function Textarea({ className, ...rest }: ComponentProps<'textarea'>) {
   return <textarea className={cn(FIELD, 'min-h-24 px-3 py-2 leading-relaxed', className)} {...rest} />
+}
+
+/**
+ * Saisie d'étiquettes en pastilles : Entrée ou virgule ajoute, Retour arrière
+ * sur un champ vide retire la dernière. Pas de doublon, pas de vide.
+ */
+export function TagsInput({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: {
+  value: string[]
+  onChange: (tags: string[]) => void
+  placeholder?: string
+  className?: string
+}) {
+  const [brouillon, setBrouillon] = useState('')
+
+  const ajouter = (texte: string) => {
+    const t = texte.trim()
+    if (t && !value.includes(t)) onChange([...value, t])
+    setBrouillon('')
+  }
+
+  return (
+    <div
+      className={cn(
+        FIELD,
+        'flex min-h-9 flex-wrap items-center gap-1.5 px-2 py-1.5 focus-within:border-p-600 focus-within:ring-2 focus-within:ring-p-100',
+        className,
+      )}
+    >
+      {value.map((t) => (
+        <span
+          key={t}
+          className="inline-flex items-center gap-1 rounded-full bg-p-050 py-0.5 pl-2.5 pr-1 text-[12px] font-semibold text-p-700"
+        >
+          {t}
+          <button
+            type="button"
+            onClick={() => onChange(value.filter((x) => x !== t))}
+            aria-label={`Retirer l’étiquette ${t}`}
+            className="rounded-full p-0.5 text-p-700/60 transition-colors hover:bg-p-100 hover:text-p-700"
+          >
+            <X size={11} />
+          </button>
+        </span>
+      ))}
+      <input
+        value={brouillon}
+        onChange={(e) => setBrouillon(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault()
+            ajouter(brouillon)
+          } else if (e.key === 'Backspace' && !brouillon && value.length > 0) {
+            onChange(value.slice(0, -1))
+          }
+        }}
+        onBlur={() => ajouter(brouillon)}
+        placeholder={value.length === 0 ? placeholder : ''}
+        className="h-6 min-w-[100px] flex-1 border-0 bg-transparent text-[13px] text-ink outline-none placeholder:text-g-500"
+      />
+    </div>
+  )
 }
 
 export function MonoTextarea({ className, ...rest }: ComponentProps<'textarea'>) {

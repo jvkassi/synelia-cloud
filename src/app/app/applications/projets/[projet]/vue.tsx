@@ -1,11 +1,13 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { Plus, Rocket } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateCourte, MAINTENANT, money, relatif } from '@/lib/format'
-import type { MoteurBase, Projet, ServiceProjet, TypeServiceProjet } from '@/lib/types'
+import type { LoadBalancer, MoteurBase, Projet, ServiceProjet, TypeServiceProjet } from '@/lib/types'
 import {
+  LOAD_BALANCERS,
   MOTEURS_DISPONIBLES,
   MOTEUR_LABEL,
   PROJETS,
@@ -44,11 +46,13 @@ import { BoutonFormulaire, useOperation } from '@/components/app/actions'
 export function VueProjet({ id }: { id: string }) {
   const lesProjets = useCollection<Projet>('projets', PROJETS)
   const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+  const lesLb = useCollection<LoadBalancer>('load-balancers', LOAD_BALANCERS)
   const { autorise, refus } = useApp()
 
   // Relu dans la collection : un service créé ici doit apparaître sans quitter
   // l'écran, et un projet né pendant la session n'existe pas dans le jeu figé.
   const projet = lesProjets.items.find((p) => p.id === id)
+  const lb = lesLb.items.find((l) => l.id === projet?.lbId)
   const services = useMemo(
     () => lesServices.items.filter((x) => x.projetId === id),
     [lesServices.items, id],
@@ -79,6 +83,13 @@ export function VueProjet({ id }: { id: string }) {
             <Badge tone="neutral">
               Espace <span className="font-mono">{projet.espaceId.toUpperCase()}</span>
             </Badge>
+            {lb && (
+              <Link href={`/app/reseau/lb/${lb.id}`}>
+                <Badge tone="info">
+                  LB <span className="font-mono">{lb.vip}</span>
+                </Badge>
+              </Link>
+            )}
             <span className="text-[12px] text-g-500">
               créé le {dateCourte(projet.cree)} · dernière activité {relatif(synthese.derniereMaj)}
             </span>
