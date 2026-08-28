@@ -4,8 +4,8 @@ import { useState } from 'react'
 import { Download, Plus, Trash2 } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { dateCourte, num, pct } from '@/lib/format'
-import { LOAD_BALANCERS, LOGS_EXECUTION, VMS, espaceById } from '@/lib/mock'
-import type { LoadBalancer, VM } from '@/lib/types'
+import { K8S_CLUSTERS, LOAD_BALANCERS, LOGS_EXECUTION, VMS, espaceById } from '@/lib/mock'
+import type { K8sCluster, LoadBalancer, VM } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, IconButton } from '@/components/ui/button'
 import { CopyField, GatedAction, Tabs } from '@/components/ui/display'
@@ -53,14 +53,20 @@ export function VueLb({ id }: { id: string }) {
   const executer = useOperation()
   const lbs = useCollection<LoadBalancer>('load-balancers', LOAD_BALANCERS)
   const parc = useCollection<VM>('vms', VMS)
+  const grappes = useCollection<K8sCluster>('clusters', K8S_CLUSTERS)
   const exceptions = useCollection<Exception>(`waf-exceptions-${id}`, EXCEPTIONS_GRAINE)
   const [onglet, setOnglet] = useState('apercu')
 
   const lb = lbs.items.find((l) => l.id === id)!
   const espace = espaceById(lb.espaceId)
-  const candidats = parc.items.filter(
-    (v) => v.espaceId === lb.espaceId && !lb.pool.some((p) => p.targetId === v.id),
-  )
+  const candidats = [
+    ...parc.items
+      .filter((v) => v.espaceId === lb.espaceId)
+      .map((v) => ({ id: v.id, label: v.nom })),
+    ...grappes.items
+      .filter((k) => k.espaceId === lb.espaceId)
+      .map((k) => ({ id: `${k.id}/ingress`, label: `k8s · ${k.nom}` })),
+  ].filter((c) => !lb.pool.some((p) => p.targetId === c.id))
 
   const onglets = lb.layer === 'l7' ? ONGLETS : ONGLETS.filter((o) => o.id !== 'regles' && o.id !== 'waf')
 
@@ -236,9 +242,9 @@ export function VueLb({ id }: { id: string }) {
                   champs={[
                     {
                       id: 'cible',
-                      label: 'Machine',
+                      label: 'Machine ou cluster Kubernetes',
                       type: 'select',
-                      options: candidats.map((v) => ({ value: v.id, label: v.nom })),
+                      options: candidats.map((c) => ({ value: c.id, label: c.label })),
                     },
                     { id: 'poids', label: 'Poids', type: 'nombre', demi: true, min: 1, max: 100 },
                   ]}
@@ -247,7 +253,7 @@ export function VueLb({ id }: { id: string }) {
                   operation={(v) => {
                     const cible = candidats.find((c) => c.id === v.cible)
                     return {
-                      titre: cible ? `${cible.nom} ajoutée au pool` : 'Cible ajoutée',
+                      titre: cible ? `${cible.label} ajoutée au pool` : 'Cible ajoutée',
                       detail: 'En attente de deux health checks consécutifs réussis.',
                       effet: () =>
                         cible
@@ -256,7 +262,7 @@ export function VueLb({ id }: { id: string }) {
                                 ...l.pool,
                                 {
                                   targetId: cible.id,
-                                  targetLabel: cible.nom,
+                                  targetLabel: cible.label,
                                   poids: Number(v.poids),
                                   sante: 'drain' as const,
                                 },
