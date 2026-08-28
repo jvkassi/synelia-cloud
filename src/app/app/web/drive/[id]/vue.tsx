@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { ExternalLink, Plus, Share2, Trash2 } from 'lucide-react'
+import { ExternalLink, Pencil, Plus, Share2, Trash2 } from 'lucide-react'
 import { money, relatif } from '@/lib/format'
-import { DRIVES, USERS, type DriveDomaine } from '@/lib/mock'
+import { DRIVES, type DriveDomaine } from '@/lib/mock'
 import { configurationDuService } from '@/lib/configurations'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink, IconButton } from '@/components/ui/button'
@@ -15,7 +15,7 @@ import { EmptyState } from '@/components/composition/states'
 import { ConfigurationServicePanel } from '@/components/business/configuration-service'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
-import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { BoutonAction, BoutonFormulaire, ModaleFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'sieges', label: 'Sièges' },
@@ -31,13 +31,13 @@ export function VueDrive({ id }: { id: string }) {
   const [onglet, setOnglet] = useState('sieges')
   const [externe, setExterne] = useState(true)
   const [motDePasse, setMotDePasse] = useState(true)
-  /** Sièges retirés dans la session : le jeu de données n'a pas de table. */
-  const [retires, setRetires] = useState<string[]>([])
+  const [edition, setEdition] = useState<string | null>(null)
 
   const d = drives.items.find((x) => x.id === id)
   if (!d) return null
   const config = configurationDuService('drive-pro')
-  const titulaires = USERS.slice(0, d.sieges.attribues).filter((u) => !retires.includes(u.id))
+  const titulaires = d.utilisateurs
+  const enEdition = titulaires.find((u) => u.id === edition)
 
   return (
     <div className="space-y-5">
@@ -64,38 +64,47 @@ export function VueDrive({ id }: { id: string }) {
             <>
               <GatedAction autorise={autorise('seat.assign')} message={refus('seat.assign')}>
                 <BoutonFormulaire
-                  libelle="Attribuer un siège"
+                  libelle="Ajouter un utilisateur"
                   size="md"
                   icone={<Plus size={14} />}
                   action="seat.assign"
-                  titre="Attribuer un siège de drive"
-                  description="Un siège attribué est facturé, qu’il soit utilisé ou non. Le titulaire accède au drive en SSO, sans mot de passe supplémentaire."
+                  titre="Ajouter un utilisateur au drive"
+                  description="Un utilisateur applicatif de ce drive : identifiant, mot de passe et quota se gèrent ici, sans lien avec le compte du portail."
                   champs={[
+                    { id: 'nom', label: 'Nom', obligatoire: true, placeholder: 'Prénom Nom' },
+                    { id: 'motDePasse', label: 'Mot de passe', obligatoire: true, demi: true },
                     {
-                      id: 'membre',
-                      label: 'Membre',
-                      type: 'select',
-                      options: USERS.slice(0, 12).map((u) => ({ value: u.id, label: `${u.nom} · ${u.email}` })),
+                      id: 'quota',
+                      label: 'Quota',
+                      type: 'nombre',
+                      obligatoire: true,
+                      demi: true,
+                      suffixe: 'Go',
+                      min: 5,
+                      max: 2000,
                     },
                   ]}
-                  libelleValider="Attribuer"
+                  valeursDepart={{ quota: 50 }}
+                  libelleValider="Ajouter"
                   operation={(v) => {
-                    const membre = USERS.find((u) => u.id === v.membre)
+                    const nouvelId = drives.identifiant('drv')
                     return {
-                      titre: `Siège attribué à ${membre?.nom ?? ''}`,
+                      titre: `${v.nom} ajouté au drive`,
                       detail:
                         d.sieges.attribues + 1 > d.sieges.souscrits
                           ? 'Un siège supplémentaire est souscrit automatiquement, facturé au prorata.'
                           : `${d.sieges.attribues + 1} sièges attribués sur ${d.sieges.souscrits} souscrits.`,
-                      effet: () => {
-                        setRetires((prev) => prev.filter((x) => x !== v.membre))
+                      effet: () =>
                         drives.modifier(d.id, (x) => ({
+                          utilisateurs: [
+                            ...x.utilisateurs,
+                            { id: nouvelId, nom: String(v.nom), quotaGo: Number(v.quota), utiliseGo: 0 },
+                          ],
                           sieges: {
                             attribues: x.sieges.attribues + 1,
                             souscrits: Math.max(x.sieges.souscrits, x.sieges.attribues + 1),
                           },
-                        }))
-                      },
+                        })),
                     }
                   }}
                 />
@@ -175,7 +184,7 @@ export function VueDrive({ id }: { id: string }) {
                   </p>
                 </div>
                 <ul className="divide-y divide-g-100">
-                  {titulaires.map((u, i) => (
+                  {titulaires.map((u) => (
                     <li
                       key={u.id}
                       className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5"
@@ -184,32 +193,39 @@ export function VueDrive({ id }: { id: string }) {
                         <span className="block truncate text-[12.5px] font-semibold text-ink">
                           {u.nom}
                         </span>
-                        <span className="block truncate text-[11px] text-g-500">{u.email}</span>
-                      </span>
-                      <span className="flex shrink-0 items-center gap-2">
-                        <span className="tnum text-[11.5px] text-g-700">
-                          {(((d.quota.utiliseGo / Math.max(1, titulaires.length)) * (1 + (i % 3) * 0.4)) / 1).toFixed(0)} Go
+                        <span className="tnum block truncate text-[11px] text-g-500">
+                          {u.utiliseGo.toFixed(0)} / {u.quotaGo} Go
                         </span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1">
                         <GatedAction autorise={autorise('seat.assign')} message={refus('seat.assign')}>
                           <IconButton
-                            label={`Retirer le siège de ${u.nom}`}
+                            label={`Modifier ${u.nom}`}
+                            size="sm"
+                            onClick={() => setEdition(u.id)}
+                          >
+                            <Pencil size={13} />
+                          </IconButton>
+                        </GatedAction>
+                        <GatedAction autorise={autorise('seat.assign')} message={refus('seat.assign')}>
+                          <IconButton
+                            label={`Retirer ${u.nom}`}
                             size="sm"
                             onClick={() =>
                               executer({
                                 action: 'seat.assign',
                                 ton: 'warn',
-                                titre: `Siège de ${u.nom} retiré`,
+                                titre: `${u.nom} retiré du drive`,
                                 detail:
                                   'Ses fichiers personnels restent trente jours avant suppression ; les fichiers partagés restent au groupe.',
-                                effet: () => {
-                                  setRetires((prev) => [...prev, u.id])
+                                effet: () =>
                                   drives.modifier(d.id, (x) => ({
+                                    utilisateurs: x.utilisateurs.filter((y) => y.id !== u.id),
                                     sieges: {
                                       ...x.sieges,
                                       attribues: Math.max(0, x.sieges.attribues - 1),
                                     },
-                                  }))
-                                },
+                                  })),
                               })
                             }
                           >
@@ -376,6 +392,38 @@ export function VueDrive({ id }: { id: string }) {
               messageRefus={refus('service.admin')}
             />
           )}
+
+          <ModaleFormulaire
+            ouvert={edition !== null}
+            onFermer={() => setEdition(null)}
+            titre={`Modifier ${enEdition?.nom ?? ''}`}
+            description="Le quota s’applique immédiatement. Laisser le mot de passe vide pour ne pas le changer."
+            champs={[
+              { id: 'quota', label: 'Quota', type: 'nombre', demi: true, suffixe: 'Go', min: 5, max: 2000 },
+              {
+                id: 'motDePasse',
+                label: 'Nouveau mot de passe',
+                demi: true,
+                placeholder: 'laisser vide pour ne pas changer',
+              },
+            ]}
+            valeursDepart={{ quota: enEdition?.quotaGo ?? 0 }}
+            libelleValider="Enregistrer"
+            onValider={(v) => {
+              if (!edition) return
+              executer({
+                action: 'seat.assign',
+                titre: `Quota de ${enEdition?.nom} mis à jour`,
+                detail: v.motDePasse ? 'Quota et mot de passe mis à jour.' : undefined,
+                effet: () =>
+                  drives.modifier(d.id, (x) => ({
+                    utilisateurs: x.utilisateurs.map((y) =>
+                      y.id === edition ? { ...y, quotaGo: Number(v.quota) } : y,
+                    ),
+                  })),
+              })
+            }}
+          />
         </>
       )}
     </div>
