@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ExternalLink, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money, relatif } from '@/lib/format'
 import { MESSAGERIES, type MessagerieDomaine } from '@/lib/mock'
@@ -17,7 +17,7 @@ import { EmptyState } from '@/components/composition/states'
 import { ConfigurationServicePanel } from '@/components/business/configuration-service'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
-import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { BoutonAction, BoutonFormulaire, ModaleFormulaire, useOperation } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'boites', label: 'Boîtes aux lettres' },
@@ -33,18 +33,20 @@ export function VueMessagerie({ id }: { id: string }) {
   const messageries = useCollection<MessagerieDomaine>('messageries', MESSAGERIES)
   const [adresse, setAdresse] = useState('')
   const [titulaire, setTitulaire] = useState('')
+  const [motDePasse, setMotDePasse] = useState('')
   const [quota, setQuota] = useState('25')
   const [onglet, setOnglet] = useState('boites')
   const [creation, setCreation] = useState(false)
   const [antivirus, setAntivirus] = useState(true)
   const [rapport, setRapport] = useState(true)
-  const [mfaExige, setMfaExige] = useState(true)
+  const [edition, setEdition] = useState<string | null>(null)
 
   const m = messageries.items.find((x) => x.id === id)
   if (!m) return null
   const config = configurationDuService('email-pro')
   const utilise = m.boites.reduce((a, b) => a + b.utiliseGo, 0)
   const total = m.boites.reduce((a, b) => a + b.quotaGo, 0)
+  const enEdition = m.boites.find((b) => b.adresse === edition)
 
   return (
     <div className="space-y-5">
@@ -122,12 +124,6 @@ export function VueMessagerie({ id }: { id: string }) {
               detail={`sur ${total} Go`}
               ton={utilise / total > 0.85 ? 'warn' : 'neutral'}
             />
-            <StatTile
-              libelle="Sans double facteur"
-              valeur={m.boites.filter((b) => !b.mfa).length}
-              detail="à corriger"
-              ton={m.boites.some((b) => !b.mfa) ? 'warn' : 'ok'}
-            />
             <StatTile libelle="En quarantaine" valeur={m.antispam.quarantaine} detail="7 derniers jours" />
           </div>
 
@@ -139,7 +135,7 @@ export function VueMessagerie({ id }: { id: string }) {
                 <table className="w-full min-w-max border-collapse">
                   <thead>
                     <tr className="border-b border-g-300 bg-g-050">
-                      {['Adresse', 'Titulaire', 'Quota', 'Double facteur', 'Dernière connexion', 'État', ''].map(
+                      {['Adresse', 'Titulaire', 'Quota', 'Dernière connexion', 'État', ''].map(
                         (c) => (
                           <th
                             key={c}
@@ -167,11 +163,6 @@ export function VueMessagerie({ id }: { id: string }) {
                             formateur={(v) => `${v.toFixed(1)} Go`}
                           />
                         </td>
-                        <td className="px-3 py-2.5">
-                          <Badge tone={b.mfa ? 'ok' : 'warn'} size="sm">
-                            {b.mfa ? 'Actif' : 'Absent'}
-                          </Badge>
-                        </td>
                         <td className="px-3 py-2.5 text-[12px] text-g-700">
                           {b.derniereConnexion ? relatif(b.derniereConnexion) : 'jamais'}
                         </td>
@@ -186,18 +177,11 @@ export function VueMessagerie({ id }: { id: string }) {
                         <td className="px-3 py-2.5 text-right">
                           <span className="flex items-center justify-end gap-1">
                             <IconButton
-                              label={`Réinitialiser ${b.adresse}`}
+                              label={`Modifier ${b.adresse}`}
                               size="sm"
-                              onClick={() =>
-                                executer({
-                                  action: 'seat.assign',
-                                  titre: `Lien de réinitialisation envoyé à ${b.adresse}`,
-                                  detail:
-                                    'Le portail ne voit jamais le mot de passe : le titulaire le choisit lui-même.',
-                                })
-                              }
+                              onClick={() => setEdition(b.adresse)}
                             >
-                              <RotateCcw size={13} />
+                              <Pencil size={13} />
                             </IconButton>
                             <IconButton
                               label={`Supprimer ${b.adresse}`}
@@ -535,12 +519,12 @@ export function VueMessagerie({ id }: { id: string }) {
               Annuler
             </Button>
             <Button
-              disabled={!adresse.trim()}
+              disabled={!adresse.trim() || !motDePasse.trim()}
               onClick={() => {
                 executer({
                   action: 'seat.assign',
                   titre: `Boîte ${adresse}@${m.domaine} créée`,
-                  detail: 'Le titulaire reçoit son lien de première connexion par SMS.',
+                  detail: 'Le mot de passe saisi est celui du titulaire dès la première connexion.',
                   effet: () =>
                     messageries.modifier(m.id, (x) => ({
                       boites: [
@@ -551,13 +535,13 @@ export function VueMessagerie({ id }: { id: string }) {
                           quotaGo: Number(quota),
                           utiliseGo: 0,
                           statut: 'active' as const,
-                          mfa: mfaExige,
                         },
                       ],
                     })),
                 })
                 setAdresse('')
                 setTitulaire('')
+                setMotDePasse('')
                 setCreation(false)
               }}
             >
@@ -585,25 +569,58 @@ export function VueMessagerie({ id }: { id: string }) {
               placeholder="Prénom Nom"
             />
           </Field>
-          <Field label="Quota" hint={`${m.boites.length + 1} boîtes sur ${m.boitesIncluses} incluses`}>
-            <Select value={quota} onChange={(e) => setQuota(e.target.value)}>
-              <option value="10">10 Go</option>
-              <option value="25">25 Go</option>
-              <option value="50">50 Go</option>
-            </Select>
+          <Field label="Mot de passe">
+            <Input
+              type="password"
+              value={motDePasse}
+              onChange={(e) => setMotDePasse(e.target.value)}
+              placeholder="Mot de passe de la boîte"
+            />
           </Field>
-          <Switch
-            label="Exiger le double facteur"
-            description="Recommandé. Le titulaire le configure à sa première connexion."
-            checked={mfaExige}
-            onChange={setMfaExige}
-          />
-          <Callout ton="info" titre="Aucun mot de passe ici">
-            L’identité est détenue par Keycloak. Le titulaire reçoit un lien de première connexion et
-            choisit lui-même son mot de passe : le portail n’en voit jamais la valeur.
-          </Callout>
+          <Field label="Quota" hint={`${m.boites.length + 1} boîtes sur ${m.boitesIncluses} incluses`}>
+            <Input
+              type="number"
+              value={quota}
+              onChange={(e) => setQuota(e.target.value)}
+              suffix="Go"
+              min={1}
+              max={200}
+            />
+          </Field>
         </div>
       </Drawer>
+
+      <ModaleFormulaire
+        ouvert={edition !== null}
+        onFermer={() => setEdition(null)}
+        titre={`Modifier ${enEdition?.adresse ?? ''}`}
+        description="Le quota s’applique immédiatement. Laisser le mot de passe vide pour ne pas le changer."
+        champs={[
+          { id: 'quota', label: 'Quota', type: 'nombre', demi: true, suffixe: 'Go', min: 1, max: 200 },
+          {
+            id: 'motDePasse',
+            label: 'Nouveau mot de passe',
+            demi: true,
+            placeholder: 'laisser vide pour ne pas changer',
+          },
+        ]}
+        valeursDepart={{ quota: enEdition?.quotaGo ?? 0 }}
+        libelleValider="Enregistrer"
+        onValider={(v) => {
+          if (!edition) return
+          executer({
+            action: 'seat.assign',
+            titre: `Boîte ${enEdition?.adresse} mise à jour`,
+            detail: v.motDePasse ? 'Quota et mot de passe mis à jour.' : undefined,
+            effet: () =>
+              messageries.modifier(m.id, (x) => ({
+                boites: x.boites.map((y) =>
+                  y.adresse === edition ? { ...y, quotaGo: Number(v.quota) } : y,
+                ),
+              })),
+          })
+        }}
+      />
     </div>
   )
 }

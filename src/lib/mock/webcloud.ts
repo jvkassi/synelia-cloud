@@ -189,7 +189,6 @@ export interface BoiteMail {
   utiliseGo: number
   statut: 'active' | 'suspendue' | 'archivee'
   derniereConnexion?: string
-  mfa: boolean
 }
 
 export interface MessagerieDomaine {
@@ -219,14 +218,14 @@ export const MESSAGERIES: MessagerieDomaine[] = [
     hoteWebmail: 'mail.dba.africa',
     boitesIncluses: 20,
     boites: [
-      { adresse: 'lea.konan@dba.africa', nom: 'Léa Konan', quotaGo: 50, utiliseGo: 18.4, statut: 'active', derniereConnexion: '2026-08-19T15:14:00Z', mfa: true },
-      { adresse: 'fatou.diallo@dba.africa', nom: 'Fatou Diallo', quotaGo: 50, utiliseGo: 34.1, statut: 'active', derniereConnexion: '2026-08-19T15:08:00Z', mfa: true },
-      { adresse: 'yao.kouassi@dba.africa', nom: 'Yao Kouassi', quotaGo: 25, utiliseGo: 11.2, statut: 'active', derniereConnexion: '2026-08-19T09:34:00Z', mfa: false },
-      { adresse: 'aicha.kone@dba.africa', nom: 'Aïcha Koné', quotaGo: 50, utiliseGo: 47.8, statut: 'active', derniereConnexion: '2026-08-19T14:58:00Z', mfa: true },
-      { adresse: 'adama.sangare@dba.africa', nom: 'Adama Sangaré', quotaGo: 25, utiliseGo: 4.6, statut: 'active', derniereConnexion: '2026-08-15T17:04:00Z', mfa: false },
-      { adresse: 'nadia.traore@dba.africa', nom: 'Nadia Traoré', quotaGo: 25, utiliseGo: 1.2, statut: 'suspendue', derniereConnexion: '2026-07-28T10:22:00Z', mfa: false },
-      { adresse: 'compta@dba.africa', nom: 'Comptabilité', quotaGo: 25, utiliseGo: 9.8, statut: 'active', derniereConnexion: '2026-08-19T11:02:00Z', mfa: true },
-      { adresse: 'contact@dba.africa', nom: 'Contact général', quotaGo: 25, utiliseGo: 14.2, statut: 'active', derniereConnexion: '2026-08-19T13:41:00Z', mfa: false },
+      { adresse: 'lea.konan@dba.africa', nom: 'Léa Konan', quotaGo: 50, utiliseGo: 18.4, statut: 'active', derniereConnexion: '2026-08-19T15:14:00Z' },
+      { adresse: 'fatou.diallo@dba.africa', nom: 'Fatou Diallo', quotaGo: 50, utiliseGo: 34.1, statut: 'active', derniereConnexion: '2026-08-19T15:08:00Z' },
+      { adresse: 'yao.kouassi@dba.africa', nom: 'Yao Kouassi', quotaGo: 25, utiliseGo: 11.2, statut: 'active', derniereConnexion: '2026-08-19T09:34:00Z' },
+      { adresse: 'aicha.kone@dba.africa', nom: 'Aïcha Koné', quotaGo: 50, utiliseGo: 47.8, statut: 'active', derniereConnexion: '2026-08-19T14:58:00Z' },
+      { adresse: 'adama.sangare@dba.africa', nom: 'Adama Sangaré', quotaGo: 25, utiliseGo: 4.6, statut: 'active', derniereConnexion: '2026-08-15T17:04:00Z' },
+      { adresse: 'nadia.traore@dba.africa', nom: 'Nadia Traoré', quotaGo: 25, utiliseGo: 1.2, statut: 'suspendue', derniereConnexion: '2026-07-28T10:22:00Z' },
+      { adresse: 'compta@dba.africa', nom: 'Comptabilité', quotaGo: 25, utiliseGo: 9.8, statut: 'active', derniereConnexion: '2026-08-19T11:02:00Z' },
+      { adresse: 'contact@dba.africa', nom: 'Contact général', quotaGo: 25, utiliseGo: 14.2, statut: 'active', derniereConnexion: '2026-08-19T13:41:00Z' },
     ],
     alias: [
       { de: 'info@dba.africa', vers: ['contact@dba.africa'] },
@@ -251,8 +250,8 @@ export const MESSAGERIES: MessagerieDomaine[] = [
     hoteWebmail: 'mail.digitalbusinessafrica.ci',
     boitesIncluses: 5,
     boites: [
-      { adresse: 'contact@digitalbusinessafrica.ci', nom: 'Contact', quotaGo: 10, utiliseGo: 2.1, statut: 'active', derniereConnexion: '2026-08-18T16:22:00Z', mfa: false },
-      { adresse: 'ci@digitalbusinessafrica.ci', nom: 'Bureau Côte d’Ivoire', quotaGo: 10, utiliseGo: 5.4, statut: 'active', derniereConnexion: '2026-08-19T08:11:00Z', mfa: true },
+      { adresse: 'contact@digitalbusinessafrica.ci', nom: 'Contact', quotaGo: 10, utiliseGo: 2.1, statut: 'active', derniereConnexion: '2026-08-18T16:22:00Z' },
+      { adresse: 'ci@digitalbusinessafrica.ci', nom: 'Bureau Côte d’Ivoire', quotaGo: 10, utiliseGo: 5.4, statut: 'active', derniereConnexion: '2026-08-19T08:11:00Z' },
     ],
     alias: [{ de: 'info@digitalbusinessafrica.ci', vers: ['contact@digitalbusinessafrica.ci'] }],
     redirections: [],
@@ -304,6 +303,8 @@ export interface DriveDomaine {
   version?: string
   sieges: { attribues: number; souscrits: number }
   quota: { utiliseGo: number; totalGo: number }
+  /** Utilisateurs applicatifs du drive — locaux au service, pas de SSO. */
+  utilisateurs: Array<{ id: string; nom: string; quotaGo: number; utiliseGo: number }>
   partage: {
     externeAutorise: boolean
     motDePasseObligatoire: boolean
@@ -326,8 +327,18 @@ export const DRIVES: DriveDomaine[] = [
     solutionOSS: 'Nextcloud',
     hote: 'drive.dba.africa',
     version: '29.0.4',
-    sieges: { attribues: 18, souscrits: 20 },
+    sieges: { attribues: 8, souscrits: 20 },
     quota: { utiliseGo: 1_142, totalGo: 2_000 },
+    utilisateurs: [
+      { id: 'drv-lea', nom: 'Léa Konan', quotaGo: 150, utiliseGo: 96 },
+      { id: 'drv-fatou', nom: 'Fatou Diallo', quotaGo: 200, utiliseGo: 168 },
+      { id: 'drv-yao', nom: 'Yao Kouassi', quotaGo: 100, utiliseGo: 41 },
+      { id: 'drv-aicha', nom: 'Aïcha Koné', quotaGo: 200, utiliseGo: 184 },
+      { id: 'drv-adama', nom: 'Adama Sangaré', quotaGo: 100, utiliseGo: 22 },
+      { id: 'drv-nadia', nom: 'Nadia Traoré', quotaGo: 80, utiliseGo: 9 },
+      { id: 'drv-compta', nom: 'Comptabilité', quotaGo: 120, utiliseGo: 74 },
+      { id: 'drv-contact', nom: 'Contact général', quotaGo: 80, utiliseGo: 33 },
+    ],
     partage: {
       externeAutorise: true,
       motDePasseObligatoire: true,
@@ -349,6 +360,7 @@ export const DRIVES: DriveDomaine[] = [
     hote: 'drive.digitalbusinessafrica.ci',
     sieges: { attribues: 0, souscrits: 0 },
     quota: { utiliseGo: 0, totalGo: 500 },
+    utilisateurs: [],
     partage: { externeAutorise: false, motDePasseObligatoire: true, expirationJours: 30, liensActifs: 0 },
     versionsFichiers: { actif: true, retentionJours: 30 },
     corbeille: { retentionJours: 30, tailleGo: 0 },
@@ -364,6 +376,7 @@ export const DRIVES: DriveDomaine[] = [
     hote: 'drive.dba-boutique.ci',
     sieges: { attribues: 0, souscrits: 0 },
     quota: { utiliseGo: 0, totalGo: 500 },
+    utilisateurs: [],
     partage: { externeAutorise: false, motDePasseObligatoire: true, expirationJours: 30, liensActifs: 0 },
     versionsFichiers: { actif: true, retentionJours: 30 },
     corbeille: { retentionJours: 30, tailleGo: 0 },
