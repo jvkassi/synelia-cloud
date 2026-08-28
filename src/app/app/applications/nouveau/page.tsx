@@ -1,46 +1,49 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
 import {
   Boxes,
   Check,
   Container as ContainerIcon,
-  FileCode2,
+  FolderPlus,
   GitBranch,
   Info,
   LayoutTemplate,
-  Plus,
-  Server,
   TriangleAlert,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MAINTENANT, money, num } from '@/lib/format'
-import {
-  ANALYSE_DEPOT,
-  ESPACES,
-  K8S_CLUSTERS,
-  PROJETS,
-  SERVICES_PROJET,
-  VMS,
-} from '@/lib/mock'
+import { ANALYSE_DEPOT, ESPACES, PROJETS, SERVICES_PROJET } from '@/lib/mock'
 import { CATEGORIE_MODELE_LABEL, MODELES, modeleBySlug } from '@/lib/mock/modeles'
 import type { Projet, ServiceProjet } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
-import { Button, IconButton } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import { Checkbox, Field, Input, Select, Switch } from '@/components/ui/field'
 import { Card, CardHeader, Callout, KeyValueList } from '@/components/composition/card'
 import { CostPreview, WizardShell } from '@/components/composition/flow'
+import { EmptyState } from '@/components/composition/states'
 import { TopologyCanvas } from '@/components/business/rbac-canvas'
-import { useApp, useEspace } from '@/components/app/contexte'
+import { useApp } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 
+/**
+ * Assistant de déploiement — pas de création de projet ici.
+ *
+ * Un projet est toujours un cluster Kubernetes dédié : il naît depuis
+ * « Créer un projet » dans Projets, avec son Espace Cloud et son cluster
+ * (neuf ou existant). Cet assistant part donc d'un projet déjà là, et
+ * n'a plus jamais à demander Kubernetes ou des machines virtuelles — c'est
+ * déjà tranché. Il ne déploie que dans **un seul** environnement à la fois :
+ * dupliquer vers un autre environnement se fait en relançant l'assistant.
+ */
 const ETAPES = [
-  { numero: 1, titre: 'Source' },
-  { numero: 2, titre: 'Analyse du dépôt' },
-  { numero: 3, titre: 'Architecture' },
-  { numero: 4, titre: 'Cible & ressources' },
-  { numero: 5, titre: 'Environnements' },
+  { numero: 1, titre: 'Projet' },
+  { numero: 2, titre: 'Source' },
+  { numero: 3, titre: 'Analyse du dépôt' },
+  { numero: 4, titre: 'Architecture' },
+  { numero: 5, titre: 'Ressources' },
+  { numero: 6, titre: 'Environnement' },
 ]
 
 const DEPOTS = [
@@ -58,21 +61,24 @@ const COMPOSANTS_CANVAS = [
   { nom: 'redis', role: 'Cache', cpu: 1, ram: 4096, disk: 10, rep: 1 },
 ]
 
-const ENVIRONNEMENTS_MODELE = [
-  { nom: 'Production', couleur: '#1B8F62', domaine: 'api', actif: true, protection: true, autoDeploy: false, motDePasse: false },
-  { nom: 'Préproduction', couleur: '#B8690B', domaine: 'preprod-api', actif: true, protection: false, autoDeploy: true, motDePasse: true },
-  { nom: 'Développement', couleur: '#2563A8', domaine: 'dev-api', actif: true, protection: false, autoDeploy: true, motDePasse: true },
-  { nom: 'Recette', couleur: '#6B3FA0', domaine: 'recette-api', actif: false, protection: false, autoDeploy: true, motDePasse: true },
-]
-
 export default function NouvelleApplication() {
+  return (
+    <Suspense fallback={null}>
+      <NouvelleApplicationInterne />
+    </Suspense>
+  )
+}
+
+/** Isolé pour `useSearchParams`, qui exige un contour de Suspense. */
+function NouvelleApplicationInterne() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { pousser } = useApp()
-  const espaceCourant = useEspace()
   const projets = useCollection<Projet>('projets', PROJETS)
   const services = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
   const { lancerJob } = useAtelier()
 
+  const [projetId, setProjetId] = useState(searchParams.get('projet') ?? projets.items[0]?.id ?? '')
   const [etape, setEtape] = useState(1)
   const [source, setSource] = useState<'git' | 'image' | 'canvas' | 'modele'>('git')
   const [modeleSlug, setModeleSlug] = useState(MODELES[0].slug)
@@ -82,46 +88,50 @@ export default function NouvelleApplication() {
   const [image, setImage] = useState('registry.synelia.cloud/dba/portail-client')
   const [etiquette, setEtiquette] = useState('v1.0.0')
   const [builder, setBuilder] = useState<'nixpacks' | 'dockerfile' | 'image'>('nixpacks')
-
-  const [cible, setCible] = useState<'vm' | 'k8s'>('k8s')
-  const [espaceId, setEspaceId] = useState(espaceCourant.id)
-  const [ressourcesNeuves, setRessourcesNeuves] = useState(true)
-  const [clusterId, setClusterId] = useState(K8S_CLUSTERS[0]?.id ?? '')
-
-  const [envs, setEnvs] = useState(ENVIRONNEMENTS_MODELE)
-  const [domaineBase, setDomaineBase] = useState('dba.africa')
   const [previewPr, setPreviewPr] = useState(true)
   const [conditions, setConditions] = useState(false)
-  // Les valeurs de départ des composants du canvas : saisies ici, reprises dans
-  // l'aperçu de coût et dans les ressources des services créés.
   const [composants, setComposants] = useState(COMPOSANTS_CANVAS)
-  const [vmsReutilisees, setVmsReutilisees] = useState<string[]>([])
+  const [env, setEnv] = useState(searchParams.get('env') ?? '')
 
+  const projet = projets.items.find((p) => p.id === projetId)
+  const envActif = env && projet?.environnements.includes(env) ? env : (projet?.environnements[0] ?? '')
   const depotChoisi = DEPOTS.find((d) => d.url === depot)!
   const modeleChoisi = modeleBySlug(modeleSlug)!
-  const envsActifs = envs.filter((e) => e.actif)
+  const espace = ESPACES.find((e) => e.id === projet?.espaceId)
 
   const lignesCout = [
     {
-      libelle: `Composants ${cible === 'k8s' ? 'Kubernetes' : 'sur machines virtuelles'}`,
-      detail: `${envsActifs.length} environnement(s) · 4 composants par environnement`,
-      montant: envsActifs.length * (cible === 'k8s' ? 14000 : 22000),
+      libelle: 'Composants Kubernetes',
+      detail: `Environnement ${envActif || '—'} · ${composants.length} composants`,
+      montant: 14000,
     },
-    ...(ressourcesNeuves && cible === 'vm'
-      ? [{ libelle: 'Nouvelles machines virtuelles', detail: '2 × c2.medium', montant: 15600 }]
-      : []),
     { libelle: 'Base managée PostgreSQL 16', detail: 'Palier Flex, détectée dans le dépôt', montant: 28000 },
     { libelle: 'Cache Redis 7.2', detail: 'Palier Flex', montant: 9000 },
-    ...(envsActifs.some((e) => e.nom === 'Production')
+    ...(envActif === 'Production'
       ? [{ libelle: 'Load balancer L7 + certificat', detail: 'Exposition publique', montant: 18000 }]
       : []),
   ]
 
-  const peutContinuer = etape === 5 ? conditions && envsActifs.length > 0 : true
+  const suivant = (n: number) => (n === 2 ? (source === 'git' ? 3 : 4) : n + 1)
+  const precedent = (n: number) => (n === 4 ? (source === 'git' ? 3 : 2) : n - 1)
+
+  const etapesVisibles = ETAPES.filter((e) => e.numero !== 3 || source === 'git')
+  const peutContinuer = etape === 1 ? Boolean(projet) : etape === 6 ? conditions && Boolean(envActif) : true
+
+  if (!projet) {
+    return (
+      <EmptyState
+        titre="Aucun projet pour l’instant"
+        phrase="Une application se déploie toujours dans un projet — le contenant qui porte l’Espace Cloud et le cluster Kubernetes. Créez-en un d’abord, ça ne facture rien tant qu’aucun service n’y tourne."
+        icone={<FolderPlus size={22} />}
+        action={{ libelle: 'Créer un projet', href: '/app/applications/projets?creer=1' }}
+      />
+    )
+  }
 
   return (
     <WizardShell
-      etapes={source === 'git' ? ETAPES : ETAPES.filter((e) => e.numero !== 2)}
+      etapes={etapesVisibles}
       courante={etape}
       onChange={setEtape}
       titre={ETAPES[etape - 1].titre}
@@ -130,6 +140,7 @@ export default function NouvelleApplication() {
           <Card>
             <MicroLabel>Application</MicroLabel>
             <dl className="mt-2.5 space-y-1.5">
+              <Petit cle="Projet" valeur={projet.nom} />
               <Petit cle="Nom" valeur={nomApp} mono />
               <Petit
                 cle="Source"
@@ -150,9 +161,8 @@ export default function NouvelleApplication() {
                 />
               )}
               <Petit cle="Constructeur" valeur={builder} />
-              <Petit cle="Cible" valeur={cible === 'k8s' ? 'Kubernetes' : 'Machines virtuelles'} />
-              <Petit cle="Espace Cloud" valeur={ESPACES.find((e) => e.id === espaceId)?.code ?? ''} mono />
-              <Petit cle="Environnements" valeur={String(envsActifs.length)} />
+              <Petit cle="Espace Cloud" valeur={espace?.code ?? ''} mono />
+              <Petit cle="Environnement" valeur={envActif || '—'} />
             </dl>
           </Card>
           <CostPreview lignes={lignesCout} />
@@ -163,92 +173,94 @@ export default function NouvelleApplication() {
           <Button
             variant="ghost"
             onClick={() => {
-              if (etape === 1) return router.push('/app/applications/projets')
-              setEtape(source === 'git' || etape !== 3 ? etape - 1 : 1)
+              if (etape === 1) return router.push(`/app/applications/projets/${projet.id}`)
+              setEtape(precedent(etape))
             }}
           >
             {etape === 1 ? 'Annuler' : 'Précédent'}
           </Button>
-          {etape < 5 ? (
-            <Button
-              onClick={() => setEtape(source === 'git' || etape !== 1 ? etape + 1 : 3)}
-            >
-              Continuer
-            </Button>
+          {etape < 6 ? (
+            <Button onClick={() => setEtape(suivant(etape))}>Continuer</Button>
           ) : (
             <Button
               disabled={!peutContinuer}
               onClick={() => {
-                const idProjet = projets.identifiant('prj')
-                const environnements = envsActifs.map((e) => e.nom)
-                projets.creer({
-                  id: idProjet,
+                const idService = services.identifiant('svc')
+                services.creer({
+                  id: idService,
+                  projetId: projet.id,
                   nom: nomApp,
-                  description:
-                    source === 'git'
-                      ? `Déployé depuis ${depot} (${branche}), construit avec ${builder}.`
-                      : source === 'image'
-                        ? `Déployé depuis l’image ${image}:${etiquette}.`
-                        : 'Créé depuis le canvas.',
-                  espaceId,
-                  cree: MAINTENANT.slice(0, 10),
-                  environnements,
-                  variables: [],
+                  type: 'application',
+                  environnement: envActif,
+                  statut: 'building',
+                  ressources: { cpu: 1, ramMo: 1024, diskGo: 20 },
+                  emplacement: {
+                    site: espace?.site ?? 'ABJ',
+                    backend: 'OpenStack Magnum',
+                    namespace: `${projet.id}-${envActif.toLowerCase()}`,
+                  },
+                  derniereMaj: MAINTENANT,
+                  coutMensuel: 8600,
+                  appId: nomApp,
+                  source:
+                    source === 'image'
+                      ? { type: 'image' as const, ref: `${image}:${etiquette}` }
+                      : { type: 'git' as const, ref: depot, branche },
+                  portConteneur: 3000,
                 })
-                services.creer(
-                  environnements.map((env) => ({
-                    id: services.identifiant('svc'),
-                    projetId: idProjet,
-                    nom: nomApp,
-                    type: 'application' as const,
-                    environnement: env,
-                    statut: 'building' as const,
-                    ressources: { cpu: 1, ramMo: 1024, diskGo: 20 },
-                    emplacement: {
-                      site: ESPACES.find((e) => e.id === espaceId)?.site ?? 'ABJ',
-                      backend: cible === 'k8s' ? 'OpenStack Magnum' : 'OpenStack Nova',
-                      namespace: cible === 'k8s' ? `${nomApp}-${env.toLowerCase()}` : undefined,
-                    },
-                    derniereMaj: MAINTENANT,
-                    coutMensuel: 8600,
-                    appId: nomApp,
-                    source:
-                      source === 'image'
-                        ? { type: 'image' as const, ref: `${image}:${etiquette}` }
-                        : { type: 'git' as const, ref: depot, branche },
-                    portConteneur: 3000,
-                  })),
-                )
                 pousser({
                   ton: 'info',
-                  titre: `Création de ${nomApp} lancée`,
-                  detail: 'Build, analyse DevSecOps, provisioning puis déploiement. Suivi dans le centre de tâches.',
+                  titre: `Déploiement de ${nomApp} lancé`,
+                  detail: `Build, analyse DevSecOps puis déploiement dans ${envActif}. Suivi dans le centre de tâches.`,
                 })
                 lancerJob({
-                  workflow: 'projet.create',
-                  cible: nomApp,
+                  workflow: 'app.deploy',
+                  cible: `${nomApp} · ${envActif}`,
                   alFin: () => {
-                    services
-                      .items.filter((x) => x.projetId === idProjet)
-                      .forEach((x) => services.modifier(x.id, { statut: 'running' }))
+                    services.modifier(idService, { statut: 'running' })
                     pousser({
                       ton: 'ok',
                       titre: `${nomApp} est déployé`,
-                      detail: `${environnements.length} environnement(s) en marche.`,
+                      detail: `En ligne dans ${envActif}.`,
                     })
                   },
                 })
-                router.push('/app/applications/projets')
+                router.push(`/app/applications/projets/${projet.id}`)
               }}
             >
-              Créer et déployer
+              Déployer
             </Button>
           )}
         </>
       }
     >
-      {/* Étape 1 — Source */}
+      {/* Étape 1 — Projet */}
       {etape === 1 && (
+        <div className="space-y-4">
+          <Field
+            label="Projet"
+            required
+            hint="L’Espace Cloud et le cluster Kubernetes du projet sont hérités — rien à choisir ici."
+          >
+            <Select value={projetId} onChange={(e) => setProjetId(e.target.value)}>
+              {projets.items.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nom} · {ESPACES.find((e) => e.id === p.espaceId)?.code ?? p.espaceId}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Callout ton="violet" titre="Pas de choix d’infrastructure">
+            Ce projet tourne sur son propre cluster Kubernetes : chaque composant devient un
+            déploiement dans un namespace dédié, avec autoscaling horizontal et isolation réseau par
+            NetworkPolicy. Rien à choisir entre Kubernetes et des machines virtuelles — c’est tranché
+            à la création du projet.
+          </Callout>
+        </div>
+      )}
+
+      {/* Étape 2 — Source */}
+      {etape === 2 && (
         <div className="space-y-4">
           <Field label="Nom de l’application" required>
             <Input value={nomApp} onChange={(e) => setNomApp(e.target.value)} className="font-mono" />
@@ -330,7 +342,7 @@ export default function NouvelleApplication() {
                     ))}
                   </Select>
                 </Field>
-                <Field label="Branche de production">
+                <Field label="Branche">
                   <Select value={branche} onChange={(e) => setBranche(e.target.value)}>
                     {depotChoisi.branches.map((b) => (
                       <option key={b} value={b}>
@@ -454,8 +466,8 @@ export default function NouvelleApplication() {
         </div>
       )}
 
-      {/* Étape 2 — Analyse du dépôt */}
-      {etape === 2 && source === 'git' && (
+      {/* Étape 3 — Analyse du dépôt */}
+      {etape === 3 && source === 'git' && (
         <div className="space-y-4">
           <Card>
             <CardHeader
@@ -529,7 +541,7 @@ export default function NouvelleApplication() {
           <Card>
             <CardHeader
               titre="Variables d’environnement attendues"
-              sousTitre="Lues dans .env.example. Les valeurs seront à renseigner par environnement."
+              sousTitre="Lues dans .env.example. Les valeurs seront à renseigner pour cet environnement."
             />
             <div className="space-y-2">
               {[
@@ -567,8 +579,8 @@ export default function NouvelleApplication() {
         </div>
       )}
 
-      {/* Étape 3 — Architecture */}
-      {etape === 3 && (
+      {/* Étape 4 — Architecture */}
+      {etape === 4 && (
         <div className="space-y-4">
           <Callout ton="info" titre="Composition proposée">
             Nous avons prérempli le canvas d’après l’analyse du dépôt : un proxy en entrée, votre
@@ -580,105 +592,9 @@ export default function NouvelleApplication() {
         </div>
       )}
 
-      {/* Étape 4 — Cible & ressources */}
-      {etape === 4 && (
+      {/* Étape 5 — Ressources */}
+      {etape === 5 && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {(
-              [
-                ['k8s', 'Kubernetes', 'Chaque composant devient un déploiement dans un namespace dédié. Autoscaling horizontal, mise à jour progressive, isolation réseau par NetworkPolicy.'],
-                ['vm', 'Machines virtuelles', 'Chaque composant tourne sur une ou plusieurs machines. Plus simple à diagnostiquer, plus prévisible en performances, moins élastique.'],
-              ] as const
-            ).map(([v, t, d]) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setCible(v)}
-                className={cn(
-                  'rounded-[10px] border-2 bg-white p-4 text-left transition-colors',
-                  cible === v ? 'border-p-700' : 'border-g-300 hover:border-p-400',
-                )}
-              >
-                <span className="flex items-center gap-2">
-                  {v === 'k8s' ? (
-                    <ContainerIcon size={16} className="text-p-700" />
-                  ) : (
-                    <Server size={16} className="text-p-700" />
-                  )}
-                  <span className="type-h3">{t}</span>
-                </span>
-                <span className="mt-2 block text-[12.5px] leading-relaxed text-g-700">{d}</span>
-              </button>
-            ))}
-          </div>
-
-          <Card>
-            <CardHeader titre="Emplacement" />
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="Espace Cloud">
-                <Select value={espaceId} onChange={(e) => setEspaceId(e.target.value)}>
-                  {ESPACES.map((e) => (
-                    <option key={e.id} value={e.id}>
-                      {e.code} · {e.site} · {e.quota.vcpu - e.usage.vcpu} vCPU libres
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              {cible === 'k8s' && (
-                <Field label="Cluster">
-                  <Select value={clusterId} onChange={(e) => setClusterId(e.target.value)}>
-                    {K8S_CLUSTERS.filter((c) => c.espaceId === espaceId).map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nom} · v{c.version}
-                      </option>
-                    ))}
-                    <option value="nouveau">Créer un nouveau cluster</option>
-                  </Select>
-                </Field>
-              )}
-            </div>
-            <div className="mt-3.5">
-              <Switch
-                checked={ressourcesNeuves}
-                onChange={setRessourcesNeuves}
-                label="Provisionner de nouvelles ressources"
-                description={
-                  cible === 'k8s'
-                    ? 'Un namespace dédié par environnement, avec quotas et NetworkPolicy. Sinon, réutilise un namespace existant.'
-                    : 'Crée les machines nécessaires. Sinon, réutilise des machines existantes de l’espace.'
-                }
-              />
-            </div>
-            {!ressourcesNeuves && cible === 'vm' && (
-              <div className="mt-3.5 space-y-2 border-t border-g-100 pt-3.5">
-                <MicroLabel>Machines existantes à réutiliser</MicroLabel>
-                {VMS.filter((v) => v.espaceId === espaceId && !v.applicationId).map((v) => (
-                  <label
-                    key={v.id}
-                    className="flex cursor-pointer items-center gap-3 rounded-[6px] border border-g-300 px-3 py-2 hover:bg-g-050"
-                  >
-                    <input
-                      type="checkbox"
-                      className="h-3.5 w-3.5 accent-[#4B2882]"
-                      checked={vmsReutilisees.includes(v.id)}
-                      onChange={(e) =>
-                        setVmsReutilisees((prev) =>
-                          e.target.checked ? [...prev, v.id] : prev.filter((x) => x !== v.id),
-                        )
-                      }
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-mono text-[12.5px] text-ink">{v.nom}</span>
-                      <span className="block text-[11px] text-g-500">
-                        {v.vcpu} vCPU · {v.ramGo} Go · {v.os}
-                      </span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </Card>
-
           <Card>
             <CardHeader
               titre="Ressources par composant"
@@ -747,108 +663,54 @@ export default function NouvelleApplication() {
               </table>
             </div>
           </Card>
+          <Callout ton="violet" titre={`Namespace ${projet.id}-${envActif.toLowerCase() || '<env>'}`}>
+            Déployé sur le cluster de <span className="font-mono text-[12px]">{projet.nom}</span>, dans
+            l’Espace Cloud <span className="font-mono text-[12px]">{espace?.code}</span>. Aucune autre
+            décision d’emplacement à prendre : c’est celle du projet.
+          </Callout>
         </div>
       )}
 
-      {/* Étape 5 — Environnements */}
-      {etape === 5 && (
+      {/* Étape 6 — Environnement */}
+      {etape === 6 && (
         <div className="space-y-4">
           <Card>
             <CardHeader
-              titre="Environnements à créer"
-              sousTitre="Chaque environnement a ses composants, ses variables, son domaine et son historique de déploiements."
+              titre="Environnement de déploiement"
+              sousTitre="Une application se déploie dans un seul environnement à la fois. Pour la retrouver ailleurs, relancez l’assistant."
             />
-            <div className="mb-4">
-              <Field label="Domaine de base" hint="les sous-domaines en découlent">
-                <Input
-                  value={domaineBase}
-                  onChange={(e) => setDomaineBase(e.target.value)}
-                  className="font-mono"
-                />
-              </Field>
-            </div>
             <div className="space-y-2">
-              {envs.map((e, i) => (
-                <div
-                  key={e.nom}
+              {projet.environnements.map((e) => (
+                <label
+                  key={e}
                   className={cn(
-                    'rounded-[8px] border px-3.5 py-3 transition-colors',
-                    e.actif ? 'border-g-300' : 'border-g-300 bg-g-050 opacity-70',
+                    'flex cursor-pointer items-center gap-2.5 rounded-[8px] border px-3.5 py-3 transition-colors',
+                    e === envActif ? 'border-p-700 bg-p-050' : 'border-g-300 hover:border-p-400',
                   )}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <label className="flex cursor-pointer items-center gap-2.5">
-                      <input
-                        type="checkbox"
-                        checked={e.actif}
-                        onChange={() =>
-                          setEnvs((p) =>
-                            p.map((x, k) => (k === i ? { ...x, actif: !x.actif } : x)),
-                          )
-                        }
-                        className="h-3.5 w-3.5 accent-[#4B2882]"
-                      />
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ background: e.couleur }}
-                        aria-hidden
-                      />
-                      <span className="text-[13px] font-semibold text-ink">{e.nom}</span>
-                    </label>
-                    {e.actif && (
-                      <span className="flex flex-wrap items-center gap-2">
-                        <Input
-                          value={e.domaine}
-                          className="w-40 font-mono"
-                          aria-label={`Sous-domaine de ${e.nom}`}
-                          onChange={(ev) =>
-                            setEnvs((prev) =>
-                              prev.map((x) =>
-                                x.nom === e.nom ? { ...x, domaine: ev.target.value } : x,
-                              ),
-                            )
-                          }
-                        />
-                        <span className="font-mono text-[12px] text-g-500">.{domaineBase}</span>
-                      </span>
-                    )}
-                  </div>
-                  {e.actif && (
-                    <div className="mt-3 flex flex-wrap gap-4 border-t border-g-100 pt-2.5">
-                      {(
-                        [
-                          { cle: 'protection' as const, libelle: 'Approbation requise avant mise en production' },
-                          { cle: 'autoDeploy' as const, libelle: 'Déploiement automatique sur poussée' },
-                          ...(e.nom !== 'Production'
-                            ? [{ cle: 'motDePasse' as const, libelle: 'Protégé par mot de passe' }]
-                            : []),
-                        ]
-                      ).map((opt) => (
-                        <label
-                          key={opt.cle}
-                          className="flex items-center gap-2 text-[11.5px] text-g-700"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={e[opt.cle]}
-                            className="h-3 w-3 accent-[#4B2882]"
-                            onChange={(ev) =>
-                              setEnvs((prev) =>
-                                prev.map((x) =>
-                                  x.nom === e.nom ? { ...x, [opt.cle]: ev.target.checked } : x,
-                                ),
-                              )
-                            }
-                          />
-                          {opt.libelle}
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                  <input
+                    type="radio"
+                    name="environnement"
+                    checked={e === envActif}
+                    onChange={() => setEnv(e)}
+                    className="h-3.5 w-3.5 accent-[#4B2882]"
+                  />
+                  <span className="text-[13px] font-semibold text-ink">{e}</span>
+                </label>
               ))}
             </div>
           </Card>
+
+          <div className="rounded-[8px] border border-g-300 bg-g-050 p-3">
+            <MicroLabel>Adresse attribuée automatiquement</MicroLabel>
+            <p className="mt-1.5 font-mono text-[12px] text-g-700">
+              {nomApp || '<service>'}-{envActif.toLowerCase().slice(0, 7) || '<env>'}.dba.synelia.app
+            </p>
+            <p className="mt-2 text-[11.5px] leading-relaxed text-g-500">
+              Certificat émis dès le premier déploiement. Vous pourrez brancher votre propre domaine
+              ensuite, sans changer cette adresse.
+            </p>
+          </div>
 
           {source === 'git' && (
             <Card>
@@ -874,6 +736,7 @@ export default function NouvelleApplication() {
             <KeyValueList
               colonnes={2}
               items={[
+                { cle: 'Projet', valeur: projet.nom },
                 { cle: 'Application', valeur: <span className="font-mono">{nomApp}</span> },
                 {
                   cle: 'Source',
@@ -885,13 +748,8 @@ export default function NouvelleApplication() {
                         : 'Composition depuis le canvas',
                 },
                 { cle: 'Constructeur', valeur: builder },
-                { cle: 'Cible', valeur: cible === 'k8s' ? 'Kubernetes' : 'Machines virtuelles' },
-                { cle: 'Espace Cloud', valeur: ESPACES.find((e) => e.id === espaceId)?.code ?? '' },
-                {
-                  cle: 'Environnements',
-                  valeur: envsActifs.map((e) => e.nom).join(', ') || 'Aucun',
-                },
-                { cle: 'Domaines', valeur: envsActifs.map((e) => `${e.domaine}.${domaineBase}`).join(', ') },
+                { cle: 'Espace Cloud', valeur: espace?.code ?? '' },
+                { cle: 'Environnement', valeur: envActif || 'Aucun' },
                 {
                   cle: 'Prévisualisation par PR',
                   valeur: previewPr && source === 'git' ? 'Activée' : 'Désactivée',
@@ -906,7 +764,7 @@ export default function NouvelleApplication() {
             <Checkbox
               checked={conditions}
               onChange={(e) => setConditions(e.target.checked)}
-              label="Je confirme la création de cette application"
+              label="Je confirme le déploiement de cette application"
               description="Le pipeline démarre immédiatement : build, analyse DevSecOps, provisioning des ressources, puis déploiement sans coupure. Montants hors taxes, TVA 18 % appliquée à la facturation."
             />
           </Card>
