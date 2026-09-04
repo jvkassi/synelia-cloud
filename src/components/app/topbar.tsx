@@ -16,9 +16,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { relatif } from '@/lib/format'
-import { ROLE_LABEL, type ProvisioningJob, type Role } from '@/lib/types'
+import { ROLE_LABEL, type EspaceCloud, type ProvisioningJob, type Role } from '@/lib/types'
 import { ROLES_CLIENT, ROLES_SUPER_ADMIN } from '@/lib/rbac'
-import { MES_ORGANISATIONS, ORG_COURANTE, UTILISATEUR_COURANT } from '@/lib/mock/orgs'
 import { ESPACES } from '@/lib/mock/iaas'
 import { JOBS, JOBS_PLATEFORME } from '@/lib/mock/ops'
 import {
@@ -36,7 +35,7 @@ import { Badge } from '@/components/ui/badge'
 import { Popover } from '@/components/ui/overlay'
 import { Logo, BadgeSuperAdmin } from '@/components/brand/logo'
 import { RechercheGlobale } from './recherche'
-import { useApp } from './contexte'
+import { useApp, useEspace } from './contexte'
 import { useAtelier, useCollection } from './atelier'
 
 const NOTIFICATIONS = [
@@ -278,8 +277,11 @@ function BarreSections({
  * panneau est alors le seul endroit où l'on choisit son Espace Cloud.
  */
 function SelecteurContexte({ avecEspace }: { avecEspace: boolean }) {
-  const { espaceId, setEspaceId } = useApp()
-  const espace = ESPACES.find((e) => e.id === espaceId) ?? ESPACES[0]
+  const { setEspaceId, organisations, organisationId, changerOrganisation } = useApp()
+  // Lus depuis l’atelier pour suivre le backend quand l’API est active.
+  const espace = useEspace()
+  const listeEspaces = useCollection<EspaceCloud>('espaces', ESPACES)
+  const orgActive = organisations.find((o) => o.id === organisationId) ?? organisations[0]
 
   return (
     <Popover
@@ -288,7 +290,7 @@ function SelecteurContexte({ avecEspace }: { avecEspace: boolean }) {
       trigger={() => (
         <span
           className="flex shrink-0 items-center gap-1.5 rounded-[6px] border border-white/15 bg-white/10 px-2 py-1.5 text-[11.5px] font-semibold text-p-300 transition-colors hover:bg-white/15"
-          title={avecEspace ? `${ORG_COURANTE.nom} · ${espace.code}` : ORG_COURANTE.nom}
+          title={avecEspace ? `${orgActive?.nom} · ${espace.code}` : (orgActive?.nom ?? '')}
         >
           <Building2 size={12} className="shrink-0" />
           {/* Le nom de l'organisation n'apparaît qu'au-delà de 1536 px quand le
@@ -301,7 +303,7 @@ function SelecteurContexte({ avecEspace }: { avecEspace: boolean }) {
               avecEspace ? 'hidden 2xl:inline' : 'hidden sm:inline',
             )}
           >
-            {ORG_COURANTE.nom}
+            {orgActive?.nom}
           </span>
           {avecEspace && (
             <>
@@ -316,23 +318,28 @@ function SelecteurContexte({ avecEspace }: { avecEspace: boolean }) {
       {(close) => (
         <div className="p-2">
           <p className="type-micro px-2 py-1.5 text-g-500">Organisation</p>
-          {MES_ORGANISATIONS.map((m) => (
+          {organisations.map((m) => (
             <Link
-              key={m.org.id}
+              key={m.id}
               href="/app"
-              onClick={close}
+              onClick={() => {
+                changerOrganisation(m.id)
+                close()
+              }}
               className={cn(
                 'flex items-center justify-between gap-2 rounded-[6px] px-2 py-2 transition-colors hover:bg-p-050',
-                m.org.id === ORG_COURANTE.id && 'bg-p-050',
+                m.id === organisationId && 'bg-p-050',
               )}
             >
               <span className="min-w-0">
                 <span className="block truncate text-[13px] font-semibold text-ink">
-                  {m.org.nom}
+                  {m.nom}
                 </span>
-                <span className="block text-[11.5px] text-g-500">{ROLE_LABEL[m.role]}</span>
+                <span className="block text-[11.5px] text-g-500">
+                  {ROLE_LABEL[m.role as Role] ?? m.role}
+                </span>
               </span>
-              {m.org.id === ORG_COURANTE.id && (
+              {m.id === organisationId && (
                 <Badge tone="violet" size="sm">
                   Actuelle
                 </Badge>
@@ -345,7 +352,7 @@ function SelecteurContexte({ avecEspace }: { avecEspace: boolean }) {
               <p className="type-micro mt-2 border-t border-g-100 px-2 pb-1 pt-2 text-g-500">
                 Espace Cloud
               </p>
-              {ESPACES.map((e) => (
+              {listeEspaces.items.map((e) => (
                 <button
                   key={e.id}
                   type="button"
@@ -534,7 +541,7 @@ function NotificationsPopover() {
  * place d'un troisième contrôle de contexte.
  */
 function MenuCompte({ superAdmin }: { superAdmin: boolean }) {
-  const { role, setRole, pousser } = useApp()
+  const { role, setRole, pousser, api, utilisateur, deconnecter } = useApp()
   const { collectionsModifiees, reinitialiser } = useAtelier()
   const roles = superAdmin ? ROLES_SUPER_ADMIN : ROLES_CLIENT
 
@@ -544,7 +551,7 @@ function MenuCompte({ superAdmin }: { superAdmin: boolean }) {
       label="Mon compte et rôle simulé"
       trigger={() => (
         <span className="flex items-center gap-1.5">
-          <Avatar nom={UTILISATEUR_COURANT.nom} size="sm" />
+          <Avatar nom={utilisateur.nom} size="sm" />
           <ChevronDown size={12} className="hidden text-p-300 sm:block" />
         </span>
       )}
@@ -552,15 +559,17 @@ function MenuCompte({ superAdmin }: { superAdmin: boolean }) {
       {(close) => (
         <div className="p-2">
           <div className="flex items-center gap-2.5 border-b border-g-100 px-2 pb-2.5">
-            <Avatar nom={UTILISATEUR_COURANT.nom} size="md" />
+            <Avatar nom={utilisateur.nom} size="md" />
             <div className="min-w-0">
               <p className="truncate text-[13px] font-semibold text-ink">
-                {UTILISATEUR_COURANT.nom}
+                {utilisateur.nom}
               </p>
-              <p className="truncate text-[11.5px] text-g-500">{UTILISATEUR_COURANT.email}</p>
+              <p className="truncate text-[11.5px] text-g-500">{utilisateur.email}</p>
             </div>
           </div>
 
+          {/* En mode API le rôle vient de la session : rien à simuler. */}
+          {!api && (
           <div className="border-b border-g-100 py-2">
             <p className="type-micro px-2 pb-1 text-g-500">Rôle simulé</p>
             <p className="px-2 pb-1.5 text-[11px] leading-snug text-g-500">
@@ -587,6 +596,7 @@ function MenuCompte({ superAdmin }: { superAdmin: boolean }) {
               ))}
             </div>
           </div>
+          )}
 
           <div className="pt-1.5">
             {superAdmin ? (
@@ -632,9 +642,25 @@ function MenuCompte({ superAdmin }: { superAdmin: boolean }) {
                 Réinitialiser la démonstration
               </button>
             )}
-            <MenuLien href="/login" onClick={close} icone={<LogOut size={13} />}>
-              Se déconnecter
-            </MenuLien>
+            {api ? (
+              <button
+                type="button"
+                onClick={() => {
+                  close()
+                  deconnecter()
+                }}
+                className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[12.5px] text-ink transition-colors hover:bg-p-050"
+              >
+                <span className="text-g-500">
+                  <LogOut size={13} />
+                </span>
+                Se déconnecter
+              </button>
+            ) : (
+              <MenuLien href="/login" onClick={close} icone={<LogOut size={13} />}>
+                Se déconnecter
+              </MenuLien>
+            )}
           </div>
         </div>
       )}

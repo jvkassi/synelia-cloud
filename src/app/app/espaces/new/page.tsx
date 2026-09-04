@@ -15,6 +15,8 @@ import { Card, CardHeader, Callout, KeyValueList } from '@/components/compositio
 import { CostPreview, WizardShell } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
+import { useOperation } from '@/components/app/actions'
+import { creerRessource, estActif } from '@/lib/api/client'
 
 const ETAPES = [
   { numero: 1, titre: 'Offre' },
@@ -46,6 +48,7 @@ export default function NouvelEspace() {
   const { pousser } = useApp()
   const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
   const { lancerJob } = useAtelier()
+  const executer = useOperation()
 
   const [etape, setEtape] = useState(1)
   const [offerId, setOfferId] = useState('off-pro')
@@ -131,6 +134,30 @@ export default function NouvelEspace() {
             <Button
               disabled={!conditions}
               onClick={() => {
+                // En mode API la création part au backend (`202` + travail
+                // suivi dans le centre de tâches) ; sinon la maquette simule.
+                if (estActif()) {
+                  executer({
+                    action: 'espace.create',
+                    titre: `Création de ${code} lancée`,
+                    detail:
+                      'Le quota est réservé, la plage réseau allouée. Suivi dans le centre de tâches.',
+                    appel: () =>
+                      creerRessource('/espaces', {
+                        code,
+                        offerId,
+                        site,
+                        cidr,
+                        quota: quotaDepuisSpecs(offre.specs),
+                        dnsInterne: dnsInterne
+                          ? `${code.toLowerCase()}.interne.synelia.cloud`
+                          : undefined,
+                      }),
+                    effetFinal: () => espaces.recharger(),
+                  })
+                  router.push('/app/espaces')
+                  return
+                }
                 const nouvel: EspaceCloud = {
                   id: espaces.identifiant('ec'),
                   orgId: 'org-dba',

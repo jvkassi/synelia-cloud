@@ -1,12 +1,13 @@
 'use client'
 
 import { pct } from '@/lib/format'
-import { SITE_COURT } from '@/lib/types'
-import { ESPACES, ORG_COURANTE } from '@/lib/mock'
+import { SITE_COURT, type EspaceCloud } from '@/lib/types'
+import { ESPACES } from '@/lib/mock'
 import type { Tone } from '@/components/ui/badge'
 import { SelecteurRessource } from '@/components/composition/selecteur-ressource'
 import { CoquillePanneau } from './cadre-section'
 import { useApp } from './contexte'
+import { useCollection } from './atelier'
 
 /**
  * Sélecteur d'Espace Cloud d'un univers — un contexte, pas une navigation.
@@ -24,9 +25,11 @@ import { useApp } from './contexte'
  * partout n'apprend rien, alors qu'un Espace à 91 % appelle une décision.
  */
 export function CadreEspace({ children }: { children: React.ReactNode }) {
-  const { espaceId, setEspaceId } = useApp()
+  const { espaceId, setEspaceId, organisationId } = useApp()
+  // Lu depuis l’atelier pour suivre le backend quand l’API est active.
+  const { items } = useCollection<EspaceCloud>('espaces', ESPACES)
 
-  const entrees = ESPACES.filter((e) => e.orgId === ORG_COURANTE.id).map((e) => {
+  const entrees = items.filter((e) => e.orgId === organisationId || !organisationId).map((e) => {
     const remplissage = Math.max(
       e.usage.vcpu / e.quota.vcpu,
       e.usage.ramGo / e.quota.ramGo,

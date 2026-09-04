@@ -8,6 +8,7 @@ import { ConfirmDialog, Modal } from '@/components/ui/overlay'
 import type { AuditEvent } from '@/lib/types'
 import { UTILISATEUR_COURANT } from '@/lib/mock/orgs'
 import { libelleWorkflow, workflowById } from '@/lib/workflows'
+import { ApiError, estActif, estTravail, suivreTravail } from '@/lib/api/client'
 import { useApp } from './contexte'
 import { useAtelier, type SpecJob } from './atelier'
 
@@ -34,6 +35,13 @@ export interface SpecOperation {
   /** Mutation appliquée à la fin du job — bascule d'état, par exemple. */
   effetFinal?: () => void
   /**
+   * Appel réel au backend, utilisé quand l’API est active. S’il renvoie un
+   * travail de provisioning (`202`), le job existant est piloté par ses
+   * `taches` ; sinon `effetFinal` s’applique au retour. En mode maquette,
+   * `effet` + `job` gardent leur comportement simulé.
+   */
+  appel?: () => Promise<unknown>
+  /**
    * Ce qu'on écrit au journal d'audit. Par défaut l'opération est journalisée
    * en déduisant l'action de `action` et la cible de `titre` ; `audit: false`
    * dispense les gestes qui ne valent pas une trace — replier un panneau,
@@ -51,7 +59,7 @@ export interface SpecOperation {
 
 export function useOperation() {
   const { pousser, autorise, role } = useApp()
-  const { lancerJob, journaliser } = useAtelier()
+  const { lancerJob, integrerTravail, journaliser } = useAtelier()
 
   const executer = useCallback(
     (spec: SpecOperation) => {
@@ -78,6 +86,74 @@ export function useOperation() {
       // la seule trace qu'un auditeur ne peut pas reconstituer autrement.
       if (spec.action && !autorise(spec.action)) {
         trace('refuse', `Rôle ${role} insuffisant pour ${spec.action}`)
+        return
+      }
+
+      // Mode API : l’appel réel remplace la simulation. Un refus ou un échec
+      // métier arrive en `ApiError` et se dit avec les mots du backend.
+      if (estActif() && spec.appel) {
+        const echec = (e: unknown) => {
+          if (e instanceof ApiError) {
+            const complements = [
+              e.rolesRequis && e.rolesRequis.length > 0
+                ? `Rôle requis : ${e.rolesRequis.join(' ou ')}.`
+                : undefined,
+              e.champs
+                ? Object.entries(e.champs)
+                    .map(([champ, message]) => `${champ} : ${message}`)
+                    .join(' ')
+                : undefined,
+              e.correlationId ? `Référence ${e.correlationId}.` : undefined,
+            ].filter(Boolean)
+            pousser({
+              ton: 'err',
+              titre: spec.titre,
+              detail: [e.message, ...complements].join(' '),
+            })
+            trace(e.statut === 403 ? 'refuse' : 'erreur', e.message)
+          } else {
+            pousser({ ton: 'err', titre: spec.titre, detail: 'Le backend ne répond pas.' })
+            trace('erreur', 'Le backend ne répond pas.')
+          }
+        }
+        spec.appel().then(
+          (resultat) => {
+            if (estTravail(resultat)) {
+              const id = integrerTravail(resultat)
+              suivreTravail(id, (travail) => {
+                integrerTravail(travail)
+                if (travail.statut === 'done') {
+                  spec.effetFinal?.()
+                  pousser({
+                    ton: 'ok',
+                    titre: travail.label,
+                    detail: 'Opération terminée. Suivi dans le centre de tâches.',
+                  })
+                } else if (travail.statut === 'failed' || travail.statut === 'rolled_back') {
+                  pousser({
+                    ton: 'err',
+                    titre: `Échec · ${travail.label}`,
+                    detail: travail.erreur
+                      ? `${travail.erreur.message} Référence ${travail.erreur.correlationId}.`
+                      : 'Diagnostic et reprise dans le centre de tâches.',
+                  })
+                }
+              })
+              trace('ok')
+              pousser({
+                ton: spec.ton ?? 'ok',
+                titre: spec.titre,
+                detail: spec.detail ?? 'Opération acceptée. Suivi dans le centre de tâches.',
+              })
+            } else {
+              spec.effet?.()
+              spec.effetFinal?.()
+              trace('ok')
+              pousser({ ton: spec.ton ?? 'ok', titre: spec.titre, detail: spec.detail })
+            }
+          },
+          (e: unknown) => echec(e),
+        )
         return
       }
 
@@ -126,7 +202,7 @@ export function useOperation() {
               : undefined),
       })
     },
-    [autorise, journaliser, lancerJob, pousser, role],
+    [autorise, integrerTravail, journaliser, lancerJob, pousser, role],
   )
 
   return executer

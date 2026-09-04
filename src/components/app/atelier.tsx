@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -12,6 +13,15 @@ import {
 import { MAINTENANT } from '@/lib/format'
 import { correlationId } from '@/lib/utils'
 import type { AuditEvent, DefinitionWorkflow, ProvisioningJob } from '@/lib/types'
+import {
+  creerRessource,
+  estActif,
+  lister,
+  modifierRessource,
+  supprimerRessource,
+  type TravailDistant,
+} from '@/lib/api/client'
+import { endpointDe } from '@/lib/api/collections'
 import { AUDIT, JOBS } from '@/lib/mock/ops'
 import {
   etapeEnEchec,
@@ -91,6 +101,12 @@ interface CtxAtelier {
   identifiant: (prefixe: string) => string
   jobs: ProvisioningJob[]
   lancerJob: (spec: SpecJob) => string
+  /**
+   * Intègre un travail renvoyé par l’API (`202`) dans la collection des jobs :
+   * créé à la première vue, mis à jour aux suivantes. Le suivi périodique
+   * (`suivreTravail`) rappelle cette fonction à chaque réponse.
+   */
+  integrerTravail: (travail: TravailDistant, nom?: string) => string
   /**
    * Reprend un job échoué à son étape échouée. L'espace fournisseur garde ses
    * jobs dans une autre collection, d'où les deux paramètres facultatifs.
@@ -172,6 +188,42 @@ export function AtelierProvider({ children }: { children: ReactNode }) {
   const identifiant = useCallback((prefixe: string) => {
     compteur.current += 1
     return `${prefixe}-s${compteur.current}`
+  }, [])
+
+  /**
+   * Un travail distant a la même forme qu’un job local (`taches` comprises) :
+   * on le normalise une fois ici pour que le centre de tâches n’ait pas à
+   * distinguer les deux provenances.
+   */
+  const integrerTravail = useCallback((travail: TravailDistant, nom: string = NOM_JOBS) => {
+    const normalise: ProvisioningJob = {
+      id: travail.id,
+      orgId: travail.orgId ?? 'org-dba',
+      type: travail.type,
+      label: travail.label,
+      statut: travail.statut,
+      startedAt: travail.startedAt ?? MAINTENANT,
+      dureeS: travail.dureeS,
+      erreur: travail.erreur,
+      taches: travail.taches.map((t) => ({
+        ordre: t.ordre,
+        nom: t.nom,
+        statut: t.statut,
+        dureeS: t.dureeS,
+        message: t.message,
+      })),
+    }
+    setCollections((p) => {
+      const courant = ((p[nom] as ProvisioningJob[] | undefined) ??
+        (nom === NOM_JOBS ? [...JOBS] : [])) as ProvisioningJob[]
+      return {
+        ...p,
+        [nom]: courant.some((j) => j.id === travail.id)
+          ? courant.map((j) => (j.id === travail.id ? normalise : j))
+          : [normalise, ...courant],
+      }
+    })
+    return travail.id
   }, [])
 
   const jobs = lire<ProvisioningJob>(NOM_JOBS, JOBS)
@@ -391,6 +443,7 @@ export function AtelierProvider({ children }: { children: ReactNode }) {
       identifiant,
       jobs,
       lancerJob,
+      integrerTravail,
       reprendreJob,
       journaliser,
       journal,
@@ -406,6 +459,7 @@ export function AtelierProvider({ children }: { children: ReactNode }) {
       identifiant,
       jobs,
       lancerJob,
+      integrerTravail,
       reprendreJob,
       journaliser,
       journal,
@@ -423,23 +477,123 @@ export function useAtelier(): CtxAtelier {
 }
 
 /**
- * Collection modifiable. `nom` identifie la collection dans l'atelier,
- * `graine` est le tableau du jeu de données fictif qui sert d'état initial.
+ * Collection modifiable. `nom` identifie la collection dans l’atelier,
+ * `graine` est le tableau du jeu de données fictif qui sert d’état initial.
+ *
+ * Quand l’API est active et que `nom` figure au registre (`src/lib/api/`),
+ * les items viennent de `GET {endpoint}?parPage=200` — la graine reste
+ * affichée en attendant la réponse, pour ne pas faire diverger l’hydratation.
+ * Les mutations appellent alors l’API (`POST`, `PATCH {id}`, `DELETE
+ * {id}?confirmation=<nom>`) puis rechargent ; sinon tout reste local.
  */
 export function useCollection<T extends Entite>(nom: string, graine: readonly T[]) {
   const a = useAtelier()
-  return useMemo(
-    () => ({
-      items: a.lire<T>(nom, graine),
-      creer: (item: T | T[], ou: 'debut' | 'fin' = 'debut') => a.creer(nom, graine, item, ou),
-      modifier: (id: string, patch: Patch<T>) => a.modifier(nom, graine, id, patch),
-      modifierPlusieurs: (ids: string[], patch: Patch<T>) =>
-        a.modifierPlusieurs(nom, graine, ids, patch),
-      supprimer: (id: string | string[]) => a.supprimer(nom, graine, id),
+  const endpoint = endpointDe(nom)
+  const distantActif = estActif() && !!endpoint
+  const [itemsDistants, setItemsDistants] = useState<T[] | null>(null)
+  const [chargement, setChargement] = useState(false)
+  const [erreur, setErreur] = useState<Error | null>(null)
+  const [generation, setGeneration] = useState(0)
+
+  useEffect(() => {
+    if (!distantActif || !endpoint) return
+    let annule = false
+    setChargement(true)
+    setErreur(null)
+    const charger = () =>
+      lister<T>(endpoint)
+        .then((page) => {
+          if (!annule) {
+            setItemsDistants(page.donnees)
+            setChargement(false)
+          }
+        })
+        .catch((e: unknown) => {
+          if (!annule) {
+            setErreur(e instanceof Error ? e : new Error('Chargement impossible'))
+            setChargement(false)
+          }
+        })
+    charger()
+    // Les travaux avancent côté backend : le centre de tâches les suit sans
+    // rechargement manuel. Les autres collections se relisent à la navigation.
+    const rafraichissement =
+      nom === 'jobs' || nom === 'jobs-plateforme'
+        ? setInterval(() => {
+            if (!annule) charger()
+          }, 10000)
+        : undefined
+    return () => {
+      annule = true
+      if (rafraichissement) clearInterval(rafraichissement)
+    }
+  }, [distantActif, endpoint, generation, nom])
+
+  const recharger = useCallback(() => setGeneration((g) => g + 1), [])
+
+  return useMemo(() => {
+    const items = itemsDistants ?? a.lire<T>(nom, graine)
+
+    /** Nom exact exigé par l’API pour confirmer une suppression. */
+    const nomConfirmation = (id: string): string => {
+      const cible = items.find((x) => x.id === id) as (T & { nom?: unknown; code?: unknown }) | undefined
+      const nomRessource = cible?.nom ?? cible?.code
+      return typeof nomRessource === 'string' && nomRessource.length > 0 ? nomRessource : id
+    }
+
+    return {
+      items,
+      /** Vrai pendant le premier chargement distant — la graine reste affichée. */
+      chargement,
+      /** Échec du dernier chargement ou rechargement distant, le cas échéant. */
+      erreur,
+      /** Relit la collection depuis l’API. Sans effet en mode maquette. */
+      recharger,
+      creer: (item: T | T[], ou: 'debut' | 'fin' = 'debut') => {
+        if (distantActif && endpoint) {
+          const corps = Array.isArray(item) ? item[0] : item
+          creerRessource(endpoint, corps).then(recharger, recharger)
+          return
+        }
+        a.creer(nom, graine, item, ou)
+      },
+      modifier: (id: string, patch: Patch<T>) => {
+        if (distantActif && endpoint) {
+          const base = items.find((x) => x.id === id)
+          if (typeof patch === 'function' && !base) return
+          const corps = typeof patch === 'function' ? (patch as (item: T) => Partial<T>)(base as T) : patch
+          modifierRessource(endpoint, id, corps).then(recharger, recharger)
+          return
+        }
+        a.modifier(nom, graine, id, patch)
+      },
+      modifierPlusieurs: (ids: string[], patch: Patch<T>) => {
+        if (distantActif && endpoint) {
+          const appels = ids.flatMap((id) => {
+            const base = items.find((x) => x.id === id)
+            if (typeof patch === 'function' && !base) return []
+            const corps =
+              typeof patch === 'function' ? (patch as (item: T) => Partial<T>)(base as T) : patch
+            return [modifierRessource(endpoint, id, corps)]
+          })
+          Promise.all(appels).then(recharger, recharger)
+          return
+        }
+        a.modifierPlusieurs(nom, graine, ids, patch)
+      },
+      supprimer: (id: string | string[]) => {
+        if (distantActif && endpoint) {
+          const cibles = Array.isArray(id) ? id : [id]
+          Promise.all(
+            cibles.map((c) => supprimerRessource(endpoint, c, nomConfirmation(c))),
+          ).then(recharger, recharger)
+          return
+        }
+        a.supprimer(nom, graine, id)
+      },
       identifiant: a.identifiant,
-    }),
-    [a, nom, graine],
-  )
+    }
+  }, [a, nom, graine, endpoint, distantActif, itemsDistants, chargement, erreur, recharger])
 }
 
 /** Une entité de la collection, par identifiant. */
