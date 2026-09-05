@@ -27,15 +27,20 @@ import { creerRessource, estActif } from '@/lib/api/client'
 const TEINTE: Record<string, string> = {
   wordpress: '#21759B',
   prestashop: '#DF0067',
+  ghost: '#15171A',
+  dolibarr: '#243A5E',
   php: '#777BB4',
   statique: '#4B2882',
   laravel: '#FF2D20',
 }
 
+// Le nom (en minuscules, sans espaces ni accents) sert de sous-domaine ET de discriminant
+// applicatif côté backend quand `type` reste générique (`php`) : « Ghost » installe une
+// image `ghost`, « Dolibarr » une image `dolibarr`, jamais la même que « Application PHP ».
 const CATALOGUE = [
   { nom: 'WordPress', type: 'wordpress', phrase: 'Site vitrine, blog, portail éditorial.', php: '8.3' },
   { nom: 'PrestaShop', type: 'prestashop', phrase: 'Boutique en ligne, paiements mobile money.', php: '8.2' },
-  { nom: 'Joomla', type: 'php', phrase: 'Portail à gestion fine des droits.', php: '8.3' },
+  { nom: 'Ghost', type: 'php', phrase: 'Blog et newsletter, édition sobre.', php: '8.3' },
   { nom: 'Dolibarr', type: 'php', phrase: 'Gestion commerciale et facturation.', php: '8.2' },
   { nom: 'Site statique', type: 'statique', phrase: 'HTML généré, déployé par Git.', php: '—' },
 ]
