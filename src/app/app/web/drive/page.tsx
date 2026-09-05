@@ -156,12 +156,13 @@ export default function ListeDrives() {
                       }),
                     job: { workflow: 'web.drive.activate', cible: d.domaine },
                     effetFinal: () => {
-                      collection.modifier(d.id, (x) => ({
-                        actif: true,
-                        sieges: { attribues: 0, souscrits: Number(v.sieges) },
-                        quota: { utiliseGo: 0, totalGo: Number(v.quota) },
-                        partage: { ...x.partage, externeAutorise: Boolean(v.externe) },
-                      }))
+                      if (!estActif())
+                        collection.modifier(d.id, (x) => ({
+                          actif: true,
+                          sieges: { attribues: 0, souscrits: Number(v.sieges) },
+                          quota: { utiliseGo: 0, totalGo: Number(v.quota) },
+                          partage: { ...x.partage, externeAutorise: Boolean(v.externe) },
+                        }))
                       collection.recharger()
                     },
                   })}

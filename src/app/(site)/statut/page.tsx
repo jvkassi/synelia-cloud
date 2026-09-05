@@ -5,7 +5,8 @@ import { Bell, CheckCircle2, Rss, Webhook } from 'lucide-react'
 import { cn, groupBy, seededSeries } from '@/lib/utils'
 import { dateHeure, pct, relatif } from '@/lib/format'
 import { SITE_COURT, type Site } from '@/lib/types'
-import { INCIDENTS, STATUT_SERVICES } from '@/lib/mock'
+import { INCIDENTS as INCIDENTS_GRAINE, STATUT_SERVICES as STATUT_GRAINE } from '@/lib/mock'
+import { usePublic } from '@/lib/api/public'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input, SegmentedControl } from '@/components/ui/field'
@@ -25,9 +26,18 @@ const COULEURS_JOUR = ['bg-ok', 'bg-ok', 'bg-ok', 'bg-ok', 'bg-ok', 'bg-warn', '
 export default function Statut() {
   const [periode, setPeriode] = useState<'90j' | '30j'>('90j')
 
+  // En mode API, les services et incidents publiés viennent de
+  // `GET /public/statut` ; sinon la graine locale reste affichée.
+  const distant = usePublic<{
+    services: typeof STATUT_GRAINE
+    incidents: typeof INCIDENTS_GRAINE
+  }>('/public/statut')
+  const STATUT_SERVICES = distant.donnees?.services ?? STATUT_GRAINE
+  const INCIDENTS = distant.donnees?.incidents ?? INCIDENTS_GRAINE
+
   const parCategorie = useMemo(
     () => Object.entries(groupBy(STATUT_SERVICES, (s) => s.categorie)),
-    [],
+    [STATUT_SERVICES],
   )
 
   const enCours = INCIDENTS.filter((i) => i.statut !== 'resolu')

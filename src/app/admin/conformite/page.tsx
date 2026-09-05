@@ -170,6 +170,10 @@ export default function Conformite() {
 
   const genererAttestation = () => {
     if (!attestation) return
+    // Pas d’appel : `POST /attestations/{modele}` génère un modèle du
+    // backend (identifiants inconnus d’ici), pas une ligne de ce journal —
+    // et `GET /attestations` ne rend pas cette forme. La génération reste
+    // locale, comme la planification des tests et le rapport CSV.
     executer({
       action: 'compliance.export',
       titre: `Attestation « ${attestation} » générée`,
@@ -1088,7 +1092,13 @@ export default function Conformite() {
               sousTitre="Chaque génération est journalisée dans l’audit, avec le demandeur et le périmètre."
             />
             <div className="space-y-1.5">
-              {generees.items.map((x) => (
+              {generees.items
+                // En mode API, `GET /attestations` renvoie des modèles à
+                // générer, pas des lignes de journal : on ne garde que les
+                // lignes qui en sont (attestation + date), les autres
+                // n’ont rien à faire dans cet historique.
+                .filter((x) => typeof x.attestation === 'string' && typeof x.date === 'string')
+                .map((x) => (
                 <div
                   key={x.id}
                   className="flex flex-wrap items-baseline justify-between gap-2 border-b border-g-100 pb-1.5 last:border-0"

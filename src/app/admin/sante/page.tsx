@@ -14,6 +14,7 @@ import {
 import {
   BACKEND_LABEL,
   SITE_COURT,
+  type Backend,
   type Incident,
   type ProvisioningJob,
 } from '@/lib/types'
@@ -32,6 +33,8 @@ import { JobTracker } from '@/components/business/paas'
 import { useApp } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { creerRessource, estActif, requete } from '@/lib/api/client'
+import { useLectureDegradable } from '@/lib/api/degradable'
 
 const ONGLETS = [
   { id: 'services', label: 'État des services' },
@@ -47,8 +50,16 @@ export default function SantePlateforme() {
   const jobs = useCollection<ProvisioningJob>('jobs-plateforme', JOBS_PLATEFORME)
   const { reprendreJob } = useAtelier()
   const incidents = useCollection<Incident>('incidents', INCIDENTS)
+  // En mode API, les socles et les jobs viennent du backend ; la maquette,
+  // non filtrée par lui, garderait des identifiants inconnus de l’API.
+  const socles = useCollection<Backend>('backends', BACKENDS)
+  const SOCLES = estActif() ? socles.items : BACKENDS
+  // `GET /admin/sante` ne sert que son `424` : les chiffres restent locaux,
+  // mais une intégration amont en panne se dit au lieu de se taire.
+  const { degrade } = useLectureDegradable('/admin/sante')
   const [onglet, setOnglet] = useState('services')
   const [communication, setCommunication] = useState<string | null>(null)
+  const [titreCommunication, setTitreCommunication] = useState('')
   const [typeCommunication, setTypeCommunication] = useState('incident')
   const [graviteCommunication, setGraviteCommunication] = useState('majeur')
   const [serviceTouche, setServiceTouche] = useState('')
@@ -60,13 +71,58 @@ export default function SantePlateforme() {
   const [publierStatut, setPublierStatut] = useState(true)
   const [smsAstreinte, setSmsAstreinte] = useState(false)
 
+  // La cible est un incident connu, un service dégradé (on ouvre alors un
+  // incident), ou `'nouveau'` (même cas, titre à saisir dans la modale).
+  const incidentCible =
+    communication && communication !== 'nouveau'
+      ? (incidents.items.find((i) => i.id === communication) ?? null)
+      : null
+
+  const publierCommunication = () => {
+    const texte = texteCommunication || 'Mise à jour publiée depuis le portail.'
+    const sites =
+      sitesTouches === 'tous' ? ['ABJ', 'GBM'] : [sitesTouches]
+    executer({
+      action: 'capacity.manage',
+      titre: 'Communication publiée',
+      detail:
+        'Visible immédiatement sur la page de statut publique et envoyée aux organisations touchées.',
+      appel: () =>
+        incidentCible
+          ? requete(`/admin/statut/incidents/${encodeURIComponent(incidentCible.id)}`, {
+              methode: 'POST',
+              corps: { texte, notifierClients },
+            })
+          : creerRessource('/admin/statut/incidents', {
+              titre:
+                titreCommunication.trim() ||
+                (typeof communication === 'string' && communication !== 'nouveau'
+                  ? communication
+                  : 'Incident plateforme'),
+              gravite: graviteCommunication,
+              services: serviceTouche ? [serviceTouche] : [],
+              sites,
+              message: texte,
+              notifierClients,
+            }),
+      effet: () =>
+        incidentCible
+          ? incidents.modifier(incidentCible.id, (i) => ({
+              mises_a_jour: [...i.mises_a_jour, { ts: MAINTENANT, texte }],
+            }))
+          : undefined,
+      effetFinal: () => incidents.recharger(),
+    })
+    setCommunication(null)
+  }
+
   const nonOperationnel = (s: (typeof STATUT_SERVICES)[number]) =>
     (['ABJ', 'GBM'] as const).some((x) => s.etats[x] !== 'operationnel')
   const degrades = STATUT_SERVICES.filter(nonOperationnel)
   const incidentsOuverts = incidents.items.filter((i) => i.statut !== 'resolu')
   const jobsEchec = jobs.items.filter((j) => j.statut === 'failed')
-  const jobsEnCours = JOBS_PLATEFORME.filter((j) => j.statut === 'running' || j.statut === 'queued')
-  const soclesHs = BACKENDS.filter((b) => b.statut !== 'en_ligne')
+  const jobsEnCours = jobs.items.filter((j) => j.statut === 'running' || j.statut === 'queued')
+  const soclesHs = SOCLES.filter((b) => b.statut !== 'en_ligne')
 
   return (
     <div className="space-y-5">
@@ -101,6 +157,18 @@ export default function SantePlateforme() {
           </>
         }
       />
+
+      {degrade && (
+        <Callout
+          ton="warn"
+          titre={`Supervision dégradée${degrade.integration ? ` — ${degrade.integration}` : ''}`}
+        >
+          L’intégration amont ne répond pas
+          {degrade.dateDonnees ? ` (données du ${dateHeure(degrade.dateDonnees)})` : ''} : les
+          chiffres ci-dessous sont les derniers connus, pas l’état actuel. Détail temps réel dans
+          Centreon et Grafana.
+        </Callout>
+      )}
 
       {incidentsOuverts.length > 0 && (
         <Callout ton="err" titre={`${incidentsOuverts.length} incident${incidentsOuverts.length > 1 ? 's' : ''} en cours`}>
@@ -385,7 +453,7 @@ export default function SantePlateforme() {
       {onglet === 'socles' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {BACKENDS.map((b) => (
+            {SOCLES.map((b) => (
               <BackendGauge key={b.id} backend={b} />
             ))}
           </div>
@@ -412,7 +480,7 @@ export default function SantePlateforme() {
                   </tr>
                 </thead>
                 <tbody>
-                  {BACKENDS.map((b) => (
+                  {SOCLES.map((b) => (
                     <tr key={b.id} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2.5">
                         <span className="block font-mono text-[12px] font-semibold text-ink">
@@ -484,9 +552,9 @@ export default function SantePlateforme() {
       {onglet === 'jobs' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-            <StatTile libelle="En file" valeur={JOBS_PLATEFORME.filter((j) => j.statut === 'queued').length} ton="info" />
-            <StatTile libelle="En cours" valeur={JOBS_PLATEFORME.filter((j) => j.statut === 'running').length} ton="info" />
-            <StatTile libelle="Terminés" valeur={JOBS_PLATEFORME.filter((j) => j.statut === 'done').length} ton="ok" />
+            <StatTile libelle="En file" valeur={jobs.items.filter((j) => j.statut === 'queued').length} ton="info" />
+            <StatTile libelle="En cours" valeur={jobs.items.filter((j) => j.statut === 'running').length} ton="info" />
+            <StatTile libelle="Terminés" valeur={jobs.items.filter((j) => j.statut === 'done').length} ton="ok" />
             <StatTile
               libelle="En échec"
               valeur={jobsEchec.length}
@@ -520,8 +588,13 @@ export default function SantePlateforme() {
                               titre: 'Reprise déclenchée',
                               detail:
                                 'Le provisionnement repart de l’étape échouée. Aucune ressource déjà créée n’est recréée.',
+                              appel: () =>
+                                requete(`/travaux/${encodeURIComponent(j.id)}/relance`, {
+                                  methode: 'POST',
+                                }),
                               effet: () =>
                                 reprendreJob(j.id, 'jobs-plateforme', JOBS_PLATEFORME),
+                              effetFinal: () => jobs.recharger(),
                             })
                           }
                         >
@@ -537,7 +610,12 @@ export default function SantePlateforme() {
                           titre: `« ${j.label} » annulé`,
                           detail:
                             'Les ressources déjà créées sont détruites dans l’ordre inverse et le quota rendu. Aucune souscription facturable n’a été ouverte.',
+                          appel: () =>
+                            requete(`/travaux/${encodeURIComponent(j.id)}/annulation`, {
+                              methode: 'POST',
+                            }),
                           effet: () => jobs.modifier(j.id, { statut: 'rolled_back' }),
+                          effetFinal: () => jobs.recharger(),
                         }}
                       />
                       <BoutonAction
@@ -590,7 +668,7 @@ export default function SantePlateforme() {
                   </tr>
                 </thead>
                 <tbody>
-                  {JOBS_PLATEFORME.map((j) => (
+                  {jobs.items.map((j) => (
                     <tr key={j.id} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2 text-[12px] font-semibold text-ink">{j.type}</td>
                       <td className="px-3 py-2 font-mono text-[11px] text-g-700">{j.label}</td>
@@ -761,37 +839,26 @@ export default function SantePlateforme() {
             <Button variant="ghost" onClick={() => setCommunication(null)}>
               Annuler
             </Button>
-            <Button
-              iconBefore={<Send size={13} />}
-              onClick={() => {
-                const cible = communication
-                executer({
-                  action: 'capacity.manage',
-                  titre: 'Communication publiée',
-                  detail:
-                    'Visible immédiatement sur la page de statut publique et envoyée aux organisations touchées.',
-                  effet: () =>
-                    cible
-                      ? incidents.modifier(cible, (i) => ({
-                          mises_a_jour: [
-                            ...i.mises_a_jour,
-                            {
-                              ts: MAINTENANT,
-                              texte: texteCommunication || 'Mise à jour publiée depuis le portail.',
-                            },
-                          ],
-                        }))
-                      : undefined,
-                })
-                setCommunication(null)
-              }}
-            >
+            <Button iconBefore={<Send size={13} />} onClick={publierCommunication}>
               Publier
             </Button>
           </>
         }
       >
         <div className="space-y-4">
+          {incidentCible === null && (
+            <Field
+              label="Titre de l’incident"
+              hint="exigé pour ouvrir un incident — une mise à jour n’en a pas besoin"
+              required
+            >
+              <Input
+                placeholder="Latence anormale sur les services managés d’Abidjan"
+                value={titreCommunication}
+                onChange={(e) => setTitreCommunication(e.target.value)}
+              />
+            </Field>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Type">
               <Select

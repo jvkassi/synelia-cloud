@@ -23,6 +23,7 @@ import { EmptyState } from '@/components/composition/states'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { creerRessource, estActif, modifierRessource, requete } from '@/lib/api/client'
 
 export function VueServeurBases({ id }: { id: string }) {
   const { autorise, refus } = useApp()
@@ -99,8 +100,15 @@ export function VueServeurBases({ id }: { id: string }) {
                 action: 'service.admin',
                 titre: 'Activation demandée',
                 detail: `${MOTEUR_WEB_LABEL[s.moteur]} sera installé sur ${s.serveur} dans quelques minutes.`,
+                appel: () => modifierRessource('/web/bases', s.id, { actif: true }),
                 job: { workflow: 'web.db.enable', cible: `${MOTEUR_WEB_LABEL[s.moteur]} · ${s.serveur}` },
-                effetFinal: () => serveurs.modifier(s.id, { actif: true }),
+                effetFinal: () => {
+                  if (estActif()) {
+                    serveurs.recharger()
+                    return
+                  }
+                  serveurs.modifier(s.id, { actif: true })
+                },
               }}
             />
           )
@@ -271,11 +279,17 @@ export function VueServeurBases({ id }: { id: string }) {
                                   ton: 'warn',
                                   titre: `${b.nom} supprimée`,
                                   detail: `Les sauvegardes restent disponibles ${s.sauvegarde.retentionJours} jours.`,
+                                  appel: () =>
+                                    requete(
+                                      `/web/bases/${encodeURIComponent(s.id)}/bases/${encodeURIComponent(b.nom)}`,
+                                      { methode: 'DELETE', query: { confirmation: b.nom } },
+                                    ),
                                   effet: () =>
                                     serveurs.modifier(s.id, (x) => ({
                                       bases: x.bases.filter((y) => y.nom !== b.nom),
                                       utiliseMo: Math.max(0, x.utiliseMo - b.tailleMo),
                                     })),
+                                  effetFinal: () => serveurs.recharger(),
                                 })
                               }
                             >
@@ -559,6 +573,14 @@ export function VueServeurBases({ id }: { id: string }) {
                   action: 'service.admin',
                   titre: `${cle === 'base' ? 'Base' : 'Index'} ${nomBase} créé`,
                   detail: `Disponible immédiatement sur ${s.hoteInterne}:${s.port}.`,
+                  // Le compte dédié demande un mot de passe que ce tiroir ne
+                  // collecte pas (le contrat l’exige) : en mode API, créez-le
+                  // ensuite depuis l’onglet Utilisateurs.
+                  appel: () =>
+                    creerRessource(`/web/bases/${encodeURIComponent(s.id)}/bases`, {
+                      nom: nomBase,
+                      ...(s.moteur === 'redis' ? {} : { jeuCaracteres: collation }),
+                    }),
                   effet: () =>
                     serveurs.modifier(s.id, (x) => ({
                       bases: [
@@ -579,6 +601,7 @@ export function VueServeurBases({ id }: { id: string }) {
                           ]
                         : x.utilisateurs,
                     })),
+                  effetFinal: () => serveurs.recharger(),
                 })
                 setNomBase('')
                 setCompteDedie('')

@@ -24,6 +24,8 @@ import { BackendGauge, PlacementSlider, AvertissementMigration } from '@/compone
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { estActif, modifierRessource, requete } from '@/lib/api/client'
+import { useLectureDegradable } from '@/lib/api/degradable'
 
 const ONGLETS = [
   { id: 'socles', label: 'Socles et capacité' },
@@ -37,12 +39,19 @@ export default function Capacite() {
   const executer = useOperation()
   const socles = useCollection<Backend>('backends', BACKENDS)
   const placements = useCollection<Placement>('placements', PLACEMENTS)
+  // En mode API, les espaces viennent du backend : le sélecteur local
+  // filtrerait sur des identifiants inconnus de l’API.
+  const espacesDistants = useCollection('espaces', ESPACES)
+  const ESPACES_LUS = estActif() ? espacesDistants.items : ESPACES
+  // `GET /admin/capacite` ne sert que son `424` : les chiffres restent
+  // locaux, mais une projection indisponible se dit au lieu de se taire.
+  const { degrade } = useLectureDegradable('/admin/capacite')
   const [onglet, setOnglet] = useState('socles')
-  const [espaceId, setEspaceId] = useState(ESPACES[0]?.id ?? '')
+  const [espaceId, setEspaceId] = useState(ESPACES_LUS[0]?.id ?? '')
   const [rebalance, setRebalance] = useState(false)
   const [repartition, setRepartition] = useState<Array<{ backendId: string; percent: number }>>([])
 
-  const espace = ESPACES.find((e) => e.id === espaceId)
+  const espace = ESPACES_LUS.find((e) => e.id === espaceId)
   const placementsEspace = placements.items.filter((p) => p.espaceId === espaceId)
 
   /** Remplace la répartition de l'espace courant par celle qui vient d'être réglée. */
@@ -164,6 +173,18 @@ export default function Capacite() {
           </>
         }
       />
+
+      {degrade && (
+        <Callout
+          ton="warn"
+          titre={`Projection de capacité indisponible${degrade.integration ? ` — ${degrade.integration}` : ''}`}
+        >
+          L’intégration amont ne répond pas
+          {degrade.dateDonnees ? ` (données du ${degrade.dateDonnees})` : ''} : les projections
+          ci-dessous sont les dernières connues. Le plan d’extension reste à valider contre
+          l’état réel des socles.
+        </Callout>
+      )}
 
       {satures.length > 0 && (
         <Callout ton="warn" titre={`${satures.length} socle dépassera 85 % de saturation sous 30 jours`}>
@@ -330,6 +351,11 @@ export default function Capacite() {
                                 b.statut === 'maintenance'
                                   ? 'Le socle accueille de nouveau des placements.'
                                   : 'Les machines du socle sont migrées à chaud vers les autres socles du site avant la maintenance.',
+                              appel: () =>
+                                modifierRessource('/admin/backends', b.id, {
+                                  statut:
+                                    b.statut === 'maintenance' ? 'en_ligne' : 'maintenance',
+                                }),
                               job:
                                 b.statut === 'maintenance'
                                   ? undefined
@@ -347,10 +373,14 @@ export default function Capacite() {
                                 b.statut === 'maintenance'
                                   ? () => socles.modifier(b.id, { statut: 'en_ligne' })
                                   : undefined,
-                              effetFinal:
-                                b.statut === 'maintenance'
-                                  ? undefined
-                                  : () => socles.modifier(b.id, { statut: 'maintenance' }),
+                              effetFinal: () => {
+                                // En maquette, le drainage simulé bascule le
+                                // socle à la fin ; en mode API, le
+                                // rechargement rapporte l’état réel.
+                                if (!estActif() && b.statut !== 'maintenance')
+                                  socles.modifier(b.id, { statut: 'maintenance' })
+                                socles.recharger()
+                              },
                             }}
                           />
                         </span>
@@ -409,7 +439,7 @@ export default function Capacite() {
                   onChange={(e) => setEspaceId(e.target.value)}
                   className="w-auto"
                 >
-                  {ESPACES.map((e) => (
+                  {ESPACES_LUS.map((e) => (
                     <option key={e.id} value={e.id}>
                       {e.code} — {e.offreNom}
                     </option>
@@ -501,7 +531,7 @@ export default function Capacite() {
                   </tr>
                 </thead>
                 <tbody>
-                  {ESPACES.map((e) => {
+                  {ESPACES_LUS.map((e) => {
                     const pls = placements.items.filter((p) => p.espaceId === e.id)
                     return (
                       <tr key={e.id} className="border-b border-g-100 last:border-0">
@@ -902,6 +932,22 @@ export default function Capacite() {
             action: 'capacity.manage',
             titre: 'Rééquilibrage appliqué',
             detail: `Le placement de ${espace?.code} est mis à jour. Les migrations à chaud démarrent maintenant ; les autres sont planifiées dans la fenêtre de maintenance du client.`,
+            appel: () =>
+              requete('/admin/placements', {
+                methode: 'PUT',
+                corps: {
+                  placements: repartition.map((part) => ({
+                    // Le backend régénère les identifiants : on renvoie
+                    // l’existant quand il y en a un, sinon un provisoire.
+                    id:
+                      placementsEspace.find((p) => p.backendId === part.backendId)?.id ??
+                      `${espaceId}-${part.backendId}`,
+                    espaceId,
+                    backendId: part.backendId,
+                    percent: part.percent,
+                  })),
+                },
+              }),
             job: { workflow: 'capacite.rebalance', cible: espace?.code ?? 'espace' },
             effetFinal: () => appliquerRepartition(repartition),
           })

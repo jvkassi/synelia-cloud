@@ -22,8 +22,8 @@ import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire } from '@/components/app/actions'
-import { creerRessource } from '@/lib/api/client'
-import type { WebHosting } from '@/lib/types'
+import { creerRessource, estActif } from '@/lib/api/client'
+import type { SiteWeb, WebHosting } from '@/lib/types'
 
 const PALIERS = [
   {
@@ -50,9 +50,16 @@ const PALIERS = [
 export default function ListeHebergements() {
   const { autorise, refus } = useApp()
   const hebergements = useCollection<WebHosting>('hebergements', HEBERGEMENTS)
-  const heberges = HEBERGEMENTS.filter((h) => h.orgId === ORG_COURANTE.id)
+  const tousSites = useCollection<SiteWeb>('sites-web', SITES_WEB)
+  // Le backend filtre déjà par organisation ; la maquette restreint au
+  // périmètre fictif, dont les identifiants sont inconnus du backend.
+  const heberges = estActif()
+    ? hebergements.items
+    : HEBERGEMENTS.filter((h) => h.orgId === ORG_COURANTE.id)
   const miens = new Set(heberges.map((h) => h.id))
-  const sites = SITES_WEB.filter((s) => miens.has(s.hebergementId))
+  const sites = (estActif() ? tousSites.items : SITES_WEB).filter((s) =>
+    miens.has(s.hebergementId),
+  )
 
   return (
     <div className="space-y-5">
@@ -148,7 +155,9 @@ export default function ListeHebergements() {
       </div>
 
       {heberges.map((h) => {
-        const sitesDuServeur = sitesDeLHebergement(h.id)
+        const sitesDuServeur = estActif()
+          ? tousSites.items.filter((s) => s.hebergementId === h.id)
+          : sitesDeLHebergement(h.id)
         const taches = tachesDeLHebergement(h.id)
         return (
           <Card key={h.id}>

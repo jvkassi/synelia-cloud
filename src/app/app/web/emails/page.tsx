@@ -13,7 +13,7 @@ import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire } from '@/components/app/actions'
-import { estActif } from '@/lib/api/client'
+import { creerRessource, estActif } from '@/lib/api/client'
 
 export default function ListeMessageries() {
   const { autorise, refus } = useApp()
@@ -167,13 +167,25 @@ export default function ListeMessageries() {
                     operation={(v) => ({
                       titre: `Messagerie de ${m.domaine} en cours d’activation`,
                       detail: `${v.boites} boîte(s) · ${v.palier}`,
+                      appel: () =>
+                        creerRessource('/web/emails', {
+                          domaine: m.domaine,
+                          palier: String(v.palier),
+                          boites: Number(v.boites),
+                          ...(v.import ? { migrationDepuis: 'fournisseur actuel' } : {}),
+                        }),
                       job: { workflow: 'web.email.activate', cible: m.domaine },
-                      effetFinal: () =>
+                      effetFinal: () => {
+                        if (estActif()) {
+                          collection.recharger()
+                          return
+                        }
                         collection.modifier(m.id, {
                           actif: true,
                           palier: String(v.palier),
                           boitesIncluses: Number(v.boites),
-                        }),
+                        })
+                      },
                     })}
                   />
                 </>

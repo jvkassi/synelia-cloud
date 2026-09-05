@@ -15,6 +15,7 @@ import { StatTile } from '@/components/composition/metrics'
 import { Stepper } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
 import { BoutonAction } from '@/components/app/actions'
+import { requete } from '@/lib/api/client'
 
 const ONGLETS = [
   { id: 'executions', label: 'Exécutions' },
@@ -28,6 +29,14 @@ const ETAPES = [
   { numero: 3, titre: 'Où' },
   { numero: 4, titre: 'Récapitulatif' },
 ]
+
+/** Le libellé du périmètre choisi vers la granularité du contrat. */
+function granulariteDu(perimetre: string): 'complete' | 'fichiers' | 'base' | 'boite_mail' {
+  if (perimetre === 'Le serveur entier') return 'complete'
+  if (perimetre === 'Une base seule') return 'base'
+  if (perimetre === 'Une boîte aux lettres') return 'boite_mail'
+  return 'fichiers'
+}
 
 export function VueSauvegarde({ id }: { id: string }) {
   const { autorise, refus } = useApp()
@@ -80,6 +89,10 @@ export function VueSauvegarde({ id }: { id: string }) {
                 ton: 'info',
                 titre: 'Sauvegarde lancée',
                 detail: `Exécution hors planning sur ${p.serveur}. Suivi dans le centre de tâches.`,
+                appel: () =>
+                  requete(`/web/backup/${encodeURIComponent(p.id)}/execution`, {
+                    methode: 'POST',
+                  }),
                 job: { workflow: 'web.backup.run', cible: p.serveur },
               }}
             />
@@ -186,6 +199,15 @@ export function VueSauvegarde({ id }: { id: string }) {
                             ton: 'info',
                             titre: `Restauration du ${dateHeure(e.ts)}`,
                             detail: e.contenu.join(' · '),
+                            appel: () =>
+                              requete(`/web/backup/${encodeURIComponent(p.id)}/restauration`, {
+                                methode: 'POST',
+                                corps: {
+                                  executionId: e.id,
+                                  granularite: granulariteDu(perimetre),
+                                  cible: 'preproduction',
+                                },
+                              }),
                             job: { workflow: 'web.backup.restore', cible: `${perimetre.toLowerCase()}` },
                           }}
                           confirmation={
@@ -473,6 +495,22 @@ export function VueSauvegarde({ id }: { id: string }) {
                     ton: 'info',
                     titre: 'Restauration lancée',
                     detail: 'Suivi dans le centre de tâches. Vous serez notifié à la fin.',
+                    // Écrire par-dessus la production exige la confirmation par
+                    // le nom du serveur, déjà saisie dans le dialogue.
+                    appel: () =>
+                      requete(`/web/backup/${encodeURIComponent(p.id)}/restauration`, {
+                        methode: 'POST',
+                        corps: {
+                          executionId: pointChoisi ?? dernier?.id,
+                          granularite: granulariteDu(perimetre),
+                          cible: destination.startsWith('Par-dessus')
+                            ? 'origine'
+                            : 'preproduction',
+                          ...(destination.startsWith('Par-dessus')
+                            ? { confirmation: p.serveur }
+                            : {}),
+                        },
+                      }),
                     job: { workflow: 'web.backup.restore', cible: `${perimetre.toLowerCase()}` },
                     effetFinal: () => setEtape(1),
                   }}

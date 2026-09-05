@@ -5,7 +5,7 @@ import { ArrowRight, CalendarClock, MoveRight, PlayCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateCourte, dateHeure, dureeMin, money, num, pct } from '@/lib/format'
 import { BACKENDS, TRAJECTOIRE_SORTIE, VMS } from '@/lib/mock'
-import { BACKEND_LABEL, SITE_COURT } from '@/lib/types'
+import { BACKEND_LABEL, SITE_COURT, type Backend } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
@@ -17,6 +17,7 @@ import { Timeline } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { estActif, requete } from '@/lib/api/client'
 
 const ONGLETS = [
   { id: 'trajectoire', label: 'Trajectoire de sortie' },
@@ -127,14 +128,65 @@ const TON_STATUT: Record<Vague['statut'], 'ok' | 'info' | 'neutral' | 'warn'> = 
   a_planifier: 'warn',
 }
 
+/** Forme distante d’une campagne (`GET /admin/migration/campagnes`). */
+interface CampagneMigrationDistante {
+  id: string
+  nom: string
+  backendSource: string
+  backendCible: string
+  ressources: number
+  migrees: number
+  fenetre: string
+  statut: 'planifiee' | 'en_cours' | 'terminee' | 'suspendue' | 'echec'
+}
+
+/**
+ * Ramène une campagne du backend à la forme locale d’une vague : mêmes
+ * champs, mêmes statuts affichables. Une campagne suspendue redevient à
+ * planifier-explicite (`planifiee`), un échec reste à replanifier.
+ */
+function normaliserCampagne(v: Vague): Vague {
+  const distante = v as unknown as Partial<CampagneMigrationDistante>
+  if (!distante.backendSource) return v
+  const ressources = distante.ressources ?? 0
+  return {
+    id: v.id,
+    nom: distante.nom ?? v.nom,
+    source: distante.backendSource,
+    cible: distante.backendCible ?? v.cible,
+    machines: ressources,
+    organisations: [],
+    fenetre: distante.fenetre ?? v.fenetre,
+    mode: 'mixte',
+    statut:
+      distante.statut === 'en_cours'
+        ? 'en_cours'
+        : distante.statut === 'terminee'
+          ? 'terminee'
+          : distante.statut === 'echec'
+            ? 'a_planifier'
+            : 'planifiee',
+    avancement: ressources > 0 ? Math.round(((distante.migrees ?? 0) / ressources) * 100) : 0,
+  }
+}
+
 export default function Migration() {
   const { autorise, refus } = useApp()
   const executer = useOperation()
-  const vagues = useCollection<Vague>('vagues-migration', VAGUES)
+  const vaguesBrutes = useCollection<Vague>('vagues-migration', VAGUES)
+  // En mode API le backend renvoie des campagnes de migration, pas des
+  // vagues : on les ramène à la forme locale pour l’affichage.
+  const vagues = {
+    ...vaguesBrutes,
+    items: estActif() ? vaguesBrutes.items.map(normaliserCampagne) : vaguesBrutes.items,
+  }
+  // Les socles en sortie aussi : les codes backend sont inconnus du jeu local.
+  const socles = useCollection<Backend>('backends', BACKENDS)
+  const SOCLES = estActif() ? socles.items : BACKENDS
   const [onglet, setOnglet] = useState('trajectoire')
   const [lancement, setLancement] = useState<Vague | null>(null)
 
-  const enSortie = BACKENDS.filter((b) => b.enSortie?.actif)
+  const enSortie = SOCLES.filter((b) => b.enSortie?.actif)
   const migrees = vagues.items
     .filter((v) => v.statut === 'terminee')
     .reduce((a, v) => a + v.machines, 0)
@@ -505,7 +557,13 @@ export default function Migration() {
                         titre: `${v.nom} suspendue`,
                         detail:
                           'Les machines déjà migrées restent sur le socle cible ; les suivantes attendent une reprise explicite.',
+                        appel: () =>
+                          requete(
+                            `/admin/migration/campagnes/${encodeURIComponent(v.id)}/suspension`,
+                            { methode: 'POST' },
+                          ),
                         effet: () => vagues.modifier(v.id, { statut: 'planifiee' }),
+                        effetFinal: () => vagues.recharger(),
                       }}
                     />
                   )}
@@ -757,10 +815,20 @@ export default function Migration() {
               action: 'capacity.manage',
               ton: 'info',
               titre: `${cible.nom} lancée`,
+              appel: () =>
+                requete(
+                  `/admin/migration/campagnes/${encodeURIComponent(cible.id)}/lancement`,
+                  { methode: 'POST' },
+                ),
               effet: () => vagues.modifier(cible.id, { statut: 'en_cours', avancement: 4 }),
               job: { workflow: 'migration.lot', cible: cible.nom },
-              effetFinal: () =>
-                vagues.modifier(cible.id, { statut: 'terminee', avancement: 100 }),
+              effetFinal: () => {
+                // En maquette, le job simulé se termine ici ; en mode API,
+                // c’est le rechargement qui rapporte l’état réel.
+                if (!estActif())
+                  vagues.modifier(cible.id, { statut: 'terminee', avancement: 100 })
+                vagues.recharger()
+              },
             })
           }
           setLancement(null)

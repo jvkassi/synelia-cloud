@@ -7,7 +7,7 @@ import { dateHeure, MAINTENANT, relatif } from '@/lib/format'
 import type { MembreEquipe } from '@/lib/mock'
 import { EQUIPE_SYNELIA, TICKETS_PLATEFORME } from '@/lib/mock'
 import { MATRICE_RBAC, ROLES_SUPER_ADMIN, can } from '@/lib/rbac'
-import { ROLE_LABEL, type Role } from '@/lib/types'
+import { ROLE_LABEL, type Role, type Ticket } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { Avatar, GatedAction, Tabs } from '@/components/ui/display'
@@ -19,6 +19,12 @@ import { RoleMatrix } from '@/components/business/rbac-canvas'
 import { useApp } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import {
+  creerRessource,
+  estActif,
+  modifierRessource,
+  supprimerRessource,
+} from '@/lib/api/client'
 
 const ONGLETS = [
   { id: 'membres', label: 'Membres de l’équipe' },
@@ -101,6 +107,9 @@ export default function Equipe() {
 
   const { autorise, refus } = useApp()
   const equipe = useCollection<MembreEquipe>('equipe-synelia', EQUIPE_SYNELIA)
+  // En mode API, les tickets en cours d’un membre se comptent sur la
+  // collection distante (identifiants backend inconnus du jeu local).
+  const ticketsDistants = useCollection<Ticket>('tickets-plateforme', TICKETS_PLATEFORME)
   const executer = useOperation()
   const [onglet, setOnglet] = useState('membres')
   const [detailId, setDetailId] = useState<string | null>(null)
@@ -125,26 +134,38 @@ export default function Equipe() {
   const elevationsActives = equipe.items.filter((m) => m.elevation?.active)
   const equipes = [...new Set(equipe.items.map((m) => m.equipe))]
 
-  const ticketsDe = (nom: string) =>
-    TICKETS_PLATEFORME.filter((t) => t.assigneA === nom && !['resolu', 'ferme'].includes(t.statut))
+  const ticketsDe = (nom: string) => {
+    const file = estActif() ? ticketsDistants.items : TICKETS_PLATEFORME
+    return file.filter((t) => t.assigneA === nom && !['resolu', 'ferme'].includes(t.statut))
+  }
 
   const ajouterMembre = () => {
     const courrielFinal = courriel.trim() || `${nom.trim().toLowerCase().replace(/\s+/g, '.')}@synelia.tech`
+    const equipeChoisie = equipeNouvelle || (astreinteNouvelle ? 'NOC Abidjan · astreinte' : 'NOC Abidjan')
     executer({
       action: 'org.manage',
       titre: `${nom.trim()} ajouté à l’équipe`,
       detail:
         'L’invitation est envoyée. Le deuxième facteur devra être enregistré avant tout accès au portail.',
+      appel: () =>
+        creerRessource('/admin/equipe', {
+          nom: nom.trim(),
+          email: courrielFinal,
+          role: roleNouveau,
+          equipe: equipeChoisie,
+          privilegie: privilegieNouveau,
+        }),
       effet: () =>
         equipe.creer({
           id: equipe.identifiant('syn'),
           nom: nom.trim(),
           email: courrielFinal,
           role: roleNouveau,
-          equipe: equipeNouvelle || (astreinteNouvelle ? 'NOC Abidjan · astreinte' : 'NOC Abidjan'),
+          equipe: equipeChoisie,
           dernierAcces: MAINTENANT,
           privilegie: privilegieNouveau,
         }),
+      effetFinal: () => equipe.recharger(),
     })
     setNom('')
     setCourriel('')
@@ -744,11 +765,17 @@ export default function Equipe() {
                             v.issue === 'retire'
                               ? 'Le compte garde son rôle mais perd l’accès plateforme complet. La revue est consignée au journal d’audit.'
                               : 'La revue est consignée au journal d’audit, avec son motif et la date du prochain réexamen.',
+                          appel: () =>
+                            modifierRessource('/admin/equipe', m.id, {
+                              privilegie: v.issue !== 'retire',
+                              revuLe: MAINTENANT,
+                            }),
                           effet: () =>
                             equipe.modifier(m.id, {
                               privilegie: v.issue !== 'retire',
                               revuLe: MAINTENANT,
                             }),
+                          effetFinal: () => equipe.recharger(),
                         })}
                       />
                     </span>
@@ -911,11 +938,17 @@ export default function Equipe() {
                 operation={(v) => ({
                   titre: `${detail.nom} est désormais ${ROLE_LABEL[v.role as Role]}`,
                   detail: 'Le changement est journalisé avec le nom de son auteur.',
+                  appel: () =>
+                    modifierRessource('/admin/equipe', detail.id, {
+                      role: v.role,
+                      equipe: String(v.equipe),
+                    }),
                   effet: () =>
                     equipe.modifier(detail.id, {
                       role: v.role as Role,
                       equipe: String(v.equipe),
                     }),
+                  effetFinal: () => equipe.recharger(),
                 })}
               />
               {detail.elevation?.active && (
@@ -928,6 +961,8 @@ export default function Equipe() {
                     ton: 'info',
                     titre: `Élévation de ${detail.nom} révoquée`,
                     detail: 'L’accès est coupé immédiatement et la révocation est journalisée.',
+                    // Pas d’appel : le contrat n’expose que la création
+                    // d’élévation (`POST …/elevation`), pas sa révocation.
                     effet: () => equipe.modifier(detail.id, { elevation: { active: false } }),
                   }}
                 />
@@ -940,6 +975,8 @@ export default function Equipe() {
                   ton: 'warn',
                   titre: `Sessions de ${detail.nom} fermées`,
                   detail: 'La personne devra se reconnecter, deuxième facteur compris, sur tous ses appareils.',
+                  // Pas d’appel : la révocation de sessions vit côté client
+                  // (`DELETE /securite/sessions`), pas côté équipe.
                   effet: () => equipe.modifier(detail.id, { dernierAcces: MAINTENANT }),
                 }}
               />
@@ -953,7 +990,13 @@ export default function Equipe() {
                     titre: `${detail.nom} passe en compte privilégié`,
                     detail:
                       'Le compte entre dans la revue trimestrielle : sans réexamen, le privilège devient un angle mort.',
+                    appel: () =>
+                      modifierRessource('/admin/equipe', detail.id, {
+                        privilegie: true,
+                        revuLe: MAINTENANT,
+                      }),
                     effet: () => equipe.modifier(detail.id, { privilegie: true, revuLe: MAINTENANT }),
+                    effetFinal: () => equipe.recharger(),
                   }}
                 />
               )}
@@ -1067,7 +1110,12 @@ export default function Equipe() {
             titre: `${retrait.nom} retiré de l’équipe`,
             detail:
               'Accès coupés et jetons révoqués. Pensez à faire tourner les secrets partagés : cette étape n’est pas automatique.',
+            // Le backend n’exige aucune confirmation sur cette route : le
+            // dialogue de saisie reste une discipline d’interface, pas un
+            // paramètre d’API.
+            appel: () => supprimerRessource('/admin/equipe', retrait.id),
             effet: () => equipe.supprimer(retrait.id),
+            effetFinal: () => equipe.recharger(),
           })
           setDetailId((id) => (id === retrait.id ? null : id))
           setRetraitId(null)

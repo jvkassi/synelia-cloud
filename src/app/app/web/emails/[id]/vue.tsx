@@ -18,6 +18,7 @@ import { ConfigurationServicePanel } from '@/components/business/configuration-s
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { creerRessource, estActif, requete } from '@/lib/api/client'
 
 const ONGLETS = [
   { id: 'boites', label: 'Boîtes aux lettres' },
@@ -28,7 +29,7 @@ const ONGLETS = [
 ]
 
 export function VueMessagerie({ id }: { id: string }) {
-  const { autorise, refus } = useApp()
+  const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
   const messageries = useCollection<MessagerieDomaine>('messageries', MESSAGERIES)
   const [adresse, setAdresse] = useState('')
@@ -42,6 +43,26 @@ export function VueMessagerie({ id }: { id: string }) {
 
   const m = messageries.items.find((x) => x.id === id)
   if (!m) return null
+
+  // L’ouverture passe par le SSO du backend (`POST …/ouverture` renvoie
+  // l’URL de rebond) ; en maquette, le lien direct suffit.
+  const ouvrirWebmail = () => {
+    if (!estActif()) {
+      window.open(`https://${m.hoteWebmail}`, '_blank', 'noopener')
+      return
+    }
+    requete<{ url: string }>(`/web/emails/${encodeURIComponent(m.id)}/ouverture`, {
+      methode: 'POST',
+    }).then(
+      (r) => window.open(r.url, '_blank', 'noopener'),
+      (e: unknown) =>
+        pousser({
+          ton: 'err',
+          titre: 'Ouverture du webmail impossible',
+          detail: e instanceof Error ? e.message : undefined,
+        }),
+    )
+  }
   const config = configurationDuService('email-pro')
   const utilise = m.boites.reduce((a, b) => a + b.utiliseGo, 0)
   const total = m.boites.reduce((a, b) => a + b.quotaGo, 0)
@@ -74,13 +95,9 @@ export function VueMessagerie({ id }: { id: string }) {
                   Créer une boîte
                 </Button>
               </GatedAction>
-              <ButtonLink
-                href={`https://${m.hoteWebmail}`}
-                variant="accent"
-                iconAfter={<ExternalLink size={13} />}
-              >
+              <Button variant="accent" iconAfter={<ExternalLink size={13} />} onClick={ouvrirWebmail}>
                 Ouvrir le webmail
-              </ButtonLink>
+              </Button>
             </>
           ) : (
             <BoutonAction
@@ -92,8 +109,20 @@ export function VueMessagerie({ id }: { id: string }) {
                 action: 'service.admin',
                 titre: `Messagerie de ${m.domaine} en cours d’activation`,
                 detail: `${money(m.prixSiege)} par boîte et par mois, au prorata.`,
+                appel: () =>
+                  creerRessource('/web/emails', {
+                    domaine: m.domaine,
+                    palier: m.palier,
+                    boites: m.boitesIncluses,
+                  }),
                 job: { workflow: 'web.email.activate', cible: m.domaine },
-                effetFinal: () => messageries.modifier(m.id, { actif: true }),
+                effetFinal: () => {
+                  if (estActif()) {
+                    messageries.recharger()
+                    return
+                  }
+                  messageries.modifier(m.id, { actif: true })
+                },
               }}
             />
           )
@@ -209,10 +238,18 @@ export function VueMessagerie({ id }: { id: string }) {
                                   titre: `Boîte ${b.adresse} supprimée`,
                                   detail:
                                     'Le contenu reste dans la sauvegarde le temps de la rétention ; le siège est libéré.',
+                                  // Le backend exige la confirmation par l’adresse
+                                  // exacte, passée ici explicitement.
+                                  appel: () =>
+                                    requete(
+                                      `/web/emails/${encodeURIComponent(m.id)}/boites/${encodeURIComponent(b.adresse)}`,
+                                      { methode: 'DELETE', query: { confirmation: b.adresse } },
+                                    ),
                                   effet: () =>
                                     messageries.modifier(m.id, (x) => ({
                                       boites: x.boites.filter((y) => y.adresse !== b.adresse),
                                     })),
+                                  effetFinal: () => messageries.recharger(),
                                 })
                               }
                             >
@@ -253,6 +290,27 @@ export function VueMessagerie({ id }: { id: string }) {
                       libelleValider="Ajouter l’alias"
                       operation={(v) => ({
                         titre: `Alias ${v.de} créé`,
+                        appel: () =>
+                          requete(`/web/emails/${encodeURIComponent(m.id)}/alias`, {
+                            methode: 'PUT',
+                            corps: {
+                              alias: [
+                                ...m.alias.map((a) => ({ de: a.de, vers: a.vers })),
+                                {
+                                  de: String(v.de),
+                                  vers: String(v.vers)
+                                    .split(',')
+                                    .map((a) => a.trim())
+                                    .filter(Boolean),
+                                },
+                              ],
+                              redirections: m.redirections.map((r) => ({
+                                de: r.de,
+                                vers: r.vers,
+                                copie: r.copie,
+                              })),
+                            },
+                          }),
                         effet: () =>
                           messageries.modifier(m.id, (x) => ({
                             alias: [
@@ -266,6 +324,7 @@ export function VueMessagerie({ id }: { id: string }) {
                               },
                             ],
                           })),
+                        effetFinal: () => messageries.recharger(),
                       })}
                     />
                   }
@@ -311,6 +370,25 @@ export function VueMessagerie({ id }: { id: string }) {
                       operation={(v) => ({
                         titre: `Redirection de ${v.de} créée`,
                         detail: v.copie ? undefined : 'Sans copie : aucun exemplaire ne reste chez vous.',
+                        appel: () =>
+                          requete(`/web/emails/${encodeURIComponent(m.id)}/alias`, {
+                            methode: 'PUT',
+                            corps: {
+                              alias: m.alias.map((a) => ({ de: a.de, vers: a.vers })),
+                              redirections: [
+                                ...m.redirections.map((r) => ({
+                                  de: r.de,
+                                  vers: r.vers,
+                                  copie: r.copie,
+                                })),
+                                {
+                                  de: String(v.de),
+                                  vers: String(v.vers),
+                                  copie: Boolean(v.copie),
+                                },
+                              ],
+                            },
+                          }),
                         effet: () =>
                           messageries.modifier(m.id, (x) => ({
                             redirections: [
@@ -318,6 +396,7 @@ export function VueMessagerie({ id }: { id: string }) {
                               { de: String(v.de), vers: String(v.vers), copie: Boolean(v.copie) },
                             ],
                           })),
+                        effetFinal: () => messageries.recharger(),
                       })}
                     />
                   }
@@ -412,11 +491,20 @@ export function VueMessagerie({ id }: { id: string }) {
                     ton: 'info',
                     titre: 'Vérification des enregistrements d’expédition',
                     detail: 'SPF, DKIM et DMARC sont relus depuis nos résolveurs, sans cache.',
+                    appel: () =>
+                      requete(`/web/emails/${encodeURIComponent(m.id)}/authentification/verification`, {
+                        methode: 'POST',
+                      }),
                     job: { workflow: 'smtp.verify', cible: m.domaine },
-                    effetFinal: () =>
+                    effetFinal: () => {
+                      if (estActif()) {
+                        messageries.recharger()
+                        return
+                      }
                       messageries.modifier(m.id, (x) => ({
                         authentification: { ...x.authentification, spf: 'valide', dkim: 'valide' },
-                      })),
+                      }))
+                    },
                   }}
                 />
               </Card>
@@ -541,6 +629,13 @@ export function VueMessagerie({ id }: { id: string }) {
                   action: 'seat.assign',
                   titre: `Boîte ${adresse}@${m.domaine} créée`,
                   detail: 'Le titulaire reçoit son lien de première connexion par SMS.',
+                  appel: () =>
+                    creerRessource(`/web/emails/${encodeURIComponent(m.id)}/boites`, {
+                      adresse: `${adresse}@${m.domaine}`,
+                      nom: titulaire || adresse,
+                      quotaGo: Number(quota),
+                      mfaObligatoire: mfaExige,
+                    }),
                   effet: () =>
                     messageries.modifier(m.id, (x) => ({
                       boites: [
@@ -555,6 +650,7 @@ export function VueMessagerie({ id }: { id: string }) {
                         },
                       ],
                     })),
+                  effetFinal: () => messageries.recharger(),
                 })
                 setAdresse('')
                 setTitulaire('')

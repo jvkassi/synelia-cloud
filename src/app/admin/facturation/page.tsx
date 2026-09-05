@@ -25,6 +25,7 @@ import { StackedBar, StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { requete } from '@/lib/api/client'
 
 const ONGLETS = [
   { id: 'revenus', label: 'Revenus' },
@@ -95,6 +96,17 @@ export default function FacturationAdmin() {
         : suspendre
           ? 'La suspension est consignée avec votre nom : elle arrête l’activité du client.'
           : 'Le dossier est mis à jour et l’action est consignée dans son historique.',
+      // Seule la relance écrite a un équivalent distant (vague de
+      // relances) ; le reste — appel, échelonnement, avoir, promesse,
+      // clôture — vit dans le journal local du dossier.
+      appel:
+        action === 'relance'
+          ? () =>
+              requete('/admin/facturation/impayes/relances', {
+                methode: 'POST',
+                corps: { factures: [relance.facture], niveau: 'rappel' },
+              })
+          : undefined,
       effet: () =>
         clos
           ? impayes.supprimer(relance.id)
@@ -114,6 +126,7 @@ export default function FacturationAdmin() {
                 },
               ],
             })),
+      effetFinal: () => impayes.recharger(),
     })
     setRelanceId(null)
   }

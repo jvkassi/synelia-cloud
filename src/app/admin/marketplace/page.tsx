@@ -23,6 +23,7 @@ import { DataTable } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
 import { useCollection, type Entite } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { requete } from '@/lib/api/client'
 import type { CampagneMaj, InstanceParc } from '@/lib/mock'
 
 const ONGLETS = [
@@ -524,15 +525,20 @@ export default function MarketplaceAdmin() {
 
           {campagnes.items.map((c) => {
             const solution = CATALOGUE.find((x) => x.slug === c.catalogSlug)
+            // En mode API le backend renvoie des campagnes sans `vagues`
+            // (instances/faites agrégés) : on affiche l’avancement global.
+            const vagues = c.vagues ?? []
             return (
               <Card
                 key={c.id}
                 className={cn(
                   c.statut === 'en_cours'
                     ? 'border-info/40'
-                    : c.statut === 'arretee'
+                    : c.statut === 'arretee' || (c.statut as string) === 'echec'
                       ? 'border-err/40'
-                      : '',
+                      : (c.statut as string) === 'suspendue'
+                        ? 'border-warn/40'
+                        : '',
                 )}
               >
                 <CardHeader
@@ -558,9 +564,11 @@ export default function MarketplaceAdmin() {
                             ? 'ok'
                             : c.statut === 'en_cours'
                               ? 'info'
-                              : c.statut === 'arretee'
+                              : c.statut === 'arretee' || (c.statut as string) === 'echec'
                                 ? 'err'
-                                : 'neutral'
+                                : (c.statut as string) === 'suspendue'
+                                  ? 'warn'
+                                  : 'neutral'
                         }
                         dot
                         size="sm"
@@ -571,14 +579,19 @@ export default function MarketplaceAdmin() {
                             ? 'En cours'
                             : c.statut === 'arretee'
                               ? 'Arrêtée'
-                              : 'Planifiée'}
+                              : (c.statut as string) === 'suspendue'
+                                ? 'Suspendue'
+                                : (c.statut as string) === 'echec'
+                                  ? 'Échec'
+                                  : 'Planifiée'}
                       </Badge>
                     </span>
                   }
                 />
 
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  {c.vagues.map((v) => (
+                {vagues.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    {vagues.map((v) => (
                     <div
                       key={v.numero}
                       className={cn(
@@ -615,8 +628,27 @@ export default function MarketplaceAdmin() {
                               : 'En attente de la vague précédente'}
                       </p>
                     </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div>
+                    <div className="mb-1 flex items-baseline justify-between gap-2">
+                      <span className="text-[12px] font-semibold text-g-700">Avancement</span>
+                      <span className="tnum text-[12px] font-bold text-ink">
+                        {(c as CampagneMaj & { faites?: number }).faites ?? 0} / {c.instances}{' '}
+                        instances
+                      </span>
+                    </div>
+                    <span className="block h-2.5 overflow-hidden rounded-full bg-g-100">
+                      <span
+                        className="block h-full rounded-full bg-p-600"
+                        style={{
+                          width: `${Math.max(2, Math.round((((c as CampagneMaj & { faites?: number }).faites ?? 0) / Math.max(1, c.instances)) * 100))}%`,
+                        }}
+                      />
+                    </span>
+                  </div>
+                )}
 
                 <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-g-100 pt-4">
                   {c.statut === 'planifiee' && (
@@ -629,53 +661,65 @@ export default function MarketplaceAdmin() {
                         titre: `${c.nom} démarrée`,
                         detail:
                           'La vague 1 démarre. Un snapshot est pris avant chaque instance, et le point d’arrêt bloquera la suite en cas d’anomalie.',
+                        appel: () =>
+                          requete(
+                            `/admin/marketplace/campagnes/${encodeURIComponent(c.id)}/lancement`,
+                            { methode: 'POST' },
+                          ),
                         effet: () =>
                           campagnes.modifier(c.id, (camp) => ({
                             statut: 'en_cours',
-                            vagues: camp.vagues.map((v) =>
+                            vagues: (camp.vagues ?? []).map((v) =>
                               v.numero === 1 ? { ...v, statut: 'en_cours' } : v,
                             ),
                           })),
+                        effetFinal: () => campagnes.recharger(),
                       }}
                     />
                   )}
                   {c.statut === 'en_cours' && (
                     <>
-                      <BoutonAction
-                        libelle={
-                          c.vagues.every((v) => v.statut === 'terminee')
-                            ? 'Clôturer la campagne'
-                            : 'Lever le point d’arrêt'
-                        }
-                        operation={{
-                          action: 'catalog.edit',
-                          titre: c.vagues.every((v) => v.statut === 'terminee')
-                            ? `${c.nom} terminée`
-                            : 'Vague suivante autorisée',
-                          detail: c.vagues.every((v) => v.statut === 'terminee')
-                            ? 'Tout le parc concerné est sur la version cible.'
-                            : 'Le point d’arrêt est levé. La vague suivante démarre à la prochaine fenêtre.',
-                          // Une vague terminée, la suivante démarre : c'est
-                          // exactement ce que le point d'arrêt autorise.
-                          effet: () =>
-                            campagnes.modifier(c.id, (camp) => {
-                              const vagues = camp.vagues.map((v) =>
-                                v.statut === 'en_cours' ? { ...v, statut: 'terminee' as const } : v,
-                              )
-                              const suivante = vagues.find((v) => v.statut === 'planifiee')
-                              return {
-                                statut: suivante ? 'en_cours' : 'terminee',
-                                vagues: suivante
-                                  ? vagues.map((v) =>
-                                      v.numero === suivante.numero
-                                        ? { ...v, statut: 'en_cours' as const }
-                                        : v,
-                                    )
-                                  : vagues,
-                              }
-                            }),
-                        }}
-                      />
+                      {vagues.length > 0 && (
+                        <BoutonAction
+                          libelle={
+                            vagues.every((v) => v.statut === 'terminee')
+                              ? 'Clôturer la campagne'
+                              : 'Lever le point d’arrêt'
+                          }
+                          operation={{
+                            action: 'catalog.edit',
+                            titre: vagues.every((v) => v.statut === 'terminee')
+                              ? `${c.nom} terminée`
+                              : 'Vague suivante autorisée',
+                            detail: vagues.every((v) => v.statut === 'terminee')
+                              ? 'Tout le parc concerné est sur la version cible.'
+                              : 'Le point d’arrêt est levé. La vague suivante démarre à la prochaine fenêtre.',
+                            // Une vague terminée, la suivante démarre : c'est
+                            // exactement ce que le point d'arrêt autorise.
+                            // Sans équivalent côté API (pas de `PATCH`
+                            // campagnes) : maquette uniquement.
+                            effet: () =>
+                              campagnes.modifier(c.id, (camp) => {
+                                const suivantes = (camp.vagues ?? []).map((v) =>
+                                  v.statut === 'en_cours'
+                                    ? { ...v, statut: 'terminee' as const }
+                                    : v,
+                                )
+                                const suivante = suivantes.find((v) => v.statut === 'planifiee')
+                                return {
+                                  statut: suivante ? 'en_cours' : 'terminee',
+                                  vagues: suivante
+                                    ? suivantes.map((v) =>
+                                        v.numero === suivante.numero
+                                          ? { ...v, statut: 'en_cours' as const }
+                                          : v,
+                                      )
+                                    : suivantes,
+                                }
+                              }),
+                          }}
+                        />
+                      )}
                       <GatedAction
                         autorise={autorise('catalog.edit')}
                         message={refus('catalog.edit')}
@@ -691,8 +735,15 @@ export default function MarketplaceAdmin() {
                       </GatedAction>
                     </>
                   )}
-                  {c.statut === 'arretee' && (
-                    <Callout ton="err" titre="Campagne arrêtée par le point de contrôle">
+                  {(c.statut === 'arretee' || (c.statut as string) === 'suspendue') && (
+                    <Callout
+                      ton="err"
+                      titre={
+                        c.statut === 'arretee'
+                          ? 'Campagne arrêtée par le point de contrôle'
+                          : 'Campagne suspendue'
+                      }
+                    >
                       Une anomalie a été détectée sur la vague en cours. Les instances déjà mises à
                       jour peuvent être ramenées à leur version antérieure depuis le snapshot pris
                       avant l’opération. Les instances non encore touchées ne l’ont pas été.
@@ -1033,15 +1084,21 @@ export default function MarketplaceAdmin() {
             titre: `${arret.nom} arrêtée`,
             detail:
               'Les instances déjà traitées peuvent être ramenées à leur version antérieure depuis leur snapshot, pendant sept jours.',
+            appel: () =>
+              requete(
+                `/admin/marketplace/campagnes/${encodeURIComponent(arret.id)}/suspension`,
+                { methode: 'POST' },
+              ),
             effet: () =>
               campagnes.modifier(arret.id, (camp) => ({
                 statut: 'arretee',
-                vagues: camp.vagues.map((v) =>
+                vagues: (camp.vagues ?? []).map((v) =>
                   v.statut === 'en_cours' || v.statut === 'planifiee'
                     ? { ...v, statut: 'arretee' as const }
                     : v,
                 ),
               })),
+            effetFinal: () => campagnes.recharger(),
           })
           setArretId(null)
         }}

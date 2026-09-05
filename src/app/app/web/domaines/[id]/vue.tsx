@@ -193,6 +193,17 @@ export function VueDomaine({ id }: { id: string }) {
                   v.sens === 'sortant'
                     ? 'Le verrou de transfert est levé pour cinq jours. Le code est envoyé au contact titulaire.'
                     : 'L’organisation destinataire doit accepter le transfert depuis son espace.',
+                // Le transfert sortant remet le code d’autorisation sans
+                // friction ; le transfert interne n’a pas d’équivalent contrat.
+                ...(v.sens === 'sortant'
+                  ? {
+                      appel: () =>
+                        requete(`/web/domaines/${encodeURIComponent(entree.id)}/code-auth`, {
+                          methode: 'POST',
+                        }),
+                    }
+                  : {}),
+                effetFinal: () => portefeuille.recharger(),
               })}
             />
           </>

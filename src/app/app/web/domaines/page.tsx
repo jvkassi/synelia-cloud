@@ -6,9 +6,9 @@ import { ArrowRightLeft, Globe, Search, Server, ShieldCheck } from 'lucide-react
 import { cn } from '@/lib/utils'
 import { dateCourte, money, num } from '@/lib/format'
 import { SITE_LABEL } from '@/lib/types'
-import { DOMAINES, SITES_WEB, entreesWebCloud, joursAvant, sitesDeLHebergement } from '@/lib/mock'
+import { DOMAINES, HEBERGEMENTS, SITES_WEB, ZONES_DNS, assemblerEntrees, entreesWebCloud, joursAvant, sitesDeLHebergement } from '@/lib/mock'
 import { ORG_COURANTE, UTILISATEUR_COURANT } from '@/lib/mock/orgs'
-import type { Domaine } from '@/lib/types'
+import type { DnsZone, Domaine, SiteWeb, WebHosting } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -35,6 +35,9 @@ export default function PortefeuilleWebCloud() {
   const { autorise, refus } = useApp()
   const executer = useOperation()
   const portefeuille = useCollection<Domaine>('domaines', DOMAINES)
+  const parcHebergements = useCollection<WebHosting>('hebergements', HEBERGEMENTS)
+  const zones = useCollection<DnsZone>('zones-dns', ZONES_DNS)
+  const tousSites = useCollection<SiteWeb>('sites-web', SITES_WEB)
   const [recherche, setRecherche] = useState('')
   const [extension, setExtension] = useState('.ci')
   const [aTransferer, setATransferer] = useState('')
@@ -94,7 +97,12 @@ export default function PortefeuilleWebCloud() {
     )
   }
 
-  const entrees = entreesWebCloud()
+  // Avec l’API, les entrées sont assemblées depuis les collections distantes
+  // (le backend filtre déjà) ; en maquette, depuis le périmètre fictif.
+  const entrees = estActif()
+    ? assemblerEntrees(portefeuille.items, parcHebergements.items, zones.items)
+    : entreesWebCloud()
+  const sitesConnus = estActif() ? tousSites.items : SITES_WEB
   const heberges = entrees.filter((e) => e.hebergement)
   const sansRenouvellement = entrees.filter(
     (e) => e.domaine && !e.domaine.renouvellementAuto,
@@ -298,8 +306,8 @@ export default function PortefeuilleWebCloud() {
         />
         <StatTile
           libelle="Sites en ligne"
-          valeur={SITES_WEB.filter((s) => s.statut === 'en_ligne').length}
-          detail={`sur ${SITES_WEB.length} installés`}
+          valeur={sitesConnus.filter((s) => s.statut === 'en_ligne').length}
+          detail={`sur ${sitesConnus.length} installés`}
         />
         <StatTile
           libelle="Échéance la plus proche"
@@ -331,7 +339,11 @@ export default function PortefeuilleWebCloud() {
             </thead>
             <tbody>
               {entrees.map((e) => {
-                const sites = e.hebergement ? sitesDeLHebergement(e.hebergement.id) : []
+                const sites = e.hebergement
+                  ? estActif()
+                    ? tousSites.items.filter((s) => s.hebergementId === e.hebergement!.id)
+                    : sitesDeLHebergement(e.hebergement.id)
+                  : []
                 return (
                   <tr key={e.id} className="border-b border-g-100 last:border-0">
                     <td className="px-3 py-2.5">
@@ -567,7 +579,7 @@ export default function PortefeuilleWebCloud() {
           <Link href="/app/applications/projets" className="font-semibold text-p-700 hover:text-m-600">
             Les projets applicatifs
           </Link>{' '}
-          répondent à ce besoin — {num(SITES_WEB.length)} sites mutualisés ne remplacent pas une
+          répondent à ce besoin — {num(sitesConnus.length)} sites mutualisés ne remplacent pas une
           application dédiée.
         </p>
       </Card>

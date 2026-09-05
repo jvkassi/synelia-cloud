@@ -22,6 +22,7 @@ import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { creerRessource, estActif } from '@/lib/api/client'
 
 export default function ListeCertificats() {
   const { autorise, refus } = useApp()
@@ -37,13 +38,22 @@ export default function ListeCertificats() {
   const commander = (cible: string, type: TypeCertificat) => {
     const offre = OFFRES_CERTIFICAT.find((o) => o.type === type)
     const nouveau = collection.identifiant('cert')
-    executer({
-      action: 'service.admin',
+    return {
+      action: 'service.admin' as const,
       titre: `Certificat pour ${cible} commandé`,
       detail:
         offre && offre.prix > 0
           ? `${offre.nom} · ${money(offre.prix)} par an. La validation d’organisation demande des pièces justificatives.`
           : 'Émission immédiate, renouvellement automatique compris.',
+      // `validationDomaine` est exigée par le contrat ; un joker ne se
+      // valide que par DNS, le reste par HTTP.
+      appel: () =>
+        creerRessource('/web/ssl', {
+          hote: cible,
+          type,
+          validationDomaine: type === 'wildcard' ? 'dns' : 'http',
+          renouvellementAuto: true,
+        }),
       effet: () =>
         collection.creer({
           id: nouveau,
@@ -69,8 +79,14 @@ export default function ListeCertificats() {
         ],
         dureeEtapeMs: 1100,
       },
-      effetFinal: () => collection.modifier(nouveau, { etat: 'actif' }),
-    })
+      effetFinal: () => {
+        if (estActif()) {
+          collection.recharger()
+          return
+        }
+        collection.modifier(nouveau, { etat: 'actif' })
+      },
+    }
   }
 
   return (
@@ -106,10 +122,7 @@ export default function ListeCertificats() {
             ]}
             valeursDepart={{ type: 'letsencrypt' }}
             libelleValider="Commander"
-            operation={(v) => ({
-              titre: `Certificat pour ${v.hote} commandé`,
-              effet: () => commander(String(v.hote), v.type as TypeCertificat),
-            })}
+            operation={(v) => commander(String(v.hote), v.type as TypeCertificat)}
           />
         }
       />
@@ -271,7 +284,7 @@ export default function ListeCertificats() {
               ))}
             </Select>
           </Field>
-          <Button disabled={!hote.trim()} onClick={() => commander(hote.trim(), typeCert)}>
+          <Button disabled={!hote.trim()} onClick={() => executer(commander(hote.trim(), typeCert))}>
             Vérifier et commander
           </Button>
         </div>

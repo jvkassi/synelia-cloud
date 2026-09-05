@@ -63,6 +63,13 @@ import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { ConfigurationServicePanel } from '@/components/business/configuration-service'
 import { CarteAbonnement } from '@/components/business/abonnement'
+import {
+  creerRessource,
+  estActif,
+  modifierRessource,
+  requete,
+  supprimerRessource,
+} from '@/lib/api/client'
 
 import { useApp } from '@/components/app/contexte'
 
@@ -167,6 +174,17 @@ export function VueHebergement({ id }: { id: string }) {
                 return {
                   titre: `Installation de ${v.hote} lancée`,
                   detail: `${v.type} · PHP ${v.php}`,
+                  appel: () =>
+                    creerRessource('/web/sites', {
+                      hebergementId: h.id,
+                      site: {
+                        hote: String(v.hote),
+                        type: v.type as SiteWeb['type'],
+                        phpVersion: String(v.php),
+                        creerBase: Boolean(v.base),
+                        ssl: true,
+                      },
+                    }),
                   effet: () =>
                     tousSites.creer({
                       id: idSite,
@@ -182,11 +200,16 @@ export function VueHebergement({ id }: { id: string }) {
                       statut: 'installation',
                     }),
                   job: { workflow: 'web.app.install', cible: String(v.hote) },
-                  effetFinal: () =>
+                  effetFinal: () => {
+                    if (estActif()) {
+                      tousSites.recharger()
+                      return
+                    }
                     tousSites.modifier(idSite, {
                       statut: 'en_ligne',
                       ssl: { etat: 'actif', emetteur: 'Let’s Encrypt', expire: '2026-11-17' },
-                    }),
+                    })
+                  },
                 }
               }}
             />
@@ -264,12 +287,26 @@ export function VueHebergement({ id }: { id: string }) {
                       titre: `${h.serveur.serveurWeb} redémarré`,
                       detail:
                         'Coupure de moins d’une seconde : les connexions en cours sont laissées se terminer.',
+                      appel: () =>
+                        requete(
+                          `/web/hebergements/${encodeURIComponent(h.id)}/redemarrage`,
+                          { methode: 'POST', query: { confirmation: h.domaineProvisoire } },
+                        ),
                       job: {
                         type: 'hebergement.restart',
                         label: `Redémarrage de ${h.serveur.serveurWeb} · ${nom}`,
                         etapes: ['Recharger la configuration', 'Redémarrer les processus'],
                         dureeEtapeMs: 900,
                       },
+                    }}
+                    confirmation={{
+                      ressource: h.domaineProvisoire,
+                      titre: `Redémarrer les services de ${nom} ?`,
+                      pertes: [
+                        'Coupure de quelques secondes sur tous les sites du serveur',
+                        'Les sessions en cours seront interrompues',
+                      ],
+                      libelleAction: 'Redémarrer',
                     }}
                   />
                 }
@@ -378,7 +415,9 @@ export function VueHebergement({ id }: { id: string }) {
                               titre: `${st.hote} retiré du serveur`,
                               detail:
                                 'La racine et la base restent en place le temps de la rétention : rien n’est effacé dans la seconde.',
+                              appel: () => supprimerRessource('/web/sites', st.id, st.hote),
                               effet: () => tousSites.supprimer(st.id),
+                              effetFinal: () => tousSites.recharger(),
                             })
                           }
                         >
@@ -539,6 +578,16 @@ export function VueHebergement({ id }: { id: string }) {
                         v.protocole === 'ftp'
                           ? 'FTP en clair transmet le mot de passe en clair : à réserver à un besoin ponctuel.'
                           : 'Le mot de passe est affiché une seule fois.',
+                      appel: () =>
+                        creerRessource(
+                          `/web/hebergements/${encodeURIComponent(h.id)}/comptes-fichiers`,
+                          {
+                            utilisateur: String(v.utilisateur),
+                            protocoles: [v.protocole as 'ftp' | 'sftp' | 'ftps'],
+                            racine: String(v.racine),
+                            ...(Number(v.quota) ? { quotaGo: Number(v.quota) } : {}),
+                          },
+                        ),
                       effet: () =>
                         tousComptes.creer({
                           id: tousComptes.identifiant('cf'),
@@ -551,6 +600,7 @@ export function VueHebergement({ id }: { id: string }) {
                           clesSsh: 0,
                           statut: 'actif',
                         }),
+                      effetFinal: () => tousComptes.recharger(),
                     })}
                   />
                 }
@@ -606,7 +656,13 @@ export function VueHebergement({ id }: { id: string }) {
                             ton: 'warn',
                             titre: `Compte ${c.utilisateur} supprimé`,
                             detail: 'Les fichiers déposés restent en place ; seul l’accès disparaît.',
+                            appel: () =>
+                              requete(
+                                `/web/hebergements/${encodeURIComponent(h.id)}/comptes-fichiers/${encodeURIComponent(c.id)}`,
+                                { methode: 'DELETE', query: { confirmation: c.utilisateur } },
+                              ),
                             effet: () => tousComptes.supprimer(c.id),
+                            effetFinal: () => tousComptes.recharger(),
                           })
                         }
                       >
@@ -634,10 +690,22 @@ export function VueHebergement({ id }: { id: string }) {
                       detail: v
                         ? undefined
                         : 'Ce qui est fermé ne peut pas être attaqué.',
+                      appel: () =>
+                        requete(`/web/hebergements/${encodeURIComponent(h.id)}/acces`, {
+                          methode: 'PUT',
+                          corps: {
+                            ftp: h.acces.ftp,
+                            sftp: v,
+                            ftps: h.acces.ftps,
+                            ssh: h.acces.ssh,
+                            portSsh: h.acces.portSsh,
+                          },
+                        }),
                       effet: () =>
                         hebergements.modifier(h.id, (x) => ({
                           acces: { ...x.acces, sftp: v },
                         })),
+                      effetFinal: () => hebergements.recharger(),
                     })
                   }
                   label="SFTP"
@@ -653,10 +721,22 @@ export function VueHebergement({ id }: { id: string }) {
                       detail: v
                         ? undefined
                         : 'Ce qui est fermé ne peut pas être attaqué.',
+                      appel: () =>
+                        requete(`/web/hebergements/${encodeURIComponent(h.id)}/acces`, {
+                          methode: 'PUT',
+                          corps: {
+                            ftp: h.acces.ftp,
+                            sftp: h.acces.sftp,
+                            ftps: v,
+                            ssh: h.acces.ssh,
+                            portSsh: h.acces.portSsh,
+                          },
+                        }),
                       effet: () =>
                         hebergements.modifier(h.id, (x) => ({
                           acces: { ...x.acces, ftps: v },
                         })),
+                      effetFinal: () => hebergements.recharger(),
                     })
                   }
                   label="FTPS"
@@ -672,10 +752,22 @@ export function VueHebergement({ id }: { id: string }) {
                       detail: v
                         ? 'Le mot de passe circule en clair : à n’ouvrir que le temps d’un dépannage.'
                         : 'Ce qui est fermé ne peut pas être attaqué.',
+                      appel: () =>
+                        requete(`/web/hebergements/${encodeURIComponent(h.id)}/acces`, {
+                          methode: 'PUT',
+                          corps: {
+                            ftp: v,
+                            sftp: h.acces.sftp,
+                            ftps: h.acces.ftps,
+                            ssh: h.acces.ssh,
+                            portSsh: h.acces.portSsh,
+                          },
+                        }),
                       effet: () =>
                         hebergements.modifier(h.id, (x) => ({
                           acces: { ...x.acces, ftp: v },
                         })),
+                      effetFinal: () => hebergements.recharger(),
                     })
                   }
                   label="FTP simple"
@@ -691,10 +783,22 @@ export function VueHebergement({ id }: { id: string }) {
                       detail: v
                         ? undefined
                         : 'Ce qui est fermé ne peut pas être attaqué.',
+                      appel: () =>
+                        requete(`/web/hebergements/${encodeURIComponent(h.id)}/acces`, {
+                          methode: 'PUT',
+                          corps: {
+                            ftp: h.acces.ftp,
+                            sftp: h.acces.sftp,
+                            ftps: h.acces.ftps,
+                            ssh: v,
+                            portSsh: h.acces.portSsh,
+                          },
+                        }),
                       effet: () =>
                         hebergements.modifier(h.id, (x) => ({
                           acces: { ...x.acces, ssh: v },
                         })),
+                      effetFinal: () => hebergements.recharger(),
                     })
                   }
                   label="Shell SSH"
@@ -727,7 +831,32 @@ export function VueHebergement({ id }: { id: string }) {
                 sousTitre="Une version par défaut pour le serveur, et une version propre à chaque site si besoin."
               />
               <Field label="Version par défaut" hint="S’applique aux sites qui n’ont pas de réglage propre.">
-                <Select defaultValue={h.php.versionDefaut}>
+                <Select
+                  defaultValue={h.php.versionDefaut}
+                  onChange={(e) =>
+                    executer({
+                      action: 'service.admin',
+                      titre: `PHP ${e.target.value} par défaut`,
+                      detail: 'Les sites sans réglage propre basculent à la prochaine requête.',
+                      appel: () =>
+                        requete(`/web/hebergements/${encodeURIComponent(h.id)}/php`, {
+                          methode: 'PUT',
+                          corps: {
+                            versionDefaut: e.target.value,
+                            extensionsActivees: h.php.extensions
+                              .filter((x) => x.active)
+                              .map((x) => x.nom),
+                            limites: h.php.limites,
+                          },
+                        }),
+                      effet: () =>
+                        hebergements.modifier(h.id, (x) => ({
+                          php: { ...x.php, versionDefaut: e.target.value },
+                        })),
+                      effetFinal: () => hebergements.recharger(),
+                    })
+                  }
+                >
                   {h.php.versionsDisponibles.map((v) => (
                     <option key={v} value={v}>
                       PHP {v}
@@ -779,10 +908,22 @@ export function VueHebergement({ id }: { id: string }) {
                       detail: v
                         ? 'Le bytecode compilé reste en mémoire : le gain est immédiat.'
                         : 'Chaque requête recompile le code : à ne faire qu’en développement.',
+                      appel: () =>
+                        requete(`/web/hebergements/${encodeURIComponent(h.id)}/php`, {
+                          methode: 'PUT',
+                          corps: {
+                            versionDefaut: h.php.versionDefaut,
+                            extensionsActivees: h.php.extensions
+                              .filter((x) => x.active)
+                              .map((x) => x.nom),
+                            limites: { ...h.php.limites, opcache: v },
+                          },
+                        }),
                       effet: () =>
                         hebergements.modifier(h.id, (x) => ({
                           php: { ...x.php, limites: { ...x.php.limites, opcache: v } },
                         })),
+                      effetFinal: () => hebergements.recharger(),
                     })
                   }
                   label="OPcache"
@@ -828,6 +969,17 @@ export function VueHebergement({ id }: { id: string }) {
                             action: 'service.admin',
                             titre: v ? `Extension ${e.nom} activée` : `Extension ${e.nom} désactivée`,
                             detail: 'Prise en compte au prochain rechargement de PHP-FPM.',
+                            appel: () =>
+                              requete(`/web/hebergements/${encodeURIComponent(h.id)}/php`, {
+                                methode: 'PUT',
+                                corps: {
+                                  versionDefaut: h.php.versionDefaut,
+                                  extensionsActivees: h.php.extensions
+                                    .filter((x) => (x.nom === e.nom ? v : x.active))
+                                    .map((x) => x.nom),
+                                  limites: h.php.limites,
+                                },
+                              }),
                             effet: () =>
                               hebergements.modifier(h.id, (x) => ({
                                 php: {
@@ -837,6 +989,7 @@ export function VueHebergement({ id }: { id: string }) {
                                   ),
                                 },
                               })),
+                            effetFinal: () => hebergements.recharger(),
                           })
                         }
                       />
@@ -883,6 +1036,16 @@ export function VueHebergement({ id }: { id: string }) {
                 operation={(v) => ({
                   titre: `Tâche « ${v.libelle} » programmée`,
                   detail: String(v.frequence),
+                  appel: () =>
+                    creerRessource(
+                      `/web/hebergements/${encodeURIComponent(h.id)}/taches`,
+                      {
+                        libelle: String(v.libelle),
+                        expression: String(v.frequence),
+                        commande: String(v.commande),
+                        actif: true,
+                      },
+                    ),
                   effet: () =>
                     toutesTaches.creer({
                       id: toutesTaches.identifiant('cron'),
@@ -903,6 +1066,7 @@ export function VueHebergement({ id }: { id: string }) {
                       prochaine: '2026-08-20T02:00:00Z',
                       actif: true,
                     }),
+                  effetFinal: () => toutesTaches.recharger(),
                 })}
               />
             </div>
@@ -948,7 +1112,21 @@ export function VueHebergement({ id }: { id: string }) {
                             action: 'service.admin',
                             ton: v ? 'ok' : 'warn',
                             titre: v ? `« ${t.libelle} » réactivée` : `« ${t.libelle} » désactivée`,
+                            appel: () =>
+                              requete(
+                                `/web/hebergements/${encodeURIComponent(h.id)}/taches/${encodeURIComponent(t.id)}`,
+                                {
+                                  methode: 'PATCH',
+                                  corps: {
+                                    libelle: t.libelle,
+                                    expression: t.expression,
+                                    commande: t.commande,
+                                    actif: v,
+                                  },
+                                },
+                              ),
                             effet: () => toutesTaches.modifier(t.id, { actif: v }),
+                            effetFinal: () => toutesTaches.recharger(),
                           })
                         }
                       />
@@ -959,18 +1137,28 @@ export function VueHebergement({ id }: { id: string }) {
                           ton: 'info',
                           titre: `« ${t.libelle} » lancée`,
                           detail: 'La sortie complète apparaît dans l’onglet Journaux.',
+                          appel: () =>
+                            requete(
+                              `/web/hebergements/${encodeURIComponent(h.id)}/taches/${encodeURIComponent(t.id)}/execution`,
+                              { methode: 'POST' },
+                            ),
                           job: {
                             type: 'cron.run',
                             label: `Exécution · ${t.libelle}`,
                             etapes: ['Lancer la commande', 'Collecter la sortie'],
                             dureeEtapeMs: 900,
                           },
-                          effetFinal: () =>
+                          effetFinal: () => {
+                            if (estActif()) {
+                              toutesTaches.recharger()
+                              return
+                            }
                             toutesTaches.modifier(t.id, {
                               derniereExecution: '2026-08-19T15:20:00Z',
                               statut: 'ok',
                               dureeS: 3,
-                            }),
+                            })
+                          },
                         }}
                       />
                     </div>
@@ -1058,12 +1246,19 @@ export function VueHebergement({ id }: { id: string }) {
                   action: 'service.admin',
                   titre: 'Réglages appliqués',
                   detail: `${cible?.hote} — rechargement de ${h.serveur.serveurWeb} sans coupure.`,
+                  appel: () =>
+                    cible
+                      ? modifierRessource('/web/sites', cible.id, {
+                          phpVersion: phpSite ?? cible.phpVersion,
+                        })
+                      : Promise.resolve(),
                   effet: () =>
                     cible
                       ? tousSites.modifier(cible.id, {
                           phpVersion: phpSite ?? cible.phpVersion,
                         })
                       : undefined,
+                  effetFinal: () => tousSites.recharger(),
                 })
                 setSiteOuvert(null)
               }}
@@ -1100,9 +1295,20 @@ export function VueHebergement({ id }: { id: string }) {
               <Switch
                 checked={siteOuvert.securite.waf}
                 onChange={(v) =>
-                  tousSites.modifier(siteOuvert.id, (x) => ({
-                    securite: { ...x.securite, waf: v },
-                  }))
+                  executer({
+                    action: 'service.admin',
+                    titre: v ? 'Pare-feu applicatif activé' : 'Pare-feu applicatif désactivé',
+                    detail: `${siteOuvert.hote} — rechargement de ${h.serveur.serveurWeb} sans coupure.`,
+                    appel: () =>
+                      modifierRessource('/web/sites', siteOuvert.id, {
+                        securite: { ...siteOuvert.securite, waf: v },
+                      }),
+                    effet: () =>
+                      tousSites.modifier(siteOuvert.id, (x) => ({
+                        securite: { ...x.securite, waf: v },
+                      })),
+                    effetFinal: () => tousSites.recharger(),
+                  })
                 }
                 label="Pare-feu applicatif"
                 description="Règles OWASP adaptées à la solution installée."
@@ -1110,9 +1316,20 @@ export function VueHebergement({ id }: { id: string }) {
               <Switch
                 checked={siteOuvert.securite.bruteForce}
                 onChange={(v) =>
-                  tousSites.modifier(siteOuvert.id, (x) => ({
-                    securite: { ...x.securite, bruteForce: v },
-                  }))
+                  executer({
+                    action: 'service.admin',
+                    titre: v ? 'Anti-force brute activé' : 'Anti-force brute désactivé',
+                    detail: `${siteOuvert.hote} — rechargement de ${h.serveur.serveurWeb} sans coupure.`,
+                    appel: () =>
+                      modifierRessource('/web/sites', siteOuvert.id, {
+                        securite: { ...siteOuvert.securite, bruteForce: v },
+                      }),
+                    effet: () =>
+                      tousSites.modifier(siteOuvert.id, (x) => ({
+                        securite: { ...x.securite, bruteForce: v },
+                      })),
+                    effetFinal: () => tousSites.recharger(),
+                  })
                 }
                 label="Anti-force brute"
                 description="Sur les pages d’authentification et les points d’API."
@@ -1120,9 +1337,20 @@ export function VueHebergement({ id }: { id: string }) {
               <Switch
                 checked={siteOuvert.securite.scanMalware}
                 onChange={(v) =>
-                  tousSites.modifier(siteOuvert.id, (x) => ({
-                    securite: { ...x.securite, scanMalware: v },
-                  }))
+                  executer({
+                    action: 'service.admin',
+                    titre: v ? 'Analyse antimalware activée' : 'Analyse antimalware désactivée',
+                    detail: `${siteOuvert.hote} — rechargement de ${h.serveur.serveurWeb} sans coupure.`,
+                    appel: () =>
+                      modifierRessource('/web/sites', siteOuvert.id, {
+                        securite: { ...siteOuvert.securite, scanMalware: v },
+                      }),
+                    effet: () =>
+                      tousSites.modifier(siteOuvert.id, (x) => ({
+                        securite: { ...x.securite, scanMalware: v },
+                      })),
+                    effetFinal: () => tousSites.recharger(),
+                  })
                 }
                 label="Analyse antimalware quotidienne"
                 description="Mise en quarantaine et alerte, sans suppression automatique."

@@ -13,6 +13,7 @@ import {
   hebergementById,
   nomServi,
 } from '@/lib/mock'
+import type { WebHosting } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -43,8 +44,16 @@ export default function ListeApplications() {
   const { autorise, refus } = useApp()
   const executer = useOperation()
   const tousSites = useCollection<SiteWeb>('sites-web', SITES_WEB)
-  const miens = new Set(HEBERGEMENTS.filter((h) => h.orgId === ORG_COURANTE.id).map((h) => h.id))
-  const sites = tousSites.items.filter((s) => miens.has(s.hebergementId))
+  const parcHebergements = useCollection<WebHosting>('hebergements', HEBERGEMENTS)
+  // Le backend filtre déjà par organisation ; la maquette restreint au
+  // périmètre fictif, dont les identifiants sont inconnus du backend.
+  const hebergementsConnus = estActif()
+    ? parcHebergements.items
+    : HEBERGEMENTS.filter((h) => h.orgId === ORG_COURANTE.id)
+  const miens = new Set(hebergementsConnus.map((h) => h.id))
+  const sites = estActif()
+    ? tousSites.items
+    : tousSites.items.filter((s) => miens.has(s.hebergementId))
   const majEnAttente = sites.reduce((a, s) => a + (s.majEnAttente ?? 0), 0)
 
   return (
@@ -72,7 +81,7 @@ export default function ListeApplications() {
                 id: 'hebergement',
                 label: 'Hébergement de destination',
                 type: 'select',
-                options: HEBERGEMENTS.filter((h) => h.orgId === ORG_COURANTE.id).map((h) => ({
+                options: hebergementsConnus.map((h) => ({
                   value: h.id,
                   label: `${h.serveur.nom} · ${h.palier}`,
                 })),
@@ -290,13 +299,25 @@ export default function ListeApplications() {
                 key={c.nom}
                 type="button"
                 onClick={() => {
-                  const premier = HEBERGEMENTS.find((h) => h.orgId === ORG_COURANTE.id)
+                  const premier = hebergementsConnus[0]
                   const idSite = tousSites.identifiant('site')
                   const hote = `${c.nom.toLowerCase().replace(/[^a-z]/g, '')}.${premier ? nomServi(premier) : 'dba.africa'}`
                   executer({
                     action: 'service.admin',
                     titre: `Installation de ${c.nom} lancée`,
                     detail: `${hote} · PHP ${c.php}. Le contenu s’édite ensuite dans l’application.`,
+                    appel: () =>
+                      premier
+                        ? creerRessource('/web/sites', {
+                            hebergementId: premier.id,
+                            site: {
+                              hote,
+                              type: c.type as SiteWeb['type'],
+                              phpVersion: c.php === '—' ? '8.3' : c.php,
+                              ssl: true,
+                            },
+                          })
+                        : Promise.resolve(),
                     effet: () =>
                       premier
                         ? tousSites.creer({
@@ -314,11 +335,16 @@ export default function ListeApplications() {
                           })
                         : undefined,
                     job: { workflow: 'web.app.install', cible: `${c.nom} · ${hote}` },
-                    effetFinal: () =>
+                    effetFinal: () => {
+                      if (estActif()) {
+                        tousSites.recharger()
+                        return
+                      }
                       tousSites.modifier(idSite, {
                         statut: 'en_ligne',
                         ssl: { etat: 'actif', emetteur: 'Let’s Encrypt', expire: '2026-11-17' },
-                      }),
+                      })
+                    },
                   })
                 }}
                 className="rounded-[8px] border border-g-300 bg-white p-3 text-left transition-colors hover:border-p-400 hover:bg-p-050"

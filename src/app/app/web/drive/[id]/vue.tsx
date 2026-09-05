@@ -16,6 +16,7 @@ import { ConfigurationServicePanel } from '@/components/business/configuration-s
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { creerRessource, estActif, modifierRessource, requete } from '@/lib/api/client'
 
 const ONGLETS = [
   { id: 'sieges', label: 'Sièges' },
@@ -25,7 +26,7 @@ const ONGLETS = [
 ]
 
 export function VueDrive({ id }: { id: string }) {
-  const { autorise, refus } = useApp()
+  const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
   const drives = useCollection<DriveDomaine>('drives', DRIVES)
   const [onglet, setOnglet] = useState('sieges')
@@ -36,6 +37,45 @@ export function VueDrive({ id }: { id: string }) {
 
   const d = drives.items.find((x) => x.id === id)
   if (!d) return null
+
+  // Comme pour le webmail : l’ouverture passe par le SSO du backend, qui
+  // renvoie l’URL de rebond ; en maquette, le lien direct suffit.
+  const ouvrirDrive = () => {
+    if (!estActif()) {
+      window.open(`https://${d.hote}`, '_blank', 'noopener')
+      return
+    }
+    requete<{ url: string }>(`/web/drive/${encodeURIComponent(d.id)}/ouverture`, {
+      methode: 'POST',
+    }).then(
+      (r) => window.open(r.url, '_blank', 'noopener'),
+      (e: unknown) =>
+        pousser({
+          ton: 'err',
+          titre: 'Ouverture du drive impossible',
+          detail: e instanceof Error ? e.message : undefined,
+        }),
+    )
+  }
+
+  const reglerPartage = (patch: {
+    externeAutorise: boolean
+    motDePasseObligatoire: boolean
+  }) =>
+    executer({
+      action: 'service.admin',
+      titre: 'Politique de partage mise à jour',
+      detail: patch.externeAutorise
+        ? 'Le partage vers l’extérieur reste autorisé.'
+        : 'Les fichiers ne se partagent plus qu’entre titulaires de sièges.',
+      appel: () =>
+        modifierRessource('/web/drive', d.id, {
+          partage: { ...patch, expirationJours: d.partage.expirationJours },
+        }),
+      effet: () =>
+        drives.modifier(d.id, (x) => ({ partage: { ...x.partage, ...patch } })),
+      effetFinal: () => drives.recharger(),
+    })
   const config = configurationDuService('drive-pro')
   const titulaires = USERS.slice(0, d.sieges.attribues).filter((u) => !retires.includes(u.id))
 
@@ -87,6 +127,12 @@ export function VueDrive({ id }: { id: string }) {
                         d.sieges.attribues + 1 > d.sieges.souscrits
                           ? 'Un siège supplémentaire est souscrit automatiquement, facturé au prorata.'
                           : `${d.sieges.attribues + 1} sièges attribués sur ${d.sieges.souscrits} souscrits.`,
+                      // Le backend attend l’identifiant du membre (`userId`) ;
+                      // les `USERS` de la maquette n’existent pas de son côté.
+                      appel: () =>
+                        creerRessource(`/web/drive/${encodeURIComponent(d.id)}/sieges`, {
+                          userId: String(v.membre),
+                        }),
                       effet: () => {
                         setRetires((prev) => prev.filter((x) => x !== v.membre))
                         drives.modifier(d.id, (x) => ({
@@ -96,17 +142,14 @@ export function VueDrive({ id }: { id: string }) {
                           },
                         }))
                       },
+                      effetFinal: () => drives.recharger(),
                     }
                   }}
                 />
               </GatedAction>
-              <ButtonLink
-                href={`https://${d.hote}`}
-                variant="accent"
-                iconAfter={<ExternalLink size={13} />}
-              >
+              <Button variant="accent" iconAfter={<ExternalLink size={13} />} onClick={ouvrirDrive}>
                 Ouvrir
-              </ButtonLink>
+              </Button>
             </>
           ) : (
             <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
@@ -119,8 +162,20 @@ export function VueDrive({ id }: { id: string }) {
                   action: 'service.admin',
                   titre: `Drive de ${d.domaine} en cours d’activation`,
                   detail: `${money(d.prixSiege)} par siège et par mois.`,
+                  appel: () =>
+                    creerRessource('/web/drive', {
+                      domaine: d.domaine,
+                      palier: d.palier,
+                      sieges: d.sieges.souscrits,
+                    }),
                   job: { workflow: 'web.drive.activate', cible: d.domaine },
-                  effetFinal: () => drives.modifier(d.id, { actif: true }),
+                  effetFinal: () => {
+                    if (estActif()) {
+                      drives.recharger()
+                      return
+                    }
+                    drives.modifier(d.id, { actif: true })
+                  },
                 }}
               />
             </GatedAction>
@@ -274,13 +329,19 @@ export function VueDrive({ id }: { id: string }) {
                     label="Autoriser le partage vers l’extérieur"
                     description="Sans cela, un fichier ne se partage qu’entre titulaires de sièges."
                     checked={externe}
-                    onChange={setExterne}
+                    onChange={(v) => {
+                      setExterne(v)
+                      reglerPartage({ externeAutorise: v, motDePasseObligatoire: motDePasse })
+                    }}
                   />
                   <Switch
                     label="Mot de passe obligatoire sur les liens publics"
                     description="Un lien transféré dans une conversation reste sinon ouvert à qui le reçoit."
                     checked={motDePasse}
-                    onChange={setMotDePasse}
+                    onChange={(v) => {
+                      setMotDePasse(v)
+                      reglerPartage({ externeAutorise: externe, motDePasseObligatoire: v })
+                    }}
                   />
                   <Field label="Expiration par défaut des liens">
                     <Select defaultValue={String(d.partage.expirationJours)}>

@@ -19,7 +19,9 @@ import { Timeline } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { estActif, modifierRessource, requete } from '@/lib/api/client'
 import type { Ticket } from '@/lib/types'
+import type { MembreEquipe } from '@/lib/mock'
 
 const ONGLETS = [
   { id: 'file', label: 'File de traitement' },
@@ -60,6 +62,12 @@ const TON_GRAVITE: Record<Ticket['gravite'], 'err' | 'warn' | 'info' | 'neutral'
 export default function TicketsAdmin() {
   const { autorise, refus } = useApp()
   const tickets = useCollection<Ticket>('tickets-plateforme', TICKETS_PLATEFORME)
+  // En mode API, organisations et intervenants viennent du backend : les
+  // identifiants distants sont inconnus du jeu local, qui filtrerait tout.
+  const orgsDistantes = useCollection('organisations', ORGANISATIONS)
+  const equipeDistante = useCollection<MembreEquipe>('equipe-synelia', EQUIPE_SYNELIA)
+  const ORGANISATIONS_LUES = estActif() ? orgsDistantes.items : ORGANISATIONS
+  const EQUIPE_LUE = estActif() ? equipeDistante.items : EQUIPE_SYNELIA
   const executer = useOperation()
   const [onglet, setOnglet] = useState('file')
   const [detailId, setDetailId] = useState<string | null>(null)
@@ -81,32 +89,43 @@ export default function TicketsAdmin() {
 
   /** Une réponse de notre côté arrête l'horloge de première réponse. */
   const repondre = (t: Ticket, statut: Ticket['statut'], titre: string, detailToast: string) => {
+    const message = reponse.trim()
     executer({
       action: 'org.dashboard.view',
       ton: statut === 'resolu' ? 'ok' : 'info',
       titre,
       detail: detailToast,
+      appel: async () => {
+        // Le message puis le statut : deux écritures, une seule opération.
+        if (message)
+          await requete(`/admin/tickets/${encodeURIComponent(t.id)}/messages`, {
+            methode: 'POST',
+            corps: { contenu: message },
+          })
+        await modifierRessource('/admin/tickets', t.id, { statut })
+      },
       effet: () =>
         tickets.modifier(t.id, (courant) => ({
           statut,
           slaRestantMin: undefined,
-          messages: reponse.trim()
+          messages: message
             ? [
                 ...courant.messages,
                 {
                   auteur: EQUIPE_SYNELIA[0].nom,
                   role: 'synelia' as const,
                   date: MAINTENANT,
-                  contenu: reponse.trim(),
+                  contenu: message,
                 },
               ]
             : courant.messages,
         })),
+      effetFinal: () => tickets.recharger(),
     })
     setReponse('')
   }
 
-  const orgNom = (id: string) => ORGANISATIONS.find((o) => o.id === id)?.nom ?? id
+  const orgNom = (id: string) => ORGANISATIONS_LUES.find((o) => o.id === id)?.nom ?? id
 
   return (
     <div className="space-y-5">
@@ -235,7 +254,7 @@ export default function TicketsAdmin() {
                   options: [
                     { value: 'tous', label: 'Tous' },
                     { value: 'non', label: 'Non assignés' },
-                    ...EQUIPE_SYNELIA.map((m) => ({ value: m.nom, label: m.nom })),
+                    ...EQUIPE_LUE.map((m) => ({ value: m.nom, label: m.nom })),
                   ],
                 },
               ]}
@@ -421,7 +440,7 @@ export default function TicketsAdmin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {EQUIPE_SYNELIA.map((m) => {
+                  {EQUIPE_LUE.map((m) => {
                     const siens = ouverts.filter((t) => t.assigneA === m.nom)
                     const sesCritiques = siens.filter((t) => t.gravite === 'critique')
                     const charge = siens.length * 20 + sesCritiques.length * 30
@@ -909,6 +928,24 @@ export default function TicketsAdmin() {
                           : v.niveau === 'editeur'
                             ? 'Un dossier est ouvert chez l’éditeur amont, avec les journaux joints. Notre engagement continue de courir : le client n’a pas à subir le délai d’un tiers.'
                             : 'Le ticket entre dans la file du niveau 2, avec son historique complet.',
+                      appel: async () => {
+                        const niveau = String(v.niveau)
+                        const note = `Escalade ${
+                          niveau === 'n3'
+                            ? 'niveau 3 (astreinte)'
+                            : niveau === 'editeur'
+                              ? 'vers l’éditeur amont'
+                              : 'niveau 2'
+                        } — ${String(v.motif)}`
+                        await requete(`/admin/tickets/${encodeURIComponent(detail.id)}/messages`, {
+                          methode: 'POST',
+                          corps: { contenu: note },
+                        })
+                        await modifierRessource('/admin/tickets', detail.id, {
+                          gravite: niveau === 'n3' ? 'critique' : undefined,
+                          assigneA: niveau === 'n3' ? (EQUIPE_LUE[3]?.nom ?? detail.assigneA) : undefined,
+                        })
+                      },
                       effet: () =>
                         tickets.modifier(detail.id, (courant) => ({
                           gravite: v.niveau === 'n3' ? 'critique' : courant.gravite,
@@ -929,6 +966,7 @@ export default function TicketsAdmin() {
                             },
                           ],
                         })),
+                      effetFinal: () => tickets.recharger(),
                     })}
                   />
                 </div>
@@ -958,11 +996,18 @@ export default function TicketsAdmin() {
                   detail: notifierIntervenant
                     ? 'L’intervenant est notifié et le ticket apparaît dans sa file.'
                     : 'Le ticket apparaît dans sa file, sans notification : il faut le lui dire de vive voix.',
+                  appel: () =>
+                    modifierRessource('/admin/tickets', assignation.id, {
+                      assigneA: intervenant,
+                      statut:
+                        assignation.statut === 'ouvert' ? 'en_cours' : assignation.statut,
+                    }),
                   effet: () =>
                     tickets.modifier(assignation.id, {
                       assigneA: intervenant,
                       statut: assignation.statut === 'ouvert' ? 'en_cours' : assignation.statut,
                     }),
+                  effetFinal: () => tickets.recharger(),
                 })
                 setIntervenant('')
                 setAssignationId(null)
@@ -987,7 +1032,7 @@ export default function TicketsAdmin() {
             <Field label="Intervenant" hint="la charge actuelle est indiquée pour chacun" required>
               <Select value={intervenant} onChange={(e) => setIntervenant(e.target.value)}>
                 <option value="">Sélectionner…</option>
-                {EQUIPE_SYNELIA.map((m) => {
+                {EQUIPE_LUE.map((m) => {
                   const siens = ouverts.filter((t) => t.assigneA === m.nom).length
                   return (
                     <option key={m.id} value={m.nom}>
