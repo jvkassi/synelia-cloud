@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Trash2 } from 'lucide-react'
 import { money } from '@/lib/format'
@@ -15,6 +15,7 @@ import { ConfirmDialog } from '@/components/ui/overlay'
 import { EnteteProjet, ProjetIntrouvable } from '@/components/business/projets'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
+import { useServicesProjet } from '@/lib/api/services-projet'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { estActif, modifierRessource, requete, supprimerRessource } from '@/lib/api/client'
 
@@ -26,7 +27,13 @@ export function VueParametres({ id }: { id: string }) {
   const { autorise, refus } = useApp()
 
   const projet = lesProjets.items.find((p) => p.id === id)
-  const services = lesServices.items.filter((x) => x.projetId === id)
+  // Avec l’API, la liste vient de `GET /projets/{id}/services` (route nichée,
+  // hors registre) ; en maquette, du filtre local.
+  const { distants: servicesDistants } = useServicesProjet(id)
+  const services = useMemo(
+    () => servicesDistants ?? lesServices.items.filter((x) => x.projetId === id),
+    [servicesDistants, lesServices.items, id],
+  )
   const [suppression, setSuppression] = useState(false)
   const [nom, setNom] = useState(projet?.nom ?? '')
   const [description, setDescription] = useState(projet?.description ?? '')

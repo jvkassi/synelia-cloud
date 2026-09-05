@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowRight, CheckCircle2, Link2, RefreshCw, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateHeure, relatif } from '@/lib/format'
@@ -17,6 +17,7 @@ import { Stepper, Timeline } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { estActif, requete } from '@/lib/api/client'
 
 interface Correspondance {
   id: string
@@ -60,6 +61,20 @@ const PROTOCOLES = [
   },
 ]
 
+/** Configuration de fédération distante (`GET/PUT /securite/sso`). */
+interface ConfigSsoDistante {
+  actif: boolean
+  protocole?: 'oidc' | 'saml' | 'ldap'
+  provisioningJustInTime?: boolean
+  secretDefini?: boolean
+  dernierTest?: { date: string; succes: boolean; detail?: string } | null
+}
+
+interface ResultatTestSso {
+  succes: boolean
+  etapes: Array<{ nom: string; ok: boolean; detail?: string }>
+}
+
 export default function Sso() {
   const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
@@ -74,6 +89,103 @@ export default function Sso() {
   const [envoiContinu, setEnvoiContinu] = useState(false)
   const [protocole, setProtocole] = useState('oidc')
   const [etape, setEtape] = useState(1)
+  const api = estActif()
+  /** Fédération connue du backend — `null` avant le premier retour. */
+  const [configSso, setConfigSso] = useState<ConfigSsoDistante | null>(null)
+  const [ssoActif, setSsoActif] = useState(false)
+  /** Dernier test réel (`POST /securite/sso/test`), affiché à l’étape 3. */
+  const [resultatTest, setResultatTest] = useState<ResultatTestSso | null>(null)
+
+  useEffect(() => {
+    if (!estActif()) return
+    requete<ConfigSsoDistante>('/securite/sso').then(
+      (c) => {
+        setConfigSso(c)
+        setSsoActif(c.actif)
+        if (c.protocole) setProtocole(c.protocole)
+        if (typeof c.provisioningJustInTime === 'boolean')
+          setCreationAuto(c.provisioningJustInTime)
+      },
+      () => {},
+    )
+  }, [])
+
+  const relireSso = () => {
+    if (!estActif()) return
+    requete<ConfigSsoDistante>('/securite/sso').then(
+      (c) => {
+        setConfigSso(c)
+        setSsoActif(c.actif)
+      },
+      () => {},
+    )
+  }
+
+  /**
+   * `PUT /securite/sso` — le contrat ne connaît pas de sous-ressource pour
+   * les correspondances : chaque ajout, modification ou retrait republie la
+   * configuration entière, portée `Organisation` devenant absence de
+   * `scopeId`. La désactivation automatique et les comptes locaux n’ont pas
+   * d’équivalent contrat et restent des réglages d’écran.
+   */
+  const publierSso = (actif: boolean, groupes: Correspondance[]) =>
+    requete('/securite/sso', {
+      methode: 'PUT',
+      corps: {
+        actif,
+        protocole,
+        provisioningJustInTime: creationAuto,
+        correspondanceGroupes: groupes.map((c) => ({
+          groupe: c.groupe,
+          role: c.role,
+          ...(c.portee !== 'Organisation' ? { scopeId: c.portee } : {}),
+        })),
+      },
+    })
+
+  /** Test réel de la fédération, sans toucher à la configuration active. */
+  const testerSso = () => {
+    if (!estActif()) {
+      executer({
+        action: 'sso.configure',
+        titre: 'Connexion au fournisseur d’identité vérifiée',
+        detail:
+          'Point de découverte joignable, certificat de signature valide, revendications attendues présentes.',
+        job: {
+          type: 'sso.test',
+          label: 'Test de la fédération d’identité',
+          etapes: [
+            'Récupérer le point de découverte',
+            'Vérifier le certificat de signature',
+            'Contrôler les revendications reçues',
+          ],
+          dureeEtapeMs: 900,
+        },
+      })
+      return
+    }
+    requete<ResultatTestSso>('/securite/sso/test', { methode: 'POST', corps: {} }).then(
+      (r) => {
+        setResultatTest(r)
+        setOnglet('configuration')
+        setEtape(3)
+        pousser({
+          ton: r.succes ? 'ok' : 'warn',
+          titre: r.succes ? 'Fédération vérifiée' : 'Fédération en défaut',
+          detail: r.etapes
+            .filter((e) => !e.ok)
+            .map((e) => `${e.nom} : ${e.detail ?? 'échec'}`)
+            .join(' · '),
+        })
+      },
+      (e: unknown) =>
+        pousser({
+          ton: 'err',
+          titre: 'Test de la fédération impossible',
+          detail: e instanceof Error ? e.message : undefined,
+        }),
+    )
+  }
 
   const federes = USERS.filter((u) => u.idpSource !== 'local').length
   const servicesSso = SERVICES_MANAGES.filter((s) => s.sso.actif).length
@@ -90,8 +202,8 @@ export default function Sso() {
         sousTitre="Vos collaborateurs se connectent avec l’identité de votre entreprise, et cette identité les suit dans tous les services managés — messagerie, partage de fichiers, ERP — sans aucun mot de passe supplémentaire à retenir ni à distribuer."
         meta={
           <>
-            <Badge tone="ok" dot size="sm">
-              Fédération active
+            <Badge tone={api ? (ssoActif ? 'ok' : 'neutral') : 'ok'} dot={!api || ssoActif} size="sm">
+              {api ? (configSso ? (ssoActif ? 'Fédération active' : 'Fédération inactive') : 'Fédération…') : 'Fédération active'}
             </Badge>
             <Badge tone="accent" size="sm">
               {servicesSso} services raccordés
@@ -103,27 +215,9 @@ export default function Sso() {
         }
         actions={
           <GatedAction autorise={autorise('sso.configure')} message={refus('sso.configure')}>
-            <BoutonAction
-              libelle="Tester la connexion"
-              size="md"
-              icone={<RefreshCw size={14} />}
-              operation={{
-                action: 'sso.configure',
-                titre: 'Connexion au fournisseur d’identité vérifiée',
-                detail:
-                  'Point de découverte joignable, certificat de signature valide, revendications attendues présentes.',
-                job: {
-                  type: 'sso.test',
-                  label: 'Test de la fédération d’identité',
-                  etapes: [
-                    'Récupérer le point de découverte',
-                    'Vérifier le certificat de signature',
-                    'Contrôler les revendications reçues',
-                  ],
-                  dureeEtapeMs: 900,
-                },
-              }}
-            />
+            <Button size="md" iconBefore={<RefreshCw size={14} />} onClick={testerSso}>
+              Tester la connexion
+            </Button>
           </GatedAction>
         }
       />
@@ -494,24 +588,57 @@ export default function Sso() {
                 />
                 <div className="rounded-[8px] border border-g-300 bg-g-050 p-4">
                   <MicroLabel className="mb-2">Résultat du dernier test</MicroLabel>
-                  <div className="space-y-1.5">
-                    {[
-                      { t: 'Redirection vers votre annuaire', ok: true },
-                      { t: 'Authentification acceptée', ok: true },
-                      { t: 'Jeton reçu et signature vérifiée', ok: true },
-                      { t: 'Réclamation email présente', ok: true },
-                      { t: 'Réclamation groups présente — 3 groupes', ok: true },
-                      { t: 'Correspondance de rôle trouvée : Administrateur d’organisation', ok: true },
-                    ].map((r) => (
-                      <div key={r.t} className="flex items-center gap-2">
-                        <CheckCircle2 size={13} className="shrink-0 text-ok" />
-                        <span className="text-[12px] text-ink">{r.t}</span>
+                  {resultatTest ? (
+                    <div className="space-y-1.5">
+                      {resultatTest.etapes.map((r) => (
+                        <div key={r.nom} className="flex items-start gap-2">
+                          <CheckCircle2
+                            size={13}
+                            className={cn('mt-0.5 shrink-0', r.ok ? 'text-ok' : 'text-err')}
+                          />
+                          <span className="text-[12px] text-ink">
+                            {r.nom}
+                            {r.detail && (
+                              <span className="block text-[11px] text-g-500">{r.detail}</span>
+                            )}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-1.5">
+                        {[
+                          { t: 'Redirection vers votre annuaire', ok: true },
+                          { t: 'Authentification acceptée', ok: true },
+                          { t: 'Jeton reçu et signature vérifiée', ok: true },
+                          { t: 'Réclamation email présente', ok: true },
+                          { t: 'Réclamation groups présente — 3 groupes', ok: true },
+                          { t: 'Correspondance de rôle trouvée : Administrateur d’organisation', ok: true },
+                        ].map((r) => (
+                          <div key={r.t} className="flex items-center gap-2">
+                            <CheckCircle2 size={13} className="shrink-0 text-ok" />
+                            <span className="text-[12px] text-ink">{r.t}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                  <p className="mt-3 text-[11px] text-g-500">
-                    Test exécuté par Léa Konan le {dateHeure('2026-08-19T14:12:00Z')}
-                  </p>
+                      <p className="mt-3 text-[11px] text-g-500">
+                        {api && configSso?.dernierTest ? (
+                          <>
+                            Dernier test connu du backend :{' '}
+                            {configSso.dernierTest.succes ? 'réussi' : 'en échec'} le{' '}
+                            {dateHeure(configSso.dernierTest.date)}
+                            {configSso.dernierTest.detail
+                              ? ` — ${configSso.dernierTest.detail}`
+                              : ''}
+                            . Lancez « Tester la connexion » pour un résultat détaillé.
+                          </>
+                        ) : (
+                          <>Test exécuté par Léa Konan le {dateHeure('2026-08-19T14:12:00Z')}</>
+                        )}
+                      </p>
+                    </>
+                  )}
                 </div>
                 <div className="space-y-3">
                   <Switch
@@ -573,10 +700,20 @@ export default function Sso() {
                   <GatedAction autorise={autorise('sso.configure')} message={refus('sso.configure')}>
                     <Button
                       onClick={() =>
-                        pousser({
-                          ton: 'ok',
+                        executer({
+                          action: 'sso.configure',
                           titre: 'Fédération enregistrée',
-                          detail: 'Les prochaines connexions passeront par votre annuaire. Votre session actuelle reste valide.',
+                          detail:
+                            'Les prochaines connexions passeront par votre annuaire. Votre session actuelle reste valide.',
+                          appel: api
+                            ? () => publierSso(true, correspondances.items)
+                            : undefined,
+                          effetFinal: () => {
+                            if (api) {
+                              setSsoActif(true)
+                              relireSso()
+                            }
+                          },
                         })
                       }
                     >
@@ -645,15 +782,34 @@ export default function Sso() {
                         },
                       ]}
                       valeursDepart={{ role: c.role, portee: c.portee }}
-                      operation={(v) => ({
-                        titre: `Correspondance ${c.groupe} modifiée`,
-                        detail: `${ROLE_LABEL[v.role as Role]} · ${v.portee}`,
-                        effet: () =>
-                          correspondances.modifier(c.id, {
-                            role: v.role as Role,
-                            portee: String(v.portee),
-                          }),
-                      })}
+                      operation={(v) => {
+                        const apres = correspondances.items.map((x) =>
+                          x.id === c.id
+                            ? { ...x, role: v.role as Role, portee: String(v.portee) }
+                            : x,
+                        )
+                        return {
+                          titre: `Correspondance ${c.groupe} modifiée`,
+                          detail: `${ROLE_LABEL[v.role as Role]} · ${v.portee}`,
+                          appel: api ? () => publierSso(ssoActif, apres) : undefined,
+                          effet: () =>
+                            correspondances.modifier(c.id, {
+                              role: v.role as Role,
+                              portee: String(v.portee),
+                            }),
+                          effetFinal: () => {
+                            // La collection locale ne suit pas le backend :
+                            // on y rejoue la modification après la publication.
+                            if (api) {
+                              correspondances.modifier(c.id, {
+                                role: v.role as Role,
+                                portee: String(v.portee),
+                              })
+                              relireSso()
+                            }
+                          },
+                        }
+                      }}
                     />
                     <BoutonAction
                       libelle="Retirer"
@@ -663,7 +819,20 @@ export default function Sso() {
                         ton: 'warn',
                         titre: `Correspondance ${c.groupe} retirée`,
                         detail: `${c.membres} membre(s) perdront le rôle ${ROLE_LABEL[c.role]} à leur prochaine connexion.`,
+                        appel: api
+                          ? () =>
+                              publierSso(
+                                ssoActif,
+                                correspondances.items.filter((x) => x.id !== c.id),
+                              )
+                          : undefined,
                         effet: () => correspondances.supprimer(c.id),
+                        effetFinal: () => {
+                          if (api) {
+                            correspondances.supprimer(c.id)
+                            relireSso()
+                          }
+                        },
                       }}
                     />
                   </span>
@@ -697,21 +866,29 @@ export default function Sso() {
               ]}
               valeursDepart={{ role: 'read_only', portee: 'Organisation' }}
               libelleValider="Ajouter"
-              operation={(v) => ({
-                titre: `Correspondance ${v.groupe} ajoutée`,
-                detail: 'Évaluée en dernier : déplacez-la si elle doit primer.',
-                effet: () =>
-                  correspondances.creer(
-                    {
-                      id: correspondances.identifiant('cor'),
-                      groupe: String(v.groupe),
-                      role: v.role as Role,
-                      membres: 0,
-                      portee: String(v.portee),
-                    },
-                    'fin',
-                  ),
-              })}
+              operation={(v) => {
+                const ajout: Correspondance = {
+                  id: correspondances.identifiant('cor'),
+                  groupe: String(v.groupe),
+                  role: v.role as Role,
+                  membres: 0,
+                  portee: String(v.portee),
+                }
+                return {
+                  titre: `Correspondance ${v.groupe} ajoutée`,
+                  detail: 'Évaluée en dernier : déplacez-la si elle doit primer.',
+                  appel: api
+                    ? () => publierSso(ssoActif, [...correspondances.items, ajout])
+                    : undefined,
+                  effet: () => correspondances.creer(ajout, 'fin'),
+                  effetFinal: () => {
+                    if (api) {
+                      correspondances.creer(ajout, 'fin')
+                      relireSso()
+                    }
+                  },
+                }
+              }}
             />
             <Callout ton="warn" className="mt-4" titre="L’ordre compte">
               Les correspondances sont évaluées de haut en bas, et la première qui s’applique gagne.

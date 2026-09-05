@@ -23,6 +23,7 @@ import {
   creerRessource,
   estActif,
   modifierRessource,
+  requete,
   supprimerRessource,
 } from '@/lib/api/client'
 
@@ -951,7 +952,7 @@ export default function Equipe() {
                   effetFinal: () => equipe.recharger(),
                 })}
               />
-              {detail.elevation?.active && (
+              {detail.elevation?.active ? (
                 <BoutonAction
                   libelle="Révoquer l’élévation"
                   variant="ghost"
@@ -961,10 +962,77 @@ export default function Equipe() {
                     ton: 'info',
                     titre: `Élévation de ${detail.nom} révoquée`,
                     detail: 'L’accès est coupé immédiatement et la révocation est journalisée.',
-                    // Pas d’appel : le contrat n’expose que la création
-                    // d’élévation (`POST …/elevation`), pas sa révocation.
+                    // `DELETE /admin/equipe/{id}/elevation` → `204`, sans
+                    // confirmation : l’identifiant du membre suffit.
+                    appel: () =>
+                      requete(
+                        `/admin/equipe/${encodeURIComponent(detail.id)}/elevation`,
+                        { methode: 'DELETE' },
+                      ),
                     effet: () => equipe.modifier(detail.id, { elevation: { active: false } }),
+                    effetFinal: () => equipe.recharger(),
                   }}
+                />
+              ) : (
+                <BoutonFormulaire
+                  libelle="Demander une élévation"
+                  variant="ghost"
+                  icone={<KeyRound size={12} />}
+                  action="org.manage"
+                  titre={`Élévation temporaire de ${detail.nom}`}
+                  description="Nominative, motivée et bornée : huit heures au plus, chaque action tracée dans le journal d’audit de l’organisation concernée."
+                  champs={[
+                    {
+                      id: 'role',
+                      label: 'Rôle accordé',
+                      type: 'select',
+                      options: ROLES_SUPER_ADMIN.map((r) => ({
+                        value: r,
+                        label: ROLE_LABEL[r] ?? r,
+                      })),
+                    },
+                    {
+                      id: 'dureeMin',
+                      label: 'Durée',
+                      type: 'nombre',
+                      demi: true,
+                      min: 30,
+                      max: 480,
+                      suffixe: 'minutes',
+                    },
+                    {
+                      id: 'motif',
+                      label: 'Motif',
+                      type: 'zone',
+                      placeholder: 'Incident en cours, accès aux journaux du client pour…',
+                      obligatoire: true,
+                    },
+                  ]}
+                  valeursDepart={{ role: 'super_admin', dureeMin: 240 }}
+                  libelleValider="Accorder l’élévation"
+                  operation={(v) => ({
+                    titre: `Élévation accordée à ${detail.nom}`,
+                    detail: `${ROLE_LABEL[v.role as Role] ?? v.role} pendant ${v.dureeMin} minutes. Expire d’elle-même.`,
+                    appel: () =>
+                      creerRessource(`/admin/equipe/${encodeURIComponent(detail.id)}/elevation`, {
+                        role: v.role,
+                        motif: String(v.motif),
+                        dureeMin: Number(v.dureeMin),
+                      }),
+                    effet: () =>
+                      equipe.modifier(detail.id, {
+                        elevation: {
+                          active: true,
+                          justification: String(v.motif),
+                          jusqua: new Date(
+                            new Date(MAINTENANT).getTime() + Number(v.dureeMin) * 60000,
+                          )
+                            .toISOString()
+                            .replace('.000', ''),
+                        },
+                      }),
+                    effetFinal: () => equipe.recharger(),
+                  })}
                 />
               )}
               <BoutonAction

@@ -46,6 +46,7 @@ export const REGISTRE_COLLECTIONS: Record<string, string> = {
   drives: '/web/drive',
   certificats: '/web/ssl',
   'cles-smtp': '/web/smtp/cles',
+  'webhooks-smtp': '/web/smtp/webhooks',
   'zones-dns': '/web/dns',
   devis: '/facturation/devis',
   'bases-managees': '/bases',
@@ -64,10 +65,20 @@ export function endpointDe(nom: string): string | undefined {
   const direct = REGISTRE_COLLECTIONS[nom]
   if (direct) return direct
   // Sous-ressources keyées par parent (`snapshots-<vmId>` → ses instantanés).
-  // Les autres clés à suffixe (`elevations-<id>`, `objets-<id>`…) n’ont pas
+  // Les services et variables d’un projet sont nichés (`/projets/{id}/…`,
+  // pas de liste globale) : les vues par projet lisent `services-<projetId>`
+  // et `variables-<projetId>`. Les élévations d’un membre d’équipe aussi
+  // (`elevations-<id>` → `/admin/equipe/<id>/elevation`).
+  // Les autres clés à suffixe (`objets-<id>`…) n’ont pas
   // d’équivalent liste côté backend et gardent la graine locale.
   const instantanes = /^snapshots-(.+)$/.exec(nom)
   if (instantanes) return `/vms/${encodeURIComponent(instantanes[1])}/instantanes`
+  const services = /^services-(.+)$/.exec(nom)
+  if (services) return `/projets/${encodeURIComponent(services[1])}/services`
+  const variables = /^variables-(.+)$/.exec(nom)
+  if (variables) return `/projets/${encodeURIComponent(variables[1])}/variables`
+  const elevations = /^elevations-(.+)$/.exec(nom)
+  if (elevations) return `/admin/equipe/${encodeURIComponent(elevations[1])}/elevation`
   return undefined
 }
 

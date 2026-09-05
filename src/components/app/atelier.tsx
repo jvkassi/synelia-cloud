@@ -540,7 +540,13 @@ function chargerDistant(nom: string, endpoint: string) {
   poserDistant(nom, { chargement: true, erreur: null })
   const tache = lister<Entite>(endpoint).then(
     (page) => {
-      poserDistant(nom, { donnees: page.donnees, chargement: false })
+      // Certaines listes reviennent en tableau brut (`/projets/{id}/services`,
+      // `/projets/{id}/variables`, `/facturation/moyens-paiement`) plutôt
+      // qu’enveloppées dans `{ donnees, pagination }` : on les range telles
+      // quelles au lieu de garder la graine en silence.
+      const brut = page as unknown
+      const donnees = Array.isArray(brut) ? (brut as Entite[]) : page.donnees
+      poserDistant(nom, { donnees, chargement: false })
     },
     (e: unknown) => {
       poserDistant(nom, {

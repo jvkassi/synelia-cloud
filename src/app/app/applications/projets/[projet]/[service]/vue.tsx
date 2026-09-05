@@ -127,7 +127,7 @@ export function VueService({ id, projetId }: { id: string; projetId?: string }) 
 
   // Avec l’API, le service vient de `GET /projets/{projetId}/services` (route
   // nichée) : un service né pendant la session n’existe pas dans le jeu figé.
-  const { distants: servicesDistants } = useServicesProjet(projetId ?? '')
+  const { distants: servicesDistants, rechargerServices } = useServicesProjet(projetId ?? '')
   const service =
     (servicesDistants ?? services.items).find((x) => x.id === id) ??
     services.items.find((x) => x.id === id)
@@ -211,7 +211,7 @@ export function VueService({ id, projetId }: { id: string; projetId?: string }) 
                   job: { workflow: 'service.start', cible: service.nom },
                   effetFinal: () => {
                     if (!estActif()) services.modifier(service.id, { statut: 'running' })
-                    services.recharger()
+                    rechargerServices()
                   },
                 }}
               />
@@ -245,7 +245,7 @@ export function VueService({ id, projetId }: { id: string; projetId?: string }) 
                   effetFinal: () => {
                     if (!estActif())
                       services.modifier(service.id, { statut: 'running', derniereMaj: MAINTENANT })
-                    services.recharger()
+                    rechargerServices()
                   },
                 }}
               />
@@ -437,6 +437,7 @@ function Apercu({
 function Connexion({ service }: { service: ServiceProjet }) {
   const { autorise, refus } = useApp()
   const services = useServices()
+  const { rechargerServices } = useServicesProjet(service.projetId)
   const base = service.base!
   const uri = MOTEUR_URI[service.moteur!](base)
   const [expose, setExpose] = useState(service.exposeExterne?.actif ?? false)
@@ -533,6 +534,22 @@ function Connexion({ service }: { service: ServiceProjet }) {
                       ton: 'warn',
                       titre: `${v.plage} autorisée`,
                       detail: 'Retirez-la dès que l’opération qui l’exigeait est terminée.',
+                      appel: () =>
+                        requete(
+                          `/projets/${encodeURIComponent(service.projetId)}/services/${encodeURIComponent(service.id)}`,
+                          {
+                            methode: 'PATCH',
+                            corps: {
+                              exposeExterne: {
+                                ...(service.exposeExterne ?? { actif: true }),
+                                sourcesAutorisees: [
+                                  ...(service.exposeExterne?.sourcesAutorisees ?? []),
+                                  String(v.plage),
+                                ],
+                              },
+                            },
+                          },
+                        ),
                       effet: () =>
                         services.modifier(service.id, (x) => ({
                           exposeExterne: {
@@ -543,6 +560,7 @@ function Connexion({ service }: { service: ServiceProjet }) {
                             ],
                           },
                         })),
+                      effetFinal: () => rechargerServices(),
                     })}
                   />
                 </div>
@@ -819,6 +837,7 @@ function FileAttente({ service }: { service: ServiceProjet }) {
   const f = service.file!
   const { autorise, refus } = useApp()
   const services = useServices()
+  const { rechargerServices } = useServicesProjet(service.projetId)
   const [concurrence, setConcurrence] = useState(f.concurrence)
 
   return (
@@ -870,10 +889,19 @@ function FileAttente({ service }: { service: ServiceProjet }) {
                 concurrence > f.concurrence
                   ? 'Au-delà de la capacité de la base, cela déplace le goulot sans rien accélérer.'
                   : undefined,
+              appel: () =>
+                requete(
+                  `/projets/${encodeURIComponent(service.projetId)}/services/${encodeURIComponent(service.id)}`,
+                  {
+                    methode: 'PATCH',
+                    corps: { file: { nom: f.nom, concurrence } },
+                  },
+                ),
               effet: () =>
                 services.modifier(service.id, (x) => ({
                   file: x.file ? { ...x.file, concurrence } : undefined,
                 })),
+              effetFinal: () => rechargerServices(),
             }}
           />
         </Card>
@@ -934,8 +962,10 @@ function Domaines({
   domaines: DomaineApplicatif[]
 }) {
   const { autorise, refus } = useApp()
+  const lesDomaines = useCollection<DomaineApplicatif>('domaines-applicatifs', DOMAINES_APPLICATIFS)
   const [ajout, setAjout] = useState(false)
   const genere = domaines.find((d) => d.origine === 'genere')
+  const hoteOfferte = `${service.nom}-${service.id.slice(0, 6)}.apps.synelia.cloud`
 
   return (
     <div className="space-y-4">
@@ -968,7 +998,32 @@ function Domaines({
                 operation={{
                   action: 'app.deploy',
                   titre: 'Adresse offerte générée',
-                  detail: `${service.nom}-${service.projetId}.apps.synelia.cloud — certificat posé, prête à servir.`,
+                  detail: `${hoteOfferte} — certificat posé, prête à servir.`,
+                  appel: () =>
+                    creerRessource('/domaines-applicatifs', {
+                      hote: hoteOfferte,
+                      serviceId: service.id,
+                    }),
+                  effet: () =>
+                    lesDomaines.creer({
+                      id: lesDomaines.identifiant('dom'),
+                      hote: hoteOfferte,
+                      origine: 'genere',
+                      serviceId: service.id,
+                      chemin: '/',
+                      portConteneur: service.portConteneur ?? 80,
+                      https: true,
+                      certificat: { etat: 'actif' },
+                      verification: {
+                        etat: 'ok',
+                        enregistrement: {
+                          type: 'A',
+                          nom: hoteOfferte,
+                          valeur: ZONE_APPLICATIVE.ingress[0].ip,
+                        },
+                      },
+                    }),
+                  effetFinal: () => lesDomaines.recharger(),
                 }}
               />
               <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
@@ -1613,6 +1668,7 @@ function Supervision({ service }: { service: ServiceProjet }) {
 function Avance({ service }: { service: ServiceProjet }) {
   const { autorise, refus } = useApp()
   const services = useServices()
+  const { rechargerServices } = useServicesProjet(service.projetId)
   const executer = useOperation()
   const [cpu, setCpu] = useState(service.ressources.cpu)
   const [ram, setRam] = useState(service.ressources.ramMo / 1024)
@@ -1654,11 +1710,20 @@ function Avance({ service }: { service: ServiceProjet }) {
                 ram < service.ressources.ramMo / 1024
                   ? 'La mémoire diminue : le service redémarre.'
                   : 'Appliqué à chaud, sans redémarrage.',
+              appel: () =>
+                requete(
+                  `/projets/${encodeURIComponent(service.projetId)}/services/${encodeURIComponent(service.id)}`,
+                  {
+                    methode: 'PATCH',
+                    corps: { ressources: { cpu, ramMo: ram * 1024 } },
+                  },
+                ),
               effet: () =>
                 services.modifier(service.id, (x) => ({
                   ressources: { ...x.ressources, cpu, ramMo: ram * 1024 },
                   coutMensuel: coutEstime,
                 })),
+              effetFinal: () => rechargerServices(),
             }}
           />
         </Card>
@@ -1746,7 +1811,7 @@ function Avance({ service }: { service: ServiceProjet }) {
                       { methode: 'POST', corps: {} },
                     ),
                   effet: () => services.modifier(service.id, { statut: 'stopped' }),
-                  effetFinal: () => services.recharger(),
+                  effetFinal: () => rechargerServices(),
                 }}
               />
             </div>
@@ -1806,7 +1871,7 @@ function Avance({ service }: { service: ServiceProjet }) {
                 { methode: 'DELETE', query: { confirmation: service.nom } },
               ),
             effet: () => services.supprimer(service.id),
-            effetFinal: () => services.recharger(),
+            effetFinal: () => rechargerServices(),
           })
         }
         titre={`Supprimer le service ${service.nom}`}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Download, FileCheck2, Fingerprint, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MAINTENANT, dateHeure, pct, relatif } from '@/lib/format'
@@ -16,7 +16,7 @@ import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { Regle321 } from '@/components/business/infra'
 import { useApp } from '@/components/app/contexte'
-import { requete } from '@/lib/api/client'
+import { estActif, requete, supprimerRessource } from '@/lib/api/client'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, useOperation } from '@/components/app/actions'
 import type { AuditEvent } from '@/lib/types'
@@ -127,6 +127,28 @@ export default function Securite() {
   const [plagesIp, setPlagesIp] = useState(false)
   const [expirationSession, setExpirationSession] = useState(true)
   const [empreinteChainage, setEmpreinteChainage] = useState(true)
+  const api = estActif()
+
+  /**
+   * `GET /securite/politiques` — l’approbation des déploiements et
+   * l’empreinte de chaînage n’ont pas d’équivalent contrat et restent des
+   * réglages d’écran. Une inactivité à zéro signifie « sans expiration ».
+   */
+  useEffect(() => {
+    if (!estActif()) return
+    requete<{
+      mfa: { obligatoire: boolean }
+      session: { inactiviteMin: number }
+      restrictionIp: { actif: boolean }
+    }>('/securite/politiques').then(
+      (p) => {
+        setMfaObligatoire(p.mfa.obligatoire)
+        setExpirationSession(p.session.inactiviteMin > 0)
+        setPlagesIp(p.restrictionIp.actif)
+      },
+      () => {},
+    )
+  }, [])
 
   const peutVoir = perm('audit.view') !== 'none'
   const refuses = AUDIT.filter((a) => a.result === 'refuse').length
@@ -509,6 +531,20 @@ export default function Securite() {
                       plagesIp ? 'accès restreint par adresse' : 'accès sans restriction d’adresse',
                       expirationSession ? 'sessions expirées après 8 h' : 'sessions sans expiration',
                     ].join(' · '),
+                    appel: api
+                      ? () =>
+                          requete('/securite/politiques', {
+                            methode: 'PUT',
+                            corps: {
+                              mfa: { obligatoire: mfaObligatoire, methodes: ['totp'] },
+                              session: {
+                                dureeMaxMin: 720,
+                                inactiviteMin: expirationSession ? 480 : 0,
+                              },
+                              restrictionIp: { actif: plagesIp, plages: [] },
+                            },
+                          })
+                      : undefined,
                   }}
                 />
               </Card>
@@ -644,6 +680,13 @@ export default function Securite() {
                       detail: x.courante
                         ? 'Vous serez redirigé vers l’écran de connexion.'
                         : `${x.appareil} · ${x.ip} — la personne devra se reconnecter.`,
+                      // La session courante ne part pas sur l’API : révoquer
+                      // son propre jeton côté backend invaliderait la session
+                      // qui porte l’écran, sans redirection conduite.
+                      appel:
+                        api && !x.courante
+                          ? () => supprimerRessource('/securite/sessions', x.id)
+                          : undefined,
                       effet: () => sessions.supprimer(x.id),
                       effetFinal: () => sessions.recharger(),
                     }}

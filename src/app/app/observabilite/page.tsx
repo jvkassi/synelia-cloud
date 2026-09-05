@@ -109,6 +109,12 @@ export default function Observabilite() {
   const [canalTicket, setCanalTicket] = useState(false)
   const [onglet, setOnglet] = useState('vue')
   const [perimetre, setPerimetre] = useState('espace')
+  // Formulaire rapide de la carte « Nouvelle règle » : mêmes champs que la
+  // modale, en version resserrée (pas de canal webhook ici, le courriel suffit).
+  const [regleMetrique, setRegleMetrique] = useState('Charge processeur')
+  const [regleSeuil, setRegleSeuil] = useState(85)
+  const [regleDuree, setRegleDuree] = useState(10)
+  const [reglePortee, setReglePortee] = useState('espace')
 
   const vms = vmsDeLEspace(espace.id)
   const enMarche = vms.filter((v) => v.statut === 'running')
@@ -121,6 +127,12 @@ export default function Observabilite() {
     lignes: LigneLog[]
     lienVictoriaLogs?: string
   }>('/observabilite/journaux')
+  // Les courbes restent une synthèse illustrée (graines stables) : le backend
+  // dit si la supervision répond. Un `424` dégrade le bloc plutôt que
+  // d’afficher des courbes dont on ne sait plus de quand elles datent.
+  const { degrade: degradeMetriques } = useLectureDegradable<{ series: unknown[] }>(
+    '/observabilite/metriques',
+  )
   const evenements = evenementsDistants?.donnees ?? EVENEMENTS_SUPERVISION
   const lignesJournal = journauxDistants?.lignes ?? LOGS_EXECUTION
   const critiques = evenements.filter(
@@ -160,7 +172,6 @@ export default function Observabilite() {
                 detail: `${v.seuil} pendant ${v.plage} · ${v.canal}`,
                 appel: () =>
                   creerRessource('/observabilite/alertes', {
-                    id: idAlerte,
                     cible: String(v.cible),
                     metrique: String(v.metrique),
                     seuil: String(v.seuil),
@@ -232,6 +243,7 @@ export default function Observabilite() {
 
           <GrilleSparkCharts
             seed={`obs-${perimetre}-${espace.id}`}
+            degrade={!!degradeMetriques}
             metriques={
               perimetre === 'espace'
                 ? [
@@ -432,22 +444,22 @@ export default function Observabilite() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <StatTile
               libelle="Critiques"
-              valeur={EVENEMENTS_SUPERVISION.filter((e) => e.gravite === 'critique').length}
+              valeur={evenements.filter((e) => e.gravite === 'critique').length}
               ton="err"
             />
             <StatTile
               libelle="Majeurs"
-              valeur={EVENEMENTS_SUPERVISION.filter((e) => e.gravite === 'majeure').length}
+              valeur={evenements.filter((e) => e.gravite === 'majeure').length}
               ton="warn"
             />
             <StatTile
               libelle="Mineurs"
-              valeur={EVENEMENTS_SUPERVISION.filter((e) => e.gravite === 'mineure').length}
+              valeur={evenements.filter((e) => e.gravite === 'mineure').length}
               ton="info"
             />
             <StatTile
               libelle="Informations"
-              valeur={EVENEMENTS_SUPERVISION.filter((e) => e.gravite === 'info').length}
+              valeur={evenements.filter((e) => e.gravite === 'info').length}
               ton="neutral"
             />
           </div>
@@ -457,8 +469,15 @@ export default function Observabilite() {
               titre="Journal des événements"
               sousTitre="Un événement reste ouvert jusqu’à sa résolution ou son acquittement. L’acquittement est nominatif."
             />
+            {degradeEvenements ? (
+              <DegradedState
+                source="supervision"
+                integration={degradeEvenements.integration}
+                dateDonnees={degradeEvenements.dateDonnees}
+              />
+            ) : (
             <div className="space-y-2">
-              {EVENEMENTS_SUPERVISION.map((e) => (
+              {evenements.map((e) => (
                 <div
                   key={e.id}
                   className={cn(
@@ -514,6 +533,7 @@ export default function Observabilite() {
                 </div>
               ))}
             </div>
+            )}
             <div className="mt-4 border-t border-g-100 pt-4">
               <LiensSortie centreon grafana logs />
             </div>
@@ -544,7 +564,6 @@ export default function Observabilite() {
                         titre: `Règle « ${v.metrique} » ajoutée`,
                         appel: () =>
                           creerRessource('/observabilite/alertes', {
-                            id: idAlerte,
                             cible: String(v.cible),
                             metrique: String(v.metrique),
                             seuil: String(v.seuil),
@@ -705,28 +724,36 @@ export default function Observabilite() {
               />
               <div className="space-y-4">
                 <Field label="Métrique">
-                  <Select defaultValue="cpu">
-                    <option value="cpu">Charge processeur</option>
-                    <option value="ram">Mémoire utilisée</option>
-                    <option value="disque">Espace disque restant</option>
-                    <option value="latence">Latence 95e centile</option>
-                    <option value="erreurs">Taux d’erreur HTTP</option>
-                    <option value="sauvegarde">Sauvegarde en échec</option>
+                  <Select value={regleMetrique} onChange={(e) => setRegleMetrique(e.target.value)}>
+                    <option value="Charge processeur">Charge processeur</option>
+                    <option value="Mémoire utilisée">Mémoire utilisée</option>
+                    <option value="Espace disque restant">Espace disque restant</option>
+                    <option value="Latence 95e centile">Latence 95e centile</option>
+                    <option value="Taux d’erreur HTTP">Taux d’erreur HTTP</option>
+                    <option value="Sauvegarde en échec">Sauvegarde en échec</option>
                   </Select>
                 </Field>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Seuil" hint="en pourcentage">
-                    <Input type="number" defaultValue={85} />
+                    <Input
+                      type="number"
+                      value={regleSeuil}
+                      onChange={(e) => setRegleSeuil(Number(e.target.value))}
+                    />
                   </Field>
                   <Field
                     label="Dépassement continu"
                     hint="minutes — évite les alertes sur un pic isolé"
                   >
-                    <Input type="number" defaultValue={10} />
+                    <Input
+                      type="number"
+                      value={regleDuree}
+                      onChange={(e) => setRegleDuree(Number(e.target.value))}
+                    />
                   </Field>
                 </div>
                 <Field label="Portée">
-                  <Select defaultValue="espace">
+                  <Select value={reglePortee} onChange={(e) => setReglePortee(e.target.value)}>
                     <option value="espace">Tout l’espace {espace.code}</option>
                     <option value="vm">Une machine précise</option>
                     <option value="app">Une application</option>
@@ -776,16 +803,33 @@ export default function Observabilite() {
                   />
                 </div>
               </div>
-              <GatedAction autorise={autorise('org.dashboard.view')} message={refus('org.dashboard.view')}>
+              <GatedAction autorise={autorise('network.manage')} message={refus('network.manage')}>
                 <Button
                   className="mt-4"
-                  onClick={() =>
-                    pousser({
-                      ton: 'ok',
+                  onClick={() => {
+                    const idAlerte = alertes.identifiant('alerte')
+                    const corps = {
+                      cible:
+                        reglePortee === 'espace'
+                          ? `Tout l’espace ${espace.code}`
+                          : reglePortee === 'vm'
+                            ? 'Une machine précise'
+                            : 'Une application',
+                      metrique: regleMetrique,
+                      seuil: `> ${regleSeuil} %`,
+                      canaux: ['email'] as AlerteRegle['canaux'],
+                      plage: `${regleDuree} min`,
+                      actif: true,
+                    }
+                    executer({
+                      action: 'network.manage',
                       titre: 'Règle d’alerte créée',
                       detail: 'Elle prendra effet au prochain cycle de collecte, dans moins d’une minute.',
+                      appel: () => creerRessource('/observabilite/alertes', corps),
+                      effet: () => alertes.creer({ id: idAlerte, ...corps }),
+                      effetFinal: () => alertes.recharger(),
                     })
-                  }
+                  }}
                 >
                   Créer la règle
                 </Button>

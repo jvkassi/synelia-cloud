@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { HardDrive, RotateCcw, ShieldAlert } from 'lucide-react'
 import { dateHeure, MAINTENANT, relatif } from '@/lib/format'
 import type { Projet, ServiceProjet } from '@/lib/types'
@@ -20,6 +20,7 @@ import { ConfirmDialog } from '@/components/ui/overlay'
 import { EnteteProjet, ICONE_TYPE, ProjetIntrouvable } from '@/components/business/projets'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
+import { useServicesProjet } from '@/lib/api/services-projet'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 /**
@@ -38,7 +39,13 @@ export function VueBackup({ id }: { id: string }) {
   const [restaurationId, setRestaurationId] = useState<string | null>(null)
 
   const projet = lesProjets.items.find((p) => p.id === id)
-  const services = lesServices.items.filter((x) => x.projetId === id)
+  // Avec l’API, la liste vient de `GET /projets/{id}/services` (route nichée,
+  // hors registre) ; en maquette, du filtre local.
+  const { distants: servicesDistants } = useServicesProjet(id)
+  const services = useMemo(
+    () => servicesDistants ?? lesServices.items.filter((x) => x.projetId === id),
+    [servicesDistants, lesServices.items, id],
+  )
   const restauration = services.find((x) => x.id === restaurationId) ?? null
 
   if (!projet) return <ProjetIntrouvable section="Backup" />

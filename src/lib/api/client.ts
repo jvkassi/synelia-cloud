@@ -156,7 +156,9 @@ async function requeteBrute<T>(chemin: string, options: OptionsRequete = {}): Pr
 /**
  * Requête avec un unique rafraîchissement du jeton : sur `401`, on rejoue
  * `POST /auth/rafraichir` une fois puis on réessaie. Si le rafraîchissement
- * échoue, la session est effacée — c’est au garde de renvoyer vers `/login`.
+ * échoue, la session est effacée et l’on renvoie vers `/login` — c’est ici,
+ * pas au garde, que l’expiration se voit en premier (un sondage en fond
+ * n’attend pas la prochaine navigation).
  */
 export async function requete<T>(chemin: string, options: OptionsRequete = {}): Promise<T> {
   try {
@@ -166,6 +168,7 @@ export async function requete<T>(chemin: string, options: OptionsRequete = {}): 
     const session = lireSession()
     if (!session?.refreshToken) {
       effacerSession()
+      redirigerConnexion()
       throw e
     }
     try {
@@ -176,10 +179,18 @@ export async function requete<T>(chemin: string, options: OptionsRequete = {}): 
       ecrireSession({ ...neuve, refreshToken: neuve.refreshToken ?? session.refreshToken })
     } catch {
       effacerSession()
+      redirigerConnexion()
       throw e
     }
     return requeteBrute<T>(chemin, options)
   }
+}
+
+/** Renvoie vers `/login` quand la session est morte — jamais depuis `/login`. */
+function redirigerConnexion(): void {
+  if (typeof window === 'undefined') return
+  if (window.location.pathname.startsWith('/login')) return
+  window.location.href = '/login'
 }
 
 // ─── Collections ────────────────────────────────────────────────────

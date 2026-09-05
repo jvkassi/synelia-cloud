@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Key, Plus, ShieldCheck, Webhook } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MAINTENANT, dateCourte, num, pct, relatif } from '@/lib/format'
@@ -12,9 +12,20 @@ import { Field, Input, Select, Switch } from '@/components/ui/field'
 import { Modal } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { GaugeCircle, QuotaBar, StackedBar, StatTile } from '@/components/composition/metrics'
+import { DegradedState } from '@/components/composition/states'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import {
+  ApiError,
+  creerRessource,
+  estActif,
+  estTravail,
+  modifierRessource,
+  requete,
+  supprimerRessource,
+  type PageDistante,
+} from '@/lib/api/client'
 
 type CleSmtp = (typeof SMTP.cles)[number]
 type WebhookSmtp = (typeof SMTP.webhooks)[number]
@@ -30,6 +41,7 @@ const ONGLETS = [
 const TON_STATUT: Record<string, 'ok' | 'warn' | 'err'> = {
   delivre: 'ok',
   differe: 'warn',
+  rebond: 'err',
   rejete: 'err',
   plainte: 'err',
 }
@@ -37,12 +49,50 @@ const TON_STATUT: Record<string, 'ok' | 'warn' | 'err'> = {
 const LIBELLE_STATUT: Record<string, string> = {
   delivre: 'Délivré',
   differe: 'Différé',
+  rebond: 'Rebond',
   rejete: 'Rejeté',
   plainte: 'Plainte',
 }
 
+/**
+ * Le contrat nomme `remis` ce que la maquette appelle `delivre` (et connaît
+ * `rebond`, que la maquette ne montre pas) : on traduit à la frontière, les
+ * libellés de l’écran restant inchangés. Sans cela chaque écriture échoue en
+ * `422` (`evenements.0` invalide).
+ */
+const evenementVersBackend = (e: string) => (e === 'delivre' ? 'remis' : e)
+const evenementVersUi = (e: string) => (e === 'remis' ? 'delivre' : e)
+
+/** Formes distantes (`GET /web/smtp/cles`, `/webhooks`, `/messages`). */
+interface CleSmtpDistante {
+  id: string
+  nom: string
+  quotaJour: number
+  utiliseJour?: number
+  creeeLe: string
+  derniereUtilisation?: string | null
+  statut: 'active' | 'suspendue' | 'revoquee'
+}
+
+interface WebhookSmtpDistant {
+  id: string
+  url: string
+  evenements: string[]
+  actif: boolean
+}
+
+interface MessageSmtpDistant {
+  id: string
+  ts: string
+  vers: string
+  sujet?: string
+  statut: string
+  code?: string
+  detail?: string
+}
+
 export default function Smtp() {
-  const { autorise, refus } = useApp()
+  const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
   const cles = useCollection<CleSmtp>('cles-smtp', SMTP.cles)
   const webhooks = useCollection<WebhookSmtp>('webhooks-smtp', SMTP.webhooks)
@@ -54,6 +104,158 @@ export default function Smtp() {
   const [refuserHorsDomaine, setRefuserHorsDomaine] = useState(true)
   const [purgeErreurs, setPurgeErreurs] = useState(true)
   const [desabonnement, setDesabonnement] = useState(false)
+  /** Mot de passe renvoyé une seule fois à la création d’une clé (mode API). */
+  const [secretCree, setSecretCree] = useState<{
+    nom: string
+    motDePasse: string
+    hote: string
+  } | null>(null)
+  const [erreursCles, setErreursCles] = useState<Record<string, string>>({})
+
+  /**
+   * `GET /web/smtp/cles` et `/webhooks` renvoient des tableaux nus, pas
+   * l’enveloppe `{ donnees, pagination }` du chargeur générique : la lecture
+   * se fait ici, dans la page, et les collections de l’atelier ne servent
+   * qu’au mode maquette. Écart backend noté dans `docs/BRANCHEMENT-API.md`.
+   */
+  const [clesDistantes, setClesDistantes] = useState<CleSmtpDistante[] | null>(null)
+  const [webhooksDistants, setWebhooksDistants] = useState<WebhookSmtpDistant[] | null>(null)
+  const [messagesDistants, setMessagesDistants] = useState<MessageSmtpDistant[] | null>(null)
+  const [journalDegrade, setJournalDegrade] = useState<{
+    integration?: string
+    dateDonnees?: string
+  } | null>(null)
+  const [actualisation, setActualisation] = useState(0)
+  const reactualiser = () => setActualisation((n) => n + 1)
+
+  useEffect(() => {
+    if (!estActif()) return
+    requete<CleSmtpDistante[]>('/web/smtp/cles').then(
+      (l) => setClesDistantes(l),
+      () => setClesDistantes([]),
+    )
+    requete<WebhookSmtpDistant[]>('/web/smtp/webhooks').then(
+      (l) => setWebhooksDistants(l),
+      () => setWebhooksDistants([]),
+    )
+    requete<PageDistante<MessageSmtpDistant>>('/web/smtp/messages', {
+      query: { parPage: 50 },
+    }).then(
+      (p) => {
+        setMessagesDistants(p.donnees)
+        setJournalDegrade(null)
+      },
+      (e: unknown) => {
+        // `424` : le journal du relais dépend d’une intégration amont — on
+        // le dit avec son nom plutôt qu’avec un « ne répond pas » générique.
+        if (e instanceof ApiError && e.statut === 424) {
+          setJournalDegrade({ integration: e.integration, dateDonnees: e.dateDonnees })
+          return
+        }
+        setMessagesDistants([])
+      },
+    )
+  }, [actualisation])
+
+  const api = estActif()
+  const ouvrirCreationCle = () => {
+    setSecretCree(null)
+    setErreursCles({})
+    setNouvelleCle(true)
+  }
+  /** Création d’une clé : le mot de passe n’est renvoyé qu’une seule fois. */
+  const creerCle = () => {
+    if (!nomCle.trim()) return
+    if (!estActif()) {
+      executer({
+        action: 'secrets.update',
+        titre: `Clé « ${nomCle} » créée`,
+        detail:
+          'Copiez-la maintenant : elle ne sera plus affichée en clair après la fermeture de cette fenêtre.',
+        effet: () =>
+          cles.creer({
+            id: cles.identifiant('sk'),
+            nom: nomCle,
+            creee: MAINTENANT.slice(0, 10),
+            derniereUtilisation: MAINTENANT,
+            quotaJour: quotaCle,
+            envoyesJour: 0,
+          }),
+      })
+      setNomCle('')
+      setNouvelleCle(false)
+      return
+    }
+    setErreursCles({})
+    const domaineExpediteur = expediteur.startsWith('*@')
+      ? expediteur.slice(2)
+      : (expediteur.split('@')[1] ?? '')
+    creerRessource<{ cle: { id: string; nom: string }; hote: string; motDePasse: string }>(
+      '/web/smtp/cles',
+      {
+        nom: nomCle.trim(),
+        quotaJour: quotaCle,
+        ...(domaineExpediteur ? { domainesAutorises: [domaineExpediteur] } : {}),
+      },
+    ).then(
+      (r) => {
+        // `201` renvoie le secret, un éventuel `202` un travail à suivre.
+        if (estTravail(r)) {
+          reactualiser()
+          pousser({
+            ton: 'ok',
+            titre: `Clé « ${nomCle.trim()} » en cours de création`,
+            detail: 'Suivi dans le centre de tâches.',
+          })
+          return
+        }
+        setSecretCree({ nom: nomCle.trim(), motDePasse: r.motDePasse, hote: r.hote })
+        reactualiser()
+        pousser({
+          ton: 'ok',
+          titre: `Clé « ${nomCle.trim()} » créée`,
+          detail: 'Copiez le mot de passe maintenant : il ne sera plus affiché.',
+        })
+      },
+      (e: unknown) => {
+        if (e instanceof ApiError && e.champs) setErreursCles(e.champs)
+        pousser({
+          ton: 'err',
+          titre: 'Création de la clé impossible',
+          detail: e instanceof Error ? e.message : undefined,
+        })
+      },
+    )
+  }
+  const clesAffichees = api
+    ? (clesDistantes ?? []).map((c) => ({
+        id: c.id,
+        nom: c.nom,
+        creee: c.creeeLe.slice(0, 10),
+        derniereUtilisation: c.derniereUtilisation ?? undefined,
+        quotaJour: c.quotaJour,
+        envoyesJour: c.utiliseJour ?? 0,
+        statut: c.statut,
+      }))
+    : cles.items.map((c) => ({ ...c, statut: 'active' as const }))
+  const webhooksAffiches = api
+    ? (webhooksDistants ?? []).map((w) => ({
+        id: w.id,
+        url: w.url,
+        evenements: w.evenements.map(evenementVersUi),
+        actif: w.actif,
+      }))
+    : webhooks.items
+  const journal = api
+    ? (messagesDistants ?? []).map((m) => ({
+        id: m.id,
+        ts: m.ts,
+        destinataire: m.vers,
+        sujet: m.sujet ?? '—',
+        statut: evenementVersUi(m.statut),
+        detail: [m.code, m.detail].filter(Boolean).join(' · ') || '—',
+      }))
+    : SMTP.journal.map((j) => ({ id: j.ts, ...j }))
 
   const tauxLivraison = SMTP.livraison.find((l) => l.statut === 'delivre')?.pct ?? 0
 
@@ -65,7 +267,7 @@ export default function Smtp() {
         sousTitre="Un relais pour les courriels transactionnels de vos applications : factures, confirmations de commande, réinitialisations de mot de passe. Adresse IP dédiée, SPF, DKIM et DMARC configurés, réputation surveillée."
         actions={
           <GatedAction autorise={autorise('secrets.update')} message={refus('secrets.update')}>
-            <Button iconBefore={<Plus size={14} />} onClick={() => setNouvelleCle(true)}>
+            <Button iconBefore={<Plus size={14} />} onClick={() => ouvrirCreationCle()}>
               Nouvelle clé d’envoi
             </Button>
           </GatedAction>
@@ -109,7 +311,7 @@ export default function Smtp() {
         />
         <StatTile
           libelle="Clés d’envoi actives"
-          valeur={SMTP.cles.length}
+          valeur={api ? (clesDistantes ?? []).length : cles.items.length}
           detail="Révocables indépendamment"
         />
       </div>
@@ -267,14 +469,14 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
               sousTitre="Une clé par application. Révoquer une clé coupe les envois de cette application seule, sans toucher aux autres."
               actions={
                 <GatedAction autorise={autorise('secrets.update')} message={refus('secrets.update')}>
-                  <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />} onClick={() => setNouvelleCle(true)}>
+                  <Button size="sm" variant="secondary" iconBefore={<Plus size={13} />} onClick={() => ouvrirCreationCle()}>
                     Créer une clé
                   </Button>
                 </GatedAction>
               }
             />
             <div className="space-y-2">
-              {cles.items.map((c) => (
+              {clesAffichees.map((c) => (
                 <div key={c.id} className="rounded-[6px] border border-g-300 px-3 py-3">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <span className="flex min-w-0 items-start gap-2.5">
@@ -284,20 +486,38 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                       <span className="min-w-0">
                         <span className="block text-[12.5px] font-semibold text-ink">{c.nom}</span>
                         <span className="block text-[11px] text-g-500">
-                          Créée le {dateCourte(c.creee)} · dernier envoi {relatif(c.derniereUtilisation)}
+                          Créée le {dateCourte(c.creee)} · dernier envoi{' '}
+                          {c.derniereUtilisation ? relatif(c.derniereUtilisation) : 'jamais'}
                         </span>
                       </span>
                     </span>
                     <span className="flex shrink-0 items-center gap-1.5">
                       <BoutonAction
-                        libelle="Réinitialiser"
+                        libelle={api ? 'Remettre en service' : 'Réinitialiser'}
                         variant="ghost"
+                        desactive={api && c.statut === 'active'}
                         operation={{
                           action: 'secrets.update',
-                          titre: `Clé « ${c.nom} » réinitialisée`,
-                          detail:
-                            'La nouvelle valeur est affichée une seule fois. L’ancienne cesse immédiatement de fonctionner.',
+                          titre: api
+                            ? `Clé « ${c.nom} » remise en service`
+                            : `Clé « ${c.nom} » réinitialisée`,
+                          detail: api
+                            ? 'La clé est de nouveau acceptée par le relais.'
+                            : 'La nouvelle valeur est affichée une seule fois. L’ancienne cesse immédiatement de fonctionner.',
+                          // Le contrat ne connaît pas la rotation d’une clé :
+                          // la remise en service réactive une clé suspendue
+                          // (`PATCH … { statut }`), le compteur journalier
+                          // restant calculé côté backend.
+                          appel: api
+                            ? () =>
+                                modifierRessource('/web/smtp/cles', c.id, {
+                                  statut: 'active',
+                                })
+                            : undefined,
                           effet: () => cles.modifier(c.id, { envoyesJour: 0 }),
+                          effetFinal: () => {
+                            if (api) reactualiser()
+                          },
                         }}
                       />
                       <BoutonAction
@@ -308,7 +528,13 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                           ton: 'warn',
                           titre: `Clé « ${c.nom} » révoquée`,
                           detail: 'Les envois de cette application seront refusés dès maintenant.',
+                          // `DELETE` confirmé par le nom exact, comme l’exige
+                          // le backend (`422` sans lui).
+                          appel: () => supprimerRessource('/web/smtp/cles', c.id, c.nom),
                           effet: () => cles.supprimer(c.id),
+                          effetFinal: () => {
+                            if (api) reactualiser()
+                          },
                         }}
                         confirmation={{
                           ressource: c.nom,
@@ -516,6 +742,16 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
               }
             />
           </div>
+          {journalDegrade && (
+            <div className="px-4 pt-3">
+              <DegradedState
+                source="journal du relais"
+                hauteur="h-28"
+                integration={journalDegrade.integration}
+                dateDonnees={journalDegrade.dateDonnees}
+              />
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full min-w-max border-collapse">
               <thead>
@@ -528,8 +764,8 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                 </tr>
               </thead>
               <tbody>
-                {SMTP.journal.map((j) => (
-                  <tr key={j.ts} className="border-b border-g-100 last:border-0">
+                {journal.map((j) => (
+                  <tr key={j.id} className="border-b border-g-100 last:border-0">
                     <td className="px-3 py-2 font-mono text-[11px] text-g-500">
                       {j.ts.slice(11, 19)}
                     </td>
@@ -590,6 +826,17 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                   operation={(v) => ({
                     titre: 'Webhook ajouté',
                     detail: 'Un appel de test est envoyé immédiatement.',
+                    // Les erreurs de champs (`422`, par exemple un
+                    // événement inconnu) restent affichées dans la modale.
+                    appel: () =>
+                      creerRessource('/web/smtp/webhooks', {
+                        url: String(v.url),
+                        evenements: String(v.evenements)
+                          .split(',')
+                          .map((e) => evenementVersBackend(e.trim()))
+                          .filter(Boolean),
+                        actif: true,
+                      }),
                     effet: () =>
                       webhooks.creer({
                         id: webhooks.identifiant('wh'),
@@ -597,12 +844,15 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                         evenements: String(v.evenements).split(','),
                         actif: true,
                       }),
+                    effetFinal: () => {
+                      if (api) reactualiser()
+                    },
                   })}
                 />
               }
             />
             <div className="space-y-2">
-              {webhooks.items.map((w) => (
+              {webhooksAffiches.map((w) => (
                 <div key={w.id} className="rounded-[6px] border border-g-300 px-3 py-2.5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <span className="flex min-w-0 items-start gap-2">
@@ -632,7 +882,18 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                           action: 'secrets.update',
                           ton: w.actif ? 'warn' : 'ok',
                           titre: w.actif ? 'Webhook désactivé' : 'Webhook réactivé',
+                          appel: api
+                            ? () =>
+                                modifierRessource('/web/smtp/webhooks', w.id, {
+                                  url: w.url,
+                                  evenements: w.evenements.map(evenementVersBackend),
+                                  actif: !w.actif,
+                                })
+                            : undefined,
                           effet: () => webhooks.modifier(w.id, { actif: !w.actif }),
+                          effetFinal: () => {
+                            if (api) reactualiser()
+                          },
                         }}
                       />
                     </span>
@@ -694,72 +955,81 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
       <Modal
         open={nouvelleCle}
         onClose={() => setNouvelleCle(false)}
-        title="Nouvelle clé d’envoi"
+        title={secretCree ? `Clé « ${secretCree.nom} » créée` : 'Nouvelle clé d’envoi'}
         size="md"
         footer={
-          <>
-            <Button variant="ghost" onClick={() => setNouvelleCle(false)}>
-              Annuler
-            </Button>
+          secretCree ? (
             <Button
-              disabled={!nomCle.trim()}
               onClick={() => {
-                executer({
-                  action: 'secrets.update',
-                  titre: `Clé « ${nomCle} » créée`,
-                  detail:
-                    'Copiez-la maintenant : elle ne sera plus affichée en clair après la fermeture de cette fenêtre.',
-                  effet: () =>
-                    cles.creer({
-                      id: cles.identifiant('sk'),
-                      nom: nomCle,
-                      creee: MAINTENANT.slice(0, 10),
-                      derniereUtilisation: MAINTENANT,
-                      quotaJour: quotaCle,
-                      envoyesJour: 0,
-                    }),
-                })
+                setSecretCree(null)
                 setNomCle('')
                 setNouvelleCle(false)
               }}
             >
-              Créer la clé
+              Fermer
             </Button>
-          </>
+          ) : (
+            <>
+              <Button variant="ghost" onClick={() => setNouvelleCle(false)}>
+                Annuler
+              </Button>
+              <Button disabled={!nomCle.trim()} onClick={creerCle}>
+                Créer la clé
+              </Button>
+            </>
+          )
         }
       >
-        <div className="space-y-4">
-          <Field label="Nom" hint="décrivez l’application qui utilisera cette clé">
-            <Input
-              value={nomCle}
-              onChange={(e) => setNomCle(e.target.value)}
-              placeholder="app-metier · notifications"
-            />
-          </Field>
-          <Field
-            label="Quota journalier"
-            hint="au-delà, les envois de cette clé sont refusés — les autres clés continuent"
-          >
-            <Input
-              type="number"
-              value={quotaCle}
-              onChange={(e) => setQuotaCle(Number(e.target.value))}
-            />
-          </Field>
-          <Field label="Adresse d’expéditeur autorisée" hint="doit appartenir à un de vos domaines">
-            <Select value={expediteur} onChange={(e) => setExpediteur(e.target.value)}>
-              <option value="facturation@dba.africa">facturation@dba.africa</option>
-              <option value="noreply@dba.africa">noreply@dba.africa</option>
-              <option value="contact@dba.africa">contact@dba.africa</option>
-              <option value="*@dba.africa">Toute adresse de dba.africa</option>
-            </Select>
-          </Field>
-          <Callout ton="warn" titre="La clé n’est affichée qu’une seule fois">
-            Nous ne la stockons pas en clair : personne chez nous ne peut la retrouver, pas même le
-            support. Si vous la perdez, réinitialisez-la — l’ancienne cesse alors immédiatement de
-            fonctionner.
-          </Callout>
-        </div>
+        {secretCree ? (
+          <div className="space-y-4">
+            <CopyField label="Hôte" value={secretCree.hote} />
+            <CopyField label="Mot de passe" value={secretCree.motDePasse} masque />
+            <Callout ton="warn" titre="Le mot de passe n’est affiché qu’une seule fois">
+              Nous ne le stockons pas en clair : personne chez nous ne peut le retrouver, pas même
+              le support. Si vous le perdez, révoquez la clé et créez-en une autre.
+            </Callout>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <Field
+              label="Nom"
+              hint="décrivez l’application qui utilisera cette clé"
+              error={erreursCles.nom}
+            >
+              <Input
+                value={nomCle}
+                onChange={(e) => setNomCle(e.target.value)}
+                placeholder="app-metier · notifications"
+              />
+            </Field>
+            {erreursCles.quotaJour && (
+              <p className="text-[12px] font-semibold text-err">{erreursCles.quotaJour}</p>
+            )}
+            <Field
+              label="Quota journalier"
+              hint="au-delà, les envois de cette clé sont refusés — les autres clés continuent"
+            >
+              <Input
+                type="number"
+                value={quotaCle}
+                onChange={(e) => setQuotaCle(Number(e.target.value))}
+              />
+            </Field>
+            <Field label="Adresse d’expéditeur autorisée" hint="doit appartenir à un de vos domaines">
+              <Select value={expediteur} onChange={(e) => setExpediteur(e.target.value)}>
+                <option value="facturation@dba.africa">facturation@dba.africa</option>
+                <option value="noreply@dba.africa">noreply@dba.africa</option>
+                <option value="contact@dba.africa">contact@dba.africa</option>
+                <option value="*@dba.africa">Toute adresse de dba.africa</option>
+              </Select>
+            </Field>
+            <Callout ton="warn" titre="La clé n’est affichée qu’une seule fois">
+              Nous ne la stockons pas en clair : personne chez nous ne peut la retrouver, pas même
+              le support. Si vous la perdez, réinitialisez-la — l’ancienne cesse alors immédiatement
+              de fonctionner.
+            </Callout>
+          </div>
+        )}
       </Modal>
     </div>
   )

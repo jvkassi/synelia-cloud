@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { CreditCard, Download, FileText, Smartphone, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -37,8 +37,9 @@ import { DataTable } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
-import { creerRessource, modifierRessource, requete } from '@/lib/api/client'
-import type { Invoice, MoyenPaiement, Subscription } from '@/lib/types'
+import { CostPreview } from '@/components/composition/flow'
+import { creerRessource, estActif, modifierRessource, requete, supprimerRessource } from '@/lib/api/client'
+import type { Devis, Invoice, MoyenPaiement, Subscription } from '@/lib/types'
 
 const ONGLETS = [
   { id: 'apercu', label: 'Aperçu' },
@@ -96,6 +97,7 @@ export default function Facturation() {
   const executer = useOperation()
   const lesFactures = useCollection<Invoice>('factures', FACTURES)
   const souscriptions = useCollection<Subscription>('souscriptions', SOUSCRIPTIONS)
+  const lesDevis = useCollection<Devis>('devis', DEVIS)
   const moyens = useCollection<MoyenEnregistre>('moyens-paiement', MOYENS)
   // Le backend nomme les mêmes champs autrement (`type`, `defaut`) : on
   // normalise une fois pour que l’onglet lise une seule forme.
@@ -110,7 +112,12 @@ export default function Facturation() {
   const [inclureNonAffecte, setInclureNonAffecte] = useState(true)
 
   const peutVoir = perm('invoice.view') !== 'none'
-  const factures = lesFactures.items.filter((f) => f.orgId === ORG_COURANTE.id)
+  // En mode API le backend filtre déjà par organisation (et ses identifiants
+  // sont inconnus du jeu local) : on lit la collection telle quelle.
+  const enApi = estActif()
+  const factures = enApi ? lesFactures.items : lesFactures.items.filter((f) => f.orgId === ORG_COURANTE.id)
+  const abonnements = enApi ? souscriptions.items : SOUSCRIPTIONS
+  const devisVisibles = enApi ? lesDevis.items : DEVIS
   const impayees = factures.filter((f) => f.statut === 'impayee')
   const enCours = factures.find((f) => f.statut === 'brouillon')
   const detail = factures.find((f) => f.id === facture)
@@ -216,7 +223,7 @@ export default function Facturation() {
         <StatTile
           libelle="Engagement mensuel"
           valeur={masque(money(SYNTHESE_CLIENT.depenseMois))}
-          detail={`${SOUSCRIPTIONS.length} souscriptions actives`}
+          detail={`${abonnements.length} souscriptions actives`}
         />
         <StatTile
           libelle="Variation sur 30 jours"
@@ -551,7 +558,7 @@ export default function Facturation() {
                   </tr>
                 </thead>
                 <tbody>
-                  {SOUSCRIPTIONS.map((s) => (
+                  {abonnements.map((s) => (
                     <tr key={s.id} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2.5">
                         <span className="block text-[12.5px] font-semibold text-ink">
@@ -582,6 +589,7 @@ export default function Facturation() {
                         {dateCourte(s.debut)}
                       </td>
                       <td className="px-3 py-2.5 text-right">
+                        <span className="flex items-center justify-end gap-1.5">
                         <BoutonFormulaire
                           libelle="Modifier"
                           variant="ghost"
@@ -602,6 +610,16 @@ export default function Facturation() {
                             },
                           ]}
                           valeursDepart={{ quantite: s.quantite, periodicite: s.periodicite }}
+                          complement={(v) => (
+                            <EstimationModification
+                              cible={s.cible}
+                              prixApplique={s.prixApplique}
+                              quantite={Number(v.quantite) || s.quantite}
+                              periodicite={
+                                String(v.periodicite) === 'annuelle' ? 'annuelle' : 'mensuelle'
+                              }
+                            />
+                          )}
                           operation={(v) => ({
                             titre: `Souscription ${s.cible.label} modifiée`,
                             detail: `${v.quantite} × ${money(s.prixApplique)} · ${v.periodicite === 'annuelle' ? 'annuelle' : 'mensuelle'}`,
@@ -618,6 +636,35 @@ export default function Facturation() {
                             effetFinal: () => souscriptions.recharger(),
                           })}
                         />
+                        <BoutonAction
+                          libelle="Résilier"
+                          variant="ghost"
+                          confirmation={{
+                            ressource: s.cible.label,
+                            titre: `Résilier ${s.cible.label} ?`,
+                            pertes: [
+                              'La facturation cesse à la fin du mois en cours',
+                              'Les ressources liées sont libérées à l’échéance',
+                              'L’historique de consommation reste consultable',
+                            ],
+                            libelleAction: 'Résilier',
+                          }}
+                          operation={{
+                            action: 'payment.update',
+                            ton: 'warn',
+                            titre: `Souscription ${s.cible.label} résiliée`,
+                            detail: 'Fin d’effet à la prochaine échéance.',
+                            appel: () =>
+                              supprimerRessource(
+                                '/facturation/souscriptions',
+                                s.id,
+                                s.cible.label,
+                              ),
+                            effet: () => souscriptions.supprimer(s.id),
+                            effetFinal: () => souscriptions.recharger(),
+                          }}
+                        />
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -628,7 +675,7 @@ export default function Facturation() {
                       Engagement mensuel total
                     </td>
                     <td className="tnum px-3 py-2.5 text-[14px] font-bold text-p-700">
-                      {masque(money(SOUSCRIPTIONS.reduce((a, s) => a + somme(s), 0)))}
+                      {masque(money(abonnements.reduce((a, s) => a + somme(s), 0)))}
                     </td>
                     <td colSpan={2} />
                   </tr>
@@ -644,7 +691,7 @@ export default function Facturation() {
                 sousTitre="15 % de remise sur les lignes d’abonnement, à périmètre identique."
               />
               <div className="space-y-2">
-                {SOUSCRIPTIONS.filter((s) => s.periodicite === 'mensuelle').map((s) => {
+                {abonnements.filter((s) => s.periodicite === 'mensuelle').map((s) => {
                   const economie = Math.round(somme(s) * 12 * 0.15)
                   return (
                     <div
@@ -696,7 +743,7 @@ export default function Facturation() {
                 {OFFRES.filter(
                   (o) =>
                     o.statut === 'publiee' &&
-                    !SOUSCRIPTIONS.some((s) => s.cible.ref === o.id) &&
+                    !abonnements.some((s) => s.cible.ref === o.id) &&
                     !o.surDevis,
                 )
                   .slice(0, 6)
@@ -900,21 +947,24 @@ export default function Facturation() {
                         }}
                       />
                     )}
-                    <BoutonAction
-                      libelle="Retirer"
-                      variant="ghost"
-                      desactive={m.principal && moyensNorm.length > 1}
-                      operation={{
-                        action: 'payment.update',
-                        ton: 'warn',
-                        titre: `${MOYEN_LABEL[m.moyen]} retiré`,
-                        detail: m.principal
-                          ? 'Aucun moyen principal : les factures devront être réglées manuellement.'
-                          : undefined,
-                        effet: () => moyens.supprimer(m.id),
-                        effetFinal: () => moyens.recharger(),
-                      }}
-                    />
+                      <BoutonAction
+                        libelle="Retirer"
+                        variant="ghost"
+                        desactive={m.principal && moyensNorm.length > 1}
+                        operation={{
+                          action: 'payment.update',
+                          ton: 'warn',
+                          titre: `${MOYEN_LABEL[m.moyen]} retiré`,
+                          detail: m.principal
+                            ? 'Aucun moyen principal : les factures devront être réglées manuellement.'
+                            : undefined,
+                          // `DELETE /facturation/moyens-paiement/{id}` → `204`,
+                          // sans confirmation : l’identifiant suffit.
+                          appel: () => supprimerRessource('/facturation/moyens-paiement', m.id),
+                          effet: () => moyens.supprimer(m.id),
+                          effetFinal: () => moyens.recharger(),
+                        }}
+                      />
                   </span>
                 </div>
               ))}
@@ -1050,7 +1100,7 @@ export default function Facturation() {
                   </tr>
                 </thead>
                 <tbody>
-                  {DEVIS.map((d) => (
+                  {devisVisibles.map((d) => (
                     <tr key={d.id} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2.5 font-mono text-[12px] font-semibold text-ink">
                         {d.numero}
@@ -1115,6 +1165,17 @@ export default function Facturation() {
                                     titre: `Devis ${d.numero} accepté`,
                                     detail:
                                       'Les souscriptions correspondantes sont créées et le provisionnement démarre.',
+                                    appel: () =>
+                                      requete(
+                                        `/facturation/devis/${encodeURIComponent(d.id)}/acceptation`,
+                                        { methode: 'POST', corps: {} },
+                                      ),
+                                    effet: () =>
+                                      lesDevis.modifier(d.id, { statut: 'accepte' }),
+                                    effetFinal: () => {
+                                      lesDevis.recharger()
+                                      souscriptions.recharger()
+                                    },
                                     job: { workflow: 'devis.accept', cible: d.numero },
                                   })
                                 }
@@ -1290,8 +1351,88 @@ function TableLignes({ facture, peutVoir }: { facture: Invoice; peutVoir: boolea
   )
 }
 
-function BarresShowback({
-  lignes,
+/**
+ * Aperçu de coût d’une modification de souscription, exigé avant validation.
+ * En mode API, les sièges de service managé sont chiffrés par le backend
+ * (`POST /facturation/estimation`, barème de sièges) ; le reste — offres dont
+ * le backend ne connaît pas le prix — garde le calcul local (quantité × prix
+ * appliqué, −15 % en annuel). Toute erreur distante retombe sur le local, sans
+ * bruit : l’estimation ne doit jamais bloquer la saisie.
+ */
+function EstimationModification({
+  cible,
+  prixApplique,
+  quantite,
+  periodicite,
+}: {
+  cible: Subscription['cible']
+  prixApplique: number
+  quantite: number
+  periodicite: 'mensuelle' | 'annuelle'
+}) {
+  const [totalDistant, setTotalDistant] = useState<number | null>(null)
+  useEffect(() => {
+    if (!estActif() || cible.type !== 'service') {
+      setTotalDistant(null)
+      return
+    }
+    let annule = false
+    const minuteur = setTimeout(() => {
+      requete<{ totalMensuel: number }>('/facturation/estimation', {
+        methode: 'POST',
+        corps: {
+          type: 'siege',
+          quantite,
+          periodicite,
+          specification: { nom: cible.label },
+        },
+      }).then(
+        (r) => {
+          if (!annule) setTotalDistant(r.totalMensuel)
+        },
+        () => {
+          if (!annule) setTotalDistant(null)
+        },
+      )
+    }, 400)
+    return () => {
+      annule = true
+      clearTimeout(minuteur)
+    }
+  }, [cible.label, cible.type, quantite, periodicite])
+
+  const mensuelLocal = quantite * prixApplique
+  // Le total distant est déjà TTC (barème plateforme) : il ne repasse pas par
+  // `CostPreview`, qui raisonne hors taxes et ajouterait la TVA une seconde fois.
+  if (totalDistant !== null) {
+    return (
+      <div className="rounded-[8px] border border-p-300 bg-p-050 px-4 py-3">
+        <p className="type-micro text-p-700">Impact estimé par la plateforme</p>
+        <p className="tnum mt-1 text-[15px] font-bold text-ink">
+          {money(totalDistant)}
+          <span className="ml-1.5 text-[11px] font-normal text-g-500">
+            / mois · {cible.label} × {quantite}
+          </span>
+        </p>
+      </div>
+    )
+  }
+  return (
+    <CostPreview
+      lignes={[
+        {
+          libelle: cible.label,
+          detail: 'Quantité × prix appliqué, −15 % en annuel',
+          montant: mensuelLocal,
+          quantite,
+        },
+      ]}
+      periodicite={periodicite}
+    />
+  )
+}
+
+function BarresShowback({  lignes,
   couleur,
   peutVoir,
 }: {

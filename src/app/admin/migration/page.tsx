@@ -546,6 +546,37 @@ export default function Migration() {
                       />
                     </GatedAction>
                   )}
+                  {(v.statut === 'en_cours' || v.statut === 'terminee') && (
+                    <BoutonAction
+                      libelle="Revenir en arrière"
+                      variant="ghost"
+                      fullWidth
+                      confirmation={{
+                        ressource: v.nom,
+                        titre: `Revenir en arrière sur ${v.nom} ?`,
+                        pertes: [
+                          'Les machines déjà migrées repassent sur le socle source',
+                          'Les données écrites depuis la migration sont conservées',
+                          'La vague repasse à planifier, à relancer dans une nouvelle fenêtre',
+                        ],
+                        libelleAction: 'Revenir en arrière',
+                      }}
+                      operation={{
+                        action: 'capacity.manage',
+                        ton: 'warn',
+                        titre: `${v.nom} : retour arrière lancé`,
+                        detail:
+                          'Le disque source a été conservé : les machines repassent dessus, sans transfert.',
+                        appel: () =>
+                          requete(
+                            `/admin/migration/campagnes/${encodeURIComponent(v.id)}/rollback`,
+                            { methode: 'POST' },
+                          ),
+                        effet: () => vagues.modifier(v.id, { statut: 'planifiee', avancement: 0 }),
+                        effetFinal: () => vagues.recharger(),
+                      }}
+                    />
+                  )}
                   {v.statut === 'en_cours' && (
                     <BoutonAction
                       libelle="Suspendre la vague"

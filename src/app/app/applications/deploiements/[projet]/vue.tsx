@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { GitCommitHorizontal, Rocket, RotateCcw, ShieldCheck } from 'lucide-react'
 import { dateHeure, duree, relatif } from '@/lib/format'
 import type { Deployment, Projet, ServiceProjet } from '@/lib/types'
@@ -22,6 +22,7 @@ import { DeploymentPipeline, SecurityFindings } from '@/components/business/paas
 import { EnteteProjet, ProjetIntrouvable } from '@/components/business/projets'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
+import { useServicesProjet } from '@/lib/api/services-projet'
 import { BoutonAction } from '@/components/app/actions'
 import { estActif, requete } from '@/lib/api/client'
 
@@ -54,7 +55,13 @@ export function VueDeploiements({ id }: { id: string }) {
   const { autorise, refus } = useApp()
 
   const projet = lesProjets.items.find((p) => p.id === id)
-  const services = lesServices.items.filter((x) => x.projetId === id)
+  // Avec l’API, la liste vient de `GET /projets/{id}/services` (route nichée,
+  // hors registre) ; en maquette, du filtre local.
+  const { distants: servicesDistants } = useServicesProjet(id)
+  const services = useMemo(
+    () => servicesDistants ?? lesServices.items.filter((x) => x.projetId === id),
+    [servicesDistants, lesServices.items, id],
+  )
 
   // Un déploiement désigne encore une application par son identifiant
   // historique ; le rattachement au projet passe par les services.

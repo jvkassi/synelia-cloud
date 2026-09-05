@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { relatif } from '@/lib/format'
 import type { Projet, ServiceProjet } from '@/lib/types'
@@ -24,6 +24,7 @@ import {
 } from '@/components/business/observabilite'
 import { AnomalieCard } from '@/components/business/paas'
 import { useCollection } from '@/components/app/atelier'
+import { useServicesProjet } from '@/lib/api/services-projet'
 import { EnteteProjet, StatutServiceBadge, couleurStatut, ProjetIntrouvable } from '@/components/business/projets'
 
 /**
@@ -39,7 +40,13 @@ export function VueObservabilite({ id }: { id: string }) {
   const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
 
   const projet = lesProjets.items.find((p) => p.id === id)
-  const services = lesServices.items.filter((x) => x.projetId === id)
+  // Avec l’API, la liste vient de `GET /projets/{id}/services` (route nichée,
+  // hors registre) ; en maquette, du filtre local.
+  const { distants: servicesDistants } = useServicesProjet(id)
+  const services = useMemo(
+    () => servicesDistants ?? lesServices.items.filter((x) => x.projetId === id),
+    [servicesDistants, lesServices.items, id],
+  )
 
   const [env, setEnv] = useState(projet?.environnements[0] ?? '')
 

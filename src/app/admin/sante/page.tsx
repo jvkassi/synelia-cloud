@@ -17,6 +17,7 @@ import {
   type Backend,
   type Incident,
   type ProvisioningJob,
+  type StatutService,
 } from '@/lib/types'
 import { MAINTENANT } from '@/lib/format'
 import { Badge, MicroLabel, StatusDot } from '@/components/ui/badge'
@@ -33,7 +34,7 @@ import { JobTracker } from '@/components/business/paas'
 import { useApp } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
-import { creerRessource, estActif, requete } from '@/lib/api/client'
+import { creerRessource, estActif, modifierRessource, requete } from '@/lib/api/client'
 import { useLectureDegradable } from '@/lib/api/degradable'
 
 const ONGLETS = [
@@ -50,6 +51,26 @@ export default function SantePlateforme() {
   const jobs = useCollection<ProvisioningJob>('jobs-plateforme', JOBS_PLATEFORME)
   const { reprendreJob } = useAtelier()
   const incidents = useCollection<Incident>('incidents', INCIDENTS)
+  // Pas de `GET` pour les états publiés (seul `PUT /admin/statut/services`
+  // existe) : la collection porte le local, l’appel pousse la liste entière.
+  // `nom` sert d’identifiant, retiré du corps envoyé.
+  const statutsServices = useCollection<StatutService & { id: string }>(
+    'statut-services',
+    STATUT_SERVICES.map((s) => ({ ...s, id: s.nom })),
+  )
+  const servicesEtats = statutsServices.items
+  const pousserEtats = (items: Array<StatutService & { id: string }>) =>
+    requete('/admin/statut/services', {
+      methode: 'PUT',
+      corps: {
+        services: items.map((s) => ({
+          nom: s.nom,
+          categorie: s.categorie,
+          etats: s.etats,
+          uptime90j: s.uptime90j,
+        })),
+      },
+    })
   // En mode API, les socles et les jobs viennent du backend ; la maquette,
   // non filtrée par lui, garderait des identifiants inconnus de l’API.
   const socles = useCollection<Backend>('backends', BACKENDS)
@@ -82,6 +103,17 @@ export default function SantePlateforme() {
     const texte = texteCommunication || 'Mise à jour publiée depuis le portail.'
     const sites =
       sitesTouches === 'tous' ? ['ABJ', 'GBM'] : [sitesTouches]
+    // Le type choisi dans la modale fait aussi changer l’état de l’incident :
+    // une résolution le clôt (avec sa date de fin), une maintenance le passe
+    // sous surveillance. Une simple information ne touche pas à l’état.
+    const statutCible =
+      typeCommunication === 'resolution'
+        ? 'resolu'
+        : typeCommunication === 'maintenance'
+          ? 'surveille'
+          : typeCommunication === 'incident'
+            ? 'en_cours'
+            : undefined
     executer({
       action: 'capacity.manage',
       titre: 'Communication publiée',
@@ -91,7 +123,11 @@ export default function SantePlateforme() {
         incidentCible
           ? requete(`/admin/statut/incidents/${encodeURIComponent(incidentCible.id)}`, {
               methode: 'POST',
-              corps: { texte, notifierClients },
+              corps: {
+                texte,
+                ...(statutCible ? { statut: statutCible } : {}),
+                notifierClients,
+              },
             })
           : creerRessource('/admin/statut/incidents', {
               titre:
@@ -105,20 +141,38 @@ export default function SantePlateforme() {
               message: texte,
               notifierClients,
             }),
-      effet: () =>
-        incidentCible
-          ? incidents.modifier(incidentCible.id, (i) => ({
-              mises_a_jour: [...i.mises_a_jour, { ts: MAINTENANT, texte }],
-            }))
-          : undefined,
+      effet: () => {
+        if (incidentCible) {
+          incidents.modifier(incidentCible.id, (i) => ({
+            mises_a_jour: [...i.mises_a_jour, { ts: MAINTENANT, texte }],
+            ...(statutCible ? { statut: statutCible } : {}),
+            ...(statutCible === 'resolu' ? { fin: MAINTENANT } : {}),
+          }))
+          return
+        }
+        incidents.creer({
+          id: incidents.identifiant('inc'),
+          titre:
+            titreCommunication.trim() ||
+            (typeof communication === 'string' && communication !== 'nouveau'
+              ? communication
+              : 'Incident plateforme'),
+          gravite: graviteCommunication as Incident['gravite'],
+          statut: 'en_cours',
+          debut: MAINTENANT,
+          services: serviceTouche ? [serviceTouche] : [],
+          sites: sites as Incident['sites'],
+          mises_a_jour: [{ ts: MAINTENANT, texte }],
+        })
+      },
       effetFinal: () => incidents.recharger(),
     })
     setCommunication(null)
   }
 
-  const nonOperationnel = (s: (typeof STATUT_SERVICES)[number]) =>
+  const nonOperationnel = (s: (typeof servicesEtats)[number]) =>
     (['ABJ', 'GBM'] as const).some((x) => s.etats[x] !== 'operationnel')
-  const degrades = STATUT_SERVICES.filter(nonOperationnel)
+  const degrades = servicesEtats.filter(nonOperationnel)
   const incidentsOuverts = incidents.items.filter((i) => i.statut !== 'resolu')
   const jobsEchec = jobs.items.filter((j) => j.statut === 'failed')
   const jobsEnCours = jobs.items.filter((j) => j.statut === 'running' || j.statut === 'queued')
@@ -181,7 +235,7 @@ export default function SantePlateforme() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <StatTile
           libelle="Services opérationnels"
-          valeur={`${STATUT_SERVICES.length - degrades.length}/${STATUT_SERVICES.length}`}
+          valeur={`${servicesEtats.length - degrades.length}/${servicesEtats.length}`}
           ton={degrades.length === 0 ? 'ok' : 'warn'}
         />
         <StatTile
@@ -236,7 +290,7 @@ export default function SantePlateforme() {
                   </tr>
                 </thead>
                 <tbody>
-                  {STATUT_SERVICES.map((s) => (
+                  {servicesEtats.map((s) => (
                     <tr key={s.nom} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2.5 text-[12.5px] font-semibold text-ink">{s.nom}</td>
                       <td className="px-3 py-2.5 text-[11.5px] text-g-500">{s.categorie}</td>
@@ -263,6 +317,68 @@ export default function SantePlateforme() {
                         </span>
                       </td>
                       <td className="px-3 py-2.5 text-right">
+                        <span className="flex items-center justify-end gap-1.5">
+                        <BoutonFormulaire
+                          libelle="État"
+                          variant="ghost"
+                          action="capacity.manage"
+                          titre={`État publié de ${s.nom}`}
+                          description="Ces états sont publiés tels quels sur la page de statut publique : un « panne » affiché à tort ouvre des tickets pour rien."
+                          champs={[
+                            {
+                              id: 'abj',
+                              label: 'Abidjan',
+                              type: 'select',
+                              demi: true,
+                              options: [
+                                { value: 'operationnel', label: 'Opérationnel' },
+                                { value: 'degrade', label: 'Dégradé' },
+                                { value: 'panne', label: 'Panne' },
+                                { value: 'maintenance', label: 'Maintenance' },
+                              ],
+                            },
+                            {
+                              id: 'gbm',
+                              label: 'Grand-Bassam',
+                              type: 'select',
+                              demi: true,
+                              options: [
+                                { value: 'operationnel', label: 'Opérationnel' },
+                                { value: 'degrade', label: 'Dégradé' },
+                                { value: 'panne', label: 'Panne' },
+                                { value: 'maintenance', label: 'Maintenance' },
+                              ],
+                            },
+                          ]}
+                          valeursDepart={{ abj: s.etats.ABJ, gbm: s.etats.GBM }}
+                          libelleValider="Publier l’état"
+                          operation={(v) => {
+                            const prochains = servicesEtats.map((x) =>
+                              x.nom === s.nom
+                                ? {
+                                    ...x,
+                                    etats: {
+                                      ABJ: String(v.abj),
+                                      GBM: String(v.gbm),
+                                    } as StatutService['etats'],
+                                  }
+                                : x,
+                            )
+                            return {
+                              titre: `État de ${s.nom} publié`,
+                              detail: `Abidjan : ${v.abj} · Grand-Bassam : ${v.gbm}.`,
+                              appel: () => pousserEtats(prochains),
+                              effet: () =>
+                                statutsServices.modifier(s.nom, {
+                                  etats: {
+                                    ABJ: String(v.abj),
+                                    GBM: String(v.gbm),
+                                  } as StatutService['etats'],
+                                }),
+                              effetFinal: () => statutsServices.recharger(),
+                            }
+                          }}
+                        />
                         {nonOperationnel(s) && (
                           <GatedAction
                             autorise={autorise('capacity.manage')}
@@ -277,6 +393,7 @@ export default function SantePlateforme() {
                             </Button>
                           </GatedAction>
                         )}
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -470,7 +587,7 @@ export default function SantePlateforme() {
               <table className="w-full min-w-max border-collapse">
                 <thead>
                   <tr className="border-b border-g-300 bg-g-050">
-                    {['Socle', 'Technologie', 'Site', 'Hôtes', 'vCPU', 'Mémoire', 'Stockage', 'Souverain', 'État'].map(
+                    {['Socle', 'Technologie', 'Site', 'Hôtes', 'vCPU', 'Mémoire', 'Stockage', 'Souverain', 'État', ''].map(
                       (h) => (
                         <th key={h} className="type-micro px-3 py-2 text-left font-semibold text-g-500">
                           {h}
@@ -526,6 +643,45 @@ export default function SantePlateforme() {
                       </td>
                       <td className="px-3 py-2.5">
                         <HealthBadge etat={b.statut === 'en_ligne' ? 'ok' : b.statut} size="sm" />
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        <BoutonFormulaire
+                          libelle="État"
+                          variant="ghost"
+                          action="capacity.manage"
+                          titre={`État du socle ${b.code}`}
+                          description="Un socle en maintenance ne reçoit plus de nouveaux placements, mais continue de servir ses charges existantes."
+                          champs={[
+                            {
+                              id: 'statut',
+                              label: 'État',
+                              type: 'select',
+                              options: [
+                                { value: 'en_ligne', label: 'En ligne' },
+                                { value: 'maintenance', label: 'Maintenance planifiée' },
+                                { value: 'degrade', label: 'Dégradé' },
+                              ],
+                            },
+                          ]}
+                          valeursDepart={{ statut: b.statut }}
+                          libelleValider="Appliquer"
+                          operation={(v) => ({
+                            titre: `Socle ${b.code} : ${v.statut}`,
+                            detail:
+                              String(v.statut) === 'en_ligne'
+                                ? 'Le socle reçoit de nouveau les placements.'
+                                : 'Retiré du pool de placement : les créations sont dirigées ailleurs.',
+                            appel: () =>
+                              modifierRessource('/admin/backends', b.id, {
+                                statut: v.statut,
+                              }),
+                            effet: () =>
+                              socles.modifier(b.id, {
+                                statut: v.statut as Backend['statut'],
+                              }),
+                            effetFinal: () => socles.recharger(),
+                          })}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -885,7 +1041,7 @@ export default function SantePlateforme() {
           <Field label="Services touchés" hint="détermine qui reçoit la notification">
             <Select value={serviceTouche} onChange={(e) => setServiceTouche(e.target.value)}>
               <option value="">Sélectionner…</option>
-              {STATUT_SERVICES.map((s) => (
+              {servicesEtats.map((s) => (
                 <option key={s.nom} value={s.nom}>
                   {s.nom}
                 </option>
