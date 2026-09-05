@@ -17,6 +17,7 @@ import { DeploymentPipeline, SecurityFindings } from '@/components/business/paas
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
+import { estActif, requete } from '@/lib/api/client'
 import type { Deployment } from '@/lib/types'
 
 const LIBELLE_STATUT: Record<Deployment['statut'], string> = {
@@ -286,8 +287,17 @@ export default function Deploiements() {
                           action: 'app.rollback',
                           titre: 'Retour arrière déclenché',
                           detail: `L’artefact précédent de ${appById(d.appId)?.nom} est repromu. Aucun rebuild : la bascule prend quelques secondes.`,
+                          appel: () =>
+                            requete(
+                              `/deploiements/${encodeURIComponent(d.id)}/rollback`,
+                              { methode: 'POST', corps: {} },
+                            ),
                           job: { workflow: 'app.rollback', cible: `${appById(d.appId)?.nom ?? d.appId} ${d.version}` },
                           effetFinal: () => {
+                            if (estActif()) {
+                              lesDeploiements.recharger()
+                              return
+                            }
                             lesDeploiements.modifier(d.id, { statut: 'rolled_back' })
                             const precedent = lesDeploiements.items.find(
                               (x) => x.appId === d.appId && x.id !== d.id && x.statut !== 'failed',

@@ -17,6 +17,8 @@ import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { CostPreview, WizardShell } from '@/components/composition/flow'
 import { useApp, useEspace } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
+import { useOperation } from '@/components/app/actions'
+import { creerRessource, estActif } from '@/lib/api/client'
 
 export default function LoadBalancers() {
   const espace = useEspace()
@@ -229,6 +231,7 @@ const ETAPES = [
 function AssistantLb({ onFermer }: { onFermer: () => void }) {
   const espace = useEspace()
   const { pousser } = useApp()
+  const executer = useOperation()
   const collection = useCollection<LoadBalancer>('load-balancers', LOAD_BALANCERS)
   const { lancerJob } = useAtelier()
   const [etape, setEtape] = useState(1)
@@ -338,6 +341,44 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
                     taux5xx: 0,
                     connexions: 0,
                   },
+                }
+                // POST /load-balancers — le backend refuse `waf` et `rateLimit`
+                // à la création (501) : ils restent locaux, hors de l’appel.
+                if (estActif()) {
+                  executer({
+                    action: 'lb.create',
+                    titre: `Création de ${nom} lancée`,
+                    detail: 'La VIP est réservée, les health checks démarrent dans une minute.',
+                    appel: () =>
+                      creerRessource('/load-balancers', {
+                        espaceId: espace.id,
+                        nom,
+                        layer,
+                        exposure,
+                        algo,
+                        ...(sticky ? { sticky: 'cookie' } : {}),
+                        listeners: [
+                          {
+                            protocole: 'HTTPS',
+                            port: portHttps,
+                            ...(certAuto ? { certId: 'cert-auto' } : {}),
+                            tlsMin,
+                          },
+                          ...(redirection ? [{ protocole: 'HTTP', port: 80 }] : []),
+                        ],
+                        cibles: cibles.map((cible) => ({ targetId: cible, poids: 10 })),
+                        healthCheck: {
+                          protocole: layer === 'l7' ? 'HTTP' : 'TCP',
+                          ...(layer === 'l7' ? { chemin: hcChemin, codeAttendu: 200 } : {}),
+                          intervalleS: hcIntervalle,
+                          seuilKo: hcSeuilKo,
+                          seuilOk: hcSeuilOk,
+                        },
+                      }),
+                    effetFinal: () => collection.recharger(),
+                  })
+                  onFermer()
+                  return
                 }
                 collection.creer(nouveau)
                 pousser({

@@ -46,6 +46,11 @@ export interface SpecOperation {
    */
   appel?: () => Promise<unknown>
   /**
+   * Rappelé sur `ApiError` en mode API, avant le toast : le site d’appel y
+   * accroche ses erreurs de champs (`422`, `e.champs`) sans rouvrir la modale.
+   */
+  onErreur?: (e: ApiError) => void
+  /**
    * Ce qu'on écrit au journal d'audit. Par défaut l'opération est journalisée
    * en déduisant l'action de `action` et la cible de `titre` ; `audit: false`
    * dispense les gestes qui ne valent pas une trace — replier un panneau,
@@ -98,6 +103,7 @@ export function useOperation() {
       if (estActif() && spec.appel) {
         const echec = (e: unknown) => {
           if (e instanceof ApiError) {
+            spec.onErreur?.(e)
             const complements = [
               e.rolesRequis && e.rolesRequis.length > 0
                 ? `Rôle requis : ${e.rolesRequis.join(' ou ')}.`
@@ -324,6 +330,8 @@ export function ModaleFormulaire({
   taille = 'md',
   onValider,
   complement,
+  erreurs,
+  fermetureAuto = true,
 }: {
   ouvert: boolean
   onFermer: () => void
@@ -336,6 +344,10 @@ export function ModaleFormulaire({
   onValider: (valeurs: ValeursFormulaire) => void
   /** Bloc libre affiché sous les champs — aperçu de coût, avertissement. */
   complement?: (valeurs: ValeursFormulaire) => ReactNode
+  /** Erreurs de champs renvoyées par l’API (`422`) : affichées sous le champ. */
+  erreurs?: Record<string, string>
+  /** Faux quand le site d’appel ferme lui-même, après le succès de l’appel. */
+  fermetureAuto?: boolean
 }) {
   const depart = useMemo(() => valeursInitiales(champs, valeursDepart), [champs, valeursDepart])
   const [valeurs, setValeurs] = useState<ValeursFormulaire>(depart)
@@ -372,7 +384,7 @@ export function ModaleFormulaire({
             disabled={!complet}
             onClick={() => {
               onValider(valeurs)
-              onFermer()
+              if (fermetureAuto) onFermer()
             }}
           >
             {libelleValider}
@@ -387,6 +399,7 @@ export function ModaleFormulaire({
             label={c.label}
             hint={c.hint}
             required={c.obligatoire}
+            error={erreurs?.[c.id]}
             className={c.demi ? 'sm:col-span-1' : 'sm:col-span-2'}
           >
             {c.type === 'select' ? (
@@ -473,7 +486,32 @@ export function BoutonFormulaire({
   const { autorise, refus } = useApp()
   const executer = useOperation()
   const [ouvert, setOuvert] = useState(false)
+  const [erreurs, setErreurs] = useState<Record<string, string>>({})
   const permis = action ? autorise(action) : true
+
+  /**
+   * En mode API avec `appel`, la modale reste ouverte jusqu’au succès : un
+   * `422` y affiche ses erreurs de champs au lieu de se perdre dans un toast
+   * sur un écran déjà refermé. En maquette elle se referme aussitôt, comme avant.
+   */
+  const valider = (valeurs: ValeursFormulaire) => {
+    const spec = operation(valeurs)
+    if (estActif() && spec.appel) {
+      setErreurs({})
+      executer({
+        action,
+        ...spec,
+        onErreur: (e) => setErreurs(e.champs ?? {}),
+        effetFinal: () => {
+          spec.effetFinal?.()
+          setOuvert(false)
+        },
+      })
+      return
+    }
+    executer({ action, ...spec })
+    setOuvert(false)
+  }
 
   return (
     <>
@@ -484,7 +522,10 @@ export function BoutonFormulaire({
           iconBefore={icone}
           fullWidth={fullWidth}
           className={className}
-          onClick={() => setOuvert(true)}
+          onClick={() => {
+            setErreurs({})
+            setOuvert(true)
+          }}
         >
           {libelle}
         </Button>
@@ -499,7 +540,9 @@ export function BoutonFormulaire({
         libelleValider={libelleValider}
         taille={taille}
         complement={complement}
-        onValider={(valeurs) => executer({ action, ...operation(valeurs) })}
+        erreurs={erreurs}
+        fermetureAuto={false}
+        onValider={valider}
       />
     </>
   )

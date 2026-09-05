@@ -34,6 +34,9 @@ import { CostPreview, WizardShell } from '@/components/composition/flow'
 import { TopologyCanvas } from '@/components/business/rbac-canvas'
 import { useApp, useEspace } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
+import { creerRessource, estActif, estTravail, suivreTravail } from '@/lib/api/client'
+import { useLectureDegradable } from '@/lib/api/degradable'
+import { DegradedState } from '@/components/composition/states'
 
 const ETAPES = [
   { numero: 1, titre: 'Source' },
@@ -71,7 +74,7 @@ export default function NouvelleApplication() {
   const espaceCourant = useEspace()
   const projets = useCollection<Projet>('projets', PROJETS)
   const services = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
-  const { lancerJob } = useAtelier()
+  const { lancerJob, integrerTravail } = useAtelier()
 
   const [etape, setEtape] = useState(1)
   const [source, setSource] = useState<'git' | 'image' | 'canvas' | 'modele'>('git')
@@ -100,6 +103,12 @@ export default function NouvelleApplication() {
   const depotChoisi = DEPOTS.find((d) => d.url === depot)!
   const modeleChoisi = modeleBySlug(modeleSlug)!
   const envsActifs = envs.filter((e) => e.actif)
+  // Branches lues sur la forge quand l’API est active (`424` → la liste
+  // statique reste, avec un bandeau dégradé nommant l’intégration).
+  const { donnees: branchesDistantes, degrade: degradeBranches } = useLectureDegradable<
+    Array<{ nom: string; defaut?: boolean }>
+  >('/depots/branches', { url: `https://${depot}` })
+  const branchesDepot = branchesDistantes?.map((b) => b.nom) ?? depotChoisi.branches
 
   const lignesCout = [
     {
@@ -181,6 +190,61 @@ export default function NouvelleApplication() {
               onClick={() => {
                 const idProjet = projets.identifiant('prj')
                 const environnements = envsActifs.map((e) => e.nom)
+                // POST /projets puis POST /projets/{id}/services, un par
+                // environnement (`202` chacun, suivi dans le centre de tâches).
+                if (estActif()) {
+                  const description =
+                    source === 'git'
+                      ? `Déployé depuis ${depot} (${branche}), construit avec ${builder}.`
+                      : source === 'image'
+                        ? `Déployé depuis l’image ${image}:${etiquette}.`
+                        : 'Créé depuis le canvas.'
+                  creerRessource('/projets', {
+                    nom: nomApp,
+                    espaceId,
+                    description,
+                    environnements,
+                  }).then((p) => {
+                    const projetId = (p as { id: string }).id
+                    projets.recharger()
+                    if (!projetId) return
+                    void Promise.all(
+                      environnements.map((env) =>
+                        creerRessource(
+                          `/projets/${encodeURIComponent(projetId)}/services`,
+                          {
+                            nom: nomApp,
+                            type: 'application',
+                            environnement: env,
+                            ...(source === 'image'
+                              ? {
+                                  source: {
+                                    type: 'image',
+                                    ref: `${image}:${etiquette}`,
+                                    branche,
+                                  },
+                                }
+                              : {
+                                  source: { type: 'git', ref: depot, branche },
+                                }),
+                          },
+                        ).then((r) => {
+                          if (estTravail(r)) {
+                            const suivi = integrerTravail(r)
+                            suivreTravail(suivi, (t) => integrerTravail(t))
+                          }
+                        }),
+                      ),
+                    )
+                  })
+                  pousser({
+                    ton: 'info',
+                    titre: `Création de ${nomApp} lancée`,
+                    detail: 'Provisioning puis déploiement. Suivi dans le centre de tâches.',
+                  })
+                  router.push('/app/applications/projets')
+                  return
+                }
                 projets.creer({
                   id: idProjet,
                   nom: nomApp,
@@ -332,7 +396,7 @@ export default function NouvelleApplication() {
                 </Field>
                 <Field label="Branche de production">
                   <Select value={branche} onChange={(e) => setBranche(e.target.value)}>
-                    {depotChoisi.branches.map((b) => (
+                    {branchesDepot.map((b) => (
                       <option key={b} value={b}>
                         {b}
                       </option>
@@ -340,6 +404,16 @@ export default function NouvelleApplication() {
                   </Select>
                 </Field>
               </div>
+              {degradeBranches && (
+                <div className="mt-3">
+                  <DegradedState
+                    source="dépôt"
+                    hauteur="h-24"
+                    integration={degradeBranches.integration}
+                    dateDonnees={degradeBranches.dateDonnees}
+                  />
+                </div>
+              )}
               <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-g-100 pt-3.5">
                 <Badge tone="ok" dot size="sm">
                   Connexion GitHub active

@@ -32,6 +32,8 @@ import {
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { useOperation } from '@/components/app/actions'
+import { creerRessource, estActif } from '@/lib/api/client'
+import { useServicesProjet } from '@/lib/api/services-projet'
 
 /**
  * Fiche d'un projet — ses services, environnement par environnement.
@@ -48,10 +50,13 @@ export function VueProjet({ id }: { id: string }) {
 
   // Relu dans la collection : un service créé ici doit apparaître sans quitter
   // l'écran, et un projet né pendant la session n'existe pas dans le jeu figé.
+  // Avec l’API, la liste vient de `GET /projets/{id}/services` (route nichée,
+  // hors registre) ; en maquette, du filtre local.
   const projet = lesProjets.items.find((p) => p.id === id)
+  const { distants: servicesDistants, rechargerServices } = useServicesProjet(id)
   const services = useMemo(
-    () => lesServices.items.filter((x) => x.projetId === id),
-    [lesServices.items, id],
+    () => servicesDistants ?? lesServices.items.filter((x) => x.projetId === id),
+    [servicesDistants, lesServices.items, id],
   )
   const synthese = syntheseDeServices(services)
 
@@ -172,6 +177,7 @@ export function VueProjet({ id }: { id: string }) {
         projet={projet}
         env={env}
         onClose={() => setCreation(null)}
+        onCree={rechargerServices}
       />
     </div>
   )
@@ -260,11 +266,13 @@ function TiroirCreation({
   projet,
   env,
   onClose,
+  onCree,
 }: {
   type: TypeServiceProjet | null
   projet: Projet
   env: string
   onClose: () => void
+  onCree?: () => void
 }) {
   const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
   const executer = useOperation()
@@ -300,6 +308,18 @@ function TiroirCreation({
         type === 'base'
           ? `${MOTEUR_LABEL[moteur]} ${version || choix.versions[0]}, joint au réseau privé du projet — aucun port ouvert sur Internet.`
           : `Déployé dans ${env}, sur l’adresse offerte du projet.`,
+      appel: () =>
+        creerRessource(`/projets/${encodeURIComponent(projet.id)}/services`, {
+          nom: nom.trim(),
+          type,
+          environnement: env,
+          ressources,
+          ...(type === 'base'
+            ? { moteur, version: version || choix.versions[0] }
+            : {}),
+          ...(type === 'cron' ? { cron: { expression: cron, commande: commande.trim() } } : {}),
+          ...(type === 'worker' ? { file: { nom: file.trim(), concurrence } } : {}),
+        }),
       effet: () =>
         lesServices.creer({
           id: idService,
@@ -370,7 +390,13 @@ function TiroirCreation({
                 'Publier l’adresse offerte',
               ],
       },
-      effetFinal: () => lesServices.modifier(idService, { statut: 'running' }),
+      effetFinal: () => {
+        if (estActif()) {
+          onCree?.()
+          return
+        }
+        lesServices.modifier(idService, { statut: 'running' })
+      },
     })
     onClose()
   }

@@ -705,14 +705,21 @@ function etatEntree(
   return { etat: 'Actif', ton: 'ok' }
 }
 
-/** Entrées Web Cloud d'une organisation, domaines et hébergements confondus. */
-export function entreesWebCloud(orgId: string = ORG_COURANTE.id): EntreeWebCloud[] {
-  const domaines = DOMAINES.filter((d) => d.orgId === orgId)
-  const hebergements = HEBERGEMENTS.filter((h) => h.orgId === orgId)
-
+/**
+ * Assemble les entrées Web Cloud depuis trois listes — domaines, hébergements,
+ * zones — quelle qu’en soit la provenance (graines locales ou collections
+ * distantes : le backend nomme les mêmes champs). L’URL reste le nom servi.
+ */
+export function assemblerEntrees(
+  domaines: Domaine[],
+  hebergements: WebHosting[],
+  zones: DnsZone[],
+): EntreeWebCloud[] {
   const depuisDomaines = domaines.map<EntreeWebCloud>((d) => {
-    const hebergement = hebergements.find((h) => h.domaine === d.nom)
-    const zone = d.zoneId ? ZONES_DNS.find((z) => z.id === d.zoneId) : undefined
+    const hebergement = hebergements.find(
+      (h) => h.id === d.hebergementId || h.domaine === d.nom,
+    )
+    const zone = d.zoneId ? zones.find((z) => z.id === d.zoneId) : undefined
     const sousTitre = hebergement
       ? `${hebergement.palier} · ${hebergement.serveur.nom}`
       : zone
@@ -734,6 +741,15 @@ export function entreesWebCloud(orgId: string = ORG_COURANTE.id): EntreeWebCloud
     }))
 
   return [...depuisDomaines, ...orphelins]
+}
+
+/** Entrées Web Cloud d'une organisation, domaines et hébergements confondus. */
+export function entreesWebCloud(orgId: string = ORG_COURANTE.id): EntreeWebCloud[] {
+  return assemblerEntrees(
+    DOMAINES.filter((d) => d.orgId === orgId),
+    HEBERGEMENTS.filter((h) => h.orgId === orgId),
+    ZONES_DNS,
+  )
 }
 
 export const entreeWebCloudById = (id: string, orgId?: string) =>

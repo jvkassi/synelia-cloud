@@ -28,6 +28,7 @@ import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { creerRessource, estActif, requete } from '@/lib/api/client'
 import type { DnsZone } from '@/lib/types'
 
 type Enregistrement = DnsZone['enregistrements'][number]
@@ -121,12 +122,35 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
       titre: edition ? 'Enregistrement modifié' : 'Enregistrement créé',
       detail:
         'Publié sur les trois serveurs de noms. Visible partout après expiration du TTL.',
+      appel: () =>
+        edition
+          ? requete(
+              `/web/dns/${encodeURIComponent(zone.id)}/enregistrements/${encodeURIComponent(edition)}`,
+              {
+                methode: 'PATCH',
+                corps: {
+                  type: f.type,
+                  nom: f.nom || '@',
+                  valeur: f.valeur,
+                  ttl: f.ttl,
+                  ...(f.priorite === '' ? {} : { priorite: Number(f.priorite) }),
+                },
+              },
+            )
+          : creerRessource(`/web/dns/${encodeURIComponent(zone.id)}/enregistrements`, {
+              type: f.type,
+              nom: f.nom || '@',
+              valeur: f.valeur,
+              ttl: f.ttl,
+              ...(f.priorite === '' ? {} : { priorite: Number(f.priorite) }),
+            }),
       effet: () =>
         zones.modifier(zone.id, (z) => ({
           enregistrements: edition
             ? z.enregistrements.map((x) => (x.id === edition ? patch : x))
             : [...z.enregistrements, patch],
         })),
+      effetFinal: () => zones.recharger(),
     })
     setAjout(false)
     setEdition(null)
@@ -506,6 +530,11 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
                   detail: v
                     ? 'La publication de l’enregistrement DS au registre prend quelques heures.'
                     : 'Le retrait du DS au registre doit précéder la dépublication des signatures, sinon la zone devient invalidable.',
+                  appel: () =>
+                    requete(`/web/dns/${encodeURIComponent(zone.id)}/dnssec`, {
+                      methode: 'PUT',
+                      corps: { actif: v },
+                    }),
                   job: {
                     type: 'dns.dnssec',
                     label: `${v ? 'Activation' : 'Désactivation'} DNSSEC · ${zone.domaine}`,
@@ -514,7 +543,12 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
                       : ['Retirer le DS au registre', 'Attendre l’expiration des caches', 'Dépublier les signatures'],
                     dureeEtapeMs: 1100,
                   },
-                  effetFinal: () => zones.modifier(zone.id, { dnssec: v }),
+                  effetFinal: () => {
+                    // PUT /web/dns/{id}/dnssec a déjà persisté : en maquette on
+                    // rejoue la bascule en local, avec l’API on relit la zone.
+                    if (!estActif()) zones.modifier(zone.id, { dnssec: v })
+                    zones.recharger()
+                  },
                 })
               }
               label="DNSSEC"
@@ -659,6 +693,19 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
                   ton: 'warn',
                   titre: `${v.sous}.${zone.domaine} délégué`,
                   detail: 'Ses enregistrements ne sont plus gérés depuis ce portail.',
+                  appel: async () => {
+                    for (const ns of [v.ns1, v.ns2].filter(Boolean)) {
+                      await creerRessource(
+                        `/web/dns/${encodeURIComponent(zone.id)}/enregistrements`,
+                        {
+                          type: 'NS',
+                          nom: String(v.sous),
+                          valeur: `${String(ns).replace(/\.$/, '')}.`,
+                          ttl: 3600,
+                        },
+                      )
+                    }
+                  },
                   effet: () =>
                     zones.modifier(zone.id, (z) => ({
                       enregistrements: [
@@ -674,6 +721,7 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
                           })),
                       ],
                     })),
+                  effetFinal: () => zones.recharger(),
                 })}
               />
             </GatedAction>
@@ -909,10 +957,16 @@ export function EditeurZone({ zoneId }: { zoneId: string }) {
               ton: 'err',
               titre: 'Enregistrement supprimé',
               detail: 'Vous pouvez le recréer depuis l’historique de la zone dans les sept jours.',
+              appel: () =>
+                requete(
+                  `/web/dns/${encodeURIComponent(zone.id)}/enregistrements/${encodeURIComponent(cible.id)}`,
+                  { methode: 'DELETE' },
+                ),
               effet: () =>
                 zones.modifier(zone.id, (z) => ({
                   enregistrements: z.enregistrements.filter((x) => x.id !== cible.id),
                 })),
+              effetFinal: () => zones.recharger(),
             })
           }
           setSuppression(null)

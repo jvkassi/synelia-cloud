@@ -21,6 +21,7 @@ import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { creerRessource, estActif } from '@/lib/api/client'
 
 const TEINTE: Record<string, string> = {
   wordpress: '#21759B',
@@ -103,6 +104,16 @@ export default function ListeApplications() {
               return {
                 titre: `Installation de ${v.hote} lancée`,
                 detail: `${v.type} · PHP ${v.php}`,
+                appel: () =>
+                  creerRessource('/web/sites', {
+                    hebergementId: String(v.hebergement),
+                    site: {
+                      hote: String(v.hote),
+                      type: v.type as 'wordpress' | 'prestashop' | 'php' | 'statique' | 'laravel',
+                      phpVersion: String(v.php),
+                      ssl: true,
+                    },
+                  }),
                 effet: () =>
                   tousSites.creer({
                     id: idSite,
@@ -118,11 +129,16 @@ export default function ListeApplications() {
                     statut: 'installation',
                   }),
                 job: { workflow: 'web.app.install', cible: String(v.hote) },
-                effetFinal: () =>
+                effetFinal: () => {
+                  if (estActif()) {
+                    tousSites.recharger()
+                    return
+                  }
                   tousSites.modifier(idSite, {
                     statut: 'en_ligne',
                     ssl: { etat: 'actif', emetteur: 'Let’s Encrypt', expire: '2026-11-17' },
-                  }),
+                  })
+                },
               }
             }}
           />

@@ -46,11 +46,14 @@ export const REGISTRE_COLLECTIONS: Record<string, string> = {
   drives: '/web/drive',
   certificats: '/web/ssl',
   'cles-smtp': '/web/smtp/cles',
+  'zones-dns': '/web/dns',
+  devis: '/facturation/devis',
   'bases-managees': '/bases',
   'regles-alertes': '/observabilite/alertes',
   impayes: '/admin/facturation/impayes',
   'parc-instances': '/admin/marketplace/instances',
   'campagnes-maj': '/admin/marketplace/campagnes',
+  'vagues-migration': '/admin/migration/campagnes',
   'tickets-plateforme': '/admin/tickets',
   'jobs-plateforme': '/admin/travaux',
   'attestations-generees': '/attestations',
@@ -83,6 +86,7 @@ const CONFIRMATION_PAR_COLLECTION: Record<string, string> = {
   certificats: 'hote',
   hebergements: 'domaineProvisoire',
   'sites-web': 'hote',
+  'zones-dns': 'domaine',
   'points-restauration': 'resourceNom',
 }
 

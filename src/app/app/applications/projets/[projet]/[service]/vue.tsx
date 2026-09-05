@@ -47,6 +47,8 @@ import { modeleBySlug } from '@/lib/mock/modeles'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { creerRessource, estActif, requete, supprimerRessource } from '@/lib/api/client'
+import { useServicesProjet } from '@/lib/api/services-projet'
 
 /** Raccourci : la collection des services d'un projet, partout dans ce fichier. */
 function useServices() {
@@ -116,18 +118,24 @@ function ongletsDu(service: ServiceProjet) {
   ]
 }
 
-export function VueService({ id }: { id: string }) {
+export function VueService({ id, projetId }: { id: string; projetId?: string }) {
   const services = useServices()
   const lesProjets = useCollection<Projet>('projets', PROJETS)
+  const lesDomaines = useCollection<DomaineApplicatif>('domaines-applicatifs', DOMAINES_APPLICATIFS)
   const [onglet, setOnglet] = useState('apercu')
   const { autorise, refus } = useApp()
 
-  const service = services.items.find((x) => x.id === id)
+  // Avec l’API, le service vient de `GET /projets/{projetId}/services` (route
+  // nichée) : un service né pendant la session n’existe pas dans le jeu figé.
+  const { distants: servicesDistants } = useServicesProjet(projetId ?? '')
+  const service =
+    (servicesDistants ?? services.items).find((x) => x.id === id) ??
+    services.items.find((x) => x.id === id)
   const projet = service ? lesProjets.items.find((p) => p.id === service.projetId) : undefined
 
   if (!service || !projet) return <ServiceIntrouvable />
 
-  const domaines = domainesDuService(id)
+  const domaines = lesDomaines.items.filter((d) => d.serviceId === id)
   const onglets = ongletsDu(service)
 
   return (
@@ -194,9 +202,17 @@ export function VueService({ id }: { id: string }) {
                   action: 'app.deploy',
                   ton: 'info',
                   titre: `Démarrage de ${service.nom}`,
+                  appel: () =>
+                    requete(
+                      `/projets/${encodeURIComponent(service.projetId)}/services/${encodeURIComponent(service.id)}/demarrage`,
+                      { methode: 'POST', corps: {} },
+                    ),
                   effet: () => services.modifier(service.id, { statut: 'building' }),
                   job: { workflow: 'service.start', cible: service.nom },
-                  effetFinal: () => services.modifier(service.id, { statut: 'running' }),
+                  effetFinal: () => {
+                    if (!estActif()) services.modifier(service.id, { statut: 'running' })
+                    services.recharger()
+                  },
                 }}
               />
             ) : (
@@ -217,12 +233,20 @@ export function VueService({ id }: { id: string }) {
                       ? 'Les connexions en cours sont fermées proprement.'
                       : 'Déploiement sans coupure : l’ancienne version sert le trafic jusqu’à la bascule.',
                   effet: () => services.modifier(service.id, { statut: 'building' }),
+                  appel: () =>
+                    requete(
+                      `/projets/${encodeURIComponent(service.projetId)}/services/${encodeURIComponent(service.id)}/redemarrage`,
+                      { methode: 'POST', corps: {} },
+                    ),
                   job: {
                     workflow: service.type === 'base' ? 'component.restart' : 'app.deploy',
                     cible: service.nom,
                   },
-                  effetFinal: () =>
-                    services.modifier(service.id, { statut: 'running', derniereMaj: MAINTENANT }),
+                  effetFinal: () => {
+                    if (!estActif())
+                      services.modifier(service.id, { statut: 'running', derniereMaj: MAINTENANT })
+                    services.recharger()
+                  },
                 }}
               />
             )}
@@ -987,6 +1011,7 @@ export function LigneDomaine({
   domaine: DomaineApplicatif
   portDefaut: number
 }) {
+  const domaines = useCollection<DomaineApplicatif>('domaines-applicatifs', DOMAINES_APPLICATIFS)
   return (
     <div className="rounded-[8px] border border-g-300 p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -1073,7 +1098,13 @@ export function LigneDomaine({
                 ton: 'info',
                 titre: `Vérification DNS de ${d.hote}`,
                 detail: 'Nos résolveurs sont interrogés sans cache.',
+                appel: () =>
+                  requete(`/domaines-applicatifs/${encodeURIComponent(d.id)}/verification`, {
+                    methode: 'POST',
+                    corps: {},
+                  }),
                 job: { workflow: 'domaine.verify', cible: d.hote },
+                effetFinal: () => domaines.recharger(),
               }}
             />
             {d.verification.verifieLe && (
@@ -1138,6 +1169,14 @@ function TiroirDomaine({
       titre: `${hote} branché sur ${service.nom}`,
       detail:
         'La vérification DNS démarre. L’adresse offerte du service continue de répondre pendant ce temps.',
+      appel: () =>
+        creerRessource('/domaines-applicatifs', {
+          hote,
+          serviceId: service.id,
+          chemin,
+          portConteneur: port,
+          https: redirection,
+        }),
       effet: () =>
         domaines.creer({
           id,
@@ -1161,7 +1200,11 @@ function TiroirDomaine({
         ],
         dureeEtapeMs: 1100,
       },
-      effetFinal: () =>
+      effetFinal: () => {
+        if (estActif()) {
+          domaines.recharger()
+          return
+        }
         domaines.modifier(id, {
           verification: { etat: 'ok', enregistrement, verifieLe: MAINTENANT },
           certificat: {
@@ -1169,7 +1212,8 @@ function TiroirDomaine({
             emetteur: certificat === 'acme' ? 'Let’s Encrypt' : 'Certificat fourni',
             expire: '2026-11-17',
           },
-        }),
+        })
+      },
     })
     setHote('')
     setEtape('saisie')
@@ -1696,7 +1740,13 @@ function Avance({ service }: { service: ServiceProjet }) {
                   ton: 'warn',
                   titre: `${service.nom} arrêté`,
                   detail: 'Processeur et mémoire libérés. Les volumes restent facturés.',
+                  appel: () =>
+                    requete(
+                      `/projets/${encodeURIComponent(service.projetId)}/services/${encodeURIComponent(service.id)}/arret`,
+                      { methode: 'POST', corps: {} },
+                    ),
                   effet: () => services.modifier(service.id, { statut: 'stopped' }),
+                  effetFinal: () => services.recharger(),
                 }}
               />
             </div>
@@ -1750,7 +1800,13 @@ function Avance({ service }: { service: ServiceProjet }) {
               service.type === 'base'
                 ? 'La base, ses volumes et ses sauvegardes hors rétention légale sont détruits.'
                 : 'Le service et ses volumes sont détruits ; ses domaines cessent de répondre.',
+            appel: () =>
+              requete(
+                `/projets/${encodeURIComponent(service.projetId)}/services/${encodeURIComponent(service.id)}`,
+                { methode: 'DELETE', query: { confirmation: service.nom } },
+              ),
             effet: () => services.supprimer(service.id),
+            effetFinal: () => services.recharger(),
           })
         }
         titre={`Supprimer le service ${service.nom}`}

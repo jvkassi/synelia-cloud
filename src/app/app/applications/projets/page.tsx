@@ -24,6 +24,7 @@ import { ICONE_TYPE } from '@/components/business/projets'
 import { useApp, useEspace } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { useOperation } from '@/components/app/actions'
+import { creerRessource } from '@/lib/api/client'
 
 export default function Projets() {
   const { autorise, refus } = useApp()
@@ -53,6 +54,13 @@ export default function Projets() {
       action: 'app.deploy',
       titre: `Projet « ${nom.trim()} » créé`,
       detail: `${envs.length || 1} environnement(s), aucun service : la facturation commence au premier déploiement.`,
+      appel: () =>
+        creerRessource('/projets', {
+          nom: nom.trim(),
+          espaceId: espace.id,
+          ...(description.trim() ? { description: description.trim() } : {}),
+          environnements: envs.length > 0 ? envs : ['Production'],
+        }),
       effet: () =>
         lesProjets.creer({
           id: lesProjets.identifiant('prj'),
@@ -63,6 +71,7 @@ export default function Projets() {
           environnements: envs.length > 0 ? envs : ['Production'],
           variables: [],
         }),
+      effetFinal: () => lesProjets.recharger(),
     })
     setNom('')
     setDescription('')

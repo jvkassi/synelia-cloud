@@ -91,6 +91,9 @@ export class ApiError extends Error {
   correlationId?: string
   rolesRequis?: string[]
   champs?: Record<string, string>
+  /** Intégration amont en cause sur `424` (avec `dateDonnees` éventuelle). */
+  integration?: string
+  dateDonnees?: string
 
   constructor(
     statut: number,
@@ -98,6 +101,8 @@ export class ApiError extends Error {
       erreur?: { code?: string; message?: string; correlationId?: string }
       rolesRequis?: string[]
       champs?: Record<string, string>
+      integration?: string
+      dateDonnees?: string
     },
   ) {
     super(corps.erreur?.message ?? `L’API a répondu ${statut}.`)
@@ -107,6 +112,8 @@ export class ApiError extends Error {
     this.correlationId = corps.erreur?.correlationId
     this.rolesRequis = corps.rolesRequis
     this.champs = corps.champs
+    this.integration = corps.integration
+    this.dateDonnees = corps.dateDonnees
   }
 }
 
@@ -139,6 +146,8 @@ async function requeteBrute<T>(chemin: string, options: OptionsRequete = {}): Pr
     erreur?: { code?: string; message?: string; correlationId?: string }
     rolesRequis?: string[]
     champs?: Record<string, string>
+    integration?: string
+    dateDonnees?: string
   } & T
   if (!reponse.ok) throw new ApiError(reponse.status, corps)
   return corps as T

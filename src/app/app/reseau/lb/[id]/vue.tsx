@@ -17,6 +17,7 @@ import { GrilleSparkCharts, LogPeek } from '@/components/business/observabilite'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { ApiError, estActif, requete } from '@/lib/api/client'
 
 interface Exception {
   id: string
@@ -50,7 +51,7 @@ const ONGLETS = [
 ]
 
 export function VueLb({ id }: { id: string }) {
-  const { autorise, refus } = useApp()
+  const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
   const lbs = useCollection<LoadBalancer>('load-balancers', LOAD_BALANCERS)
   const parc = useCollection<VM>('vms', VMS)
@@ -82,6 +83,52 @@ export function VueLb({ id }: { id: string }) {
   const candidats = parc.items.filter(
     (v) => v.espaceId === lb.espaceId && !lb.pool.some((p) => p.targetId === v.id),
   )
+
+  /**
+   * PUT /load-balancers/{id}/pool — remplacement complet du pool (poids et
+   * drain compris). Utilisé sans `useOperation` par les réglages continus
+   * (poids, drain) : un toast par frappe serait du bruit, le rechargement
+   * suffit à confirmer.
+   */
+  const publierPool = (pool: LoadBalancer['pool']) => {
+    if (!estActif()) {
+      lbs.modifier(lb.id, { pool })
+      return
+    }
+    requete(`/load-balancers/${encodeURIComponent(lb.id)}/pool`, {
+      methode: 'PUT',
+      corps: {
+        cibles: pool.map((p) => ({
+          targetId: p.targetId,
+          poids: p.poids,
+          drain: p.sante === 'drain',
+        })),
+      },
+    }).then(
+      () => lbs.recharger(),
+      (e: unknown) => {
+        pousser({
+          ton: 'err',
+          titre: 'Pool non mis à jour',
+          detail: e instanceof ApiError ? e.message : 'Le backend ne répond pas.',
+        })
+        lbs.recharger()
+      },
+    )
+  }
+
+  /** Même remplacement, sous forme d’`appel` pour les actions discrètes. */
+  const appelPool = (pool: LoadBalancer['pool']) => () =>
+    requete(`/load-balancers/${encodeURIComponent(lb.id)}/pool`, {
+      methode: 'PUT',
+      corps: {
+        cibles: pool.map((p) => ({
+          targetId: p.targetId,
+          poids: p.poids,
+          drain: p.sante === 'drain',
+        })),
+      },
+    })
 
   const onglets = lb.layer === 'l7' ? ONGLETS : ONGLETS.filter((o) => o.id !== 'regles' && o.id !== 'waf')
 
@@ -267,9 +314,21 @@ export function VueLb({ id }: { id: string }) {
                   libelleValider="Ajouter"
                   operation={(v) => {
                     const cible = candidats.find((c) => c.id === v.cible)
+                    const pool = cible
+                      ? [
+                          ...lb.pool,
+                          {
+                            targetId: cible.id,
+                            targetLabel: cible.nom,
+                            poids: Number(v.poids),
+                            sante: 'drain' as const,
+                          },
+                        ]
+                      : lb.pool
                     return {
                       titre: cible ? `${cible.nom} ajoutée au pool` : 'Cible ajoutée',
                       detail: 'En attente de deux health checks consécutifs réussis.',
+                      appel: appelPool(pool),
                       effet: () =>
                         cible
                           ? lbs.modifier(lb.id, (l) => ({
@@ -290,14 +349,15 @@ export function VueLb({ id }: { id: string }) {
                         etapes: ['Déclarer la cible', 'Attendre deux health checks réussis'],
                         dureeEtapeMs: 1100,
                       },
-                      effetFinal: () =>
-                        cible
-                          ? lbs.modifier(lb.id, (l) => ({
-                              pool: l.pool.map((p) =>
-                                p.targetId === cible.id ? { ...p, sante: 'ok' as const } : p,
-                              ),
-                            }))
-                          : undefined,
+                      effetFinal: () => {
+                        if (!estActif() && cible)
+                          lbs.modifier(lb.id, (l) => ({
+                            pool: l.pool.map((p) =>
+                              p.targetId === cible.id ? { ...p, sante: 'ok' as const } : p,
+                            ),
+                          }))
+                        lbs.recharger()
+                      },
                     }
                   }}
                 />
@@ -339,13 +399,13 @@ export function VueLb({ id }: { id: string }) {
                             className="w-20"
                             aria-label="Poids"
                             onChange={(e) =>
-                              lbs.modifier(lb.id, (l) => ({
-                                pool: l.pool.map((x) =>
+                              publierPool(
+                                lb.pool.map((x) =>
                                   x.targetId === p.targetId
                                     ? { ...x, poids: Number(e.target.value) }
                                     : x,
                                 ),
-                              }))
+                              )
                             }
                           />
                         </td>
@@ -379,6 +439,13 @@ export function VueLb({ id }: { id: string }) {
                                 detail: v
                                   ? 'Aucune nouvelle requête ne lui est envoyée ; les connexions en cours se terminent normalement.'
                                   : 'Réintégration après validation du health check.',
+                                appel: appelPool(
+                                  lb.pool.map((x) =>
+                                    x.targetId === p.targetId
+                                      ? { ...x, sante: v ? ('drain' as const) : ('ok' as const) }
+                                      : x,
+                                  ),
+                                ),
                                 effet: () =>
                                   lbs.modifier(lb.id, (l) => ({
                                     pool: l.pool.map((x) =>
@@ -387,6 +454,7 @@ export function VueLb({ id }: { id: string }) {
                                         : x,
                                     ),
                                   })),
+                                effetFinal: () => lbs.recharger(),
                               })
                             }
                           />
@@ -402,10 +470,14 @@ export function VueLb({ id }: { id: string }) {
                                 titre: `${p.targetLabel} retirée du pool`,
                                 detail:
                                   'Les connexions en cours sont coupées. Le mode drain évite cela.',
+                                appel: appelPool(
+                                  lb.pool.filter((x) => x.targetId !== p.targetId),
+                                ),
                                 effet: () =>
                                   lbs.modifier(lb.id, (l) => ({
                                     pool: l.pool.filter((x) => x.targetId !== p.targetId),
                                   })),
+                                effetFinal: () => lbs.recharger(),
                               })
                             }
                           >
@@ -505,6 +577,35 @@ export function VueLb({ id }: { id: string }) {
                   libelleValider="Ajouter"
                   operation={(v) => ({
                     titre: `Écouteur ${v.protocole}:${v.port} ajouté`,
+                    appel: () =>
+                      requete(`/load-balancers/${encodeURIComponent(lb.id)}`, {
+                        methode: 'PATCH',
+                        corps: {
+                          espaceId: lb.espaceId,
+                          nom: lb.nom,
+                          layer: lb.layer,
+                          exposure: lb.exposure,
+                          listeners: [
+                            ...lb.listeners.map((x) => ({
+                              protocole: x.protocole,
+                              port: x.port,
+                              ...(x.certId ? { certId: x.certId } : {}),
+                              ...(x.tlsMin ? { tlsMin: x.tlsMin } : {}),
+                            })),
+                            {
+                              protocole: String(v.protocole),
+                              port: Number(v.port),
+                              ...(String(v.protocole) === 'HTTPS'
+                                ? {
+                                    certId:
+                                      lb.listeners.find((x) => x.certId)?.certId ?? 'cert-auto',
+                                    tlsMin: String(v.tls),
+                                  }
+                                : {}),
+                            },
+                          ],
+                        },
+                      }),
                     effet: () =>
                       lbs.modifier(lb.id, (l) => ({
                         listeners: [
@@ -520,6 +621,7 @@ export function VueLb({ id }: { id: string }) {
                           },
                         ],
                       })),
+                    effetFinal: () => lbs.recharger(),
                   })}
                 />
               }
@@ -651,6 +753,26 @@ export function VueLb({ id }: { id: string }) {
                   operation={(v) => ({
                     titre: 'Règle de routage ajoutée',
                     detail: `${v.hote || '*'}${v.chemin || '/*'} → ${v.cible}`,
+                    appel: () =>
+                      requete(`/load-balancers/${encodeURIComponent(lb.id)}/regles-l7`, {
+                        methode: 'PUT',
+                        corps: {
+                          regles: [
+                            ...(lb.reglesL7 ?? []).map((x) => ({
+                              ...(x.hote ? { hote: x.hote } : {}),
+                              ...(x.chemin ? { chemin: x.chemin } : {}),
+                              ...(x.entete ? { entete: x.entete } : {}),
+                              cible: x.cible,
+                            })),
+                            {
+                              ...(String(v.hote) ? { hote: String(v.hote) } : {}),
+                              ...(String(v.chemin) ? { chemin: String(v.chemin) } : {}),
+                              ...(String(v.entete) ? { entete: String(v.entete) } : {}),
+                              cible: String(v.cible),
+                            },
+                          ],
+                        },
+                      }),
                     effet: () =>
                       lbs.modifier(lb.id, (l) => ({
                         reglesL7: [
@@ -663,6 +785,7 @@ export function VueLb({ id }: { id: string }) {
                           },
                         ],
                       })),
+                    effetFinal: () => lbs.recharger(),
                   })}
                 />
               }
@@ -714,10 +837,28 @@ export function VueLb({ id }: { id: string }) {
                                 ton: 'warn',
                                 titre: 'Règle de routage supprimée',
                                 detail: `${r.hote ?? '*'}${r.chemin ?? '/*'} → ${r.cible}`,
+                                appel: () =>
+                                  requete(
+                                    `/load-balancers/${encodeURIComponent(lb.id)}/regles-l7`,
+                                    {
+                                      methode: 'PUT',
+                                      corps: {
+                                        regles: (lb.reglesL7 ?? [])
+                                          .filter((_, j) => j !== i)
+                                          .map((x) => ({
+                                            ...(x.hote ? { hote: x.hote } : {}),
+                                            ...(x.chemin ? { chemin: x.chemin } : {}),
+                                            ...(x.entete ? { entete: x.entete } : {}),
+                                            cible: x.cible,
+                                          })),
+                                      },
+                                    },
+                                  ),
                                 effet: () =>
                                   lbs.modifier(lb.id, (l) => ({
                                     reglesL7: (l.reglesL7 ?? []).filter((_, j) => j !== i),
                                   })),
+                                effetFinal: () => lbs.recharger(),
                               })
                             }
                           >

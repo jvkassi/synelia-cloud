@@ -914,6 +914,8 @@ export interface Domaine {
   whoisProtege: boolean
   verrouTransfert: boolean
   zoneId?: string
+  /** Serveur attaché — un domaine est attaché à un serveur et à un seul. */
+  hebergementId?: string
 }
 
 // ─── Commerce & exploitation ──────────────────────────────────────────

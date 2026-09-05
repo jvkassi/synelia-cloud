@@ -5,7 +5,9 @@ import { useState } from 'react'
 import { ArrowRightLeft, Globe, Lock, ServerCog, ShieldCheck } from 'lucide-react'
 import { dateCourte } from '@/lib/format'
 import { SITE_LABEL } from '@/lib/types'
-import { abonnementDeLEntree, entreeWebCloudById, sitesDeLHebergement } from '@/lib/mock'
+import { abonnementDeLEntree, assemblerEntrees, entreeWebCloudById, sitesDeLHebergement } from '@/lib/mock'
+import { DOMAINES, HEBERGEMENTS, ZONES_DNS } from '@/lib/mock'
+import type { DnsZone, Domaine, WebHosting } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { CopyField, GatedAction, Tabs } from '@/components/ui/display'
@@ -14,7 +16,9 @@ import { EmptyState } from '@/components/composition/states'
 import { CarteAbonnement } from '@/components/business/abonnement'
 import { EditeurZone } from '@/components/business/editeur-zone'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire } from '@/components/app/actions'
+import { creerRessource, estActif, requete } from '@/lib/api/client'
 
 /**
  * Fiche d'un domaine auquel aucun serveur n'est attaché.
@@ -26,9 +30,36 @@ import { BoutonFormulaire } from '@/components/app/actions'
 export function VueDomaine({ id }: { id: string }) {
   const { autorise, refus } = useApp()
   const [onglet, setOnglet] = useState('apercu')
+  const portefeuille = useCollection<Domaine>('domaines', DOMAINES)
+  const parcHebergements = useCollection<WebHosting>('hebergements', HEBERGEMENTS)
+  const zones = useCollection<DnsZone>('zones-dns', ZONES_DNS)
 
-  const entree = entreeWebCloudById(id)
-  if (!entree) return null
+  // Avec l’API, l’entrée est assemblée depuis les collections distantes (le
+  // backend nomme les mêmes champs, `hebergementId` et `zoneId` compris) ; un
+  // domaine né pendant la session n’existe pas dans le jeu figé.
+  const entree = estActif()
+    ? assemblerEntrees(portefeuille.items, parcHebergements.items, zones.items).find(
+        (e) => e.id === id,
+      )
+    : entreeWebCloudById(id)
+  if (!entree)
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          fil={[
+            { label: 'Espace client', href: '/app' },
+            { label: 'Domaines', href: '/app/web/domaines' },
+            { label: 'Introuvable' },
+          ]}
+          titre="Domaine introuvable"
+        />
+        <EmptyState
+          titre="Ce domaine n’existe pas ou plus"
+          phrase="Il a peut-être été supprimé, ou vous avez suivi un lien vers une autre organisation."
+          action={{ libelle: 'Retour aux domaines', href: '/app/web/domaines' }}
+        />
+      </div>
+    )
   const d = entree.domaine
   const h = entree.hebergement
   const abonnement = abonnementDeLEntree(entree)
@@ -110,6 +141,12 @@ export function VueDomaine({ id }: { id: string }) {
                 operation={(v) => ({
                   titre: `Hébergement ${v.palier} en cours de création`,
                   detail: `Serveur à ${v.site === 'ABJ' ? 'Abidjan' : 'Grand-Bassam'}. La zone sera pointée vers son adresse.`,
+                  appel: () =>
+                    creerRessource('/web/hebergements', {
+                      palier: String(v.palier),
+                      site: v.site as 'ABJ' | 'GBM',
+                      domaine: entree.nom,
+                    }),
                   job: {
                     type: 'hebergement.create',
                     label: `Attachement d’un hébergement · ${entree.nom}`,
@@ -121,6 +158,7 @@ export function VueDomaine({ id }: { id: string }) {
                       'Pointer les enregistrements A de la zone',
                     ],
                   },
+                  effetFinal: () => parcHebergements.recharger(),
                 })}
               />
             )}

@@ -23,6 +23,7 @@ import { EnteteProjet, ProjetIntrouvable } from '@/components/business/projets'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
+import { estActif, requete } from '@/lib/api/client'
 
 const LIBELLE_STATUT: Record<Deployment['statut'], string> = {
   queued: 'En file',
@@ -214,10 +215,19 @@ export function VueDeploiements({ id }: { id: string }) {
                             action: 'app.rollback',
                             titre: 'Retour arrière déclenché',
                             detail: `L’artefact précédent de ${appById(d.appId)?.nom} est repromu. Aucun rebuild : la bascule prend quelques secondes.`,
+                            appel: () =>
+                              requete(
+                                `/deploiements/${encodeURIComponent(d.id)}/rollback`,
+                                { methode: 'POST', corps: {} },
+                              ),
                             job: { workflow: 'app.rollback', cible: `${appById(d.appId)?.nom ?? d.appId} ${d.version}` },
                             // Le déploiement annulé n'est pas effacé : l'historique
                             // doit dire qu'il a existé, et qu'on est revenu en arrière.
                             effetFinal: () => {
+                              if (estActif()) {
+                                lesDeploiements.recharger()
+                                return
+                              }
                               lesDeploiements.modifier(d.id, { statut: 'rolled_back' })
                               const precedent = deploiements.find(
                                 (x) => x.appId === d.appId && x.id !== d.id && x.statut !== 'failed',

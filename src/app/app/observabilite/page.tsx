@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { BellRing, Plus } from 'lucide-react'
+import { BellRing, FlaskConical, Plus, Trash2 } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { dateHeure, num, pct, relatif } from '@/lib/format'
 import {
@@ -17,17 +17,26 @@ import {
   vmsDeLEspace,
   hrefDuService,
 } from '@/lib/mock'
-import type { AlerteRegle } from '@/lib/types'
+import type { AlerteRegle, EvenementSupervision, LigneLog } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
-import { Button, ButtonLink } from '@/components/ui/button'
+import { Button, ButtonLink, IconButton } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
 import { Field, Input, SegmentedControl, Select, Switch } from '@/components/ui/field'
 import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/card'
 import { HealthBadge, StatTile } from '@/components/composition/metrics'
 import { EventList, GrilleSparkCharts, LiensSortie, LogPeek } from '@/components/business/observabilite'
+import { DegradedState } from '@/components/composition/states'
 import { useApp, useEspace } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
-import { BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import {
+  creerRessource,
+  modifierRessource,
+  requete,
+  supprimerRessource,
+  type PageDistante,
+} from '@/lib/api/client'
+import { useLectureDegradable } from '@/lib/api/degradable'
 
 /** Champs d'une règle d'alerte — mêmes champs à la création et à la reprise. */
 const CHAMPS_ALERTE = [
@@ -103,7 +112,18 @@ export default function Observabilite() {
 
   const vms = vmsDeLEspace(espace.id)
   const enMarche = vms.filter((v) => v.statut === 'running')
-  const critiques = EVENEMENTS_SUPERVISION.filter(
+  // En mode API, les événements et les journaux viennent du backend ; un
+  // `424` (intégration amont muette) affiche un état dégradé nommé au lieu
+  // des graines. Les autres échecs gardent les graines, sans bruit.
+  const { donnees: evenementsDistants, degrade: degradeEvenements } =
+    useLectureDegradable<PageDistante<EvenementSupervision>>('/observabilite/evenements')
+  const { donnees: journauxDistants, degrade: degradeJournaux } = useLectureDegradable<{
+    lignes: LigneLog[]
+    lienVictoriaLogs?: string
+  }>('/observabilite/journaux')
+  const evenements = evenementsDistants?.donnees ?? EVENEMENTS_SUPERVISION
+  const lignesJournal = journauxDistants?.lignes ?? LOGS_EXECUTION
+  const critiques = evenements.filter(
     (e) => e.gravite === 'critique' || e.gravite === 'majeure',
   ).length
   const appsDegradees = APPLICATIONS.filter(
@@ -132,20 +152,35 @@ export default function Observabilite() {
             champs={CHAMPS_ALERTE}
             valeursDepart={{ plage: '15 min', canal: 'email', actif: true }}
             libelleValider="Créer la règle"
-            operation={(v) => ({
-              titre: `Règle « ${v.metrique} » créée`,
-              detail: `${v.seuil} pendant ${v.plage} · ${v.canal}`,
-              effet: () =>
-                alertes.creer({
-                  id: alertes.identifiant('alerte'),
-                  cible: String(v.cible),
-                  metrique: String(v.metrique),
-                  seuil: String(v.seuil),
-                  canaux: [v.canal as AlerteRegle['canaux'][number]],
-                  plage: String(v.plage),
-                  actif: Boolean(v.actif),
-                }),
-            })}
+            action="network.manage"
+            operation={(v) => {
+              const idAlerte = alertes.identifiant('alerte')
+              return {
+                titre: `Règle « ${v.metrique} » créée`,
+                detail: `${v.seuil} pendant ${v.plage} · ${v.canal}`,
+                appel: () =>
+                  creerRessource('/observabilite/alertes', {
+                    id: idAlerte,
+                    cible: String(v.cible),
+                    metrique: String(v.metrique),
+                    seuil: String(v.seuil),
+                    canaux: [v.canal as AlerteRegle['canaux'][number]],
+                    plage: String(v.plage),
+                    actif: Boolean(v.actif),
+                  }),
+                effet: () =>
+                  alertes.creer({
+                    id: idAlerte,
+                    cible: String(v.cible),
+                    metrique: String(v.metrique),
+                    seuil: String(v.seuil),
+                    canaux: [v.canal as AlerteRegle['canaux'][number]],
+                    plage: String(v.plage),
+                    actif: Boolean(v.actif),
+                  }),
+                effetFinal: () => alertes.recharger(),
+              }
+            }}
           />
         }
         meta={
@@ -223,30 +258,48 @@ export default function Observabilite() {
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
-              <CardHeader
-                titre="Derniers événements"
-                sousTitre="Les huit derniers événements de supervision, toutes ressources confondues."
+            <CardHeader
+              titre="Derniers événements"
+              sousTitre="Les huit derniers événements de supervision, toutes ressources confondues."
+            />
+            {degradeEvenements ? (
+              <DegradedState
+                source="supervision"
+                integration={degradeEvenements.integration}
+                dateDonnees={degradeEvenements.dateDonnees}
               />
+            ) : (
               <EventList
-                evenements={EVENEMENTS_SUPERVISION}
+                evenements={evenements}
                 max={8}
                 lienSortie="Ouvrir la console Centreon"
                 hrefSortie="https://centreon.synelia.cloud/monitoring/resources"
               />
-            </Card>
+            )}
+          </Card>
 
-            <Card>
-              <CardHeader
-                titre="Aperçu des journaux"
-                sousTitre="Vingt lignes, brutes, pour vérifier qu’une hypothèse tient. Au-delà, le moteur de recherche est bien meilleur que nous."
+          <Card>
+            <CardHeader
+              titre="Aperçu des journaux"
+              sousTitre="Vingt lignes, brutes, pour vérifier qu’une hypothèse tient. Au-delà, le moteur de recherche est bien meilleur que nous."
+            />
+            {degradeJournaux ? (
+              <DegradedState
+                source="journaux"
+                integration={degradeJournaux.integration}
+                dateDonnees={degradeJournaux.dateDonnees}
               />
+            ) : (
               <LogPeek
-                lignes={LOGS_EXECUTION}
+                lignes={lignesJournal}
                 max={20}
                 titre="facturation-api · Production"
-                hrefSortie="https://logs.synelia.cloud/select/vmui"
+                hrefSortie={
+                  journauxDistants?.lienVictoriaLogs ?? 'https://logs.synelia.cloud/select/vmui'
+                }
               />
-            </Card>
+            )}
+          </Card>
           </div>
 
           <Callout ton="violet" titre="Pourquoi nous n’avons pas construit de constructeur de requêtes">
@@ -484,19 +537,34 @@ export default function Observabilite() {
                     champs={CHAMPS_ALERTE}
                     valeursDepart={{ plage: '15 min', canal: 'email', actif: true }}
                     libelleValider="Ajouter la règle"
-                    operation={(v) => ({
-                      titre: `Règle « ${v.metrique} » ajoutée`,
-                      effet: () =>
-                        alertes.creer({
-                          id: alertes.identifiant('alerte'),
-                          cible: String(v.cible),
-                          metrique: String(v.metrique),
-                          seuil: String(v.seuil),
-                          canaux: [v.canal as AlerteRegle['canaux'][number]],
-                          plage: String(v.plage),
-                          actif: Boolean(v.actif),
-                        }),
-                    })}
+                    action="network.manage"
+                    operation={(v) => {
+                      const idAlerte = alertes.identifiant('alerte')
+                      return {
+                        titre: `Règle « ${v.metrique} » ajoutée`,
+                        appel: () =>
+                          creerRessource('/observabilite/alertes', {
+                            id: idAlerte,
+                            cible: String(v.cible),
+                            metrique: String(v.metrique),
+                            seuil: String(v.seuil),
+                            canaux: [v.canal as AlerteRegle['canaux'][number]],
+                            plage: String(v.plage),
+                            actif: Boolean(v.actif),
+                          }),
+                        effet: () =>
+                          alertes.creer({
+                            id: idAlerte,
+                            cible: String(v.cible),
+                            metrique: String(v.metrique),
+                            seuil: String(v.seuil),
+                            canaux: [v.canal as AlerteRegle['canaux'][number]],
+                            plage: String(v.plage),
+                            actif: Boolean(v.actif),
+                          }),
+                        effetFinal: () => alertes.recharger(),
+                      }
+                    }}
                   />
                 }
               />
@@ -541,33 +609,86 @@ export default function Observabilite() {
                         </Badge>
                       </td>
                       <td className="px-3 py-2.5 text-right">
-                        <BoutonFormulaire
-                          libelle="Modifier"
-                          variant="ghost"
-                          titre={`Modifier « ${r.metrique} »`}
-                          champs={CHAMPS_ALERTE}
-                          valeursDepart={{
-                            metrique: r.metrique,
-                            cible: r.cible,
-                            seuil: r.seuil,
-                            plage: r.plage,
-                            canal: r.canaux[0] ?? 'email',
-                            actif: r.actif,
-                          }}
-                          operation={(v) => ({
-                            titre: `Règle « ${v.metrique} » modifiée`,
-                            detail: v.actif ? undefined : 'La règle est désarmée : elle ne notifiera plus.',
-                            effet: () =>
-                              alertes.modifier(r.id, {
-                                metrique: String(v.metrique),
-                                cible: String(v.cible),
-                                seuil: String(v.seuil),
-                                plage: String(v.plage),
-                                canaux: [v.canal as AlerteRegle['canaux'][number]],
-                                actif: Boolean(v.actif),
-                              }),
-                          })}
-                        />
+                        <span className="flex items-center justify-end gap-1">
+                          <BoutonFormulaire
+                            libelle="Modifier"
+                            variant="ghost"
+                            titre={`Modifier « ${r.metrique} »`}
+                            champs={CHAMPS_ALERTE}
+                            valeursDepart={{
+                              metrique: r.metrique,
+                              cible: r.cible,
+                              seuil: r.seuil,
+                              plage: r.plage,
+                              canal: r.canaux[0] ?? 'email',
+                              actif: r.actif,
+                            }}
+                            action="network.manage"
+                            operation={(v) => ({
+                              titre: `Règle « ${v.metrique} » modifiée`,
+                              detail: v.actif
+                                ? undefined
+                                : 'La règle est désarmée : elle ne notifiera plus.',
+                              appel: () =>
+                                modifierRessource('/observabilite/alertes', r.id, {
+                                  cible: String(v.cible),
+                                  metrique: String(v.metrique),
+                                  seuil: String(v.seuil),
+                                  canaux: [v.canal as AlerteRegle['canaux'][number]],
+                                  plage: String(v.plage),
+                                  actif: Boolean(v.actif),
+                                }),
+                              effet: () =>
+                                alertes.modifier(r.id, {
+                                  metrique: String(v.metrique),
+                                  cible: String(v.cible),
+                                  seuil: String(v.seuil),
+                                  plage: String(v.plage),
+                                  canaux: [v.canal as AlerteRegle['canaux'][number]],
+                                  actif: Boolean(v.actif),
+                                }),
+                              effetFinal: () => alertes.recharger(),
+                            })}
+                          />
+                          <BoutonAction
+                            libelle="Tester"
+                            variant="ghost"
+                            icone={<FlaskConical size={13} />}
+                            operation={{
+                              action: 'network.manage',
+                              ton: 'info',
+                              titre: `Règle « ${r.metrique} » testée`,
+                              detail: 'Le résultat du test arrive dans le centre de notifications.',
+                              appel: () =>
+                                requete(
+                                  `/observabilite/alertes/${encodeURIComponent(r.id)}/test`,
+                                  { methode: 'POST', corps: {} },
+                                ),
+                            }}
+                          />
+                          <GatedAction
+                            autorise={autorise('network.manage')}
+                            message={refus('network.manage')}
+                          >
+                            <IconButton
+                              label={`Supprimer la règle « ${r.metrique} »`}
+                              size="sm"
+                              onClick={() =>
+                                executer({
+                                  action: 'network.manage',
+                                  ton: 'warn',
+                                  titre: `Règle « ${r.metrique} » supprimée`,
+                                  appel: () =>
+                                    supprimerRessource('/observabilite/alertes', r.id, r.cible),
+                                  effet: () => alertes.supprimer(r.id),
+                                  effetFinal: () => alertes.recharger(),
+                                })
+                              }
+                            >
+                              <Trash2 size={13} className="text-err" />
+                            </IconButton>
+                          </GatedAction>
+                        </span>
                       </td>
                     </tr>
                   ))}

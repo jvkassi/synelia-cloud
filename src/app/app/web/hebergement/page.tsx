@@ -20,7 +20,10 @@ import { GatedAction } from '@/components/ui/display'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire } from '@/components/app/actions'
+import { creerRessource } from '@/lib/api/client'
+import type { WebHosting } from '@/lib/types'
 
 const PALIERS = [
   {
@@ -46,6 +49,7 @@ const PALIERS = [
 
 export default function ListeHebergements() {
   const { autorise, refus } = useApp()
+  const hebergements = useCollection<WebHosting>('hebergements', HEBERGEMENTS)
   const heberges = HEBERGEMENTS.filter((h) => h.orgId === ORG_COURANTE.id)
   const miens = new Set(heberges.map((h) => h.id))
   const sites = SITES_WEB.filter((s) => miens.has(s.hebergementId))
@@ -105,6 +109,12 @@ export default function ListeHebergements() {
               detail: v.domaine
                 ? `Servira ${v.domaine} depuis ${v.site === 'ABJ' ? 'Abidjan' : 'Grand-Bassam'}.`
                 : 'Un nom provisoire est attribué le temps que vous enregistriez votre domaine.',
+              appel: () =>
+                creerRessource('/web/hebergements', {
+                  palier: String(v.palier),
+                  site: v.site as 'ABJ' | 'GBM',
+                  ...(String(v.domaine).trim() ? { domaine: String(v.domaine).trim() } : {}),
+                }),
               job: {
                 type: 'hebergement.create',
                 label: `Création de l’hébergement ${v.palier}`,
@@ -116,6 +126,7 @@ export default function ListeHebergements() {
                   'Poser le certificat',
                 ],
               },
+              effetFinal: () => hebergements.recharger(),
             })}
           />
         }

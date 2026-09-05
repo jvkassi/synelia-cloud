@@ -13,6 +13,7 @@ import { EnteteProjet, ProjetIntrouvable } from '@/components/business/projets'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, ModaleFormulaire, useOperation } from '@/components/app/actions'
+import { requete } from '@/lib/api/client'
 
 export function VueVariables({ id }: { id: string }) {
   const lesProjets = useCollection<Projet>('projets', PROJETS)
@@ -78,6 +79,25 @@ export function VueVariables({ id }: { id: string }) {
     environnements:
       v.environnements === 'tous' ? [...projet.environnements] : [String(v.environnements)],
   })
+
+  /**
+   * PUT /projets/{id}/variables — remplacement complet de la liste, dans la
+   * forme du contrat (`valeur` absente pour un secret). L’écran recalcule la
+   * liste visée puis la publie ; la maquette applique le même calcul en local.
+   */
+  const appelVariables = (variables: Projet['variables']) => () =>
+    requete(`/projets/${encodeURIComponent(projet.id)}/variables`, {
+      methode: 'PUT',
+      corps: {
+        variables: variables.map((x) => ({
+          cle: x.cle,
+          ...(x.valeur !== undefined ? { valeur: x.valeur } : {}),
+          secret: x.secret,
+          portee: x.portee,
+          environnements: x.environnements,
+        })),
+      },
+    })
 
   const enCours = edition !== null ? projet.variables[edition] : null
 
@@ -151,10 +171,12 @@ export function VueVariables({ id }: { id: string }) {
                   v.portee === 'build'
                     ? 'Portée construction : elle prendra effet au prochain build.'
                     : 'Portée exécution : redéployez les services concernés pour qu’ils la relisent.',
+                appel: appelVariables([...projet.variables, versVariable(v)]),
                 effet: () =>
                   lesProjets.modifier(projet.id, (p) => ({
                     variables: [...p.variables, versVariable(v)],
                   })),
+                effetFinal: () => lesProjets.recharger(),
               })}
             />
           }
@@ -249,10 +271,12 @@ export function VueVariables({ id }: { id: string }) {
                           titre: `Variable ${v.cle} retirée`,
                           detail:
                             'Les services qui la lisaient ne la recevront plus à leur prochain démarrage. Vérifiez qu’aucun n’en dépend avant de redéployer.',
+                          appel: appelVariables(projet.variables.filter((_, j) => j !== i)),
                           effet: () =>
                             lesProjets.modifier(projet.id, (p) => ({
                               variables: p.variables.filter((_, j) => j !== i),
                             })),
+                          effetFinal: () => lesProjets.recharger(),
                         }}
                         confirmation={{
                           ressource: v.cle,
@@ -304,10 +328,14 @@ export function VueVariables({ id }: { id: string }) {
             action: 'app.deploy',
             titre: `Variable ${String(v.cle).trim()} enregistrée`,
             detail: 'Redéployez les services concernés pour qu’ils prennent la nouvelle valeur.',
+            appel: appelVariables(
+              projet.variables.map((x, j) => (j === index ? versVariable(v) : x)),
+            ),
             effet: () =>
               lesProjets.modifier(projet.id, (p) => ({
                 variables: p.variables.map((x, j) => (j === index ? versVariable(v) : x)),
               })),
+            effetFinal: () => lesProjets.recharger(),
           })
           setEdition(null)
         }}

@@ -16,6 +16,7 @@ import { EnteteProjet, ProjetIntrouvable } from '@/components/business/projets'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { estActif, modifierRessource, requete, supprimerRessource } from '@/lib/api/client'
 
 export function VueParametres({ id }: { id: string }) {
   const router = useRouter()
@@ -105,12 +106,20 @@ export function VueParametres({ id }: { id: string }) {
               action: 'app.deploy',
               titre: `Paramètres de ${nom.trim()} enregistrés`,
               detail: 'Aucun service n’a été redémarré : ces réglages sont de l’identité, pas de la configuration d’exécution.',
+              appel: () =>
+                modifierRessource('/projets', projet.id, {
+                  nom: nom.trim(),
+                  description: description.trim(),
+                  espaceId,
+                  environnements: projet.environnements,
+                }),
               effet: () =>
                 lesProjets.modifier(projet.id, {
                   nom: nom.trim(),
                   description: description.trim(),
                   espaceId,
                 }),
+              effetFinal: () => lesProjets.recharger(),
             }}
           />
         </Card>
@@ -174,10 +183,17 @@ export function VueParametres({ id }: { id: string }) {
               operation={(v) => ({
                 titre: `Environnement « ${v.nom} » ajouté`,
                 detail: 'Il est vide : déployez-y un service pour qu’il commence à exister.',
+                appel: () =>
+                  modifierRessource('/projets', projet.id, {
+                    nom: projet.nom,
+                    espaceId: projet.espaceId,
+                    environnements: [...projet.environnements, String(v.nom).trim()],
+                  }),
                 effet: () =>
                   lesProjets.modifier(projet.id, (p) => ({
                     environnements: [...p.environnements, String(v.nom).trim()],
                   })),
+                effetFinal: () => lesProjets.recharger(),
               })}
             />
           </Card>
@@ -216,18 +232,33 @@ export function VueParametres({ id }: { id: string }) {
         open={suppression}
         onClose={() => setSuppression(false)}
         onConfirm={() => {
+          // DELETE /projets/{id} refuse un projet non vide (`409`) : les
+          // services partent d’abord, un par un, puis le projet. `202` suivi.
+          const viderPuisSupprimer = async () => {
+            for (const s of services) {
+              await requete(
+                `/projets/${encodeURIComponent(projet.id)}/services/${encodeURIComponent(s.id)}`,
+                { methode: 'DELETE', query: { confirmation: s.nom } },
+              )
+            }
+            return supprimerRessource('/projets', projet.id, projet.nom)
+          }
           executer({
             action: 'app.deploy',
             ton: 'warn',
             titre: `Projet ${projet.nom} supprimé`,
             detail: `${services.length} service(s) arrêté(s) puis détruit(s). Les sauvegardes suivent leur rétention légale, puis disparaissent.`,
+            ...(estActif() ? { appel: viderPuisSupprimer } : {}),
             effet: () => {
               lesServices.supprimer(services.map((x) => x.id))
               lesProjets.supprimer(projet.id)
             },
+            effetFinal: () => {
+              lesProjets.recharger()
+              router.push('/app/applications/projets')
+            },
           })
           setSuppression(false)
-          router.push('/app/applications/projets')
         }}
         titre="Supprimer le projet"
         ressource={projet.nom}
