@@ -24,6 +24,7 @@ import { DataTable } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, useOperation } from '@/components/app/actions'
+import { creerRessource } from '@/lib/api/client'
 import type { Ticket } from '@/lib/types'
 
 const ONGLETS = [
@@ -645,6 +646,13 @@ export default function Support() {
                   titre: 'Ticket ouvert',
                   detail:
                     'Les métriques, journaux et l’emplacement des ressources sélectionnées ont été joints automatiquement.',
+                  appel: () =>
+                    creerRessource('/support/tickets', {
+                      sujet,
+                      gravite,
+                      contenu: description,
+                      ressourcesLiees: ressource ? [ressource] : [],
+                    }),
                   effet: () =>
                     collection.creer({
                       id: collection.identifiant('tck'),
@@ -666,6 +674,7 @@ export default function Support() {
                         },
                       ],
                     }),
+                  effetFinal: () => collection.recharger(),
                 })
                 setSujet('')
                 setDescription('')

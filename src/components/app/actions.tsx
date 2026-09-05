@@ -28,11 +28,15 @@ export interface SpecOperation {
   titre: string
   detail?: string
   ton?: 'ok' | 'info' | 'warn' | 'err'
-  /** Mutation immédiate de l'atelier. */
+  /** Mutation immédiate de l'atelier. En mode API avec `appel`, elle est
+   * sautée : l’appel réel a déjà muté le backend (la rejouer doublerait
+   * l’écriture, la collection distante `POST` à nouveau). */
   effet?: () => void
-  /** Job de provisionnement affiché dans le centre de tâches. */
+  /** Job de provisionnement affiché dans le centre de tâches. Mode maquette
+   * uniquement quand `appel` est fourni et l’API active. */
   job?: Omit<SpecJob, 'alFin' | 'alEchec'>
-  /** Mutation appliquée à la fin du job — bascule d'état, par exemple. */
+  /** Réconciliation après l’appel réel (recharger, naviguer) ou mutation
+   * appliquée à la fin du job simulé. Court dans les deux modes. */
   effetFinal?: () => void
   /**
    * Appel réel au backend, utilisé quand l’API est active. S’il renvoie un
@@ -146,7 +150,8 @@ export function useOperation() {
                 detail: spec.detail ?? 'Opération acceptée. Suivi dans le centre de tâches.',
               })
             } else {
-              spec.effet?.()
+              // Réponse directe (ressource créée, `204`) : l’écriture a eu
+              // lieu côté backend, on réconcilie sans rejouer `effet`.
               spec.effetFinal?.()
               trace('ok')
               pousser({ ton: spec.ton ?? 'ok', titre: spec.titre, detail: spec.detail })

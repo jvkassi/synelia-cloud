@@ -8,6 +8,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react'
 import { MAINTENANT } from '@/lib/format'
@@ -18,10 +19,11 @@ import {
   estActif,
   lister,
   modifierRessource,
+  requete,
   supprimerRessource,
   type TravailDistant,
 } from '@/lib/api/client'
-import { endpointDe } from '@/lib/api/collections'
+import { champConfirmation, endpointDe } from '@/lib/api/collections'
 import { AUDIT, JOBS } from '@/lib/mock/ops'
 import {
   etapeEnEchec,
@@ -486,59 +488,130 @@ export function useAtelier(): CtxAtelier {
  * Les mutations appellent alors l’API (`POST`, `PATCH {id}`, `DELETE
  * {id}?confirmation=<nom>`) puis rechargent ; sinon tout reste local.
  */
+
+// ─── Cache distant partagé ────────────────────────────────────────────
+//
+// Un seul chargement par clé, même quand plusieurs écrans montent la même
+// collection ensemble (le sélecteur d’espace et trois tableaux appelaient
+// `/espaces` en même temps : une seule requête part désormais). Le cache sert
+// immédiatement, puis se réactualise en fond — la graine ne s’affiche qu’avant
+// le tout premier retour.
+
+interface EntreeDistante {
+  donnees: Entite[] | null
+  chargement: boolean
+  erreur: Error | null
+}
+
+const CACHE_DISTANT = new Map<string, EntreeDistante>()
+const ECOUTEURS_DISTANT = new Map<string, Set<() => void>>()
+const CHARGEMENTS_EN_COURS = new Map<string, Promise<void>>()
+
+function entreeDistante(nom: string): EntreeDistante {
+  let entree = CACHE_DISTANT.get(nom)
+  if (!entree) {
+    entree = { donnees: null, chargement: false, erreur: null }
+    CACHE_DISTANT.set(nom, entree)
+  }
+  return entree
+}
+
+function notifierDistant(nom: string) {
+  ECOUTEURS_DISTANT.get(nom)?.forEach((cb) => cb())
+}
+
+function poserDistant(nom: string, patch: Partial<EntreeDistante>) {
+  CACHE_DISTANT.set(nom, { ...entreeDistante(nom), ...patch })
+  notifierDistant(nom)
+}
+
+/** Intègre un item isolé (lecture unitaire) dans la liste en cache. */
+export function integrerDistant(nom: string, item: Entite) {
+  const courant = entreeDistante(nom).donnees ?? []
+  poserDistant(nom, {
+    donnees: courant.some((x) => x.id === item.id)
+      ? courant.map((x) => (x.id === item.id ? item : x))
+      : [item, ...courant],
+  })
+}
+
+function chargerDistant(nom: string, endpoint: string) {
+  if (CHARGEMENTS_EN_COURS.has(nom)) return
+  poserDistant(nom, { chargement: true, erreur: null })
+  const tache = lister<Entite>(endpoint).then(
+    (page) => {
+      poserDistant(nom, { donnees: page.donnees, chargement: false })
+    },
+    (e: unknown) => {
+      poserDistant(nom, {
+        erreur: e instanceof Error ? e : new Error('Chargement impossible'),
+        chargement: false,
+      })
+    },
+  )
+  CHARGEMENTS_EN_COURS.set(nom, tache)
+  void tache.finally(() => {
+    CHARGEMENTS_EN_COURS.delete(nom)
+  })
+}
+
+function abonnerDistant(nom: string, cb: () => void) {
+  let ecouteurs = ECOUTEURS_DISTANT.get(nom)
+  if (!ecouteurs) {
+    ecouteurs = new Set()
+    ECOUTEURS_DISTANT.set(nom, ecouteurs)
+  }
+  ecouteurs.add(cb)
+  return () => {
+    ecouteurs.delete(cb)
+  }
+}
+
 export function useCollection<T extends Entite>(nom: string, graine: readonly T[]) {
   const a = useAtelier()
   const endpoint = endpointDe(nom)
   const distantActif = estActif() && !!endpoint
-  const [itemsDistants, setItemsDistants] = useState<T[] | null>(null)
-  const [chargement, setChargement] = useState(false)
-  const [erreur, setErreur] = useState<Error | null>(null)
-  const [generation, setGeneration] = useState(0)
+  const entree = useSyncExternalStore(
+    useCallback((cb: () => void) => abonnerDistant(nom, cb), [nom]),
+    () => entreeDistante(nom),
+    () => entreeDistante(nom),
+  )
+  const itemsDistants = entree.donnees as T[] | null
+  const chargement = entree.chargement
+  const erreur = entree.erreur
 
   useEffect(() => {
     if (!distantActif || !endpoint) return
-    let annule = false
-    setChargement(true)
-    setErreur(null)
-    const charger = () =>
-      lister<T>(endpoint)
-        .then((page) => {
-          if (!annule) {
-            setItemsDistants(page.donnees)
-            setChargement(false)
-          }
-        })
-        .catch((e: unknown) => {
-          if (!annule) {
-            setErreur(e instanceof Error ? e : new Error('Chargement impossible'))
-            setChargement(false)
-          }
-        })
-    charger()
+    chargerDistant(nom, endpoint)
     // Les travaux avancent côté backend : le centre de tâches les suit sans
     // rechargement manuel. Les autres collections se relisent à la navigation.
     const rafraichissement =
       nom === 'jobs' || nom === 'jobs-plateforme'
-        ? setInterval(() => {
-            if (!annule) charger()
-          }, 10000)
+        ? setInterval(() => chargerDistant(nom, endpoint), 10000)
         : undefined
     return () => {
-      annule = true
       if (rafraichissement) clearInterval(rafraichissement)
     }
-  }, [distantActif, endpoint, generation, nom])
+  }, [distantActif, endpoint, nom])
 
-  const recharger = useCallback(() => setGeneration((g) => g + 1), [])
+  const recharger = useCallback(() => {
+    if (endpoint && estActif()) chargerDistant(nom, endpoint)
+  }, [endpoint, nom])
 
   return useMemo(() => {
     const items = itemsDistants ?? a.lire<T>(nom, graine)
 
-    /** Nom exact exigé par l’API pour confirmer une suppression. */
+    /**
+     * Nom exact exigé par l’API pour confirmer une suppression — le champ
+     * varie par ressource (`code` pour un espace, `adresse` pour une IP…,
+     * voir `champConfirmation`). Un écart renvoie `422` sans rien détruire.
+     */
     const nomConfirmation = (id: string): string => {
-      const cible = items.find((x) => x.id === id) as (T & { nom?: unknown; code?: unknown }) | undefined
-      const nomRessource = cible?.nom ?? cible?.code
-      return typeof nomRessource === 'string' && nomRessource.length > 0 ? nomRessource : id
+      const cible = items.find((x) => x.id === id) as
+        | (T & Record<string, unknown>)
+        | undefined
+      const candidat = cible?.[champConfirmation(nom)] ?? cible?.nom ?? cible?.code
+      return typeof candidat === 'string' && candidat.length > 0 ? candidat : id
     }
 
     return {
@@ -581,11 +654,19 @@ export function useCollection<T extends Entite>(nom: string, graine: readonly T[
         }
         a.modifierPlusieurs(nom, graine, ids, patch)
       },
-      supprimer: (id: string | string[]) => {
+      supprimer: (id: string | string[], confirmation?: string) => {
         if (distantActif && endpoint) {
           const cibles = Array.isArray(id) ? id : [id]
           Promise.all(
-            cibles.map((c) => supprimerRessource(endpoint, c, nomConfirmation(c))),
+            cibles.map((c) =>
+              supprimerRessource(
+                endpoint,
+                c,
+                // `confirmation` explicite (un courriel de membre, par exemple,
+                // que la collection ne porte pas) sinon le champ de la ressource.
+                !Array.isArray(id) && confirmation ? confirmation : nomConfirmation(c),
+              ),
+            ),
           ).then(recharger, recharger)
           return
         }
@@ -599,6 +680,27 @@ export function useCollection<T extends Entite>(nom: string, graine: readonly T[
 /** Une entité de la collection, par identifiant. */
 export function useEntite<T extends Entite>(nom: string, graine: readonly T[], id: string) {
   const { items, modifier, supprimer } = useCollection<T>(nom, graine)
+  const endpoint = endpointDe(nom)
+  const distantActif = estActif() && !!endpoint
+  // Page de détail ouverte sans la liste en cache (lien direct, nouvel onglet) :
+  // la ressource se charge seule au lieu d’afficher « introuvable ».
+  const manque = distantActif && id.length > 0 && !items.some((x) => x.id === id)
+  useEffect(() => {
+    if (!manque || !endpoint) return
+    let annule = false
+    requete<T>(`${endpoint}/${encodeURIComponent(id)}`).then(
+      (item) => {
+        if (!annule && item && typeof item === 'object') integrerDistant(nom, item as Entite)
+      },
+      () => {
+        // 404 ou réseau : l’écran garde son état « introuvable », qui dit
+        // déjà ce qu’il ne trouve pas sans casser la page.
+      },
+    )
+    return () => {
+      annule = true
+    }
+  }, [manque, endpoint, nom, id])
   return {
     entite: items.find((x) => x.id === id),
     modifier: (patch: Patch<T>) => modifier(id, patch),

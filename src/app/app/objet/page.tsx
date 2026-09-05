@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { KeyRound, Plus, RotateCw, Trash2 } from 'lucide-react'
 import { MAINTENANT, goHumain, money, num } from '@/lib/format'
 import type { Bucket, Site } from '@/lib/types'
@@ -14,6 +15,7 @@ import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { creerRessource } from '@/lib/api/client'
 import { CHAMPS_CLE, type CleS3 } from './cles'
 
 const PRIX_GO = { chaud: 1.5, froid: 0.62 }
@@ -23,6 +25,12 @@ export default function StockageObjet() {
   const executer = useOperation()
   const seaux = useCollection<Bucket>('buckets', BUCKETS)
   const cles = useCollection<CleS3>('cles-s3', CLES_S3)
+  /** Identifiants renvoyés une seule fois à la création d’une clé S3. */
+  const [secretS3, setSecretS3] = useState<{
+    accessKeyId: string
+    secret: string
+    endpoint: string
+  } | null>(null)
   const total = seaux.items.reduce((a, b) => a + b.tailleGo, 0)
   const objets = seaux.items.reduce((a, b) => a + b.objets, 0)
   const cout = seaux.items.reduce((a, b) => a + Math.round(b.tailleGo * PRIX_GO[b.classe]), 0)
@@ -281,6 +289,32 @@ export default function StockageObjet() {
                 operation={(v) => ({
                   titre: `Clé ${v.nom} créée`,
                   detail: 'La valeur secrète est affichée une seule fois : conservez-la maintenant.',
+                  // Le backend exige `droits` dans son vocabulaire ; le
+                  // libellé du formulaire y est traduit ici.
+                  appel: () =>
+                    creerRessource('/cles-s3', {
+                      nom: String(v.nom),
+                      buckets: v.bucket === 'tous' ? [] : [String(v.bucket)],
+                      droits:
+                        v.portee === 'lecture'
+                          ? 'lecture'
+                          : v.portee === 'ecriture'
+                            ? 'lecture_ecriture'
+                            : 'lecture_ecriture',
+                    }).then((reponse) => {
+                      const r = reponse as {
+                        accessKeyId?: unknown
+                        secretAccessKey?: unknown
+                        endpoint?: unknown
+                      } | null
+                      if (r && typeof r.secretAccessKey === 'string')
+                        setSecretS3({
+                          accessKeyId: String(r.accessKeyId ?? ''),
+                          secret: String(r.secretAccessKey),
+                          endpoint: String(r.endpoint ?? ''),
+                        })
+                      return reponse
+                    }),
                   effet: () =>
                     cles.creer({
                       id: cles.identifiant('ak'),
@@ -292,6 +326,7 @@ export default function StockageObjet() {
                       creee: MAINTENANT.slice(0, 10),
                       derniereUtilisation: MAINTENANT,
                     }),
+                  effetFinal: () => cles.recharger(),
                 })}
               />
             }
@@ -353,6 +388,29 @@ export default function StockageObjet() {
             d’écriture sur le bucket de sauvegarde ne doit jamais pouvoir supprimer d’objet — le
             verrouillage WORM l’en empêche de toute façon.
           </p>
+          {secretS3 && (
+            <div className="mt-3 rounded-[8px] border border-err/40 bg-err-bg px-3.5 py-3">
+              <p className="text-[12.5px] font-bold text-ink">
+                Copiez ces identifiants maintenant — le secret ne sera plus jamais affiché
+              </p>
+              <p className="mt-1 font-mono text-[12px] break-all text-ink">
+                {secretS3.accessKeyId} · {secretS3.secret}
+              </p>
+              {secretS3.endpoint && (
+                <p className="mt-0.5 font-mono text-[11.5px] break-all text-g-700">
+                  {secretS3.endpoint}
+                </p>
+              )}
+              <Button
+                size="sm"
+                variant="ghost"
+                className="mt-2"
+                onClick={() => setSecretS3(null)}
+              >
+                Je les ai copiés, masquer
+              </Button>
+            </div>
+          )}
         </Card>
 
         <Card>

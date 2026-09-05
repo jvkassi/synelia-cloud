@@ -22,6 +22,7 @@ import { Regle321 } from '@/components/business/infra'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { creerRessource } from '@/lib/api/client'
 
 /** Valeurs du formulaire de plan — le tiroir doit être contrôlé pour
  *  qu'« Enregistrer » ait quelque chose à enregistrer. */
@@ -590,6 +591,11 @@ function OngletPoints() {
               ton: 'info',
               titre: `Restauration de ${p.resourceNom}`,
               detail: `Point du ${dateHeure(p.date)} · ${goHumain(p.tailleGo)}`,
+              appel: () =>
+                creerRessource('/sauvegarde/restaurations', {
+                  pointId: p.id,
+                  cible: 'origine',
+                }),
               job: { workflow: 'backup.restore', cible: `${p.resourceNom} · ${dateCourte(p.date)}` },
             }}
           />
@@ -622,6 +628,7 @@ function OngletPoints() {
                 titre: `Point du ${dateCourte(p.date)} supprimé`,
                 detail: `${goHumain(p.tailleGo)} libérés sur ${p.destination}`,
                 effet: () => points.supprimer(p.id),
+                effetFinal: () => points.recharger(),
               })
             }
           >

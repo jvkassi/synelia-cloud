@@ -15,3 +15,4 @@ pnpm-debug.log*
 # Le gestionnaire de paquets est bun : bun.lock fait foi.
 package-lock.json
 .env.local
+.env*

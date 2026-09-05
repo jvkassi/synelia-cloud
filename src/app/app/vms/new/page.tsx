@@ -20,9 +20,12 @@ import {
   Switch,
 } from '@/components/ui/field'
 import { Card, CardHeader, Callout, KeyValueList } from '@/components/composition/card'
+import { EmptyState } from '@/components/composition/states'
 import { CostPreview, WizardShell } from '@/components/composition/flow'
 import { useApp, useEspace } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
+import { useOperation } from '@/components/app/actions'
+import { creerRessource, estActif } from '@/lib/api/client'
 
 const ETAPES = [
   { numero: 1, titre: 'Mode' },
@@ -45,6 +48,12 @@ const IMAGES_PRIVEES = [
   { id: 'priv-base-dba', nom: 'dba-base-hardened', detail: 'Ubuntu 24.04 durci · agents internes préinstallés', licence: 0 },
   { id: 'priv-legacy', nom: 'legacy-centos7-snapshot', detail: 'Capturée depuis legacy-erp-01 le 12/07/2026', licence: 0 },
 ]
+
+/** La maquette et le backend ne nomment pas leurs images tout à fait pareil. */
+const CORRESPONDANCE_IMAGES: Record<string, string> = {
+  'ubuntu-2404': 'ubuntu-24.04',
+  'win-2022': 'windows-2022',
+}
 
 const FLAVORS = [
   { id: 'c1.small', nom: 'c1.small', vcpu: 2, ram: 8, disk: 40, prix: 4200, famille: 'Usage général' },
@@ -95,6 +104,7 @@ export default function NouvellesVms() {
   const parc = useCollection<VM>('vms', VMS)
   const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
   const { lancerJob } = useAtelier()
+  const executer = useOperation()
 
   const [etape, setEtape] = useState(1)
   const [mode, setMode] = useState<'identique' | 'differencie'>('identique')
@@ -130,7 +140,10 @@ export default function NouvellesVms() {
   const images = sourceImage === 'synelia' ? IMAGES_SYNELIA : IMAGES_PRIVEES
   const imageChoisie = [...IMAGES_SYNELIA, ...IMAGES_PRIVEES].find((i) => i.id === image)
   const flavorChoisi = FLAVORS.find((f) => f.id === flavor)!
-  const espace = espaces.items.find((e) => e.id === espaceId)!
+  // L’espace choisi peut ne plus figurer dans la liste (supprimé pendant la
+  // session, autre organisation) : on retombe sur le premier au lieu de
+  // planter sur `espace.usage`.
+  const espace = espaces.items.find((e) => e.id === espaceId) ?? espaces.items[0]
 
   const machinesACreer = useMemo(() => {
     if (mode === 'differencie') {
@@ -197,10 +210,21 @@ export default function NouvellesVms() {
   ]
 
   const quotaSuffisant =
+    espace !== undefined &&
     espace.usage.vcpu + totalVcpu <= espace.quota.vcpu &&
     espace.usage.ramGo + totalRam <= espace.quota.ramGo
 
   const peutContinuer = etape === 6 ? conditions && quotaSuffisant : true
+
+  if (!espace) {
+    return (
+      <EmptyState
+        titre="Aucun Espace Cloud disponible"
+        phrase="Créez d’abord un Espace Cloud : c’est l’enveloppe de quota dans laquelle naissent les machines."
+        action={{ libelle: 'Créer un Espace Cloud', href: '/app/espaces/new' }}
+      />
+    )
+  }
 
   /**
    * Les machines apparaissent tout de suite dans la liste, à l'état
@@ -208,6 +232,31 @@ export default function NouvellesVms() {
    * du centre de tâches quelque chose à faire basculer en fin de course.
    */
   const creerLeLot = () => {
+    // En mode API le lot part en une passe (`202` + travail suivi) ; sinon
+    // la maquette simule, comme avant.
+    if (estActif()) {
+      executer({
+        action: 'vm.create_delete',
+        titre: `Création de ${machinesACreer.length} machine${machinesACreer.length > 1 ? 's' : ''} lancée`,
+        detail: 'Le quota est réservé. Suivi dans le centre de tâches.',
+        appel: () =>
+          creerRessource('/vms/lot', {
+            espaceId: espace.id,
+            site: espace.site,
+            machines: machinesACreer.map((m) => ({
+              nom: m.nom,
+              // Les identifiants d’images divergent d’un tiret entre la
+              // maquette et le backend (`ubuntu-2404` → `ubuntu-24.04`).
+              imageId: CORRESPONDANCE_IMAGES[m.image] ?? m.image,
+              vcpu: m.vcpu,
+              ramGo: m.ram,
+              diskGo: m.disk,
+            })),
+          }),
+        effetFinal: () => parc.recharger(),
+      })
+      return
+    }
     const octet = parc.items.length + 11
     const nouvelles: VM[] = machinesACreer.map((m, i) => ({
       id: parc.identifiant('vm'),
@@ -337,7 +386,7 @@ export default function NouvellesVms() {
         <div className="space-y-4">
           <Field label="Espace Cloud de destination">
             <Select value={espaceId} onChange={(e) => setEspaceId(e.target.value)}>
-              {ESPACES.map((e) => (
+              {(estActif() ? espaces.items : ESPACES).map((e) => (
                 <option key={e.id} value={e.id}>
                   {e.code} · {e.site} · {e.quota.vcpu - e.usage.vcpu} vCPU disponibles
                 </option>
@@ -442,7 +491,7 @@ export default function NouvellesVms() {
                   />
                 </Field>
                 <Field label="Nombre de machines">
-                  <Slider value={nombre} onChange={setNombre} min={1} max={20} unite="machines" />
+                  <Slider label="Nombre de machines" value={nombre} onChange={setNombre} min={1} max={20} unite="machines" />
                 </Field>
               </div>
 

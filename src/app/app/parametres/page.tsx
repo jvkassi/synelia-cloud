@@ -16,14 +16,20 @@ import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { creerRessource } from '@/lib/api/client'
 
 interface Jeton {
   id: string
   nom: string
-  role: string
-  portee: string
-  cree: string
-  dernier: string
+  role?: string
+  portee?: string | string[]
+  cree?: string
+  creeLe?: string
+  dernier?: string
+  derniereUtilisation?: string | null
+  /** Backend : préfixe public affiché à la place du secret. */
+  prefixe?: string
+  statut?: string
 }
 
 const JETONS: Jeton[] = [
@@ -31,6 +37,33 @@ const JETONS: Jeton[] = [
   { id: 'tok-2', nom: 'ci-deploiement', role: 'Administrateur d’application', portee: 'Organisation', cree: '2026-02-08', dernier: 'il y a 28 min' },
   { id: 'tok-3', nom: 'export-facturation', role: 'Responsable facturation', portee: 'Organisation', cree: '2026-06-01', dernier: 'il y a 3 j' },
 ]
+
+/**
+ * Libellé du formulaire → identifiants d’actions RBAC acceptés par
+ * `POST /securite/cles-api` (inclus dans les permissions d’un org admin).
+ */
+const PORTEE_JETON: Record<string, string[]> = {
+  'Lecture seule': ['org.dashboard.view', 'invoice.view', 'audit.view'],
+  'Administrateur d’application': [
+    'app.deploy',
+    'app.rollback',
+    'component.restart',
+    'marketplace.subscribe',
+    'seat.assign',
+    'service.open',
+  ],
+  'Administrateur d’infrastructure': [
+    'vm.create_delete',
+    'vm.power',
+    'vm.hardware.update',
+    'network.manage',
+    'lb.create',
+    'backup.plan.write',
+    'backup.restore',
+    'espace.create',
+  ],
+  'Responsable facturation': ['invoice.view', 'payment.update'],
+}
 
 const ONGLETS = [
   { id: 'organisation', label: 'Organisation' },
@@ -44,6 +77,8 @@ export default function Parametres() {
   const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
   const jetons = useCollection<Jeton>('jetons-api', JETONS)
+  /** Secret renvoyé une seule fois à la création — jamais réaffiché ensuite. */
+  const [secretCree, setSecretCree] = useState<string | null>(null)
   const [onglet, setOnglet] = useState('organisation')
   const [fermeture, setFermeture] = useState(false)
 
@@ -372,14 +407,17 @@ export default function Parametres() {
                       <span className="min-w-0">
                         <span className="block font-mono text-[12.5px] font-semibold text-ink">
                           {j.nom}
+                          {j.prefixe && (
+                            <span className="ml-1.5 font-normal text-g-500">{j.prefixe}…</span>
+                          )}
                         </span>
                         <span className="block text-[11px] text-g-500">
-                          {j.role} · portée {j.portee}
+                          {Array.isArray(j.portee) ? j.portee.join(' · ') : (j.role ? `${j.role} · ` : '') + (j.portee ?? '')}
                         </span>
                       </span>
                       <span className="flex shrink-0 items-center gap-1.5">
                         <Badge tone="neutral" size="sm">
-                          {j.dernier}
+                          {j.dernier ?? (j.derniereUtilisation ? `utilisé ${j.derniereUtilisation}` : 'jamais utilisé')}
                         </Badge>
                         <BoutonAction
                           libelle="Révoquer"
@@ -390,6 +428,7 @@ export default function Parametres() {
                             titre: `Jeton ${j.nom} révoqué`,
                             detail: 'Toute automatisation qui l’utilise cessera de fonctionner immédiatement.',
                             effet: () => jetons.supprimer(j.id),
+                            effetFinal: () => jetons.recharger(),
                           }}
                           confirmation={{
                             ressource: j.nom,
@@ -442,6 +481,18 @@ export default function Parametres() {
                 operation={(v) => ({
                   titre: `Jeton ${v.nom} créé`,
                   detail: 'La valeur du jeton est affichée une seule fois : copiez-la maintenant.',
+                  // Le backend attend des identifiants d’actions RBAC, pas le
+                  // libellé du rôle : la correspondance vit ici, au seul
+                  // endroit où ce formulaire existe.
+                  appel: () =>
+                    creerRessource('/securite/cles-api', {
+                      nom: String(v.nom),
+                      portee: PORTEE_JETON[String(v.role)] ?? ['org.dashboard.view'],
+                    }).then((reponse) => {
+                      const secret = (reponse as { secret?: unknown } | null)?.secret
+                      if (typeof secret === 'string') setSecretCree(secret)
+                      return reponse
+                    }),
                   effet: () =>
                     jetons.creer({
                       id: jetons.identifiant('tok'),
@@ -451,6 +502,7 @@ export default function Parametres() {
                       cree: MAINTENANT.slice(0, 10),
                       dernier: 'jamais utilisé',
                     }),
+                  effetFinal: () => jetons.recharger(),
                 })}
               />
               <Callout ton="warn" className="mt-4" titre="Un jeton n’a pas de deuxième facteur">
@@ -459,6 +511,22 @@ export default function Parametres() {
                 quand c’est faisable, et faites-les tourner. Un jeton d’administrateur d’organisation
                 dans un fichier de configuration est un incident en attente.
               </Callout>
+              {secretCree && (
+                <div className="mt-4 rounded-[8px] border border-err/40 bg-err-bg px-3.5 py-3">
+                  <p className="text-[12.5px] font-bold text-ink">
+                    Copiez ce secret maintenant — il ne sera plus jamais affiché
+                  </p>
+                  <p className="mt-1 font-mono text-[12px] break-all text-ink">{secretCree}</p>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="mt-2"
+                    onClick={() => setSecretCree(null)}
+                  >
+                    Je l’ai copié, masquer
+                  </Button>
+                </div>
+              )}
             </Card>
 
             <Card>

@@ -12,11 +12,13 @@ import { Button, IconButton } from '@/components/ui/button'
 import { CodeBlock, CopyField, GatedAction, Tabs } from '@/components/ui/display'
 import { Field, Input, Select, Switch } from '@/components/ui/field'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
+import { EmptyState } from '@/components/composition/states'
 import { HealthBadge, QuotaBar, StatTile } from '@/components/composition/metrics'
 import { GrilleSparkCharts } from '@/components/business/observabilite'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { requete, supprimerRessource } from '@/lib/api/client'
 
 /** Versions proposées à la mise à jour — une mineure d'écart au plus. */
 const VERSIONS = ['1.29.6', '1.30.4', '1.31.2']
@@ -67,8 +69,28 @@ export function VueCluster({ id }: { id: string }) {
   const [auditApi, setAuditApi] = useState(true)
   const [apiPublique, setApiPublique] = useState(false)
 
-  const cluster = grappes.items.find((c) => c.id === id)!
-  const espace = espaceById(cluster.espaceId)
+  const cluster = grappes.items.find((c) => c.id === id)
+  const espace = cluster ? espaceById(cluster.espaceId) : undefined
+
+  if (!cluster) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          fil={[
+            { label: 'Espace client', href: '/app' },
+            { label: 'Kubernetes', href: '/app/kubernetes' },
+            { label: 'Introuvable' },
+          ]}
+          titre="Cluster introuvable"
+        />
+        <EmptyState
+          titre="Ce cluster n’existe pas ou plus"
+          phrase="Il a peut-être été supprimé, ou vous avez suivi un lien vers une autre organisation."
+          action={{ libelle: 'Retour aux clusters', href: '/app/kubernetes' }}
+        />
+      </div>
+    )
+  }
 
   const poserBrouillon = (pool: string, champ: 'nodes' | 'min' | 'max' | 'disk', valeur: number) =>
     setBrouillons((p) => ({ ...p, [pool]: { ...p[pool], [champ]: valeur } }))
@@ -163,13 +185,20 @@ users:
               operation={(v) => ({
                 ton: 'info',
                 titre: `Mise à jour vers ${v.version} lancée`,
+                appel: () =>
+                  requete(`/kubernetes/${encodeURIComponent(cluster.id)}/mise-a-jour`, {
+                    methode: 'POST',
+                    corps: { version: String(v.version) },
+                  }),
                 effet: () => grappes.modifier(cluster.id, { statut: 'updating' }),
                 job: { workflow: 'k8s.upgrade', cible: `${cluster.nom} → ${v.version}` },
-                effetFinal: () =>
+                effetFinal: () => {
                   grappes.modifier(cluster.id, {
                     statut: 'running',
                     version: String(v.version),
-                  }),
+                  })
+                  grappes.recharger()
+                },
               })}
             />
           </>
@@ -544,10 +573,17 @@ users:
                       ton: 'warn',
                       titre: `Pool ${p.nom} supprimé`,
                       detail: 'Ses nœuds sont drainés puis détruits ; les pods se replacent ailleurs.',
+                      appel: () =>
+                        supprimerRessource(
+                          `/kubernetes/${encodeURIComponent(cluster.id)}/pools`,
+                          p.nom,
+                          p.nom,
+                        ),
                       effet: () =>
                         grappes.modifier(cluster.id, (c) => ({
                           pools: c.pools.filter((x) => x.nom !== p.nom),
                         })),
+                      effetFinal: () => grappes.recharger(),
                     })
                   }
                 >
@@ -606,6 +642,16 @@ users:
             operation={(v) => ({
               titre: `Pool ${v.nom} créé`,
               detail: `${v.nodes} nœuds · ${v.flavor}`,
+              appel: () =>
+                requete(`/kubernetes/${encodeURIComponent(cluster.id)}/pools`, {
+                  methode: 'POST',
+                  corps: {
+                    nom: String(v.nom),
+                    nodes: Number(v.nodes),
+                    flavor: String(v.flavor),
+                    diskGo: Number(v.disque),
+                  },
+                }),
               job: {
                 type: 'k8s.pool.create',
                 label: `Création du pool ${v.nom} · ${cluster.nom}`,
@@ -629,6 +675,7 @@ users:
                     },
                   ],
                 })),
+              effetFinal: () => grappes.recharger(),
             })}
           />
         </div>
@@ -660,16 +707,23 @@ users:
                 libelleValider="Installer"
                 operation={(v) => ({
                   titre: `Module ${String(v.module).split(' ')[0]} installé`,
+                  appel: () =>
+                    requete(`/kubernetes/${encodeURIComponent(cluster.id)}/modules`, {
+                      methode: 'PUT',
+                      corps: { modules: [...cluster.modules, String(v.module)] },
+                    }),
                   job: {
                     type: 'k8s.module.install',
                     label: `Installation ${v.module} · ${cluster.nom}`,
                     etapes: ['Déployer le chart Helm', 'Attendre les pods Ready'],
                     dureeEtapeMs: 1100,
                   },
-                  effetFinal: () =>
+                  effetFinal: () => {
                     grappes.modifier(cluster.id, (c) => ({
                       modules: [...c.modules, String(v.module)],
-                    })),
+                    }))
+                    grappes.recharger()
+                  },
                 })}
               />
             }

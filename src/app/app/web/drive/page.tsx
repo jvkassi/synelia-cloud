@@ -13,12 +13,15 @@ import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire } from '@/components/app/actions'
+import { creerRessource, estActif } from '@/lib/api/client'
 
 export default function ListeDrives() {
   const { autorise, refus } = useApp()
   const collection = useCollection<DriveDomaine>('drives', DRIVES)
+  // Le backend filtre déjà par organisation ; la maquette restreint au
+  // périmètre fictif, dont les identifiants sont inconnus du backend.
   const perimetre = new Set(drivesDeLOrg().map((d) => d.id))
-  const drives = collection.items.filter((d) => perimetre.has(d.id))
+  const drives = estActif() ? collection.items : collection.items.filter((d) => perimetre.has(d.id))
   const actifs = drives.filter((d) => d.actif)
 
   return (
@@ -145,14 +148,22 @@ export default function ListeDrives() {
                   operation={(v) => ({
                     titre: `Drive de ${d.domaine} en cours d’activation`,
                     detail: `${v.sieges} sièges · ${v.quota} Go`,
+                    appel: () =>
+                      creerRessource('/web/drive', {
+                        domaine: d.domaine,
+                        palier: d.palier,
+                        sieges: Number(v.sieges),
+                      }),
                     job: { workflow: 'web.drive.activate', cible: d.domaine },
-                    effetFinal: () =>
+                    effetFinal: () => {
                       collection.modifier(d.id, (x) => ({
                         actif: true,
                         sieges: { attribues: 0, souscrits: Number(v.sieges) },
                         quota: { utiliseGo: 0, totalGo: Number(v.quota) },
                         partage: { ...x.partage, externeAutorise: Boolean(v.externe) },
-                      })),
+                      }))
+                      collection.recharger()
+                    },
                   })}
                 />
               </>

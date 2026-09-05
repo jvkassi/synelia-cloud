@@ -14,6 +14,8 @@ import { Card, CardHeader, Callout, KeyValueList } from '@/components/compositio
 import { CostPreview, WizardShell } from '@/components/composition/flow'
 import { useApp, useEspace } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
+import { useOperation } from '@/components/app/actions'
+import { creerRessource, estActif } from '@/lib/api/client'
 
 const ETAPES = [
   { numero: 1, titre: 'Version et site' },
@@ -113,6 +115,7 @@ export default function NouveauCluster() {
   const espaceCourant = useEspace()
   const grappes = useCollection<K8sCluster>('clusters', K8S_CLUSTERS)
   const { lancerJob } = useAtelier()
+  const executer = useOperation()
 
   const [etape, setEtape] = useState(1)
   const [nom, setNom] = useState('k8s-prod-02')
@@ -189,6 +192,31 @@ export default function NouveauCluster() {
     setPools((p) => p.map((x) => (x.id === id ? { ...x, ...patch } : x)))
 
   const creerLeCluster = () => {
+    // En mode API la création part au backend (`202` + travail suivi) ; sinon
+    // la maquette simule, comme avant.
+    if (estActif()) {
+      executer({
+        action: 'vm.create_delete',
+        titre: `Création de ${nom} lancée`,
+        detail: 'Le control plane est provisionné avant les pools. Suivi dans le centre de tâches.',
+        appel: () =>
+          creerRessource('/kubernetes', {
+            espaceId: espace.id,
+            nom,
+            version,
+            site,
+            controlPlane: { mode: modeCp, nodes: modeCp === 'ha' ? 3 : 1 },
+            pools: pools.map((p) => ({
+              nom: p.nom,
+              nodes: p.nodes,
+              flavor: p.flavor,
+              diskGo: p.diskGo,
+            })),
+          }),
+        effetFinal: () => grappes.recharger(),
+      })
+      return
+    }
     const cluster: K8sCluster = {
       id: grappes.identifiant('k8s'),
       espaceId: espace.id,

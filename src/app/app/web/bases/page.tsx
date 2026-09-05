@@ -20,14 +20,16 @@ import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
+import { estActif } from '@/lib/api/client'
 
 export default function ListeBases() {
   const { autorise, refus } = useApp()
   const serveurs = useCollection<ServeurBases>('serveurs-bases', SERVEURS_BASES)
   // Le périmètre de l'organisation vient du jeu de données ; l'état vient de
-  // l'atelier, pour qu'une activation se voie tout de suite.
+  // l'atelier, pour qu'une activation se voie tout de suite. En mode API le
+  // backend filtre déjà, avec des identifiants inconnus du jeu local.
   const perimetre = new Set(serveursBasesDeLOrg().map((m) => m.id))
-  const moteurs = serveurs.items.filter((m) => perimetre.has(m.id))
+  const moteurs = estActif() ? serveurs.items : serveurs.items.filter((m) => perimetre.has(m.id))
   const actifs = moteurs.filter((m) => m.actif)
   const bases = actifs.reduce((a, m) => a + m.bases.length, 0)
 

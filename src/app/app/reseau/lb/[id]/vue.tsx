@@ -11,6 +11,7 @@ import { Button, IconButton } from '@/components/ui/button'
 import { CopyField, GatedAction, Tabs } from '@/components/ui/display'
 import { Field, Input, Select, Slider, Switch } from '@/components/ui/field'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
+import { EmptyState } from '@/components/composition/states'
 import { StatTile } from '@/components/composition/metrics'
 import { GrilleSparkCharts, LogPeek } from '@/components/business/observabilite'
 import { useApp } from '@/components/app/contexte'
@@ -56,8 +57,28 @@ export function VueLb({ id }: { id: string }) {
   const exceptions = useCollection<Exception>(`waf-exceptions-${id}`, EXCEPTIONS_GRAINE)
   const [onglet, setOnglet] = useState('apercu')
 
-  const lb = lbs.items.find((l) => l.id === id)!
-  const espace = espaceById(lb.espaceId)
+  const lb = lbs.items.find((l) => l.id === id)
+  const espace = lb ? espaceById(lb.espaceId) : undefined
+
+  if (!lb) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          fil={[
+            { label: 'Espace client', href: '/app' },
+            { label: 'Load balancers', href: '/app/reseau/lb' },
+            { label: 'Introuvable' },
+          ]}
+          titre="Load balancer introuvable"
+        />
+        <EmptyState
+          titre="Ce load balancer n’existe pas ou plus"
+          phrase="Il a peut-être été supprimé, ou vous avez suivi un lien vers une autre organisation."
+          action={{ libelle: 'Retour au réseau', href: '/app/reseau' }}
+        />
+      </div>
+    )
+  }
   const candidats = parc.items.filter(
     (v) => v.espaceId === lb.espaceId && !lb.pool.some((p) => p.targetId === v.id),
   )

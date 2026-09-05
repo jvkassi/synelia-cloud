@@ -33,6 +33,7 @@ import { EventList, GrilleSparkCharts } from '@/components/business/observabilit
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire } from '@/components/app/actions'
+import { modifierRessource, requete } from '@/lib/api/client'
 
 const ONGLETS = [
   { id: 'apercu', label: 'Vue d’ensemble' },
@@ -52,12 +53,34 @@ export function VueEspace({ id }: { id: string }) {
   const grappes = useCollection<K8sCluster>('clusters', K8S_CLUSTERS)
   const [onglet, setOnglet] = useState('apercu')
 
-  const espace = espaces.items.find((e) => e.id === id)!
+  const espace = espaces.items.find((e) => e.id === id)
   const vms = parc.items.filter((v) => v.espaceId === id)
   const clusters = grappes.items.filter((c) => c.espaceId === id)
   const volumes = disques.items.filter((v) => v.espaceId === id)
   const reseaux = reseauxDeLEspace(id)
   const ips = ipsDeLEspace(id)
+
+  // Identifiant inconnu (lien direct, espace supprimé) : la page le dit au
+  // lieu de planter sur `espace.code`.
+  if (!espace) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          fil={[
+            { label: 'Espace client', href: '/app' },
+            { label: 'Espaces Cloud', href: '/app/espaces' },
+            { label: 'Introuvable' },
+          ]}
+          titre="Espace introuvable"
+        />
+        <EmptyState
+          titre="Cet Espace Cloud n’existe pas ou plus"
+          phrase="Il a peut-être été supprimé, ou vous avez suivi un lien vers une autre organisation."
+          action={{ libelle: 'Retour aux espaces', href: '/app/espaces' }}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5">
@@ -99,15 +122,26 @@ export function VueEspace({ id }: { id: string }) {
               operation={(v) => ({
                 titre: `Capacité de ${espace.code} étendue`,
                 detail: `${v.vcpu} vCPU · ${v.ram} Go · ${v.stockage} To`,
+                appel: () =>
+                  requete(`/espaces/${encodeURIComponent(espace.id)}/quota`, {
+                    methode: 'PUT',
+                    corps: {
+                      vcpu: Number(v.vcpu),
+                      ramGo: Number(v.ram),
+                      stockageTo: Number(v.stockage),
+                    },
+                  }),
                 job: { workflow: 'espace.extend', cible: espace.code },
-                effetFinal: () =>
+                effetFinal: () => {
                   espaces.modifier(espace.id, {
                     quota: {
                       vcpu: Number(v.vcpu),
                       ramGo: Number(v.ram),
                       stockageTo: Number(v.stockage),
                     },
-                  }),
+                  })
+                  espaces.recharger()
+                },
               })}
             />
             <BoutonFormulaire
@@ -136,6 +170,9 @@ export function VueEspace({ id }: { id: string }) {
                 return {
                   titre: `Offre de ${espace.code} changée`,
                   detail: offre ? `${offre.nom} · effet à la prochaine période` : undefined,
+                  // `offerId` ne fait pas partie du contrat : seul le quota
+                  // se règle côté backend, le changement d’offre reste local
+                  // en attendant (aucun appel, aucun job simulé en mode API).
                   effet: () =>
                     offre
                       ? espaces.modifier(espace.id, {

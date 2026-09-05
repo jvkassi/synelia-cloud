@@ -16,6 +16,7 @@ import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { useApp, useEspace } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { requete } from '@/lib/api/client'
 
 export default function ListeVms() {
   const { autorise, refus } = useApp()
@@ -30,16 +31,33 @@ export default function ListeVms() {
     libelle: string,
     workflow: string,
     statutFinal: VM['statut'],
-  ) =>
-    executer({
+  ) => {
+    const actionApi =
+      workflow === 'vm.power.start'
+        ? 'demarrage'
+        : workflow === 'vm.power.stop'
+          ? 'arret'
+          : 'redemarrage'
+    return executer({
+      action: 'vm.power',
       ton: 'info',
       titre: `${libelle} de ${ids.length} machine${ids.length > 1 ? 's' : ''}`,
+      // En mode API chaque machine reçoit son ordre ; le premier travail
+      // renvoyé pilote le suivi, les autres avancent dans le centre de tâches.
+      appel: () =>
+        Promise.all(
+          ids.map((vmId) => requete(`/vms/${encodeURIComponent(vmId)}/${actionApi}`, { methode: 'POST', corps: {} })),
+        ).then((reponses) => reponses[0]),
       job: {
         workflow,
         cible: `${ids.length} machine${ids.length > 1 ? 's' : ''}`,
       },
-      effetFinal: () => parc.modifierPlusieurs(ids, { statut: statutFinal }),
+      effetFinal: () => {
+        parc.modifierPlusieurs(ids, { statut: statutFinal })
+        parc.recharger()
+      },
     })
+  }
 
   const colonnes: Array<Colonne<VM>> = [
     {
@@ -297,10 +315,21 @@ export default function ListeVms() {
                 iconBefore={<Camera size={13} />}
                 onClick={() =>
                   executer({
+                    action: 'vm.create_delete',
                     titre: `Snapshot de ${ids.length} machine${ids.length > 1 ? 's' : ''} demandé`,
                     detail:
                       'Un snapshot n’est pas une sauvegarde : il vit sur le même stockage que la machine.',
+                    appel: () =>
+                      Promise.all(
+                        ids.map((vmId) =>
+                          requete(`/vms/${encodeURIComponent(vmId)}/instantanes`, {
+                            methode: 'POST',
+                            corps: { nom: `groupe-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')}` },
+                          }),
+                        ),
+                      ).then((reponses) => reponses[0]),
                     job: { workflow: 'vm.snapshot', cible: `${ids.length} machine${ids.length > 1 ? 's' : ''}` },
+                    effetFinal: () => parc.recharger(),
                   })
                 }
               >

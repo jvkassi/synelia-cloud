@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, ChevronRight, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MicroLabel } from '@/components/ui/badge'
+import { estActif, requete } from '@/lib/api/client'
 
 /** Panneau de progression persistant après première connexion (§3.3). */
 const JALONS = [
@@ -48,9 +49,27 @@ const JALONS = [
 export function PanneauOnboarding() {
   const [ferme, setFerme] = useState(false)
   const [ouvert, setOuvert] = useState<string | null>('domaine')
+  // En mode API le backend sait si le guide est terminé ou masqué : on ne
+  // l’affiche pas quand il dit de ne pas le faire. Les jalons eux-mêmes
+  // restent décrits ici, au seul endroit où ce parcours existe.
+  const [masqueDistant, setMasqueDistant] = useState(false)
+  useEffect(() => {
+    if (!estActif()) return
+    requete<{ termine?: boolean; masque?: boolean }>('/onboarding').then(
+      (o) => {
+        if (o.termine || o.masque) setMasqueDistant(true)
+      },
+      () => {},
+    )
+  }, [])
   const faits = JALONS.filter((j) => j.fait).length
 
-  if (ferme || faits === JALONS.length) return null
+  const masquer = () => {
+    setFerme(true)
+    if (estActif()) requete('/onboarding', { methode: 'PATCH', corps: { masque: true } }).catch(() => {})
+  }
+
+  if (ferme || masqueDistant || faits === JALONS.length) return null
 
   return (
     <section className="overflow-hidden rounded-[10px] border border-p-300 bg-p-050">
@@ -71,7 +90,7 @@ export function PanneauOnboarding() {
         </div>
         <button
           type="button"
-          onClick={() => setFerme(true)}
+          onClick={masquer}
           className="flex items-center gap-1 text-[11.5px] font-semibold text-g-500 transition-colors hover:text-p-700"
         >
           Ne plus afficher

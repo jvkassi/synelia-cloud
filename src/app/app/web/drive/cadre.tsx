@@ -1,12 +1,17 @@
 'use client'
 
-import { drivesDeLOrg } from '@/lib/mock'
+import { DRIVES, drivesDeLOrg } from '@/lib/mock'
 import type { Tone } from '@/components/ui/badge'
 import { CadreSection } from '@/components/app/cadre-section'
+import { useCollection } from '@/components/app/atelier'
+import { estActif } from '@/lib/api/client'
+import type { DriveDomaine } from '@/lib/mock'
 
 /** Panneau de la section — liste les drives de l'organisation. */
 export function CadreDrive({ children }: { children: React.ReactNode }) {
-  const entrees = drivesDeLOrg().map((d) => ({
+  const collection = useCollection<DriveDomaine>('drives', DRIVES)
+  const source = estActif() ? collection.items : drivesDeLOrg()
+  const entrees = source.map((d) => ({
     id: d.id,
     nom: d.domaine,
     sousTitre: d.actif

@@ -29,7 +29,7 @@ import {
 } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, IconButton } from '@/components/ui/button'
-import { CopyField, GatedAction, Tabs } from '@/components/ui/display'
+import { CopyField, GatedAction, Skeleton, Tabs } from '@/components/ui/display'
 import { Field, Input, SegmentedControl, Select, Switch } from '@/components/ui/field'
 import { ConfirmDialog, Drawer, Popover } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
@@ -37,7 +37,8 @@ import { HealthBadge, QuotaBar, StatTile } from '@/components/composition/metric
 import { EmptyState } from '@/components/composition/states'
 import { EventList, GrilleSparkCharts } from '@/components/business/observabilite'
 import { useApp } from '@/components/app/contexte'
-import { useCollection } from '@/components/app/atelier'
+import { useCollection, useEntite } from '@/components/app/atelier'
+import { creerRessource, requete, supprimerRessource } from '@/lib/api/client'
 import {
   BoutonAction,
   BoutonFormulaire,
@@ -48,9 +49,13 @@ import {
 interface Snapshot {
   id: string
   nom: string
-  date: string
-  taille: number
-  type: string
+  /** Maquette. Le backend renvoie `cree` — les deux sont lus. */
+  date?: string
+  cree?: string
+  /** Maquette. Le backend renvoie `tailleGo`. */
+  taille?: number
+  tailleGo?: number
+  type?: string
 }
 
 /** Les snapshots ne sont pas dans le jeu de données : graine locale. */
@@ -75,13 +80,28 @@ export function VueVm({ id }: { id: string }) {
   const executer = useOperation()
   const parc = useCollection<VM>('vms', VMS)
   const disques = useCollection<Volume>('volumes', VOLUMES)
+  // Lecture unitaire quand la liste ne contient pas (encore) la machine :
+  // lien direct vers une ressource créée pendant la session ou ailleurs.
+  const { entite: isolee } = useEntite<VM>('vms', VMS, id)
   const snapshots = useCollection<Snapshot>(`snapshots-${id}`, SNAPSHOTS_GRAINE)
   const [onglet, setOnglet] = useState('apercu')
   const [console_, setConsole] = useState(false)
   const [suppression, setSuppression] = useState(false)
   const [redimensionnement, setRedimensionnement] = useState(false)
 
-  const vm = parc.items.find((v) => v.id === id)
+  const vm = parc.items.find((v) => v.id === id) ?? isolee
+
+  // Chargement distant en cours (lien direct, liste pas encore là) : des
+  // squelettes, pas un « supprimée » qui se contredirait une seconde après.
+  if (!vm && parc.chargement) {
+    return (
+      <div className="space-y-5">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    )
+  }
 
   // La machine peut avoir été supprimée depuis cette page : le retour arrière
   // du navigateur ne doit pas casser l'écran.
@@ -121,6 +141,10 @@ export function VueVm({ id }: { id: string }) {
       type: vm.statut === 'running' ? 'à chaud' : 'à froid',
     })
   }
+
+  /** POST /vms/{id}/instantanes — le backend n’exige que `nom`. */
+  const appelSnapshot = (nom: string) =>
+    creerRessource(`/vms/${encodeURIComponent(id)}/instantanes`, { nom })
 
   return (
     <div className="space-y-5">
@@ -175,9 +199,14 @@ export function VueVm({ id }: { id: string }) {
                 ton: 'info',
                 titre: `Redémarrage de ${vm.nom}`,
                 detail: 'La machine sera de nouveau disponible dans environ 40 secondes.',
+                appel: () =>
+                  requete(`/vms/${encodeURIComponent(vm.id)}/redemarrage`, { methode: 'POST', corps: {} }),
                 effet: () => parc.modifier(vm.id, { statut: 'creating' }),
                 job: { workflow: 'vm.power.reboot', cible: vm.nom },
-                effetFinal: () => parc.modifier(vm.id, { statut: 'running' }),
+                effetFinal: () => {
+                  parc.modifier(vm.id, { statut: 'running' })
+                  parc.recharger()
+                },
               }}
             />
             <BoutonFormulaire
@@ -198,7 +227,9 @@ export function VueVm({ id }: { id: string }) {
               operation={(v) => ({
                 titre: `Snapshot « ${v.nom} » créé`,
                 detail: `Machine ${vm.nom}`,
+                appel: () => appelSnapshot(String(v.nom)),
                 effet: () => prendreUnSnapshot(String(v.nom)),
+                effetFinal: () => snapshots.recharger(),
               })}
             />
             <Popover
@@ -225,14 +256,21 @@ export function VueVm({ id }: { id: string }) {
                             vm.statut === 'running'
                               ? `Arrêt de ${vm.nom} demandé`
                               : `Démarrage de ${vm.nom} demandé`,
+                          appel: () =>
+                            requete(
+                              `/vms/${encodeURIComponent(vm.id)}/${vm.statut === 'running' ? 'arret' : 'demarrage'}`,
+                              { methode: 'POST', corps: {} },
+                            ),
                           job: {
                             workflow: vm.statut === 'running' ? 'vm.power.stop' : 'vm.power.start',
                             cible: vm.nom,
                           },
-                          effetFinal: () =>
+                          effetFinal: () => {
                             parc.modifier(vm.id, {
                               statut: vm.statut === 'running' ? 'stopped' : 'running',
-                            }),
+                            })
+                            parc.recharger()
+                          },
                         }),
                     },
                     {
@@ -245,9 +283,17 @@ export function VueVm({ id }: { id: string }) {
                           ton: 'info',
                           titre: `Migration à chaud de ${vm.nom}`,
                           detail: 'Aucune interruption de service attendue.',
+                          appel: () =>
+                            requete(`/vms/${encodeURIComponent(vm.id)}/migration`, {
+                              methode: 'POST',
+                              corps: { site: vm.site },
+                            }),
                           effet: () => parc.modifier(vm.id, { statut: 'migrating' }),
                           job: { workflow: 'vm.migrate', cible: vm.nom },
-                          effetFinal: () => parc.modifier(vm.id, { statut: 'running' }),
+                          effetFinal: () => {
+                            parc.modifier(vm.id, { statut: 'running' })
+                            parc.recharger()
+                          },
                         }),
                     },
                   ].map((a) => (
@@ -590,6 +636,16 @@ export function VueVm({ id }: { id: string }) {
                 operation={(v) => ({
                   titre: `Volume « ${v.nom} » attaché`,
                   detail: `${v.taille} Go · ${String(v.classe).toUpperCase()}`,
+                  appel: () =>
+                    creerRessource('/volumes', {
+                      espaceId: vm.espaceId,
+                      nom: String(v.nom),
+                      tailleGo: Number(v.taille),
+                      classe: v.classe,
+                      chiffre: Boolean(v.chiffre),
+                      attacherA: vm.id,
+                      montage: String(v.montage) || undefined,
+                    }),
                   effet: () =>
                     disques.creer({
                       id: disques.identifiant('vol'),
@@ -604,6 +660,7 @@ export function VueVm({ id }: { id: string }) {
                       iops: v.classe === 'nvme' ? 12000 : v.classe === 'ssd' ? 6000 : 900,
                       montage: String(v.montage),
                     }),
+                  effetFinal: () => disques.recharger(),
                 })}
               />
             }
@@ -690,8 +747,14 @@ export function VueVm({ id }: { id: string }) {
                             libelleValider="Étendre"
                             operation={(f) => ({
                               titre: `${v.nom} étendu à ${num(Number(f.taille))} Go`,
+                              appel: () =>
+                                requete(`/volumes/${encodeURIComponent(v.id)}/extension`, {
+                                  methode: 'POST',
+                                  corps: { tailleGo: Number(f.taille) },
+                                }),
                               effet: () =>
                                 disques.modifier(v.id, { tailleGo: Number(f.taille) }),
+                              effetFinal: () => disques.recharger(),
                             })}
                           />
                           <BoutonAction
@@ -702,12 +765,17 @@ export function VueVm({ id }: { id: string }) {
                               ton: 'warn',
                               titre: `${v.nom} détaché`,
                               detail: 'Le volume est conservé et peut être attaché à une autre machine.',
+                              appel: () =>
+                                requete(`/volumes/${encodeURIComponent(v.id)}/attachement`, {
+                                  methode: 'DELETE',
+                                }),
                               effet: () =>
                                 disques.modifier(v.id, {
                                   attachedTo: undefined,
                                   attachedLabel: undefined,
                                   montage: undefined,
                                 }),
+                              effetFinal: () => disques.recharger(),
                             }}
                           />
                         </span>
@@ -739,7 +807,9 @@ export function VueVm({ id }: { id: string }) {
                 ]}
                 operation={(v) => ({
                   titre: `Snapshot « ${v.nom} » créé`,
+                  appel: () => appelSnapshot(String(v.nom)),
                   effet: () => prendreUnSnapshot(String(v.nom)),
+                  effetFinal: () => snapshots.recharger(),
                 })}
               />
             }
@@ -759,13 +829,13 @@ export function VueVm({ id }: { id: string }) {
                 {snapshots.items.map((s) => (
                   <tr key={s.id} className="border-b border-g-100 last:border-0">
                     <td className="px-3 py-2.5 font-mono text-[12.5px] text-ink">{s.nom}</td>
-                    <td className="px-3 py-2.5 text-[12.5px] text-g-700">{dateHeure(s.date)}</td>
+                    <td className="px-3 py-2.5 text-[12.5px] text-g-700">{dateHeure(s.date ?? s.cree ?? MAINTENANT)}</td>
                     <td className="tnum px-3 py-2.5 text-[12.5px] text-g-700">
-                      {goHumain(s.taille)}
+                      {goHumain(s.taille ?? s.tailleGo ?? 0)}
                     </td>
                     <td className="px-3 py-2.5">
                       <Badge tone="neutral" size="sm">
-                        {s.type}
+                        {s.type ?? '—'}
                       </Badge>
                     </td>
                     <td className="px-3 py-2.5">
@@ -777,6 +847,11 @@ export function VueVm({ id }: { id: string }) {
                             action: 'vm.create_delete',
                             ton: 'info',
                             titre: `Restauration du snapshot « ${s.nom} »`,
+                            appel: () =>
+                              requete(
+                                `/vms/${encodeURIComponent(vm.id)}/instantanes/${encodeURIComponent(s.id)}`,
+                                { methode: 'POST', corps: {} },
+                              ),
                             effet: () => parc.modifier(vm.id, { statut: 'creating' }),
                             job: {
                               type: 'vm.snapshot.revert',
@@ -787,13 +862,16 @@ export function VueVm({ id }: { id: string }) {
                                 'Rallumer la machine',
                               ],
                             },
-                            effetFinal: () => parc.modifier(vm.id, { statut: 'running' }),
+                            effetFinal: () => {
+                              parc.modifier(vm.id, { statut: 'running' })
+                              parc.recharger()
+                            },
                           }}
                           confirmation={{
                             ressource: vm.nom,
                             titre: `Revenir au snapshot « ${s.nom} » ?`,
                             pertes: [
-                              `Toutes les écritures postérieures au ${dateHeure(s.date)} seront perdues`,
+                              `Toutes les écritures postérieures au ${dateHeure(s.date ?? s.cree ?? MAINTENANT)} seront perdues`,
                               'La machine sera arrêtée pendant l’opération',
                             ],
                             libelleAction: 'Revenir à ce snapshot',
@@ -835,7 +913,13 @@ export function VueVm({ id }: { id: string }) {
                               ton: 'warn',
                               titre: `Snapshot « ${s.nom} » supprimé`,
                               detail: 'L’espace disque est rendu immédiatement.',
+                              appel: () =>
+                                supprimerRessource(
+                                  `/vms/${encodeURIComponent(vm.id)}/instantanes`,
+                                  s.id,
+                                ),
                               effet: () => snapshots.supprimer(s.id),
+                              effetFinal: () => snapshots.recharger(),
                             })
                           }
                         >
@@ -1114,12 +1198,18 @@ ops@${vm.nom}:~$ _`}
             action: 'vm.hardware.update',
             titre: `${vm.nom} redimensionnée`,
             detail: `${v.vcpu} vCPU · ${v.ram} Go`,
+            appel: () =>
+              requete(`/vms/${encodeURIComponent(vm.id)}/redimensionnement`, {
+                methode: 'POST',
+                corps: { vcpu: Number(v.vcpu), ramGo: Number(v.ram) },
+              }),
             effet: () =>
               parc.modifier(vm.id, {
                 vcpu: Number(v.vcpu),
                 ramGo: Number(v.ram),
                 flavor: 'personnalisé',
               }),
+            effetFinal: () => parc.recharger(),
           })
         }
       />
@@ -1133,10 +1223,17 @@ ops@${vm.nom}:~$ _`}
             ton: 'warn',
             titre: `Suppression de ${vm.nom} lancée`,
             detail: 'Le quota sera libéré à la fin de l’opération.',
+            // En mode API la suppression part avec le nom exact exigé par le
+            // backend ; les volumes de données survivent côté backend aussi.
+            appel: () => supprimerRessource('/vms', vm.id, vm.nom),
             effet: () => {
               // Les volumes de données survivent à la machine : on les détache.
               volumes.forEach((v) => disques.modifier(v.id, { attachedTo: undefined }))
               parc.supprimer(vm.id)
+              router.push('/app/vms')
+            },
+            effetFinal: () => {
+              parc.recharger()
               router.push('/app/vms')
             },
           })
@@ -1212,6 +1309,13 @@ function OngletMateriel({ vm }: { vm: VM }) {
       detail: redemarrageNecessaire
         ? 'Un redémarrage est nécessaire pour que tout soit pris en compte.'
         : 'Modifications appliquées à chaud.',
+      // Seuls vCPU et mémoire ont un équivalent API ; le reste (cartes,
+      // USB, Secure Boot…) reste une préférence d’affichage locale.
+      appel: () =>
+        requete(`/vms/${encodeURIComponent(vm.id)}/redimensionnement`, {
+          methode: 'POST',
+          corps: { vcpu, ramGo: ram },
+        }),
       effet: () =>
         parc.modifier(vm.id, (v) => ({
           vcpu,
@@ -1231,6 +1335,7 @@ function OngletMateriel({ vm }: { vm: VM }) {
             job: { workflow: 'vm.resize', cible: vm.nom },
           }
         : {}),
+      effetFinal: () => parc.recharger(),
     })
 
   return (

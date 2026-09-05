@@ -37,6 +37,7 @@ import { DataTable } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { creerRessource, modifierRessource, requete } from '@/lib/api/client'
 import type { Invoice, MoyenPaiement, Subscription } from '@/lib/types'
 
 const ONGLETS = [
@@ -78,6 +79,10 @@ interface MoyenEnregistre {
   moyen: MoyenPaiement
   detail: string
   principal: boolean
+  /** Backend (`GET /facturation/moyens-paiement`) : mêmes sens, autres noms. */
+  type?: MoyenPaiement
+  defaut?: boolean
+  libelle?: string
 }
 
 const MOYENS: MoyenEnregistre[] = [
@@ -92,6 +97,13 @@ export default function Facturation() {
   const lesFactures = useCollection<Invoice>('factures', FACTURES)
   const souscriptions = useCollection<Subscription>('souscriptions', SOUSCRIPTIONS)
   const moyens = useCollection<MoyenEnregistre>('moyens-paiement', MOYENS)
+  // Le backend nomme les mêmes champs autrement (`type`, `defaut`) : on
+  // normalise une fois pour que l’onglet lise une seule forme.
+  const moyensNorm = moyens.items.map((m) => ({
+    ...m,
+    moyen: m.moyen ?? m.type ?? ('virement' as MoyenPaiement),
+    principal: m.principal ?? m.defaut ?? false,
+  }))
   const [onglet, setOnglet] = useState('apercu')
   const [facture, setFacture] = useState<string | null>(null)
   const [envoiMensuel, setEnvoiMensuel] = useState(true)
@@ -112,14 +124,22 @@ export default function Facturation() {
     executer({
       action: 'payment.update',
       titre: `Règlement de ${f.numero} lancé`,
-      detail: `${money(f.total)} · moyen principal : ${MOYEN_LABEL[moyens.items.find((m) => m.principal)?.moyen ?? 'virement']}`,
+      detail: `${money(f.total)} · moyen principal : ${MOYEN_LABEL[moyensNorm.find((m) => m.principal)?.moyen ?? 'virement']}`,
+      appel: () =>
+        requete(`/facturation/factures/${encodeURIComponent(f.id)}/paiement`, {
+          methode: 'POST',
+          corps: { moyenId: moyensNorm.find((m) => m.principal)?.id },
+        }),
       job: {
         type: 'facture.paiement',
         label: `Règlement ${f.numero}`,
         etapes: ['Initier le paiement', 'Attendre la confirmation du prestataire', 'Rapprocher la facture'],
         dureeEtapeMs: 1100,
       },
-      effetFinal: () => lesFactures.modifier(f.id, { statut: 'payee' }),
+      effetFinal: () => {
+        lesFactures.modifier(f.id, { statut: 'payee' })
+        lesFactures.recharger()
+      },
     })
 
   const masque = (v: string) => (peutVoir ? v : '•••')
@@ -585,11 +605,17 @@ export default function Facturation() {
                           operation={(v) => ({
                             titre: `Souscription ${s.cible.label} modifiée`,
                             detail: `${v.quantite} × ${money(s.prixApplique)} · ${v.periodicite === 'annuelle' ? 'annuelle' : 'mensuelle'}`,
+                            appel: () =>
+                              modifierRessource('/facturation/souscriptions', s.id, {
+                                quantite: Number(v.quantite),
+                                periodicite: v.periodicite,
+                              }),
                             effet: () =>
                               souscriptions.modifier(s.id, {
                                 quantite: Number(v.quantite),
                                 periodicite: v.periodicite as Subscription['periodicite'],
                               }),
+                            effetFinal: () => souscriptions.recharger(),
                           })}
                         />
                       </td>
@@ -644,7 +670,12 @@ export default function Facturation() {
                             action: 'payment.update',
                             titre: `${s.cible.label} passe à l’engagement annuel`,
                             detail: `${masque(money(economie))} économisés sur douze mois. Une réduction de périmètre en cours d’année est ajustée à la baisse.`,
+                            appel: () =>
+                              modifierRessource('/facturation/souscriptions', s.id, {
+                                periodicite: 'annuelle',
+                              }),
                             effet: () => souscriptions.modifier(s.id, { periodicite: 'annuelle' }),
+                            effetFinal: () => souscriptions.recharger(),
                           }}
                         />
                       </span>
@@ -822,7 +853,7 @@ export default function Facturation() {
               sousTitre="Nous acceptons les moyens réellement utilisés en Afrique de l’Ouest, pas seulement la carte internationale."
             />
             <div className="space-y-2">
-              {moyens.items.map((m) => (
+              {moyensNorm.map((m) => (
                 <div
                   key={m.id}
                   className={cn(
@@ -858,18 +889,21 @@ export default function Facturation() {
                           action: 'payment.update',
                           titre: `${MOYEN_LABEL[m.moyen]} devient le moyen principal`,
                           detail: 'Les prochains prélèvements passeront par ce moyen.',
+                          appel: () =>
+                            modifierRessource('/facturation/moyens-paiement', m.id, { defaut: true }),
                           effet: () =>
                             moyens.modifierPlusieurs(
-                              moyens.items.map((x) => x.id),
+                              moyensNorm.map((x) => x.id),
                               (x) => ({ principal: x.id === m.id }),
                             ),
+                          effetFinal: () => moyens.recharger(),
                         }}
                       />
                     )}
                     <BoutonAction
                       libelle="Retirer"
                       variant="ghost"
-                      desactive={m.principal && moyens.items.length > 1}
+                      desactive={m.principal && moyensNorm.length > 1}
                       operation={{
                         action: 'payment.update',
                         ton: 'warn',
@@ -878,6 +912,7 @@ export default function Facturation() {
                           ? 'Aucun moyen principal : les factures devront être réglées manuellement.'
                           : undefined,
                         effet: () => moyens.supprimer(m.id),
+                        effetFinal: () => moyens.recharger(),
                       }}
                     />
                   </span>
@@ -912,10 +947,16 @@ export default function Facturation() {
               operation={(v) => ({
                 titre: `${MOYEN_LABEL[v.moyen as MoyenPaiement]} ajouté`,
                 detail: v.principal ? 'Défini comme moyen principal.' : undefined,
+                appel: () =>
+                  creerRessource('/facturation/moyens-paiement', {
+                    type: v.moyen,
+                    numero: String(v.reference),
+                    defaut: Boolean(v.principal),
+                  }),
                 effet: () => {
                   if (v.principal)
                     moyens.modifierPlusieurs(
-                      moyens.items.map((x) => x.id),
+                      moyensNorm.map((x) => x.id),
                       { principal: false },
                     )
                   moyens.creer({
@@ -925,6 +966,7 @@ export default function Facturation() {
                     principal: Boolean(v.principal),
                   })
                 },
+                effetFinal: () => moyens.recharger(),
               })}
             />
             <Callout ton="info" className="mt-4" titre="Ce que nous ne stockons pas">

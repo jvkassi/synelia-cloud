@@ -16,6 +16,7 @@ import { GrilleSparkCharts, LogPeek } from '@/components/business/observabilite'
 import { useApp, useEspace } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire } from '@/components/app/actions'
+import { estActif, requete } from '@/lib/api/client'
 import type { LigneLog, ManagedDatabase } from '@/lib/types'
 
 const PALIERS = [
@@ -332,14 +333,21 @@ export default function BasesManagees() {
                           action: 'network.manage',
                           titre: `Réplica de lecture ajouté à ${base.nom}`,
                           detail: 'Le rattrapage initial dure quelques minutes selon la taille de la base.',
+                          appel: () =>
+                            requete(`/bases/${encodeURIComponent(base.id)}/replicas`, {
+                              methode: 'POST',
+                              corps: {},
+                            }),
                           job: {
                             type: 'db.replica.create',
                             label: `Réplica de lecture · ${base.nom}`,
                             etapes: ['Cloner la base', 'Rattraper les journaux', 'Ouvrir les connexions en lecture'],
                             dureeEtapeMs: 1100,
                           },
-                          effetFinal: () =>
-                            collection.modifier(base.id, (b) => ({ replicas: b.replicas + 1 })),
+                          effetFinal: () => {
+                            collection.modifier(base.id, (b) => ({ replicas: b.replicas + 1 }))
+                            collection.recharger()
+                          },
                         }}
                       />
                     }
@@ -477,6 +485,15 @@ export default function BasesManagees() {
                           destinationPitr === 'nouvelle'
                             ? 'Une nouvelle instance est créée : l’actuelle continue de servir.'
                             : 'L’instance actuelle sera écrasée.',
+                        appel: () =>
+                          requete(`/bases/${encodeURIComponent(base.id)}/restauration`, {
+                            methode: 'POST',
+                            corps: {
+                              instant: `${instantPitr.length === 16 ? `${instantPitr}:00Z` : instantPitr}`,
+                              nomCible:
+                                destinationPitr === 'nouvelle' ? `${base.nom}-restore` : base.nom,
+                            },
+                          }),
                         job: {
                           type: 'db.pitr',
                           label: `Restauration ${base.nom} · ${instantPitr}`,
@@ -491,7 +508,14 @@ export default function BasesManagees() {
                         },
                         effetFinal:
                           destinationPitr === 'nouvelle'
-                            ? () =>
+                            ? () => {
+                                // En mode API l’instance restaurée vient du
+                                // backend : la recréer localement la
+                                // dupliquerait (la collection `POST` à nouveau).
+                                if (estActif()) {
+                                  collection.recharger()
+                                  return
+                                }
                                 collection.creer({
                                   ...base,
                                   id: collection.identifiant('db'),
@@ -499,7 +523,8 @@ export default function BasesManagees() {
                                   replicas: 0,
                                   host: base.host.replace(base.nom, `${base.nom}-restore`),
                                 })
-                            : undefined,
+                              }
+                            : () => collection.recharger(),
                       }}
                       confirmation={
                         destinationPitr === 'ecraser'

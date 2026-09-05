@@ -13,12 +13,13 @@ import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire } from '@/components/app/actions'
+import { estActif } from '@/lib/api/client'
 
 export default function ListeMessageries() {
   const { autorise, refus } = useApp()
   const collection = useCollection<MessagerieDomaine>('messageries', MESSAGERIES)
   const perimetre = new Set(messageriesDeLOrg().map((m) => m.id))
-  const messageries = collection.items.filter((m) => perimetre.has(m.id))
+  const messageries = estActif() ? collection.items : collection.items.filter((m) => perimetre.has(m.id))
   const actives = messageries.filter((m) => m.actif)
   const boites = actives.reduce((a, m) => a + m.boites.length, 0)
   const stockage = actives.reduce((a, m) => a + m.boites.reduce((x, b) => x + b.utiliseGo, 0), 0)

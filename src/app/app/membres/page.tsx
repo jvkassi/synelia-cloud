@@ -27,13 +27,17 @@ import { RoleMatrix } from '@/components/business/rbac-canvas'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { creerRessource, estActif, requete, supprimerRessource } from '@/lib/api/client'
 
 interface Invitation {
   id: string
   email: string
   role: Role
-  envoyee: string
-  par: string
+  /** Maquette. Le backend renvoie `expire` + `statut` — les deux sont lus. */
+  envoyee?: string
+  par?: string
+  expire?: string
+  statut?: string
 }
 
 /** Invitations en attente — le jeu de données n'en a pas de table. */
@@ -93,9 +97,15 @@ export default function Membres() {
   const [attribPortee, setAttribPortee] = useState('org')
 
   const membres = adhesions.items
-    .filter((m) => m.orgId === ORG_COURANTE.id)
-    .map((m) => ({ membership: m, user: userById(m.userId)! }))
-    .filter((x) => x.user)
+    // Le backend filtre déjà par organisation active ; la maquette, non.
+    .filter((m) => estActif() || m.orgId === ORG_COURANTE.id)
+    // En mode API l’utilisateur arrive embarqué (`utilisateur`) : les
+    // identifiants du backend sont inconnus du jeu de données local.
+    .map((m) => ({
+      membership: m,
+      user: userById(m.userId) ?? (m as unknown as { utilisateur?: (typeof USERS)[number] }).utilisateur,
+    }))
+    .flatMap((x) => (x.user ? [x as { membership: Membership; user: (typeof USERS)[number] }] : []))
   const lignes: LigneMembre[] = membres.map(({ membership: m, user: u }) => ({
     id: m.id,
     nom: u.nom,
@@ -334,7 +344,10 @@ export default function Membres() {
                       {i.email}
                     </span>
                     <span className="block text-[11px] text-g-500">
-                      {ROLE_LABEL[i.role]} · envoyée {relatif(i.envoyee)} par {i.par}
+                      {ROLE_LABEL[i.role]} ·{' '}
+                      {i.envoyee
+                        ? `envoyée ${relatif(i.envoyee)}${i.par ? ` par ${i.par}` : ''}`
+                        : `expire le ${i.expire ? dateCourte(i.expire) : '—'}`}
                     </span>
                   </span>
                   <span className="flex shrink-0 items-center gap-1.5">
@@ -348,7 +361,13 @@ export default function Membres() {
                         action: 'member.invite',
                         titre: `Invitation renvoyée à ${i.email}`,
                         detail: 'Le lien précédent est invalidé : seul le dernier fonctionne.',
+                        appel: () =>
+                          requete(`/invitations/${encodeURIComponent(i.id)}/relance`, {
+                            methode: 'POST',
+                            corps: {},
+                          }),
                         effet: () => invitations.modifier(i.id, { envoyee: MAINTENANT }),
+                        effetFinal: () => invitations.recharger(),
                       }}
                     />
                     <BoutonAction
@@ -359,7 +378,11 @@ export default function Membres() {
                         ton: 'warn',
                         titre: `Invitation de ${i.email} annulée`,
                         detail: 'Le lien devient inutilisable immédiatement.',
+                        // Sans `confirmation` : le backend n’en exige pas pour
+                        // une invitation (le lien seul porte le risque).
+                        appel: () => supprimerRessource('/invitations', i.id),
                         effet: () => invitations.supprimer(i.id),
+                        effetFinal: () => invitations.recharger(),
                       }}
                     />
                   </span>
@@ -644,6 +667,13 @@ export default function Membres() {
                       action: 'member.invite',
                       titre: 'Attribution enregistrée',
                       detail: `${cible?.nom ?? ''} · ${ROLE_LABEL[attribRole]} sur ${espace ? `l’espace ${espace.code}` : 'toute l’organisation'}. Effet immédiat, sans nouvelle connexion.`,
+                      appel: () =>
+                        creerRessource('/membres', {
+                          userId: adhesions.items.find((m) => m.id === cible?.id)?.userId,
+                          role: attribRole,
+                          scopeType: espace ? 'espace' : 'org',
+                          scopeId: espace?.id,
+                        }),
                       effet: () =>
                         cible
                           ? adhesions.creer({
@@ -657,6 +687,7 @@ export default function Membres() {
                               scopeLabel: espace ? `Espace ${espace.code}` : undefined,
                             })
                           : undefined,
+                      effetFinal: () => adhesions.recharger(),
                     })
                   }}
                 >
@@ -686,6 +717,13 @@ export default function Membres() {
                   titre: `Invitation envoyée à ${inviteEmail}`,
                   detail:
                     'Le lien est valable sept jours et à usage unique. Aucun mot de passe n’est transmis par courriel.',
+                  appel: () =>
+                    creerRessource('/invitations', {
+                      email: inviteEmail,
+                      role: inviteRole,
+                      scopeType: invitePortee === 'org' ? 'org' : 'espace',
+                      scopeId: invitePortee === 'org' ? undefined : invitePortee,
+                    }),
                   effet: () =>
                     invitations.creer({
                       id: invitations.identifiant('inv'),
@@ -694,6 +732,7 @@ export default function Membres() {
                       envoyee: MAINTENANT,
                       par: UTILISATEUR_COURANT.nom,
                     }),
+                  effetFinal: () => invitations.recharger(),
                 })
                 setInviteEmail('')
                 setInvitation(false)
@@ -840,7 +879,13 @@ export default function Membres() {
                 libelleValider="Changer le rôle"
                 operation={(v) => ({
                   titre: `${membreDetail.nom} est désormais ${ROLE_LABEL[v.role as Role]}`,
+                  appel: () =>
+                    requete(`/membres/${encodeURIComponent(membreDetail.id)}`, {
+                      methode: 'PATCH',
+                      corps: { role: v.role },
+                    }),
                   effet: () => adhesions.modifier(membreDetail.id, { role: v.role as Role }),
+                  effetFinal: () => adhesions.recharger(),
                 })}
               />
               {!membreDetail.mfa && (
@@ -891,8 +936,15 @@ export default function Membres() {
               titre: `${cible.nom} a été retiré de l’organisation`,
               detail:
                 'Son identité subsiste chez notre fournisseur d’identité, mais elle n’a plus accès à vos ressources.',
+              // Le backend confirme par le courriel, que l’adhésion seule
+              // ne porte pas : on le passe explicitement.
+              appel: () => supprimerRessource('/membres', cible.id, cible.email),
               effet: () => {
                 adhesions.supprimer(cible.id)
+                if (detail === cible.id) setDetail(null)
+              },
+              effetFinal: () => {
+                adhesions.recharger()
                 if (detail === cible.id) setDetail(null)
               },
             })

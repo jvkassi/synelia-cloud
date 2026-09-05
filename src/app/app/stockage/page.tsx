@@ -14,6 +14,7 @@ import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { useApp, useEspace } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire } from '@/components/app/actions'
+import { creerRessource, requete } from '@/lib/api/client'
 
 const PRIX_GO: Record<Volume['classe'], number> = {
   nvme: 5.4,
@@ -155,7 +156,13 @@ export default function Stockage() {
             libelleValider="Étendre"
             operation={(f) => ({
               titre: `${v.nom} étendu à ${num(Number(f.taille))} Go`,
+              appel: () =>
+                requete(`/volumes/${encodeURIComponent(v.id)}/extension`, {
+                  methode: 'POST',
+                  corps: { tailleGo: Number(f.taille) },
+                }),
               effet: () => disques.modifier(v.id, { tailleGo: Number(f.taille) }),
+              effetFinal: () => disques.recharger(),
             })}
           />
           {v.attachedTo ? (
@@ -167,12 +174,15 @@ export default function Stockage() {
                 ton: 'warn',
                 titre: `${v.nom} détaché`,
                 detail: 'Le volume reste facturé tant qu’il existe.',
+                appel: () =>
+                  requete(`/volumes/${encodeURIComponent(v.id)}/attachement`, { methode: 'DELETE' }),
                 effet: () =>
                   disques.modifier(v.id, {
                     attachedTo: undefined,
                     attachedLabel: undefined,
                     montage: undefined,
                   }),
+                effetFinal: () => disques.recharger(),
               }}
             />
           ) : (
@@ -196,12 +206,18 @@ export default function Stockage() {
                 const cible = machines.find((m) => m.id === f.machine)
                 return {
                   titre: `${v.nom} attaché à ${cible?.nom ?? ''}`,
+                  appel: () =>
+                    requete(`/volumes/${encodeURIComponent(v.id)}/attachement`, {
+                      methode: 'PUT',
+                      corps: { vmId: cible?.id, montage: String(f.montage) || undefined },
+                    }),
                   effet: () =>
                     disques.modifier(v.id, {
                       attachedTo: cible?.id,
                       attachedLabel: cible?.nom,
                       montage: String(f.montage) || undefined,
                     }),
+                  effetFinal: () => disques.recharger(),
                 }
               }}
             />
@@ -236,6 +252,14 @@ export default function Stockage() {
             operation={(v) => ({
               titre: `Volume ${v.nom} créé`,
               detail: `${v.taille} Go · ${String(v.classe).toUpperCase()} · détaché`,
+              appel: () =>
+                creerRessource('/volumes', {
+                  espaceId: espace.id,
+                  nom: String(v.nom),
+                  tailleGo: Number(v.taille),
+                  classe: v.classe,
+                  chiffre: Boolean(v.chiffre),
+                }),
               effet: () =>
                 disques.creer({
                   id: disques.identifiant('vol'),
@@ -254,6 +278,7 @@ export default function Stockage() {
                           ? 900
                           : 120,
                 }),
+              effetFinal: () => disques.recharger(),
             })}
           />
         }

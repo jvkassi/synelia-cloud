@@ -9,6 +9,7 @@
 export const REGISTRE_COLLECTIONS: Record<string, string> = {
   vms: '/vms',
   espaces: '/espaces',
+  volumes: '/volumes',
   buckets: '/buckets',
   'cles-s3': '/cles-s3',
   clusters: '/kubernetes',
@@ -57,5 +58,34 @@ export const REGISTRE_COLLECTIONS: Record<string, string> = {
 
 /** Endpoint d’une collection, ou `undefined` quand elle reste locale. */
 export function endpointDe(nom: string): string | undefined {
-  return REGISTRE_COLLECTIONS[nom]
+  const direct = REGISTRE_COLLECTIONS[nom]
+  if (direct) return direct
+  // Sous-ressources keyées par parent (`snapshots-<vmId>` → ses instantanés).
+  // Les autres clés à suffixe (`elevations-<id>`, `objets-<id>`…) n’ont pas
+  // d’équivalent liste côté backend et gardent la graine locale.
+  const instantanes = /^snapshots-(.+)$/.exec(nom)
+  if (instantanes) return `/vms/${encodeURIComponent(instantanes[1])}/instantanes`
+  return undefined
+}
+
+/**
+ * Champ dont la valeur exacte confirme une suppression (`?confirmation=`).
+ * Relevé des appels `exiger_confirmation` du backend — pas deviné : un espace
+ * se confirme par son `code` (il n’a pas de `nom`), une IP par son `adresse`,
+ * une alerte par sa `cible`. Défaut : `nom`, puis `code`, puis l’identifiant.
+ */
+const CONFIRMATION_PAR_COLLECTION: Record<string, string> = {
+  espaces: 'code',
+  ips: 'adresse',
+  'regles-alertes': 'cible',
+  'domaines-applicatifs': 'hote',
+  domaines: 'domaine',
+  certificats: 'hote',
+  hebergements: 'domaineProvisoire',
+  'sites-web': 'hote',
+  'points-restauration': 'resourceNom',
+}
+
+export function champConfirmation(nom: string): string {
+  return CONFIRMATION_PAR_COLLECTION[nom] ?? 'nom'
 }

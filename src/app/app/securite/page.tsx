@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Download, FileCheck2, Fingerprint, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { dateHeure, pct, relatif } from '@/lib/format'
+import { MAINTENANT, dateHeure, pct, relatif } from '@/lib/format'
 import { CONFORMITE, ORG_COURANTE, USERS } from '@/lib/mock'
 import { ROLE_LABEL, type Role } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -16,6 +16,7 @@ import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { Regle321 } from '@/components/business/infra'
 import { useApp } from '@/components/app/contexte'
+import { requete } from '@/lib/api/client'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, useOperation } from '@/components/app/actions'
 import type { AuditEvent } from '@/lib/types'
@@ -31,6 +32,11 @@ interface SessionActive {
   ouverte: string
   derniereActivite: string
   courante?: boolean
+  /** Backend (`GET /securite/sessions`) : mêmes sens, autres noms. */
+  utilisateurNom?: string | null
+  email?: string | null
+  agent?: string | null
+  debut?: string
 }
 
 /**
@@ -100,9 +106,19 @@ export default function Securite() {
   // ajoutent, refus compris. Sans atelier touché, il retombe sur la graine.
   const { journal: AUDIT } = useAtelier()
 
-  const { autorise, refus, perm, pousser } = useApp()
+  const { autorise, refus, perm, pousser, organisations, organisationId } = useApp()
   const executer = useOperation()
   const sessions = useCollection<SessionActive>('sessions', SESSIONS)
+  // Le backend nomme les mêmes champs autrement : on normalise une fois pour
+  // que l’onglet lise une seule forme (un `lieu` absent plantait l’affichage).
+  const sessionsNorm = sessions.items.map((x) => ({
+    ...x,
+    nom: x.nom ?? x.utilisateurNom ?? x.email ?? '—',
+    appareil: x.appareil ?? x.agent ?? '—',
+    lieu: x.lieu ?? x.ip,
+    ouverte: x.ouverte ?? x.debut ?? MAINTENANT,
+  }))
+  const nomOrg = organisations.find((o) => o.id === organisationId)?.nom ?? ORG_COURANTE.nom
   const [onglet, setOnglet] = useState('audit')
   const [detail, setDetail] = useState<string | null>(null)
   /** Politique d'organisation — les réglages non désactivables restent fixes. */
@@ -523,16 +539,16 @@ export default function Securite() {
       {onglet === 'sessions' && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <StatTile libelle="Sessions ouvertes" valeur={sessions.items.length} />
+            <StatTile libelle="Sessions ouvertes" valeur={sessionsNorm.length} />
             <StatTile
-              libelle="Personnes connectées"
-              valeur={new Set(sessions.items.map((x) => x.userId)).size}
+              libelle="Comptes connectés"
+              valeur={new Set(sessionsNorm.map((x) => x.userId)).size}
             />
             <StatTile
-              libelle="Hors Côte d’Ivoire"
-              valeur={sessions.items.filter((x) => !x.lieu.includes('Côte d’Ivoire')).length}
+              libelle="Hors du pays"
+              valeur={sessionsNorm.filter((x) => !x.lieu.includes('Côte d’Ivoire')).length}
               ton={
-                sessions.items.some((x) => !x.lieu.includes('Côte d’Ivoire')) ? 'warn' : 'ok'
+                sessionsNorm.some((x) => !x.lieu.includes('Côte d’Ivoire')) ? 'warn' : 'ok'
               }
               detail="À vérifier si personne n’est en déplacement"
             />
@@ -554,20 +570,28 @@ export default function Securite() {
               <BoutonAction
                 libelle="Révoquer toutes les autres"
                 icone={<ShieldAlert size={13} />}
-                desactive={sessions.items.filter((x) => !x.courante).length === 0}
+                desactive={sessionsNorm.filter((x) => !x.courante).length === 0}
                 operation={{
                   action: 'sso.configure',
                   ton: 'warn',
-                  titre: `${sessions.items.filter((x) => !x.courante).length} session(s) révoquée(s)`,
+                  titre: `${sessionsNorm.filter((x) => !x.courante).length} session(s) révoquée(s)`,
                   detail:
                     'Toutes les personnes concernées devront se reconnecter. Votre session courante est conservée.',
+                  // La révocation globale part sur la route dédiée (le nom
+                  // de l’organisation en confirmation), pas en N suppressions.
+                  appel: () =>
+                    requete('/securite/sessions', {
+                      methode: 'DELETE',
+                      query: { confirmation: nomOrg },
+                    }),
                   effet: () =>
                     sessions.supprimer(
                       sessions.items.filter((x) => !x.courante).map((x) => x.id),
                     ),
+                  effetFinal: () => sessions.recharger(),
                 }}
                 confirmation={{
-                  ressource: ORG_COURANTE.nom,
+                  ressource: nomOrg,
                   titre: 'Révoquer toutes les autres sessions ?',
                   pertes: [
                     'Toutes les personnes connectées devront se reconnecter',
@@ -579,7 +603,7 @@ export default function Securite() {
               />
             </div>
             <ul className="divide-y divide-g-100">
-              {sessions.items.map((x) => (
+              {sessionsNorm.map((x) => (
                 <li key={x.id} className="flex flex-wrap items-start gap-3 px-4 py-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -587,9 +611,11 @@ export default function Securite() {
                       <Badge tone="neutral" size="sm">
                         {x.appareil}
                       </Badge>
-                      <Badge tone="neutral" size="sm">
-                        {x.navigateur}
-                      </Badge>
+                      {x.navigateur && (
+                        <Badge tone="neutral" size="sm">
+                          {x.navigateur}
+                        </Badge>
+                      )}
                       {x.courante && (
                         <Badge tone="ok" size="sm" dot>
                           Session courante
@@ -619,6 +645,7 @@ export default function Securite() {
                         ? 'Vous serez redirigé vers l’écran de connexion.'
                         : `${x.appareil} · ${x.ip} — la personne devra se reconnecter.`,
                       effet: () => sessions.supprimer(x.id),
+                      effetFinal: () => sessions.recharger(),
                     }}
                   />
                 </li>

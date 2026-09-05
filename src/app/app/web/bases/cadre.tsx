@@ -1,12 +1,16 @@
 'use client'
 
-import { MOTEUR_WEB_LABEL, serveursBasesDeLOrg } from '@/lib/mock'
+import { MOTEUR_WEB_LABEL, SERVEURS_BASES, serveursBasesDeLOrg, type ServeurBases } from '@/lib/mock'
 import type { Tone } from '@/components/ui/badge'
 import { CadreSection } from '@/components/app/cadre-section'
+import { useCollection } from '@/components/app/atelier'
+import { estActif } from '@/lib/api/client'
 
 /** Panneau de la section — liste les serveurs de bases de l'organisation. */
 export function CadreBases({ children }: { children: React.ReactNode }) {
-  const entrees = serveursBasesDeLOrg().map((s) => ({
+  const collection = useCollection<ServeurBases>('serveurs-bases', SERVEURS_BASES)
+  const source = estActif() ? collection.items : serveursBasesDeLOrg()
+  const entrees = source.map((s) => ({
     id: s.id,
     nom: `${MOTEUR_WEB_LABEL[s.moteur]} ${s.version}`,
     sousTitre: `${s.serveur} · ${s.bases.length} base${s.bases.length > 1 ? 's' : ''}`,

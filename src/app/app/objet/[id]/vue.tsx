@@ -11,6 +11,7 @@ import { Button, IconButton } from '@/components/ui/button'
 import { CodeBlock, CopyField, GatedAction, Tabs } from '@/components/ui/display'
 import { Field, Input, MonoTextarea, Radio, Select, Slider, Switch } from '@/components/ui/field'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
+import { EmptyState } from '@/components/composition/states'
 import { StatTile } from '@/components/composition/metrics'
 import { LogPeek } from '@/components/business/observabilite'
 import { useApp } from '@/components/app/contexte'
@@ -86,7 +87,28 @@ export function VueBucket({ id }: { id: string }) {
   const regles = useCollection<RegleCycle>(`cycle-${id}`, REGLES_CYCLE)
   const [onglet, setOnglet] = useState('objets')
 
-  const bucket = seaux.items.find((b) => b.id === id)!
+  const bucket = seaux.items.find((b) => b.id === id)
+
+  if (!bucket) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          fil={[
+            { label: 'Espace client', href: '/app' },
+            { label: 'Stockage objet S3', href: '/app/objet' },
+            { label: 'Introuvable' },
+          ]}
+          titre="Bucket introuvable"
+        />
+        <EmptyState
+          titre="Ce bucket n’existe pas ou plus"
+          phrase="Il a peut-être été supprimé, ou vous avez suivi un lien vers une autre organisation."
+          action={{ libelle: 'Retour au stockage objet', href: '/app/objet' }}
+        />
+      </div>
+    )
+  }
+
   const prixGo = bucket.classe === 'chaud' ? 1.5 : 0.62
 
   return (

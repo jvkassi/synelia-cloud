@@ -1,12 +1,16 @@
 'use client'
 
-import { messageriesDeLOrg } from '@/lib/mock'
+import { MESSAGERIES, messageriesDeLOrg, type MessagerieDomaine } from '@/lib/mock'
 import type { Tone } from '@/components/ui/badge'
 import { CadreSection } from '@/components/app/cadre-section'
+import { useCollection } from '@/components/app/atelier'
+import { estActif } from '@/lib/api/client'
 
 /** Panneau de la section — liste les messageries de l'organisation. */
 export function CadreEmails({ children }: { children: React.ReactNode }) {
-  const entrees = messageriesDeLOrg().map((m) => ({
+  const collection = useCollection<MessagerieDomaine>('messageries', MESSAGERIES)
+  const source = estActif() ? collection.items : messageriesDeLOrg()
+  const entrees = source.map((m) => ({
     id: m.id,
     nom: m.domaine,
     sousTitre: m.actif

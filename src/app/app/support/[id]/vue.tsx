@@ -16,11 +16,13 @@ import { Button, ButtonLink } from '@/components/ui/button'
 import { Avatar, Tabs } from '@/components/ui/display'
 import { Field, MonoTextarea, Select, Switch } from '@/components/ui/field'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
+import { EmptyState } from '@/components/composition/states'
 import { StatTile } from '@/components/composition/metrics'
 import { Timeline } from '@/components/composition/flow'
 import { EventList, GrilleSparkCharts, LogPeek } from '@/components/business/observabilite'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, useOperation } from '@/components/app/actions'
+import { creerRessource, modifierRessource } from '@/lib/api/client'
 import type { Ticket } from '@/lib/types'
 
 const LIBELLE_STATUT: Record<Ticket['statut'], string> = {
@@ -67,7 +69,28 @@ export function VueTicket({ id }: { id: string }) {
   const [lectureContexte, setLectureContexte] = useState(true)
   const [interventionAutorisee, setInterventionAutorisee] = useState(false)
 
-  const t = tickets.items.find((x) => x.id === id)!
+  const t = tickets.items.find((x) => x.id === id)
+
+  if (!t) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          fil={[
+            { label: 'Espace client', href: '/app' },
+            { label: 'Support', href: '/app/support' },
+            { label: 'Introuvable' },
+          ]}
+          titre="Ticket introuvable"
+        />
+        <EmptyState
+          titre="Ce ticket n’existe pas ou plus"
+          phrase="Il a peut-être été fermé depuis plus de trente-six mois, ou vous avez suivi un lien vers une autre organisation."
+          action={{ libelle: 'Retour au support', href: '/app/support' }}
+        />
+      </div>
+    )
+  }
+
   const ouvert = !['resolu', 'ferme'].includes(t.statut)
 
   const premiereReponse = t.messages.find((m) => m.role === 'synelia')
@@ -111,7 +134,9 @@ export function VueTicket({ id }: { id: string }) {
                   executer({
                     titre: 'Ticket marqué comme résolu',
                     detail: 'Il reste consultable et peut être réouvert pendant sept jours.',
+                    appel: () => modifierRessource('/support/tickets', t.id, { statut: 'resolu' }),
                     effet: () => tickets.modifier(t.id, { statut: 'resolu', slaRestantMin: undefined }),
+                    effetFinal: () => tickets.recharger(),
                   })
                 }
               >
@@ -126,7 +151,12 @@ export function VueTicket({ id }: { id: string }) {
                   titre: 'Escalade demandée',
                   detail:
                     'Le responsable d’astreinte est notifié et reprend le ticket. L’engagement de résolution ne change pas : c’est le niveau d’attention qui change.',
+                  appel: () =>
+                    creerRessource(`/support/tickets/${encodeURIComponent(t.id)}/escalade`, {
+                      motif: 'Escalade demandée depuis le portail',
+                    }),
                   effet: () => tickets.modifier(t.id, { statut: 'en_cours' }),
+                  effetFinal: () => tickets.recharger(),
                 }}
               />
             </>
@@ -138,7 +168,9 @@ export function VueTicket({ id }: { id: string }) {
                 ton: 'info',
                 titre: `Ticket ${t.numero} réouvert`,
                 detail: 'L’équipe qui l’avait traité est notifiée en priorité.',
+                appel: () => modifierRessource('/support/tickets', t.id, { statut: 'ouvert' }),
                 effet: () => tickets.modifier(t.id, { statut: 'ouvert' }),
+                effetFinal: () => tickets.recharger(),
               }}
             />
           )
@@ -291,6 +323,10 @@ export function VueTicket({ id }: { id: string }) {
                       executer({
                         titre: 'Réponse envoyée',
                         detail: `L’équipe est notifiée. Engagement de réponse : ${dureeMin(t.slaCible.premiereReponseMin)}.`,
+                        appel: () =>
+                          creerRessource(`/support/tickets/${encodeURIComponent(t.id)}/messages`, {
+                            contenu: reponse,
+                          }),
                         effet: () =>
                           tickets.modifier(t.id, (x) => ({
                             statut: 'en_cours',
@@ -304,6 +340,7 @@ export function VueTicket({ id }: { id: string }) {
                               },
                             ],
                           })),
+                        effetFinal: () => tickets.recharger(),
                       })
                       setReponse('')
                     }}
