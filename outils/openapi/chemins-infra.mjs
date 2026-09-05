@@ -186,6 +186,7 @@ const vms = fusion(
       filtre('tag', chaine()),
       filtre('applicationId', chaine()),
     ],
+    erreursCreation: [404],
   }),
   {
     '/vms/lot': {
@@ -200,7 +201,7 @@ const vms = fusion(
         ok: ref('TravailProvisioning'),
         code: 202,
         rbac: 'vm.create_delete',
-        erreurs: [409, 402],
+        erreurs: [409, 402, 404],
       }),
     },
     '/vms/{vmId}/materiel': {
@@ -374,6 +375,7 @@ const k8s = fusion(
     rbacEcriture: 'vm.create_delete',
     filtres: [filtreEspace, filtreSite, filtre('statut', liste(['running', 'degraded', 'provisioning', 'updating']))],
     sansModification: true,
+    erreursCreation: [404],
   }),
   {
     '/kubernetes/versions': {
@@ -1032,7 +1034,7 @@ const protection = fusion(
     corps: ref('DemandeRestauration'),
     corpsRequis: true,
     rbac: 'backup.restore',
-    erreurs: [409],
+    erreurs: [409, 404],
   }),
   action({
     tag: T_PROTECTION,

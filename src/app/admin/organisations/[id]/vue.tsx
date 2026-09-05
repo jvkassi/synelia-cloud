@@ -38,6 +38,7 @@ import { Timeline } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { modifierRessource, requete } from '@/lib/api/client'
 
 const ONGLETS = [
   { id: 'synthese', label: 'Synthèse' },
@@ -965,10 +966,15 @@ export function VueOrganisation({ id }: { id: string }) {
                 detail: `Plan ${planService || (org.tenantPlan ?? 'Standard')}, quota de ${quotaEspaces} espaces, libre-service ${
                   libreService ? 'autorisé' : 'refusé'
                 }. La modification est journalisée dans l’audit du client, avec votre nom.`,
+                appel: () =>
+                  modifierRessource('/organisations', org.id, {
+                    tenantPlan: planService || (org.tenantPlan ?? 'Standard'),
+                  }),
                 effet: () =>
                   orgs.modifier(org.id, {
                     tenantPlan: planService || (org.tenantPlan ?? 'Standard'),
                   }),
+                effetFinal: () => orgs.recharger(),
               }}
             />
           </Card>
@@ -1117,6 +1123,20 @@ export function VueOrganisation({ id }: { id: string }) {
                   ton: 'warn',
                   titre: 'Élévation demandée',
                   detail: `Une entrée apparaît immédiatement dans le journal d’audit de ${org.nom}, avec votre nom et le motif.`,
+                  // `POST /organisations/{id}/emprunt-identite` : l’accès aux
+                  // ressources du client, borné en durée, en écriture seulement
+                  // pour une intervention. La session renvoyée n’est pas prise :
+                  // on reste dans l’espace fournisseur.
+                  appel: () =>
+                    requete(`/organisations/${encodeURIComponent(org.id)}/emprunt-identite`, {
+                      methode: 'POST',
+                      corps: {
+                        motif: motifElevation.trim(),
+                        ticketId: ticketElevation.trim() || undefined,
+                        ecriture: perimetreElevation === 'intervention',
+                        dureeMin: Number(dureeElevation) * 60,
+                      },
+                    }),
                   effet: () =>
                     elevations.creer({
                       id: elevations.identifiant('elv'),
@@ -1220,8 +1240,21 @@ export function VueOrganisation({ id }: { id: string }) {
             titre: org.statut === 'active' ? `${org.nom} suspendue` : `${org.nom} réactivée`,
             detail:
               'L’opération est journalisée dans l’audit de l’organisation et dans celui de la plateforme.',
+            appel: () =>
+              org.statut === 'active'
+                ? requete(`/organisations/${encodeURIComponent(org.id)}/suspension`, {
+                    methode: 'POST',
+                    corps: {
+                      motif: 'Suspension décidée depuis l’espace fournisseur, après relances.',
+                      notifier: true,
+                    },
+                  })
+                : requete(`/organisations/${encodeURIComponent(org.id)}/suspension`, {
+                    methode: 'DELETE',
+                  }),
             effet: () =>
               orgs.modifier(org.id, { statut: org.statut === 'active' ? 'suspendue' : 'active' }),
+            effetFinal: () => orgs.recharger(),
           })
           setSuspension(false)
         }}

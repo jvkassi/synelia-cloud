@@ -79,7 +79,7 @@ const domaines = fusion(
         id: 'verifierDisponibiliteDomaine',
         resume: 'Vérifier la disponibilité d’un nom',
         params: [
-          filtre('nom', chaine(), 'Nom complet avec son extension.'),
+          filtre('nom', chaine(), 'Nom complet avec son extension.', true),
           filtre('extensions', chaine(), 'Extensions supplémentaires à tester, séparées par des virgules.'),
         ],
         ok: ref('DisponibiliteDomaine'),
@@ -500,7 +500,7 @@ const sitesWeb = fusion(
         ok: ref('TravailProvisioning'),
         code: 202,
         rbac: 'service.admin',
-        erreurs: [409, 402],
+        erreurs: [409, 402, 404],
       }),
     },
     '/web/sites/{siteId}': {

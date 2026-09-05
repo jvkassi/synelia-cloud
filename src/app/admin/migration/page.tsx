@@ -17,7 +17,7 @@ import { Timeline } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
-import { estActif, requete } from '@/lib/api/client'
+import { creerRessource, estActif, requete } from '@/lib/api/client'
 
 const ONGLETS = [
   { id: 'trajectoire', label: 'Trajectoire de sortie' },
@@ -199,9 +199,91 @@ export default function Migration() {
         titre="Migration entre socles"
         sousTitre="Nous exploitons encore des hyperviseurs propriétaires, et nous le disons. Voici le calendrier de sortie, son avancement réel, et ce qui reste à faire. Cette page a son équivalent public : nous ne communiquons pas un chiffre différent à l’extérieur."
         actions={
-          <ButtonLink variant="secondary" external href="/souverainete">
-            Voir la page publique
-          </ButtonLink>
+          <>
+            <BoutonFormulaire
+              libelle="Nouvelle campagne"
+              size="md"
+              icone={<CalendarClock size={14} />}
+              action="capacity.manage"
+              titre="Planifier une campagne de migration"
+              description="Une campagne déplace les ressources d’un socle en sortie vers un socle libre, dans une fenêtre annoncée aux organisations concernées sept jours avant. Le retour arrière reste possible sept jours."
+              libelleValider="Planifier"
+              champs={[
+                {
+                  id: 'nom',
+                  label: 'Nom',
+                  placeholder: 'Vague 7 — bases de données restantes',
+                  obligatoire: true,
+                },
+                {
+                  id: 'backendSource',
+                  label: 'Socle source',
+                  type: 'select',
+                  demi: true,
+                  options: (enSortie.length > 0 ? enSortie : SOCLES).map((b) => ({
+                    value: b.code,
+                    label: `${b.code} · ${SITE_COURT[b.site]}`,
+                  })),
+                },
+                {
+                  id: 'backendCible',
+                  label: 'Socle cible',
+                  type: 'select',
+                  demi: true,
+                  options: SOCLES.filter((b) => !b.enSortie?.actif).map((b) => ({
+                    value: b.code,
+                    label: `${b.code} · ${SITE_COURT[b.site]}`,
+                  })),
+                },
+                {
+                  id: 'fenetre',
+                  label: 'Fenêtre',
+                  type: 'select',
+                  options: [
+                    { value: 'Samedi 22h00 – 02h00', label: 'Samedi 22h00 – 02h00' },
+                    { value: 'Dimanche 02h00 – 06h00', label: 'Dimanche 02h00 – 06h00' },
+                    { value: 'Nuit de semaine 23h00 – 04h00', label: 'Nuit de semaine 23h00 – 04h00' },
+                  ],
+                },
+                {
+                  id: 'notifierClients',
+                  label: 'Prévenir les organisations concernées',
+                  type: 'switch',
+                  placeholder: 'Avis envoyé sept jours avant',
+                },
+              ]}
+              valeursDepart={{ notifierClients: true }}
+              operation={(v) => ({
+                titre: `${v.nom} planifiée`,
+                detail: `${v.backendSource} → ${v.backendCible} · ${v.fenetre}.`,
+                appel: () =>
+                  creerRessource('/admin/migration/campagnes', {
+                    nom: String(v.nom).trim(),
+                    backendSource: String(v.backendSource),
+                    backendCible: String(v.backendCible),
+                    fenetre: String(v.fenetre),
+                    notifierClients: Boolean(v.notifierClients),
+                  }),
+                effet: () =>
+                  vaguesBrutes.creer({
+                    id: vaguesBrutes.identifiant('v'),
+                    nom: String(v.nom).trim(),
+                    source: String(v.backendSource),
+                    cible: String(v.backendCible),
+                    machines: 0,
+                    organisations: [],
+                    fenetre: String(v.fenetre),
+                    mode: 'mixte',
+                    statut: 'planifiee',
+                    avancement: 0,
+                  }),
+                effetFinal: () => vaguesBrutes.recharger(),
+              })}
+            />
+            <ButtonLink variant="secondary" external href="/souverainete">
+              Voir la page publique
+            </ButtonLink>
+          </>
         }
         meta={
           <>

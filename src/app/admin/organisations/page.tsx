@@ -20,6 +20,7 @@ import { useApp } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire, useOperation } from '@/components/app/actions'
 import type { Organisation } from '@/lib/types'
+import { creerRessource } from '@/lib/api/client'
 
 export default function Organisations() {
   const { autorise, refus, pousser } = useApp()
@@ -50,6 +51,18 @@ export default function Organisations() {
         adminCourriel.trim() || 'l’administrateur'
       } est envoyée.`,
       job: { workflow: 'org.create', cible: nom.trim() },
+      appel: () =>
+        creerRessource('/organisations', {
+          nom: nom.trim(),
+          pays,
+          secteur: secteur.trim() || undefined,
+          tva: tva.trim() || undefined,
+          tenantPlan: plan,
+          administrateur: adminCourriel.trim()
+            ? { email: adminCourriel.trim(), nom: adminCourriel.trim().split('@')[0] }
+            : undefined,
+        }),
+      effetFinal: () => orgs.recharger(),
       effet: () =>
         orgs.creer({
           id: orgs.identifiant('org'),

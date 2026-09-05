@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Download, FileCheck2, Fingerprint, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MAINTENANT, dateHeure, pct, relatif } from '@/lib/format'
@@ -37,6 +37,27 @@ interface SessionActive {
   email?: string | null
   agent?: string | null
   debut?: string
+}
+
+/**
+ * `GET/PUT /securite/politiques` — l’écran ne règle que trois interrupteurs :
+ * on renvoie ce qu’on a lu (méthodes MFA, plages IP, durées, mot de passe)
+ * avec ces réglages par-dessus, sans écraser le reste.
+ */
+interface PolitiquesDistantes {
+  mfa: { obligatoire: boolean; methodes: string[]; delaiGraceJours?: number; exemptions?: string[] }
+  session: {
+    dureeMaxMin: number
+    inactiviteMin: number
+    sessionUniqueParUtilisateur?: boolean
+    reauthentificationActionsSensibles?: boolean
+  }
+  restrictionIp: {
+    actif: boolean
+    plages: Array<{ cidr: string; libelle?: string; portee: string }>
+    appliqueAuxAdmins?: boolean
+  }
+  motDePasse?: Record<string, unknown>
 }
 
 /**
@@ -134,14 +155,12 @@ export default function Securite() {
    * l’empreinte de chaînage n’ont pas d’équivalent contrat et restent des
    * réglages d’écran. Une inactivité à zéro signifie « sans expiration ».
    */
-  useEffect(() => {
+  const [politiquesDistantes, setPolitiquesDistantes] = useState<PolitiquesDistantes | null>(null)
+  const lirePolitiques = useCallback(() => {
     if (!estActif()) return
-    requete<{
-      mfa: { obligatoire: boolean }
-      session: { inactiviteMin: number }
-      restrictionIp: { actif: boolean }
-    }>('/securite/politiques').then(
+    requete<PolitiquesDistantes>('/securite/politiques').then(
       (p) => {
+        setPolitiquesDistantes(p)
         setMfaObligatoire(p.mfa.obligatoire)
         setExpirationSession(p.session.inactiviteMin > 0)
         setPlagesIp(p.restrictionIp.actif)
@@ -149,6 +168,9 @@ export default function Securite() {
       () => {},
     )
   }, [])
+  useEffect(() => {
+    lirePolitiques()
+  }, [lirePolitiques])
 
   const peutVoir = perm('audit.view') !== 'none'
   const refuses = AUDIT.filter((a) => a.result === 'refuse').length
@@ -536,15 +558,36 @@ export default function Securite() {
                           requete('/securite/politiques', {
                             methode: 'PUT',
                             corps: {
-                              mfa: { obligatoire: mfaObligatoire, methodes: ['totp'] },
-                              session: {
-                                dureeMaxMin: 720,
-                                inactiviteMin: expirationSession ? 480 : 0,
+                              mfa: {
+                                ...(politiquesDistantes?.mfa ?? { methodes: ['totp'] }),
+                                obligatoire: mfaObligatoire,
                               },
-                              restrictionIp: { actif: plagesIp, plages: [] },
+                              session: {
+                                ...(politiquesDistantes?.session ?? { dureeMaxMin: 720 }),
+                                // « 8 heures » quand rien n’était réglé ; sinon on garde
+                                // la durée déjà en place plutôt que de l’écraser.
+                                inactiviteMin: expirationSession
+                                  ? politiquesDistantes?.session.inactiviteMin || 480
+                                  : 0,
+                              },
+                              restrictionIp: {
+                                ...(politiquesDistantes?.restrictionIp ?? { plages: [] }),
+                                actif: plagesIp,
+                              },
+                              ...(politiquesDistantes?.motDePasse
+                                ? { motDePasse: politiquesDistantes.motDePasse }
+                                : {}),
                             },
                           })
                       : undefined,
+                    // Une politique plus stricte peut invalider des sessions :
+                    // on relit les deux.
+                    effetFinal: () => {
+                      if (api) {
+                        lirePolitiques()
+                        sessions.recharger()
+                      }
+                    },
                   }}
                 />
               </Card>

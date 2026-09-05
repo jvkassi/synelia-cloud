@@ -57,6 +57,55 @@ export default function PortefeuilleWebCloud() {
     integration?: string
     dateDonnees?: string
   } | null>(null)
+  const [transfertDegrade, setTransfertDegrade] = useState<{
+    integration?: string
+    dateDonnees?: string
+  } | null>(null)
+
+  /**
+   * Éligibilité au transfert : le contrat n’a pas de route dédiée, mais
+   * `GET /web/domaines/disponibilite` dit si le nom existe au registre — un
+   * nom libre n’a rien à transférer, un nom pris peut l’être avec son code.
+   */
+  const verifierTransfert = () => {
+    const nom = aTransferer.trim().toLowerCase()
+    if (!nom) return
+    if (!estActif()) {
+      executer({
+        ton: 'info',
+        titre: `${nom} est transférable`,
+        detail:
+          'Le domaine a plus de 60 jours et n’est pas verrouillé. Il vous reste à fournir le code d’autorisation.',
+      })
+      return
+    }
+    setTransfertDegrade(null)
+    requete<{ disponible: boolean; registre?: string; whois?: string }>(
+      '/web/domaines/disponibilite',
+      { query: { nom } },
+    ).then(
+      (r) => {
+        executer({
+          ton: r.disponible ? 'warn' : 'info',
+          titre: r.disponible ? `${nom} n’est enregistré nulle part` : `${nom} est transférable`,
+          detail: r.disponible
+            ? 'Rien à transférer : commandez-le depuis le bouton en haut de page.'
+            : `Enregistré${r.registre ? ` au registre ${r.registre}` : ''}${r.whois ? ` (${r.whois})` : ''}. Il vous reste à fournir le code d’autorisation.`,
+        })
+      },
+      (e: unknown) => {
+        if (e instanceof ApiError && e.statut === 424) {
+          setTransfertDegrade({ integration: e.integration, dateDonnees: e.dateDonnees })
+          return
+        }
+        executer({
+          ton: 'err',
+          titre: 'Éligibilité invérifiable',
+          detail: e instanceof Error ? e.message : undefined,
+        })
+      },
+    )
+  }
 
   const verifierDispo = () => {
     if (!estActif()) {
@@ -523,18 +572,20 @@ export default function PortefeuilleWebCloud() {
                 placeholder="mon-entreprise.ci"
               />
             </Field>
-            <BoutonAction
-              libelle="Vérifier l’éligibilité"
-              size="md"
-              desactive={!aTransferer.trim()}
-              operation={{
-                ton: 'info',
-                titre: `${aTransferer} est transférable`,
-                detail:
-                  'Le domaine a plus de 60 jours et n’est pas verrouillé. Il vous reste à fournir le code d’autorisation.',
-              }}
-            />
+            <Button size="md" disabled={!aTransferer.trim()} onClick={verifierTransfert}>
+              Vérifier l’éligibilité
+            </Button>
           </div>
+          {transfertDegrade && (
+            <div className="mt-3">
+              <DegradedState
+                source="registre"
+                hauteur="h-28"
+                integration={transfertDegrade.integration}
+                dateDonnees={transfertDegrade.dateDonnees}
+              />
+            </div>
+          )}
 
           <Callout ton="info" className="mt-3" titre="Durée réelle">
             Cinq à sept jours pour un <span className="font-mono">.com</span>, et jusqu’à dix jours

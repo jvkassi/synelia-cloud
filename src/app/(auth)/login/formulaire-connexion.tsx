@@ -26,7 +26,8 @@ export function FormulaireConnexionApi() {
     router.push('/app')
   }
 
-  const connecter = async () => {
+  const connecter = async (e?: { preventDefault: () => void }) => {
+    e?.preventDefault()
     setChargement(true)
     setErreur(null)
     try {
@@ -95,7 +96,7 @@ export function FormulaireConnexionApi() {
           </Button>
         </div>
       ) : (
-        <div className="mt-3.5 space-y-3.5">
+        <form className="mt-3.5 space-y-3.5" onSubmit={connecter}>
           <Field label="Adresse e-mail professionnelle">
             <Input
               type="email"
@@ -112,17 +113,14 @@ export function FormulaireConnexionApi() {
               placeholder="••••••••••"
               value={motDePasse}
               onChange={(e) => setMotDePasse(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && email.trim() && motDePasse) connecter()
-              }}
             />
           </Field>
           {erreur && <p className="text-[12.5px] font-medium text-err">{erreur}</p>}
           <Button
+            type="submit"
             fullWidth
             loading={chargement}
             disabled={email.trim().length === 0 || motDePasse.length === 0}
-            onClick={connecter}
             iconAfter={<ArrowRight size={14} />}
           >
             Se connecter
@@ -131,7 +129,7 @@ export function FormulaireConnexionApi() {
             Session ouverte auprès de l’API configurée. En démonstration locale, utilisez le compte
             <span className="font-mono text-[11px]"> admin@synelia.cloud</span>.
           </p>
-        </div>
+        </form>
       )}
     </div>
   )

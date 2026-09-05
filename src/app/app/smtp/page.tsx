@@ -91,6 +91,27 @@ interface MessageSmtpDistant {
   detail?: string
 }
 
+/** `GET /web/smtp` — le relais de l’organisation (hôte, quota, authentification). */
+interface RelaisSmtpDistant {
+  id: string
+  hote: string
+  ports: number[]
+  identifiant: string
+  domainesAutorises: string[]
+  authentification: { spf: string; dkim: string; dmarc: string; selecteurDkim?: string }
+  quota: { parJour: number; parHeure: number; utiliseJour: number }
+  reputation: { tauxRemise: number; tauxRebond: number; plaintes: number; listeNoire: boolean }
+  actif: boolean
+}
+
+/** `POST /web/smtp/identifiants` — renvoyés une seule fois. */
+interface IdentifiantsSmtp {
+  hote: string
+  ports?: number[]
+  identifiant: string
+  motDePasse: string
+}
+
 export default function Smtp() {
   const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
@@ -111,6 +132,13 @@ export default function Smtp() {
     hote: string
   } | null>(null)
   const [erreursCles, setErreursCles] = useState<Record<string, string>>({})
+  /** Relais distant et ses réglages éditables (`PATCH /web/smtp`). */
+  const [relais, setRelais] = useState<RelaisSmtpDistant | null>(null)
+  const [domainesRelais, setDomainesRelais] = useState('')
+  const [quotaRelais, setQuotaRelais] = useState(5000)
+  const [erreursRelais, setErreursRelais] = useState<Record<string, string>>({})
+  const [identifiantsRegeneres, setIdentifiantsRegeneres] = useState<IdentifiantsSmtp | null>(null)
+  const [destinataireTest, setDestinataireTest] = useState('')
 
   /**
    * `GET /web/smtp/cles` et `/webhooks` renvoient des tableaux nus, pas
@@ -130,6 +158,14 @@ export default function Smtp() {
 
   useEffect(() => {
     if (!estActif()) return
+    requete<RelaisSmtpDistant>('/web/smtp').then(
+      (r) => {
+        setRelais(r)
+        setDomainesRelais(r.domainesAutorises.join(', '))
+        setQuotaRelais(r.quota.parJour)
+      },
+      () => setRelais(null),
+    )
     requete<CleSmtpDistante[]>('/web/smtp/cles').then(
       (l) => setClesDistantes(l),
       () => setClesDistantes([]),
@@ -257,7 +293,46 @@ export default function Smtp() {
       }))
     : SMTP.journal.map((j) => ({ id: j.ts, ...j }))
 
-  const tauxLivraison = SMTP.livraison.find((l) => l.statut === 'delivre')?.pct ?? 0
+  const tauxLivraison = api
+    ? (relais?.reputation.tauxRemise ?? 0)
+    : (SMTP.livraison.find((l) => l.statut === 'delivre')?.pct ?? 0)
+  const quotaJour = api ? (relais?.quota.parJour ?? 0) : SMTP.quotas.parJour
+  const envoyesJour = api ? (relais?.quota.utiliseJour ?? 0) : SMTP.quotas.envoyesJour
+  const parHeure = api ? (relais?.quota.parHeure ?? 0) : SMTP.quotas.parHeure
+  const relaisActif = api ? relais?.actif === true : true
+
+  /** `POST /web/smtp/test` — un message d’essai part réellement par le relais. */
+  const envoyerTest = () => {
+    const destinataire = destinataireTest.trim()
+    if (!destinataire) return
+    if (!estActif()) {
+      pousser({
+        ton: 'ok',
+        titre: `Message d’essai remis à ${destinataire}`,
+        detail: 'Code 250 — le relais accepte vos envois.',
+      })
+      return
+    }
+    requete<{ envoye: boolean; code?: string; detail?: string }>('/web/smtp/test', {
+      methode: 'POST',
+      corps: { destinataire },
+    }).then(
+      (r) =>
+        pousser({
+          ton: r.envoye ? 'ok' : 'warn',
+          titre: r.envoye
+            ? `Message d’essai remis à ${destinataire}`
+            : `Message d’essai refusé pour ${destinataire}`,
+          detail: [r.code, r.detail].filter(Boolean).join(' · ') || undefined,
+        }),
+      (e: unknown) =>
+        pousser({
+          ton: 'err',
+          titre: 'Envoi du message d’essai impossible',
+          detail: e instanceof Error ? e.message : undefined,
+        }),
+    )
+  }
 
   return (
     <div className="space-y-5">
@@ -274,16 +349,16 @@ export default function Smtp() {
         }
         meta={
           <>
-            <Badge tone="ok" dot size="sm">
-              Relais opérationnel
+            <Badge tone={relaisActif ? 'ok' : 'warn'} dot size="sm">
+              {relaisActif ? 'Relais opérationnel' : 'Relais à activer'}
             </Badge>
             <Badge tone="neutral" size="sm">
-              IP dédiée {SMTP.reputation.ip}
+              {api ? relais?.hote || 'Relais non provisionné' : `IP dédiée ${SMTP.reputation.ip}`}
             </Badge>
             <Badge tone="neutral" size="sm">
-              {SMTP.reputation.listesNoires === 0
-                ? 'Aucune liste noire'
-                : `${SMTP.reputation.listesNoires} liste noire`}
+              {(api ? relais?.reputation.listeNoire === true : SMTP.reputation.listesNoires > 0)
+                ? 'Présent dans une liste noire'
+                : 'Aucune liste noire'}
             </Badge>
           </>
         }
@@ -292,9 +367,9 @@ export default function Smtp() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
           libelle="Envoyés aujourd’hui"
-          valeur={num(SMTP.quotas.envoyesJour)}
-          detail={`sur ${num(SMTP.quotas.parJour)} autorisés`}
-          ton={SMTP.quotas.envoyesJour / SMTP.quotas.parJour > 0.8 ? 'warn' : 'violet'}
+          valeur={num(envoyesJour)}
+          detail={`sur ${num(quotaJour)} autorisés`}
+          ton={quotaJour > 0 && envoyesJour / quotaJour > 0.8 ? 'warn' : 'violet'}
         />
         <StatTile
           libelle="Taux de livraison"
@@ -302,13 +377,22 @@ export default function Smtp() {
           ton={tauxLivraison > 95 ? 'ok' : 'warn'}
           detail="Sur les dernières 24 heures"
         />
-        <StatTile
-          libelle="Score de réputation"
-          valeur={SMTP.reputation.score}
-          unite="/100"
-          ton={SMTP.reputation.score > 90 ? 'ok' : 'warn'}
-          detail="Mesuré auprès des grands fournisseurs"
-        />
+        {api ? (
+          <StatTile
+            libelle="Réputation"
+            valeur={relais?.reputation.listeNoire ? 'Listée' : 'Saine'}
+            ton={relais?.reputation.listeNoire ? 'err' : 'ok'}
+            detail={`Rebonds ${pct(relais?.reputation.tauxRebond ?? 0, 1)} · plaintes ${pct(relais?.reputation.plaintes ?? 0, 2)}`}
+          />
+        ) : (
+          <StatTile
+            libelle="Score de réputation"
+            valeur={SMTP.reputation.score}
+            unite="/100"
+            ton={SMTP.reputation.score > 90 ? 'ok' : 'warn'}
+            detail="Mesuré auprès des grands fournisseurs"
+          />
+        )}
         <StatTile
           libelle="Clés d’envoi actives"
           valeur={api ? (clesDistantes ?? []).length : cles.items.length}
@@ -320,31 +404,81 @@ export default function Smtp() {
 
       {onglet === 'apercu' && (
         <div className="space-y-4">
+          {api && relais && !relais.actif && (
+            <Card>
+              <CardHeader
+                titre="Le relais n’est pas encore activé"
+                sousTitre="Déclarez vos domaines expéditeurs : le relais est provisionné, SPF, DKIM et DMARC posés, puis le mode d’essai levé."
+                actions={
+                  <BoutonFormulaire
+                    libelle="Activer le relais"
+                    variant="primary"
+                    icone={<Plus size={13} />}
+                    action="secrets.update"
+                    titre="Activer le relais SMTP"
+                    description="Les domaines déclarés sont les seuls acceptés en expéditeur. Le quota se règle ensuite."
+                    champs={[
+                      { id: 'domaines', label: 'Domaines autorisés', placeholder: 'dba.africa, digitalbusinessafrica.ci', obligatoire: true },
+                      { id: 'quotaJour', label: 'Quota journalier', type: 'nombre', min: 100, demi: true },
+                      { id: 'ipDediee', label: 'Adresse IP dédiée', type: 'switch', placeholder: 'Réputation isolée', demi: true },
+                    ]}
+                    valeursDepart={{ quotaJour: 5000, ipDediee: false }}
+                    libelleValider="Activer"
+                    operation={(v) => ({
+                      titre: 'Activation du relais lancée',
+                      detail:
+                        'Provisionnement, authentification du domaine puis levée du mode d’essai : suivi dans le centre de tâches.',
+                      // `POST /web/smtp` → `202`, travail suivi par `useOperation`.
+                      appel: () =>
+                        creerRessource('/web/smtp', {
+                          domainesAutorises: String(v.domaines)
+                            .split(',')
+                            .map((d) => d.trim())
+                            .filter(Boolean),
+                          quotaJour: Number(v.quotaJour),
+                          ipDediee: Boolean(v.ipDediee),
+                        }),
+                      effetFinal: reactualiser,
+                    })}
+                  />
+                }
+              />
+            </Card>
+          )}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card>
               <CardHeader titre="Quotas" sousTitre="Trois limites, pour trois types d’abus différents." />
               <div className="space-y-3.5">
                 <QuotaBar
                   libelle="Par jour"
-                  utilise={SMTP.quotas.envoyesJour}
-                  total={SMTP.quotas.parJour}
+                  utilise={envoyesJour}
+                  total={quotaJour}
                   seuil={80}
                   formateur={(v) => num(v)}
                 />
-                <QuotaBar
-                  libelle="Par heure"
-                  utilise={1142}
-                  total={SMTP.quotas.parHeure}
-                  seuil={80}
-                  formateur={(v) => num(v)}
-                />
-                <QuotaBar
-                  libelle="Par minute"
-                  utilise={38}
-                  total={SMTP.quotas.parMinute}
-                  seuil={80}
-                  formateur={(v) => num(v)}
-                />
+                {api ? (
+                  <p className="text-[12px] leading-relaxed text-g-700">
+                    Par heure : <span className="font-semibold text-ink">{num(parHeure)}</span>{' '}
+                    autorisés — le compteur horaire n’est pas exposé par l’API.
+                  </p>
+                ) : (
+                  <>
+                    <QuotaBar
+                      libelle="Par heure"
+                      utilise={1142}
+                      total={parHeure}
+                      seuil={80}
+                      formateur={(v) => num(v)}
+                    />
+                    <QuotaBar
+                      libelle="Par minute"
+                      utilise={38}
+                      total={SMTP.quotas.parMinute}
+                      seuil={80}
+                      formateur={(v) => num(v)}
+                    />
+                  </>
+                )}
               </div>
               <Callout ton="info" className="mt-4" titre="Pourquoi une limite par minute">
                 Une boucle de code qui part en vrille peut envoyer dix mille courriels en quelques
@@ -431,11 +565,84 @@ export default function Smtp() {
             />
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div className="space-y-3">
-                <CopyField label="Hôte" value="smtp.synelia.cloud" />
-                <CopyField label="Port (STARTTLS)" value="587" />
-                <CopyField label="Port (TLS implicite)" value="465" />
-                <CopyField label="Nom d’utilisateur" value="org-dba" />
+                <CopyField label="Hôte" value={api ? relais?.hote || '—' : 'smtp.synelia.cloud'} />
+                {api ? (
+                  <CopyField label="Ports" value={(relais?.ports ?? []).join(', ') || '—'} />
+                ) : (
+                  <>
+                    <CopyField label="Port (STARTTLS)" value="587" />
+                    <CopyField label="Port (TLS implicite)" value="465" />
+                  </>
+                )}
+                <CopyField
+                  label="Nom d’utilisateur"
+                  value={api ? relais?.identifiant || '—' : 'org-dba'}
+                />
                 <CopyField label="Mot de passe" masque value="Utilisez une clé d’envoi, jamais ce mot de passe" />
+                {identifiantsRegeneres && (
+                  <Callout ton="warn" titre="Nouveaux identifiants — affichés une seule fois">
+                    <div className="mt-2 space-y-2">
+                      <CopyField label="Identifiant" value={identifiantsRegeneres.identifiant} />
+                      <CopyField label="Mot de passe" value={identifiantsRegeneres.motDePasse} masque />
+                    </div>
+                  </Callout>
+                )}
+                <div className="flex flex-wrap items-end gap-2 border-t border-g-100 pt-3">
+                  <Field
+                    label="Courriel de test"
+                    hint="un message d’essai part réellement par le relais"
+                    className="min-w-0 flex-1"
+                  >
+                    <Input
+                      value={destinataireTest}
+                      onChange={(e) => setDestinataireTest(e.target.value)}
+                      placeholder="vous@dba.africa"
+                    />
+                  </Field>
+                  <GatedAction autorise={autorise('secrets.update')} message={refus('secrets.update')}>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={!destinataireTest.trim()}
+                      onClick={envoyerTest}
+                    >
+                      Envoyer
+                    </Button>
+                  </GatedAction>
+                  {api && (
+                    <BoutonAction
+                      libelle="Régénérer les identifiants"
+                      variant="ghost"
+                      operation={{
+                        action: 'secrets.update',
+                        ton: 'warn',
+                        titre: 'Identifiants du relais régénérés',
+                        detail:
+                          'L’ancien mot de passe cesse de fonctionner immédiatement. Le nouveau est affiché une seule fois.',
+                        // Le backend attend le mot « regenerer » en confirmation
+                        // (relevé du `422` : « Attendu : regenerer »).
+                        appel: () =>
+                          requete<IdentifiantsSmtp>('/web/smtp/identifiants', {
+                            methode: 'POST',
+                            corps: { confirmation: 'regenerer' },
+                          }).then((r) => {
+                            setIdentifiantsRegeneres(r)
+                            return r
+                          }),
+                        effetFinal: reactualiser,
+                      }}
+                      confirmation={{
+                        ressource: 'regenerer',
+                        titre: 'Régénérer les identifiants du relais ?',
+                        pertes: [
+                          'Les applications qui utilisent le mot de passe actuel cesseront d’envoyer',
+                          'Les clés d’envoi ne sont pas concernées',
+                        ],
+                        libelleAction: 'Régénérer',
+                      }}
+                    />
+                  )}
+                </div>
               </div>
               <div>
                 <MicroLabel className="mb-2">Exemple d’envoi</MicroLabel>
@@ -582,19 +789,19 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
               {[
                 {
                   nom: 'SPF',
-                  etat: SMTP.authentification.spf,
+                  etat: api ? (relais?.authentification.spf ?? 'absent') : SMTP.authentification.spf,
                   quoi: 'Déclare quels serveurs sont autorisés à envoyer pour votre domaine.',
                   valeur: 'v=spf1 include:spf.synelia.cloud -all',
                 },
                 {
                   nom: 'DKIM',
-                  etat: SMTP.authentification.dkim,
+                  etat: api ? (relais?.authentification.dkim ?? 'absent') : SMTP.authentification.dkim,
                   quoi: 'Signe chaque courriel avec une clé privée ; le destinataire vérifie la signature via votre DNS.',
                   valeur: 'synelia._domainkey · RSA 2048 bits',
                 },
                 {
                   nom: 'DMARC',
-                  etat: SMTP.authentification.dmarc,
+                  etat: api ? relais?.authentification.dmarc || 'absent' : SMTP.authentification.dmarc,
                   quoi: 'Indique au destinataire quoi faire d’un courriel qui échoue SPF et DKIM, et vous envoie des rapports.',
                   valeur: 'v=DMARC1; p=quarantine; rua=mailto:dmarc@dba.africa',
                 },
@@ -704,6 +911,29 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                   description="Obligatoire pour les envois de masse chez Gmail et Yahoo. Inutile pour les courriels transactionnels."
                 />
               </div>
+              {api && (
+                <div className="mt-4 grid grid-cols-1 gap-4 border-t border-g-100 pt-4 sm:grid-cols-2">
+                  <Field
+                    label="Domaines autorisés en expéditeur"
+                    hint="séparés par des virgules"
+                    error={erreursRelais.domainesAutorises}
+                    className="sm:col-span-2"
+                  >
+                    <Input
+                      value={domainesRelais}
+                      onChange={(e) => setDomainesRelais(e.target.value)}
+                      placeholder="dba.africa, digitalbusinessafrica.ci"
+                    />
+                  </Field>
+                  <Field label="Quota journalier" error={erreursRelais.quotaJour}>
+                    <Input
+                      type="number"
+                      value={quotaRelais}
+                      onChange={(e) => setQuotaRelais(Number(e.target.value))}
+                    />
+                  </Field>
+                </div>
+              )}
               <BoutonAction
                 libelle="Enregistrer"
                 size="md"
@@ -716,6 +946,28 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                     purgeErreurs ? 'adresses mortes purgées' : 'adresses mortes conservées',
                     desabonnement ? 'en-tête de désabonnement ajouté' : 'aucun en-tête de désabonnement',
                   ].join(' · '),
+                  // Les trois interrupteurs n’ont pas d’équivalent contrat :
+                  // seuls domaines autorisés et quota partent dans `PATCH /web/smtp`.
+                  appel: api
+                    ? () =>
+                        requete('/web/smtp', {
+                          methode: 'PATCH',
+                          corps: {
+                            domainesAutorises: domainesRelais
+                              .split(',')
+                              .map((d) => d.trim())
+                              .filter(Boolean),
+                            quotaJour: quotaRelais,
+                          },
+                        })
+                    : undefined,
+                  onErreur: (e) => setErreursRelais(e.champs ?? {}),
+                  effetFinal: () => {
+                    if (api) {
+                      setErreursRelais({})
+                      reactualiser()
+                    }
+                  },
                 }}
               />
             </Card>
@@ -894,6 +1146,32 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                           effetFinal: () => {
                             if (api) reactualiser()
                           },
+                        }}
+                      />
+                      <BoutonAction
+                        libelle="Supprimer"
+                        variant="ghost"
+                        operation={{
+                          action: 'secrets.update',
+                          ton: 'warn',
+                          titre: 'Webhook supprimé',
+                          detail: `${w.url} ne sera plus appelé.`,
+                          // `DELETE /web/smtp/webhooks/{id}` — sans confirmation côté
+                          // backend ; l’écran garde la sienne, comme toute suppression.
+                          appel: api ? () => supprimerRessource('/web/smtp/webhooks', w.id) : undefined,
+                          effet: () => webhooks.supprimer(w.id),
+                          effetFinal: () => {
+                            if (api) reactualiser()
+                          },
+                        }}
+                        confirmation={{
+                          ressource: w.url,
+                          titre: 'Supprimer ce webhook ?',
+                          pertes: [
+                            'Votre application ne sera plus prévenue des changements d’état',
+                            'Le secret de signature associé est invalidé',
+                          ],
+                          libelleAction: 'Supprimer le webhook',
                         }}
                       />
                     </span>

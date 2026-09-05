@@ -16,6 +16,7 @@ import { StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
+import { requete } from '@/lib/api/client'
 
 const ONGLETS = [
   { id: 'restauration', label: 'Tests de restauration' },
@@ -497,6 +498,14 @@ export default function Conformite() {
                 operation={{
                   action: 'compliance.export',
                   titre: 'Planification des tests enregistrée',
+                  // `POST /admin/conformite/tests-restauration` → `202` : la
+                  // campagne du mois part sur l’échantillon réglé ici et se
+                  // suit dans le centre de tâches.
+                  appel: () =>
+                    requete('/admin/conformite/tests-restauration', {
+                      methode: 'POST',
+                      corps: { perimetre: 'toutes', echantillonPct: partParc },
+                    }),
                   detail: `${partParc} % du parc tiré au sort chaque mois, ${
                     profondeur === 'complet'
                       ? 'en restauration complète avec vérification des données'

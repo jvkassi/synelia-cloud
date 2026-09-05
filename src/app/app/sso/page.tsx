@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ArrowRight, CheckCircle2, Link2, RefreshCw, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateHeure, relatif } from '@/lib/format'
@@ -65,8 +65,13 @@ const PROTOCOLES = [
 interface ConfigSsoDistante {
   actif: boolean
   protocole?: 'oidc' | 'saml' | 'ldap'
+  emetteur?: string
+  clientId?: string
+  urlMetadonnees?: string
+  domainesVerifies?: string[]
   provisioningJustInTime?: boolean
   secretDefini?: boolean
+  correspondanceGroupes?: Array<{ groupe: string; role: Role; scopeId?: string }>
   dernierTest?: { date: string; succes: boolean; detail?: string } | null
 }
 
@@ -90,36 +95,55 @@ export default function Sso() {
   const [protocole, setProtocole] = useState('oidc')
   const [etape, setEtape] = useState(1)
   const api = estActif()
+  /** Paramètres publiés dans `PUT /securite/sso` — préremplis depuis `GET`. */
+  const [emetteur, setEmetteur] = useState(
+    'https://login.microsoftonline.com/8f2a91c4-d7b0-e544-3a17-c96e2f0d8b41/v2.0/.well-known/openid-configuration',
+  )
+  const [clientId, setClientId] = useState('4d91a7c2-8b0e-4413-9c6e-2f0d8b41a17c')
+  const [urlMetadonnees, setUrlMetadonnees] = useState('')
+  const [domainesVerifies, setDomainesVerifies] = useState('dba.africa, digitalbusinessafrica.ci')
+  /** Erreurs de champs renvoyées par le backend (`422`), affichées sous les champs de l’étape 2. */
+  const [erreursSso, setErreursSso] = useState<Record<string, string>>({})
+  /** Correspondances telles que le backend les connaît (mode API) ; la graine locale sinon. */
+  const [correspondancesDistantes, setCorrespondancesDistantes] = useState<Correspondance[]>([])
   /** Fédération connue du backend — `null` avant le premier retour. */
   const [configSso, setConfigSso] = useState<ConfigSsoDistante | null>(null)
   const [ssoActif, setSsoActif] = useState(false)
   /** Dernier test réel (`POST /securite/sso/test`), affiché à l’étape 3. */
   const [resultatTest, setResultatTest] = useState<ResultatTestSso | null>(null)
 
-  useEffect(() => {
-    if (!estActif()) return
-    requete<ConfigSsoDistante>('/securite/sso').then(
-      (c) => {
-        setConfigSso(c)
-        setSsoActif(c.actif)
-        if (c.protocole) setProtocole(c.protocole)
-        if (typeof c.provisioningJustInTime === 'boolean')
-          setCreationAuto(c.provisioningJustInTime)
-      },
-      () => {},
+  /** Reporte la configuration lue (`GET /securite/sso`) dans les champs de l’écran. */
+  const appliquerConfig = useCallback((c: ConfigSsoDistante) => {
+    setConfigSso(c)
+    setSsoActif(c.actif)
+    if (c.protocole) setProtocole(c.protocole)
+    if (typeof c.provisioningJustInTime === 'boolean') setCreationAuto(c.provisioningJustInTime)
+    if (c.emetteur) setEmetteur(c.emetteur)
+    if (c.clientId) setClientId(c.clientId)
+    if (c.urlMetadonnees) setUrlMetadonnees(c.urlMetadonnees)
+    if (c.domainesVerifies) setDomainesVerifies(c.domainesVerifies.join(', '))
+    setCorrespondancesDistantes(
+      (c.correspondanceGroupes ?? []).map((g, i) => ({
+        id: `cor-distante-${i}`,
+        groupe: g.groupe,
+        role: g.role,
+        membres: 0,
+        portee: g.scopeId ?? 'Organisation',
+      })),
     )
   }, [])
 
+  useEffect(() => {
+    if (!estActif()) return
+    requete<ConfigSsoDistante>('/securite/sso').then(appliquerConfig, () => {})
+  }, [appliquerConfig])
+
   const relireSso = () => {
     if (!estActif()) return
-    requete<ConfigSsoDistante>('/securite/sso').then(
-      (c) => {
-        setConfigSso(c)
-        setSsoActif(c.actif)
-      },
-      () => {},
-    )
+    requete<ConfigSsoDistante>('/securite/sso').then(appliquerConfig, () => {})
   }
+
+  const listeCorrespondances = api ? correspondancesDistantes : correspondances.items
 
   /**
    * `PUT /securite/sso` — le contrat ne connaît pas de sous-ressource pour
@@ -128,13 +152,32 @@ export default function Sso() {
    * `scopeId`. La désactivation automatique et les comptes locaux n’ont pas
    * d’équivalent contrat et restent des réglages d’écran.
    */
-  const publierSso = (actif: boolean, groupes: Correspondance[]) =>
+  const publierSso = (
+    actif: boolean,
+    groupes: Correspondance[],
+    complement: { provisioningJustInTime?: boolean } = {},
+  ) =>
     requete('/securite/sso', {
       methode: 'PUT',
       corps: {
         actif,
         protocole,
+        // Le contrat ne porte pas le secret client : il reste à saisir hors
+        // écran (`secretDefini` dit seulement s’il existe).
+        ...(protocole === 'saml'
+          ? urlMetadonnees.trim()
+            ? { urlMetadonnees: urlMetadonnees.trim() }
+            : {}
+          : emetteur.trim()
+            ? { emetteur: emetteur.trim() }
+            : {}),
+        ...(clientId.trim() ? { clientId: clientId.trim() } : {}),
+        domainesVerifies: domainesVerifies
+          .split(',')
+          .map((d) => d.trim())
+          .filter(Boolean),
         provisioningJustInTime: creationAuto,
+        ...complement,
         correspondanceGroupes: groupes.map((c) => ({
           groupe: c.groupe,
           role: c.role,
@@ -323,10 +366,14 @@ export default function Sso() {
             <Card>
               <CardHeader
                 titre="Fédération configurée"
-                sousTitre="Microsoft Entra ID · OpenID Connect"
+                sousTitre={
+                  api
+                    ? `${PROTOCOLES.find((p) => p.id === protocole)?.nom ?? protocole}${configSso?.emetteur ? ` · ${configSso.emetteur}` : ''}`
+                    : 'Microsoft Entra ID · OpenID Connect'
+                }
                 actions={
-                  <Badge tone="ok" dot size="sm">
-                    Opérationnelle
+                  <Badge tone={!api || ssoActif ? 'ok' : 'neutral'} dot={!api || ssoActif} size="sm">
+                    {!api || ssoActif ? 'Opérationnelle' : 'Inactive'}
                   </Badge>
                 }
               />
@@ -499,11 +546,12 @@ export default function Sso() {
                     <Field
                       label="URL de découverte"
                       hint="se termine par /.well-known/openid-configuration"
+                      error={erreursSso.emetteur}
                     >
-                      <Input defaultValue="https://login.microsoftonline.com/8f2a91c4-d7b0-e544-3a17-c96e2f0d8b41/v2.0/.well-known/openid-configuration" />
+                      <Input value={emetteur} onChange={(e) => setEmetteur(e.target.value)} />
                     </Field>
-                    <Field label="Identifiant client">
-                      <Input defaultValue="4d91a7c2-8b0e-4413-9c6e-2f0d8b41a17c" />
+                    <Field label="Identifiant client" error={erreursSso.clientId}>
+                      <Input value={clientId} onChange={(e) => setClientId(e.target.value)} />
                     </Field>
                     <Field label="Secret client" hint="chiffré au repos, jamais réaffiché">
                       <Input type="password" defaultValue="••••••••••••••••••••••••" />
@@ -514,8 +562,12 @@ export default function Sso() {
                     <Field
                       label="Domaines de découverte"
                       hint="une adresse de ces domaines est redirigée automatiquement vers votre annuaire"
+                      error={erreursSso.domainesVerifies}
                     >
-                      <Input defaultValue="dba.africa, digitalbusinessafrica.ci" />
+                      <Input
+                        value={domainesVerifies}
+                        onChange={(e) => setDomainesVerifies(e.target.value)}
+                      />
                     </Field>
                     <Field label="Réclamation portant les groupes">
                       <Input defaultValue="groups" />
@@ -524,8 +576,15 @@ export default function Sso() {
                 )}
                 {protocole === 'saml' && (
                   <div className="space-y-4">
-                    <Field label="URL des métadonnées du fournisseur d’identité">
-                      <Input placeholder="https://sso.exemple.ci/FederationMetadata.xml" />
+                    <Field
+                      label="URL des métadonnées du fournisseur d’identité"
+                      error={erreursSso.urlMetadonnees}
+                    >
+                      <Input
+                        value={urlMetadonnees}
+                        onChange={(e) => setUrlMetadonnees(e.target.value)}
+                        placeholder="https://sso.exemple.ci/FederationMetadata.xml"
+                      />
                     </Field>
                     <Field
                       label="ou métadonnées collées"
@@ -574,6 +633,30 @@ export default function Sso() {
                   <Button variant="ghost" onClick={() => setEtape(1)}>
                     Retour
                   </Button>
+                  {api && (
+                    <GatedAction autorise={autorise('sso.configure')} message={refus('sso.configure')}>
+                      <Button
+                        variant="secondary"
+                        onClick={() =>
+                          executer({
+                            action: 'sso.configure',
+                            titre: 'Paramètres de fédération enregistrés',
+                            detail:
+                              'La fédération garde son état actuel : testez-la, puis activez-la à l’étape suivante.',
+                            appel: () => publierSso(ssoActif, listeCorrespondances),
+                            onErreur: (e) => setErreursSso(e.champs ?? {}),
+                            effetFinal: () => {
+                              setErreursSso({})
+                              relireSso()
+                              setEtape(3)
+                            },
+                          })
+                        }
+                      >
+                        Enregistrer les paramètres
+                      </Button>
+                    </GatedAction>
+                  )}
                   <Button onClick={() => setEtape(3)}>Continuer</Button>
                 </div>
               </div>
@@ -652,7 +735,19 @@ export default function Sso() {
                         detail: v
                           ? undefined
                           : 'Chaque arrivée exigera désormais une invitation manuelle.',
+                        appel: api
+                          ? () =>
+                              publierSso(ssoActif, listeCorrespondances, {
+                                provisioningJustInTime: v,
+                              })
+                          : undefined,
                         effet: () => setCreationAuto(v),
+                        effetFinal: () => {
+                          if (api) {
+                            setCreationAuto(v)
+                            relireSso()
+                          }
+                        },
                       })
                     }
                     label="Créer automatiquement les comptes à la première connexion"
@@ -706,10 +801,17 @@ export default function Sso() {
                           detail:
                             'Les prochaines connexions passeront par votre annuaire. Votre session actuelle reste valide.',
                           appel: api
-                            ? () => publierSso(true, correspondances.items)
+                            ? () => publierSso(true, listeCorrespondances)
                             : undefined,
+                          // Un `422` renvoie à l’étape 2, où les champs en
+                          // cause portent le message du backend.
+                          onErreur: (e) => {
+                            setErreursSso(e.champs ?? {})
+                            if (e.champs) setEtape(2)
+                          },
                           effetFinal: () => {
                             if (api) {
+                              setErreursSso({})
                               setSsoActif(true)
                               relireSso()
                             }
@@ -735,7 +837,7 @@ export default function Sso() {
               sousTitre="Un groupe de votre annuaire donne un rôle chez nous. C’est ce qui permet de gérer les accès depuis votre annuaire, sans repasser par ce portail à chaque mouvement d’équipe."
             />
             <div className="space-y-2">
-              {correspondances.items.map((c) => (
+              {listeCorrespondances.map((c) => (
                 <div
                   key={c.id}
                   className="flex flex-wrap items-center gap-3 rounded-[6px] border border-g-300 px-3 py-2.5"
@@ -783,7 +885,7 @@ export default function Sso() {
                       ]}
                       valeursDepart={{ role: c.role, portee: c.portee }}
                       operation={(v) => {
-                        const apres = correspondances.items.map((x) =>
+                        const apres = listeCorrespondances.map((x) =>
                           x.id === c.id
                             ? { ...x, role: v.role as Role, portee: String(v.portee) }
                             : x,
@@ -797,16 +899,10 @@ export default function Sso() {
                               role: v.role as Role,
                               portee: String(v.portee),
                             }),
+                          // En mode API la liste affichée vient du backend :
+                          // on la relit après publication.
                           effetFinal: () => {
-                            // La collection locale ne suit pas le backend :
-                            // on y rejoue la modification après la publication.
-                            if (api) {
-                              correspondances.modifier(c.id, {
-                                role: v.role as Role,
-                                portee: String(v.portee),
-                              })
-                              relireSso()
-                            }
+                            if (api) relireSso()
                           },
                         }
                       }}
@@ -823,15 +919,12 @@ export default function Sso() {
                           ? () =>
                               publierSso(
                                 ssoActif,
-                                correspondances.items.filter((x) => x.id !== c.id),
+                                listeCorrespondances.filter((x) => x.id !== c.id),
                               )
                           : undefined,
                         effet: () => correspondances.supprimer(c.id),
                         effetFinal: () => {
-                          if (api) {
-                            correspondances.supprimer(c.id)
-                            relireSso()
-                          }
+                          if (api) relireSso()
                         },
                       }}
                     />
@@ -878,14 +971,11 @@ export default function Sso() {
                   titre: `Correspondance ${v.groupe} ajoutée`,
                   detail: 'Évaluée en dernier : déplacez-la si elle doit primer.',
                   appel: api
-                    ? () => publierSso(ssoActif, [...correspondances.items, ajout])
+                    ? () => publierSso(ssoActif, [...listeCorrespondances, ajout])
                     : undefined,
                   effet: () => correspondances.creer(ajout, 'fin'),
                   effetFinal: () => {
-                    if (api) {
-                      correspondances.creer(ajout, 'fin')
-                      relireSso()
-                    }
+                    if (api) relireSso()
                   },
                 }
               }}
@@ -945,7 +1035,7 @@ export default function Sso() {
                     // La première correspondance qui s'applique gagne, dans
                     // l'ordre de la liste : c'est ce que dit l'écran.
                     const retenue =
-                      correspondances.items.find((c) => groupes.includes(c.groupe)) ?? null
+                      listeCorrespondances.find((c) => groupes.includes(c.groupe)) ?? null
                     setResultatSimulation(retenue)
                     executer({
                       ton: retenue ? 'ok' : 'warn',

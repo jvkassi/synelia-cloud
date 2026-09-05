@@ -5,6 +5,8 @@ import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CATEGORIE_LABEL, type CategorieService } from '@/lib/types'
 import { CATALOGUE, CONTRAT_INTEGRATION } from '@/lib/mock'
+import { usePublic } from '@/lib/api/public'
+import { fusionnerCatalogue, type FicheCataloguePublique } from '@/lib/api/vitrine'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { SearchInput, SegmentedControl } from '@/components/ui/field'
 import { CatalogCard } from '@/components/business/service-card'
@@ -23,10 +25,18 @@ export default function MarketplacePublic() {
   const [q, setQ] = useState('')
   const [categorie, setCategorie] = useState<CategorieService | 'toutes'>('toutes')
   const [mode, setMode] = useState<'tous' | 'dedie' | 'mutualise'>('tous')
+  // En mode API, le catalogue publié (`GET /public/catalogue/services`)
+  // remplace la liste locale ; chaque fiche garde l’habillage local de
+  // même `slug` (pictogramme, captures) que le backend ne publie pas.
+  const distant = usePublic<{ donnees: FicheCataloguePublique[] }>('/public/catalogue/services')
+  const catalogue = useMemo(
+    () => fusionnerCatalogue(distant.donnees?.donnees, CATALOGUE) ?? CATALOGUE,
+    [distant.donnees],
+  )
 
   const resultats = useMemo(
     () =>
-      CATALOGUE.filter((s) => {
+      catalogue.filter((s) => {
         if (categorie !== 'toutes' && s.categorie !== categorie) return false
         if (mode !== 'tous' && !s.modes.includes(mode)) return false
         if (!q.trim()) return true
@@ -37,7 +47,7 @@ export default function MarketplacePublic() {
           s.pitch.toLowerCase().includes(n)
         )
       }),
-    [q, categorie, mode],
+    [catalogue, q, categorie, mode],
   )
 
   return (
@@ -55,8 +65,8 @@ export default function MarketplacePublic() {
         enfants={
           <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
             {[
-              { v: `${CATALOGUE.length}`, l: 'solutions au catalogue' },
-              { v: `${CATALOGUE.filter((c) => c.certifie).length}`, l: 'certifiées Synelia' },
+              { v: `${catalogue.length}`, l: 'solutions au catalogue' },
+              { v: `${catalogue.filter((c) => c.certifie).length}`, l: 'certifiées Synelia' },
               { v: '2', l: 'sites en Côte d’Ivoire' },
             ].map((x) => (
               <div key={x.l} className="rounded-[14px] border border-encre-2/10 bg-creme px-4 py-3">
@@ -123,7 +133,7 @@ export default function MarketplacePublic() {
               >
                 {CATEGORIE_LABEL[c]}
                 <span className="ml-1.5 text-[10px] opacity-70">
-                  {CATALOGUE.filter((s) => s.categorie === c).length}
+                  {catalogue.filter((s) => s.categorie === c).length}
                 </span>
               </button>
             ))}

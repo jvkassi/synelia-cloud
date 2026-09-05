@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Download, Plus, ShieldAlert, Trash2 } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { dateCourte, num, pct } from '@/lib/format'
@@ -11,7 +11,7 @@ import { Button, IconButton } from '@/components/ui/button'
 import { CopyField, GatedAction, Tabs } from '@/components/ui/display'
 import { Field, Input, Select, Slider, Switch } from '@/components/ui/field'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
-import { EmptyState } from '@/components/composition/states'
+import { DegradedState, EmptyState } from '@/components/composition/states'
 import { StatTile } from '@/components/composition/metrics'
 import { GrilleSparkCharts, LogPeek } from '@/components/business/observabilite'
 import { useApp } from '@/components/app/contexte'
@@ -57,6 +57,31 @@ export function VueLb({ id }: { id: string }) {
   const parc = useCollection<VM>('vms', VMS)
   const exceptions = useCollection<Exception>(`waf-exceptions-${id}`, EXCEPTIONS_GRAINE)
   const [onglet, setOnglet] = useState('apercu')
+  /**
+   * `GET /load-balancers/{id}/metriques` : un `424` nomme l’intégration en
+   * défaut (et la date des dernières données) à la place des courbes.
+   */
+  const [metriquesDegradees, setMetriquesDegradees] = useState<{
+    integration?: string
+    dateDonnees?: string
+  } | null>(null)
+  useEffect(() => {
+    if (!estActif()) return
+    let annule = false
+    requete(`/load-balancers/${encodeURIComponent(id)}/metriques`).then(
+      () => {
+        if (!annule) setMetriquesDegradees(null)
+      },
+      (e: unknown) => {
+        if (annule) return
+        if (e instanceof ApiError && e.statut === 424)
+          setMetriquesDegradees({ integration: e.integration, dateDonnees: e.dateDonnees })
+      },
+    )
+    return () => {
+      annule = true
+    }
+  }, [id])
 
   const lb = lbs.items.find((l) => l.id === id)
   const espace = lb ? espaceById(lb.espaceId) : undefined
@@ -207,6 +232,13 @@ export function VueLb({ id }: { id: string }) {
             />
           </div>
 
+          {metriquesDegradees ? (
+            <DegradedState
+              source="métriques du load balancer"
+              integration={metriquesDegradees.integration}
+              dateDonnees={metriquesDegradees.dateDonnees}
+            />
+          ) : (
           <GrilleSparkCharts
             seed={`lb-${id}`}
             metriques={[
@@ -216,6 +248,7 @@ export function VueLb({ id }: { id: string }) {
               { titre: 'Connexions actives', unite: '', min: lb.metriques.connexions * 0.6, max: lb.metriques.connexions * 1.3 },
             ]}
           />
+          )}
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card>
@@ -938,6 +971,8 @@ export function VueLb({ id }: { id: string }) {
             <div className="space-y-3.5">
               <Switch
                 checked={lb.waf?.actif ?? false}
+                // `PATCH /load-balancers/{id}` refuse `waf` et `rateLimit`
+                // (`422 non_porte`) : le pare-feu reste un réglage d’écran.
                 onChange={(v) =>
                   executer({
                     action: 'lb.create',

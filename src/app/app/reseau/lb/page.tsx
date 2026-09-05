@@ -257,6 +257,8 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
   const [hcSeuilKo, setHcSeuilKo] = useState(3)
   const [hcSeuilOk, setHcSeuilOk] = useState(2)
   const [conditions, setConditions] = useState(false)
+  /** Erreurs de champs du backend (`422`) : l’assistant reste ouvert et les affiche. */
+  const [erreurs, setErreurs] = useState<Record<string, string>>({})
 
   const ipsLibres = PUBLIC_IPS.filter((i) => i.espaceId === espace.id && !i.attachedTo)
   const vmsEspace = VMS.filter((v) => v.espaceId === espace.id)
@@ -345,10 +347,14 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
                 // POST /load-balancers — le backend refuse `waf` et `rateLimit`
                 // à la création (501) : ils restent locaux, hors de l’appel.
                 if (estActif()) {
+                  setErreurs({})
                   executer({
                     action: 'lb.create',
                     titre: `Création de ${nom} lancée`,
                     detail: 'La VIP est réservée, les health checks démarrent dans une minute.',
+                    onErreur: (e) => setErreurs(e.champs ?? {}),
+                    // L’assistant se ferme dès que le `202` est accepté ; sur
+                    // refus il reste ouvert avec les champs en cause.
                     appel: () =>
                       creerRessource('/load-balancers', {
                         espaceId: espace.id,
@@ -374,10 +380,12 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
                           seuilKo: hcSeuilKo,
                           seuilOk: hcSeuilOk,
                         },
+                      }).then((r) => {
+                        onFermer()
+                        return r
                       }),
                     effetFinal: () => collection.recharger(),
                   })
-                  onFermer()
                   return
                 }
                 collection.creer(nouveau)
@@ -723,6 +731,17 @@ function AssistantLb({ onFermer }: { onFermer: () => void }) {
       {/* Étape 5 — Health check */}
       {etape === 5 && (
         <div className="space-y-4">
+          {Object.keys(erreurs).length > 0 && (
+            <Callout ton="err" titre="Le backend a refusé la demande">
+              <ul className="mt-1 space-y-0.5">
+                {Object.entries(erreurs).map(([champ, message]) => (
+                  <li key={champ}>
+                    <span className="font-mono text-[12px]">{champ}</span> : {message}
+                  </li>
+                ))}
+              </ul>
+            </Callout>
+          )}
           <Card>
             <CardHeader
               titre="Health check"

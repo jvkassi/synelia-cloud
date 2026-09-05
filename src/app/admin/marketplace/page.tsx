@@ -23,7 +23,7 @@ import { DataTable } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
 import { useCollection, type Entite } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
-import { requete } from '@/lib/api/client'
+import { creerRessource, estActif, requete } from '@/lib/api/client'
 import type { CampagneMaj, InstanceParc } from '@/lib/mock'
 
 const ONGLETS = [
@@ -40,6 +40,21 @@ const ONGLETS = [
  * du catalogue que cet écran modifie.
  */
 const CERTIFICATIONS: readonly Entite[] = []
+
+/**
+ * `PUT /admin/catalogue/services/{slug}` exige la fiche complète : on
+ * renvoie la locale, certifiée, sans son pictogramme (propre à la vitrine).
+ */
+function certifierFiche(slug: string): Promise<unknown> {
+  const fiche = CATALOGUE.find((c) => c.slug === slug)
+  if (!fiche) return Promise.reject(new Error(`Solution ${slug} inconnue du catalogue.`))
+  const corps: Record<string, unknown> = { ...fiche, certifie: true }
+  delete corps.icone
+  return requete(`/admin/catalogue/services/${encodeURIComponent(slug)}`, {
+    methode: 'PUT',
+    corps,
+  })
+}
 
 export default function MarketplaceAdmin() {
   const { autorise, refus } = useApp()
@@ -116,6 +131,7 @@ export default function MarketplaceAdmin() {
             operation={(v) => ({
               titre: `Certification de ${CATALOGUE.find((c) => c.slug === v.slug)?.nom ?? 'la solution'} lancée`,
               detail: 'Les neuf capacités du contrat d’intégration sont vérifiées une à une.',
+              appel: () => certifierFiche(String(v.slug)),
               job: {
                 type: 'catalog.certify',
                 label: `Certification · ${CATALOGUE.find((c) => c.slug === v.slug)?.nom ?? 'solution'}`,
@@ -481,6 +497,21 @@ export default function MarketplaceAdmin() {
                           operation={(v) => ({
                             titre: `Mise à jour de ${i.serviceNom} planifiée`,
                             detail: `Version ${v.version}${v.prevenir ? ' · le client est prévenu par courriel' : ' · aucun avis envoyé au client'}.`,
+                            // Une instance isolée se met à jour par une campagne
+                            // d’une instance (`instances: [id]`), à lancer ensuite
+                            // depuis l’onglet Campagnes.
+                            appel: () =>
+                              creerRessource('/admin/marketplace/campagnes', {
+                                nom: `${i.serviceNom} — ${i.orgNom}`,
+                                catalogSlug: i.catalogSlug,
+                                versionCible: String(v.version),
+                                fenetre: String(v.fenetre),
+                                strategie: 'immediate',
+                                instances: [i.id],
+                                notesVersion: v.prevenir
+                                  ? 'Avis de maintenance envoyé au client.'
+                                  : undefined,
+                              }),
                             job: {
                               type: 'service.upgrade',
                               label: `Montée de version · ${i.serviceNom} (${i.orgNom})`,
@@ -492,12 +523,19 @@ export default function MarketplaceAdmin() {
                                 'Remise en service',
                               ],
                             },
-                            effetFinal: () =>
+                            effetFinal: () => {
+                              // Pas de `PATCH` sur le parc côté API : c’est la
+                              // campagne créée qui portera la mise à jour.
+                              if (estActif()) {
+                                campagnes.recharger()
+                                return
+                              }
                               parc.modifier(i.id, {
                                 version: String(v.version),
                                 derniereMaj: MAINTENANT.slice(0, 10),
                                 sante: 'ok',
-                              }),
+                              })
+                            },
                           })}
                         />
                       )}
@@ -1036,6 +1074,7 @@ export default function MarketplaceAdmin() {
                     action: 'catalog.edit',
                     titre: `Certification de ${fiche.nom} lancée`,
                     detail: 'Les neuf capacités du contrat d’intégration sont vérifiées une à une.',
+                    appel: () => certifierFiche(fiche.slug),
                     job: {
                       type: 'catalog.certify',
                       label: `Certification · ${fiche.nom}`,

@@ -87,7 +87,7 @@ const auth = {
       detail:
         "Appelé dès la saisie de l'adresse : si le domaine est fédéré, l'écran de connexion " +
         'remplace le champ mot de passe par le bouton du fournisseur d’identité.',
-      params: [filtre('email', chaine(undefined, { format: 'email' }), 'Adresse saisie.')],
+      params: [filtre('email', chaine(undefined, { format: 'email' }), 'Adresse saisie.', true)],
       ok: ref('DecouverteSso'),
     }),
   },
@@ -416,7 +416,7 @@ const membres = fusion(
         ok: ref('Membre'),
         code: 201,
         rbac: 'member.invite',
-        erreurs: [409],
+        erreurs: [409, 404],
       }),
     },
     '/membres/{membreId}': {

@@ -25,6 +25,14 @@ import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { creerRessource, estActif, modifierRessource, requete } from '@/lib/api/client'
 
+/** Mot de passe fort généré côté client — affiché une seule fois, jamais stocké ici. */
+function genererMotDePasse(longueur = 20): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!#%+-_'
+  const octets = new Uint8Array(longueur)
+  crypto.getRandomValues(octets)
+  return Array.from(octets, (o) => alphabet[o % alphabet.length]).join('')
+}
+
 export function VueServeurBases({ id }: { id: string }) {
   const { autorise, refus } = useApp()
   const executer = useOperation()
@@ -37,6 +45,8 @@ export function VueServeurBases({ id }: { id: string }) {
   const [baseRestauree, setBaseRestauree] = useState<string | null>(null)
   const [pointRestauration, setPointRestauration] = useState('hier')
   const [nomCopie, setNomCopie] = useState<string | null>(null)
+  /** Mot de passe réinitialisé d’un utilisateur — montré une fois. */
+  const [secretUtilisateur, setSecretUtilisateur] = useState<{ nom: string; motDePasse: string } | null>(null)
 
   const s = serveurs.items.find((x) => x.id === id)
   if (!s) return null
@@ -167,6 +177,19 @@ export function VueServeurBases({ id }: { id: string }) {
                       action: 'service.admin',
                       titre: `Export de ${s.bases.length} ${cle}(s) préparé`,
                       detail: `${(s.utiliseMo / 1024).toFixed(2)} Go · lien signé valable une heure`,
+                      // Un export par base (`POST …/bases/{nom}/export`, `202` chacun).
+                      appel:
+                        s.bases.length > 0
+                          ? () =>
+                              Promise.all(
+                                s.bases.map((b) =>
+                                  requete(
+                                    `/web/bases/${encodeURIComponent(s.id)}/bases/${encodeURIComponent(b.nom)}/export`,
+                                    { methode: 'POST', corps: { format: 'sql_gz' } },
+                                  ),
+                                ),
+                              )
+                          : undefined,
                       job: {
                         type: 'base.dump',
                         label: `Export ${MOTEUR_WEB_LABEL[s.moteur]} · ${s.serveur}`,
@@ -386,14 +409,22 @@ export function VueServeurBases({ id }: { id: string }) {
                       <IconButton
                         label={`Réinitialiser le mot de passe de ${u.nom}`}
                         size="sm"
-                        onClick={() =>
+                        onClick={() => {
+                          const motDePasse = genererMotDePasse()
                           executer({
                             action: 'service.admin',
                             titre: `Mot de passe de ${u.nom} réinitialisé`,
                             detail:
-                              'Affiché une seule fois. Mettez à jour la configuration du site avant de quitter cette page.',
+                              'Affiché une seule fois ci-dessous. Mettez à jour la configuration du site avant de quitter cette page.',
+                            // `PATCH /web/bases/{id}/utilisateurs/{nom} { motDePasse }`.
+                            appel: () =>
+                              requete(
+                                `/web/bases/${encodeURIComponent(s.id)}/utilisateurs/${encodeURIComponent(u.nom)}`,
+                                { methode: 'PATCH', corps: { motDePasse } },
+                              ),
+                            effetFinal: () => setSecretUtilisateur({ nom: u.nom, motDePasse }),
                           })
-                        }
+                        }}
                       >
                         <RotateCcw size={13} />
                       </IconButton>
@@ -401,6 +432,15 @@ export function VueServeurBases({ id }: { id: string }) {
                   </li>
                 ))}
               </ul>
+              {secretUtilisateur && (
+                <Callout
+                  ton="warn"
+                  className="mt-4"
+                  titre={`Nouveau mot de passe de ${secretUtilisateur.nom} — affiché une seule fois`}
+                >
+                  <CopyField className="mt-2" value={secretUtilisateur.motDePasse} masque mono />
+                </Callout>
+              )}
             </Card>
           )}
 

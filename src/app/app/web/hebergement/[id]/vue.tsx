@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Activity,
   Clock,
@@ -36,8 +36,10 @@ import {
   CATALOGUE_PARTAGE,
   COMPTES_FICHIERS,
   LOGS_EXECUTION,
+  SERVEURS_BASES,
   SITES_WEB,
   TACHES_WEB,
+  type ServeurBases,
   TYPE_SITE_LABEL,
   abonnementDeLEntree,
   basesDeLHebergement,
@@ -57,19 +59,28 @@ import { Field, Input, SegmentedControl, Select, Switch } from '@/components/ui/
 import { Drawer, Tooltip } from '@/components/ui/overlay'
 import { PageHeader, Card, CardHeader, Callout, KeyValueList } from '@/components/composition/card'
 import { StatTile, QuotaBar, HealthBadge } from '@/components/composition/metrics'
-import { EmptyState } from '@/components/composition/states'
+import { DegradedState, EmptyState } from '@/components/composition/states'
 import { GrilleSparkCharts, LogPeek } from '@/components/business/observabilite'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { ConfigurationServicePanel } from '@/components/business/configuration-service'
 import { CarteAbonnement } from '@/components/business/abonnement'
 import {
+  ApiError,
   creerRessource,
   estActif,
   modifierRessource,
   requete,
   supprimerRessource,
 } from '@/lib/api/client'
+
+/** Mot de passe fort généré côté client — affiché une seule fois, jamais stocké ici. */
+function genererMotDePasse(longueur = 20): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!#%+-_'
+  const octets = new Uint8Array(longueur)
+  crypto.getRandomValues(octets)
+  return Array.from(octets, (o) => alphabet[o % alphabet.length]).join('')
+}
 
 import { useApp } from '@/components/app/contexte'
 
@@ -103,6 +114,31 @@ export function VueHebergement({ id }: { id: string }) {
   const toutesBases = useCollection<BaseHebergement>('bases-hebergement', BASES_HEBERGEMENT)
   const tousComptes = useCollection<CompteFichiers>('comptes-fichiers', COMPTES_FICHIERS)
   const toutesTaches = useCollection<TachePlanifieeWeb>('taches-web', TACHES_WEB)
+  const serveursBases = useCollection<ServeurBases>('serveurs-bases', SERVEURS_BASES)
+  /** Mot de passe remplacé d’un compte de transfert — montré une fois. */
+  const [secretCompte, setSecretCompte] = useState<{ utilisateur: string; motDePasse: string } | null>(null)
+  /** `GET /web/hebergements/{id}/metriques` : `424` → intégration nommée à la place des courbes. */
+  const [metriquesDegradees, setMetriquesDegradees] = useState<{
+    integration?: string
+    dateDonnees?: string
+  } | null>(null)
+  useEffect(() => {
+    if (!estActif()) return
+    let annule = false
+    requete(`/web/hebergements/${encodeURIComponent(id)}/metriques`).then(
+      () => {
+        if (!annule) setMetriquesDegradees(null)
+      },
+      (e: unknown) => {
+        if (annule) return
+        if (e instanceof ApiError && e.statut === 424)
+          setMetriquesDegradees({ integration: e.integration, dateDonnees: e.dateDonnees })
+      },
+    )
+    return () => {
+      annule = true
+    }
+  }, [id])
 
   const h = hebergements.items.find((x) => x.id === id)
   if (!h) return null
@@ -526,15 +562,23 @@ export function VueHebergement({ id }: { id: string }) {
                 </ButtonLink>
               }
             />
-            <GrilleSparkCharts
-              seed={h.id}
-              metriques={[
-                { titre: 'Visites', unite: '/h', min: 40, max: 320 },
-                { titre: 'Temps de réponse', unite: 'ms', min: 120, max: 480 },
-                { titre: 'Processeur', unite: '%', min: 12, max: 68, seuil: 85 },
-                { titre: 'Erreurs 5xx', unite: '/h', min: 0, max: 6 },
-              ]}
-            />
+            {metriquesDegradees ? (
+              <DegradedState
+                source="métriques de l’hébergement"
+                integration={metriquesDegradees.integration}
+                dateDonnees={metriquesDegradees.dateDonnees}
+              />
+            ) : (
+              <GrilleSparkCharts
+                seed={h.id}
+                metriques={[
+                  { titre: 'Visites', unite: '/h', min: 40, max: 320 },
+                  { titre: 'Temps de réponse', unite: 'ms', min: 120, max: 480 },
+                  { titre: 'Processeur', unite: '%', min: 12, max: 68, seuil: 85 },
+                  { titre: 'Erreurs 5xx', unite: '/h', min: 0, max: 6 },
+                ]}
+              />
+            )}
           </Card>
         </div>
       )}
@@ -640,12 +684,36 @@ export function VueHebergement({ id }: { id: string }) {
                     <div className="flex shrink-0 items-center gap-1.5">
                       <BoutonAction
                         libelle="Remplacer le mot de passe"
-                        operation={{
-                          action: 'service.admin',
-                          titre: `Mot de passe de ${c.utilisateur} remplacé`,
-                          detail:
-                            'Affiché une seule fois. L’ancien cesse de fonctionner immédiatement : prévenez l’intervenant.',
-                        }}
+                        operation={(() => {
+                          // Généré au clic, envoyé au backend, montré une fois.
+                          const motDePasse = genererMotDePasse()
+                          return {
+                            action: 'service.admin',
+                            titre: `Mot de passe de ${c.utilisateur} remplacé`,
+                            detail:
+                              'Affiché une seule fois ci-dessous. L’ancien cesse de fonctionner immédiatement : prévenez l’intervenant.',
+                            // `PATCH …/comptes-fichiers/{id}` reprend le corps de
+                            // création (utilisateur, protocoles, racine requis).
+                            appel: () =>
+                              requete(
+                                `/web/hebergements/${encodeURIComponent(h.id)}/comptes-fichiers/${encodeURIComponent(c.id)}`,
+                                {
+                                  methode: 'PATCH',
+                                  corps: {
+                                    utilisateur: c.utilisateur,
+                                    protocoles: c.protocoles,
+                                    racine: c.racine,
+                                    ...(c.quotaGo ? { quotaGo: c.quotaGo } : {}),
+                                    motDePasse,
+                                  },
+                                },
+                              ),
+                            effetFinal: () => {
+                              setSecretCompte({ utilisateur: c.utilisateur, motDePasse })
+                              if (estActif()) tousComptes.recharger()
+                            },
+                          }
+                        })()}
                       />
                       <IconButton
                         label={`Supprimer ${c.utilisateur}`}
@@ -672,6 +740,15 @@ export function VueHebergement({ id }: { id: string }) {
                   </li>
                 ))}
               </ul>
+              {secretCompte && (
+                <Callout
+                  ton="warn"
+                  className="mt-4"
+                  titre={`Nouveau mot de passe de ${secretCompte.utilisateur} — affiché une seule fois`}
+                >
+                  <CopyField className="mt-2" value={secretCompte.motDePasse} masque mono />
+                </Callout>
+              )}
             </Card>
 
             <Card>
@@ -1449,6 +1526,20 @@ export function VueHebergement({ id }: { id: string }) {
                   action: 'service.admin',
                   titre: `Export de ${baseOuverte.nom} préparé`,
                   detail: `${baseOuverte.tailleMo} Mo · lien signé valable une heure`,
+                  // `POST /web/bases/{serveur}/bases/{nom}/export` → `202` ; le
+                  // serveur est celui de l’hébergement pour ce moteur.
+                  appel: (() => {
+                    const serveur = serveursBases.items.find(
+                      (x) => x.hebergementId === h.id && x.moteur === baseOuverte.moteur,
+                    )
+                    return serveur
+                      ? () =>
+                          requete(
+                            `/web/bases/${encodeURIComponent(serveur.id)}/bases/${encodeURIComponent(baseOuverte.nom)}/export`,
+                            { methode: 'POST', corps: { format: 'sql_gz' } },
+                          )
+                      : undefined
+                  })(),
                   job: {
                     type: 'base.dump',
                     label: `Export SQL · ${baseOuverte.nom}`,
