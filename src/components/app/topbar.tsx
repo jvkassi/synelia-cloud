@@ -8,6 +8,7 @@ import {
   ChevronDown,
   CircleUser,
   CloudCog,
+  Fingerprint,
   ListChecks,
   LogOut,
   RotateCcw,
@@ -614,6 +615,13 @@ function MenuCompte({ superAdmin }: { superAdmin: boolean }) {
               </MenuLien>
             ) : (
               <>
+                {/* Auto-gestion du deuxième facteur : n'a de sens qu'un vrai
+                    compte backend à modifier, donc masqué en mode maquette. */}
+                {api && (
+                  <MenuLien href="/app/compte" onClick={close} icone={<Fingerprint size={13} />}>
+                    Mon compte
+                  </MenuLien>
+                )}
                 <MenuLien href="/app/parametres" onClick={close} icone={<Settings size={13} />}>
                   Préférences
                 </MenuLien>

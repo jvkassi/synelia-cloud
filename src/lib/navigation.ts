@@ -228,7 +228,10 @@ export const UNIVERS_CLIENT: UniversNav[] = [
     sections: [
       { nom: 'Utilisateurs & rôles', href: '/app/membres' },
       { nom: "Fédération d'identité", href: '/app/sso' },
-      { nom: 'Sécurité & audit', href: '/app/securite' },
+      // « Mon compte » (double authentification personnelle) n'a pas d'onglet
+      // propre, sur le patron du lanceur : on y arrive par le menu du compte.
+      // Rattaché ici pour que la barre garde un repère quand on l'ouvre.
+      { nom: 'Sécurité & audit', href: '/app/securite', aussi: ['/app/compte'] },
     ],
   },
 ]

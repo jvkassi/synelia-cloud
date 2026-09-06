@@ -17,7 +17,7 @@ export interface SessionApi {
   accessToken: string
   refreshToken: string
   expiresIn: number
-  utilisateur: { id: string; nom: string; email: string }
+  utilisateur: { id: string; nom: string; email: string; mfaEnabled?: boolean }
   organisations: OrganisationSession[]
   organisationActive: string
   roleActif: string
