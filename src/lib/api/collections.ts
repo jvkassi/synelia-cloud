@@ -75,8 +75,12 @@ export function endpointDe(nom: string): string | undefined {
   // d’équivalent liste côté backend et gardent la graine locale.
   const instantanes = /^snapshots-(.+)$/.exec(nom)
   if (instantanes) return `/vms/${encodeURIComponent(instantanes[1])}/instantanes`
+  // `services-projet` (littéral) désigne la vue « tous les projets » des racines de
+  // section (§ Applications de CLAUDE.md) — pas un identifiant de projet. La confondre
+  // avec `services-<projetId>` interrogeait `/projets/projet/services`, un chemin qui
+  // n'existe pas : aucune liste globale ne remplace la graine locale ici, à raison.
   const services = /^services-(.+)$/.exec(nom)
-  if (services) return `/projets/${encodeURIComponent(services[1])}/services`
+  if (services && services[1] !== 'projet') return `/projets/${encodeURIComponent(services[1])}/services`
   const variables = /^variables-(.+)$/.exec(nom)
   if (variables) return `/projets/${encodeURIComponent(variables[1])}/variables`
   const elevations = /^elevations-(.+)$/.exec(nom)
