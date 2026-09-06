@@ -1508,6 +1508,11 @@ export interface EtapeFlux {
   detail: string
   agentId?: string
   outilId?: string
+  /**
+   * Connaissance : quelle base interroger. Ajouté pour que l'exécution réelle sache où
+   * chercher — les champs `source`/`detail` restent du texte descriptif, pas un identifiant.
+   */
+  connaissanceId?: string
   /** Étape conditionnelle : sautée quand la condition n'est pas remplie. */
   condition?: string
   /**
