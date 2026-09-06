@@ -14525,6 +14525,497 @@
         }
       }
     },
+    "/ia/flux": {
+      "get": {
+        "tags": [
+          "IA — Orchestration"
+        ],
+        "operationId": "listerFluxOrchestrations",
+        "summary": "Lister les flux d’orchestration",
+        "x-rbac": "org.dashboard.view",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organisation"
+          },
+          {
+            "$ref": "#/components/parameters/Langue"
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/ParPage"
+          },
+          {
+            "$ref": "#/components/parameters/Tri"
+          },
+          {
+            "$ref": "#/components/parameters/Ordre"
+          },
+          {
+            "$ref": "#/components/parameters/Recherche"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "donnees": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/FluxOrchestration"
+                      }
+                    },
+                    "pagination": {
+                      "$ref": "#/components/schemas/Pagination"
+                    }
+                  },
+                  "required": [
+                    "donnees",
+                    "pagination"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAuthentifie"
+          },
+          "403": {
+            "$ref": "#/components/responses/Interdit"
+          },
+          "422": {
+            "$ref": "#/components/responses/Invalidee"
+          },
+          "429": {
+            "$ref": "#/components/responses/TropDeRequetes"
+          },
+          "500": {
+            "$ref": "#/components/responses/Serveur"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "IA — Orchestration"
+        ],
+        "operationId": "creerFluxOrchestration",
+        "summary": "Créer un flux d’orchestration",
+        "x-rbac": "ia.flow.write",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organisation"
+          },
+          {
+            "$ref": "#/components/parameters/Langue"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FluxOrchestrationCreation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FluxOrchestration"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAuthentifie"
+          },
+          "403": {
+            "$ref": "#/components/responses/Interdit"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflit"
+          },
+          "422": {
+            "$ref": "#/components/responses/Invalidee"
+          },
+          "429": {
+            "$ref": "#/components/responses/TropDeRequetes"
+          },
+          "500": {
+            "$ref": "#/components/responses/Serveur"
+          }
+        }
+      }
+    },
+    "/ia/flux/{fluxId}": {
+      "get": {
+        "tags": [
+          "IA — Orchestration"
+        ],
+        "operationId": "obtenirFluxOrchestration",
+        "summary": "Obtenir un flux d’orchestration",
+        "x-rbac": "org.dashboard.view",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organisation"
+          },
+          {
+            "$ref": "#/components/parameters/Langue"
+          },
+          {
+            "name": "fluxId",
+            "in": "path",
+            "required": true,
+            "description": "Identifiant du flux d’orchestration.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "fx-reclamation"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FluxOrchestration"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAuthentifie"
+          },
+          "403": {
+            "$ref": "#/components/responses/Interdit"
+          },
+          "404": {
+            "$ref": "#/components/responses/Introuvable"
+          },
+          "429": {
+            "$ref": "#/components/responses/TropDeRequetes"
+          },
+          "500": {
+            "$ref": "#/components/responses/Serveur"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "IA — Orchestration"
+        ],
+        "operationId": "modifierFluxOrchestration",
+        "summary": "Modifier un flux d’orchestration",
+        "x-rbac": "ia.flow.write",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organisation"
+          },
+          {
+            "$ref": "#/components/parameters/Langue"
+          },
+          {
+            "name": "fluxId",
+            "in": "path",
+            "required": true,
+            "description": "Identifiant du flux d’orchestration.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "fx-reclamation"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FluxOrchestrationModification"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FluxOrchestration"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAuthentifie"
+          },
+          "403": {
+            "$ref": "#/components/responses/Interdit"
+          },
+          "404": {
+            "$ref": "#/components/responses/Introuvable"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflit"
+          },
+          "422": {
+            "$ref": "#/components/responses/Invalidee"
+          },
+          "429": {
+            "$ref": "#/components/responses/TropDeRequetes"
+          },
+          "500": {
+            "$ref": "#/components/responses/Serveur"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "IA — Orchestration"
+        ],
+        "operationId": "supprimerFluxOrchestration",
+        "summary": "Supprimer un flux d’orchestration",
+        "description": "Action destructive : le nom exact de la ressource est exigé en confirmation.",
+        "x-rbac": "ia.flow.write",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organisation"
+          },
+          {
+            "$ref": "#/components/parameters/Langue"
+          },
+          {
+            "$ref": "#/components/parameters/Confirmation"
+          },
+          {
+            "name": "fluxId",
+            "in": "path",
+            "required": true,
+            "description": "Identifiant du flux d’orchestration.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "fx-reclamation"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Supprimé. Aucun corps."
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAuthentifie"
+          },
+          "403": {
+            "$ref": "#/components/responses/Interdit"
+          },
+          "404": {
+            "$ref": "#/components/responses/Introuvable"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflit"
+          },
+          "422": {
+            "$ref": "#/components/responses/Invalidee"
+          },
+          "429": {
+            "$ref": "#/components/responses/TropDeRequetes"
+          },
+          "500": {
+            "$ref": "#/components/responses/Serveur"
+          }
+        }
+      }
+    },
+    "/ia/flux/{fluxId}/executer": {
+      "post": {
+        "tags": [
+          "IA — Orchestration"
+        ],
+        "operationId": "executerFlux",
+        "summary": "Exécuter un flux",
+        "description": "Démarre une exécution réelle du flux — moteur natif Python, pas un simulateur : les étapes `agent` appellent réellement la passerelle LiteLLM, les étapes `connaissance` la recherche documentaire réelle. Asynchrone comme toute opération longue : renvoie un `TravailProvisioning` à interroger via `GET /travaux/{id}`. Une étape `humain` en attente laisse le travail `running` avec un message explicite sur la tâche concernée, à débloquer via `reprendreExecutionFlux`.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organisation"
+          },
+          {
+            "$ref": "#/components/parameters/Langue"
+          },
+          {
+            "name": "fluxId",
+            "in": "path",
+            "required": true,
+            "description": "Identifiant du flux d’orchestration.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "fx-reclamation"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FluxExecutionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepté — travail de provisioning créé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TravailProvisioning"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAuthentifie"
+          },
+          "403": {
+            "$ref": "#/components/responses/Interdit"
+          },
+          "404": {
+            "$ref": "#/components/responses/Introuvable"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflit"
+          },
+          "422": {
+            "$ref": "#/components/responses/Invalidee"
+          },
+          "424": {
+            "$ref": "#/components/responses/Degrade"
+          },
+          "429": {
+            "$ref": "#/components/responses/TropDeRequetes"
+          },
+          "500": {
+            "$ref": "#/components/responses/Serveur"
+          }
+        }
+      }
+    },
+    "/ia/flux/{fluxId}/executions/{travailId}/reprendre": {
+      "post": {
+        "tags": [
+          "IA — Orchestration"
+        ],
+        "operationId": "reprendreExecutionFlux",
+        "summary": "Reprendre un flux en attente d’une validation humaine",
+        "description": "Une étape `humain` a mis le travail en pause : ce point d’entrée transmet la décision et reprend l’exécution à l’étape suivante. Un travail qui n’est pas en attente d’une validation humaine renvoie 409.",
+        "x-rbac": "ia.flow.write",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organisation"
+          },
+          {
+            "$ref": "#/components/parameters/Langue"
+          },
+          {
+            "name": "fluxId",
+            "in": "path",
+            "required": true,
+            "description": "Identifiant du flux d’orchestration.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "fx-reclamation"
+          },
+          {
+            "name": "travailId",
+            "in": "path",
+            "required": true,
+            "description": "Identifiant du travail — l’exécution du flux.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "trv-01"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FluxRepriseRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepté — travail de provisioning créé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TravailProvisioning"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAuthentifie"
+          },
+          "403": {
+            "$ref": "#/components/responses/Interdit"
+          },
+          "404": {
+            "$ref": "#/components/responses/Introuvable"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflit"
+          },
+          "422": {
+            "$ref": "#/components/responses/Invalidee"
+          },
+          "424": {
+            "$ref": "#/components/responses/Degrade"
+          },
+          "429": {
+            "$ref": "#/components/responses/TropDeRequetes"
+          },
+          "500": {
+            "$ref": "#/components/responses/Serveur"
+          }
+        }
+      }
+    },
     "/ia/modeles": {
       "get": {
         "tags": [
@@ -40215,6 +40706,41 @@
           "defaut"
         ]
       },
+      "BrancheFlux": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string",
+            "description": "Évaluée en « premier mot-clé de la condition trouvé dans les variables ou la dernière sortie » — pas un langage d’expression complet."
+          },
+          "partPct": {
+            "type": "number"
+          },
+          "parDefaut": {
+            "type": "boolean",
+            "description": "La branche de repli reçoit ce qu’aucune condition n’a retenu."
+          },
+          "etapes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EtapeFlux"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "condition",
+          "partPct",
+          "etapes"
+        ]
+      },
       "BriqueCanvas": {
         "type": "object",
         "properties": {
@@ -43808,6 +44334,120 @@
           "devise"
         ]
       },
+      "EtapeFlux": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "declencheur",
+              "agent",
+              "outil",
+              "connaissance",
+              "routeur",
+              "boucle",
+              "humain",
+              "code",
+              "reponse",
+              "anonymisation",
+              "habilitation",
+              "transfert"
+            ]
+          },
+          "nom": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "agentId": {
+            "type": "string"
+          },
+          "outilId": {
+            "type": "string"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "verrouillee": {
+            "type": "boolean"
+          },
+          "executions24h": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "latenceMs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "coutPourMille": {
+            "type": "number"
+          },
+          "tauxErreurPct": {
+            "type": "number"
+          },
+          "reprise": {
+            "type": "object",
+            "properties": {
+              "tentatives": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "delaiS": {
+                "type": "integer",
+                "format": "int32"
+              }
+            },
+            "required": [
+              "tentatives",
+              "delaiS"
+            ]
+          },
+          "branches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrancheFlux"
+            }
+          },
+          "modeRoutage": {
+            "type": "string",
+            "enum": [
+              "premiere",
+              "toutes"
+            ]
+          },
+          "corps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EtapeFlux"
+            }
+          },
+          "surItems": {
+            "type": "string"
+          },
+          "maxIterations": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "nom",
+          "source",
+          "detail",
+          "executions24h",
+          "latenceMs",
+          "coutPourMille",
+          "tauxErreurPct"
+        ]
+      },
       "EtudeCas": {
         "type": "object",
         "properties": {
@@ -44637,6 +45277,257 @@
           "accroche",
           "description",
           "categorie"
+        ]
+      },
+      "FluxExecutionRequest": {
+        "type": "object",
+        "properties": {
+          "entree": {
+            "type": "string",
+            "description": "Message ou charge utile qui déclenche le flux — ce que le déclencheur aurait reçu."
+          },
+          "variables": {
+            "type": "object",
+            "description": "Valeurs de variables à surcharger pour cette exécution seulement (clé → valeur).",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "entree"
+        ]
+      },
+      "FluxOrchestration": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "espaceId": {
+            "type": "string"
+          },
+          "statut": {
+            "type": "string",
+            "enum": [
+              "publie",
+              "brouillon",
+              "suspendu"
+            ]
+          },
+          "declencheur": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "message",
+                  "planifie",
+                  "webhook",
+                  "fichier",
+                  "evenement"
+                ]
+              },
+              "libelle": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "libelle",
+              "detail"
+            ]
+          },
+          "etapes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EtapeFlux"
+            }
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VariableFlux"
+            }
+          },
+          "executions7j": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "dureeMedianeS": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "tauxSuccesPct": {
+            "type": "number"
+          },
+          "coutParExecution": {
+            "type": "number"
+          },
+          "memoirePartagee": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "nom",
+          "description",
+          "espaceId",
+          "statut",
+          "declencheur",
+          "etapes",
+          "variables",
+          "memoirePartagee",
+          "version"
+        ]
+      },
+      "FluxOrchestrationCreation": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "espaceId": {
+            "type": "string"
+          },
+          "declencheur": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "message",
+                  "planifie",
+                  "webhook",
+                  "fichier",
+                  "evenement"
+                ]
+              },
+              "libelle": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "libelle",
+              "detail"
+            ]
+          },
+          "etapes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EtapeFlux"
+            }
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VariableFlux"
+            }
+          },
+          "memoirePartagee": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "nom",
+          "declencheur"
+        ]
+      },
+      "FluxOrchestrationModification": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "statut": {
+            "type": "string",
+            "enum": [
+              "publie",
+              "brouillon",
+              "suspendu"
+            ]
+          },
+          "declencheur": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "message",
+                  "planifie",
+                  "webhook",
+                  "fichier",
+                  "evenement"
+                ]
+              },
+              "libelle": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "libelle",
+              "detail"
+            ]
+          },
+          "etapes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EtapeFlux"
+            }
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VariableFlux"
+            }
+          },
+          "memoirePartagee": {
+            "type": "boolean"
+          }
+        }
+      },
+      "FluxRepriseRequest": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approuve",
+              "rejete"
+            ]
+          },
+          "commentaire": {
+            "type": "string",
+            "description": "Motif ou précision laissé par la personne qui valide."
+          }
+        },
+        "required": [
+          "decision"
         ]
       },
       "Gabarit": {
@@ -52082,6 +52973,37 @@
           "cle",
           "secret",
           "scope"
+        ]
+      },
+      "VariableFlux": {
+        "type": "object",
+        "properties": {
+          "cle": {
+            "type": "string"
+          },
+          "portee": {
+            "type": "string",
+            "enum": [
+              "environnement",
+              "conversation",
+              "systeme"
+            ]
+          },
+          "valeur": {
+            "type": "string"
+          },
+          "secret": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cle",
+          "portee",
+          "valeur",
+          "description"
         ]
       },
       "Ventilation": {

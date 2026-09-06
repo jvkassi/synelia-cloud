@@ -1,20 +1,24 @@
 /**
- * Chemins — univers « IA & Agents » (MVP).
+ * Chemins — univers « IA & Agents ».
  *
- * Une passerelle (LiteLLM devant OpenRouter), un catalogue de modèles et des
- * agents qu'on invoque en un aller-retour. Pas de flux, de bases de
- * connaissances, d'outils, de canaux, de clés, de routage, de garde-fous, de
- * points d'inférence dédiée ni de consommation détaillée dans cette passe :
- * volontairement laissés pour une itération suivante.
+ * Une passerelle (LiteLLM devant OpenRouter), un catalogue de modèles, des
+ * agents qu'on invoque en un aller-retour, et des flux d'orchestration qu'on
+ * exécute réellement (moteur natif Python, pas de service Mastra séparé pour
+ * l'instant). Bases de connaissances, outils, canaux, clés, routage,
+ * garde-fous, points d'inférence dédiée et consommation détaillée restent hors
+ * de cette passe.
  */
 
-import { chemin, crud, fusion, op, ref } from './socle.mjs'
+import { action, chemin, crud, fusion, op, ref } from './socle.mjs'
 
 const T_MODELES = 'IA — Modèles'
 const T_AGENTS = 'IA — Agents'
+const T_FLUX = 'IA — Orchestration'
 
 const idModele = chemin('modeleId', 'Identifiant du modèle IA.', 'm-llama-70b')
 const idAgent = chemin('agentId', 'Identifiant de l’agent.', 'agent-support')
+const idFlux = chemin('fluxId', 'Identifiant du flux d’orchestration.', 'fx-reclamation')
+const idExecution = chemin('travailId', 'Identifiant du travail — l’exécution du flux.', 'trv-01')
 
 const modeles = crud({
   tag: T_MODELES,
@@ -66,4 +70,52 @@ const agents = fusion(
   },
 )
 
-export const cheminsIa = fusion(modeles, agents)
+const flux = fusion(
+  crud({
+    tag: T_FLUX,
+    base: '/ia/flux',
+    idParam: idFlux,
+    nomSingulier: 'FluxOrchestration',
+    nomPluriel: 'FluxOrchestrations',
+    libelle: 'un flux d’orchestration',
+    libellePluriel: 'les flux d’orchestration',
+    schema: 'FluxOrchestration',
+    creation: 'FluxOrchestrationCreation',
+    modification: 'FluxOrchestrationModification',
+    rbacLecture: 'org.dashboard.view',
+    rbacEcriture: 'ia.flow.write',
+  }),
+  action({
+    tag: T_FLUX,
+    chemin: `/ia/flux/{${idFlux.name}}/executer`,
+    id: 'executerFlux',
+    resume: 'Exécuter un flux',
+    detail:
+      'Démarre une exécution réelle du flux — moteur natif Python, pas un simulateur : les étapes ' +
+      '`agent` appellent réellement la passerelle LiteLLM, les étapes `connaissance` la recherche ' +
+      'documentaire réelle. Asynchrone comme toute opération longue : renvoie un `TravailProvisioning` ' +
+      'à interroger via `GET /travaux/{id}`. Une étape `humain` en attente laisse le travail `running` ' +
+      'avec un message explicite sur la tâche concernée, à débloquer via `reprendreExecutionFlux`.',
+    params: [idFlux],
+    corps: ref('FluxExecutionRequest'),
+    corpsRequis: true,
+    erreurs: [409, 424],
+  }),
+  action({
+    tag: T_FLUX,
+    chemin: `/ia/flux/{${idFlux.name}}/executions/{${idExecution.name}}/reprendre`,
+    id: 'reprendreExecutionFlux',
+    resume: 'Reprendre un flux en attente d’une validation humaine',
+    detail:
+      'Une étape `humain` a mis le travail en pause : ce point d’entrée transmet la décision et reprend ' +
+      'l’exécution à l’étape suivante. Un travail qui n’est pas en attente d’une validation humaine ' +
+      'renvoie 409.',
+    params: [idFlux, idExecution],
+    corps: ref('FluxRepriseRequest'),
+    corpsRequis: true,
+    rbac: 'ia.flow.write',
+    erreurs: [409, 424],
+  }),
+)
+
+export const cheminsIa = fusion(modeles, agents, flux)
