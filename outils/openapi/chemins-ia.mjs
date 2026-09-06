@@ -14,11 +14,15 @@ import { action, chemin, crud, fusion, op, ref } from './socle.mjs'
 const T_MODELES = 'IA — Modèles'
 const T_AGENTS = 'IA — Agents'
 const T_FLUX = 'IA — Orchestration'
+const T_CONNAISSANCES = 'IA — Connaissances'
+const T_CLES = 'IA — Clés'
 
 const idModele = chemin('modeleId', 'Identifiant du modèle IA.', 'm-llama-70b')
 const idAgent = chemin('agentId', 'Identifiant de l’agent.', 'agent-support')
 const idFlux = chemin('fluxId', 'Identifiant du flux d’orchestration.', 'fx-reclamation')
 const idExecution = chemin('travailId', 'Identifiant du travail — l’exécution du flux.', 'trv-01')
+const idConnaissance = chemin('connaissanceId', 'Identifiant de la base de connaissances.', 'kb-rh')
+const idCle = chemin('cleId', 'Identifiant de la clé IA.', 'cle-prod')
 
 const modeles = crud({
   tag: T_MODELES,
@@ -118,4 +122,70 @@ const flux = fusion(
   }),
 )
 
-export const cheminsIa = fusion(modeles, agents, flux)
+const connaissances = fusion(
+  crud({
+    tag: T_CONNAISSANCES,
+    base: '/ia/connaissances',
+    idParam: idConnaissance,
+    nomSingulier: 'BaseConnaissance',
+    nomPluriel: 'BasesConnaissance',
+    libelle: 'une base de connaissances',
+    libellePluriel: 'les bases de connaissances',
+    schema: 'BaseConnaissance',
+    creation: 'BaseConnaissanceCreation',
+    modification: 'BaseConnaissanceModification',
+    rbacLecture: 'org.dashboard.view',
+    rbacEcriture: 'ia.knowledge.write',
+  }),
+  action({
+    tag: T_CONNAISSANCES,
+    chemin: `/ia/connaissances/{${idConnaissance.name}}/documents`,
+    id: 'ingererDocumentConnaissance',
+    resume: 'Ingérer un document dans une base de connaissances',
+    detail:
+      'Extraction réelle du texte (Docling), découpage en fragments, vectorisation (BGE-M3 via ' +
+      'Infinity) puis indexation (Qdrant) — un travail de provisioning comme toute opération ' +
+      'longue. Au moins un de `texte`, `contenuBase64` ou `url` est requis.',
+    params: [idConnaissance],
+    corps: ref('DocumentConnaissanceCreation'),
+    corpsRequis: true,
+    rbac: 'ia.knowledge.write',
+    erreurs: [424],
+  }),
+  {
+    [`/ia/connaissances/{${idConnaissance.name}}/rechercher`]: {
+      post: op({
+        tag: T_CONNAISSANCES,
+        id: 'rechercherConnaissance',
+        resume: 'Rechercher dans une base de connaissances',
+        detail:
+          'Recherche vectorielle réelle (Qdrant) sur les fragments indexés — la requête est vectorisée ' +
+          'avec le même modèle d’embedding que les documents. C’est ce point d’entrée qu’une étape ' +
+          '`connaissance` d’un flux d’orchestration appelle ; il ne dépend d’aucun état de flux.',
+        params: [idConnaissance],
+        corps: ref('ConnaissanceRechercheRequest'),
+        ok: ref('ConnaissanceRechercheResponse'),
+        erreurs: [424],
+      }),
+    },
+  },
+)
+
+const cles = crud({
+  tag: T_CLES,
+  base: '/ia/cles',
+  idParam: idCle,
+  nomSingulier: 'CleIA',
+  nomPluriel: 'ClesIA',
+  libelle: 'une clé IA',
+  libellePluriel: 'les clés IA',
+  schema: 'CleIA',
+  creation: 'CleIACreation',
+  modification: 'CleIAModification',
+  rbacLecture: 'ia.key.manage',
+  rbacEcriture: 'ia.key.manage',
+})
+// La création d'une clé renvoie le secret, ce que le CRUD générique ne sait pas dire.
+cles['/ia/cles'].post.responses['201'].content['application/json'].schema = ref('CleIASecret')
+
+export const cheminsIa = fusion(modeles, agents, flux, connaissances, cles)
