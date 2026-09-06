@@ -182,21 +182,28 @@ export function GrilleSparkCharts({
   )
 }
 
+/** URL réelle du Grafana déployé sur le cluster workload dev01 (victoria-metrics-k8s-stack).
+ * `hrefGrafana` permet à un écran qui a lu `liens.grafana` depuis le backend (dégradable,
+ * donc parfois absent) de la préciser ; sans backend actif, cette constante reste correcte. */
+const GRAFANA_URL_DEFAUT = 'https://grafana.synelia.dev01.ovh.smile.ci'
+
 /** Les trois liens de sortie autorisés (§4.9). */
 export function LiensSortie({
   centreon = true,
   grafana = true,
   logs = true,
+  hrefGrafana,
   className,
 }: {
   centreon?: boolean
   grafana?: boolean
   logs?: boolean
+  hrefGrafana?: string
   className?: string
 }) {
   const liens = [
     centreon && { libelle: 'Ouvrir dans Centreon', href: 'https://centreon.synelia.tech' },
-    grafana && { libelle: 'Ouvrir dans Grafana', href: 'https://grafana.synelia.cloud' },
+    grafana && { libelle: 'Ouvrir dans Grafana', href: hrefGrafana || GRAFANA_URL_DEFAUT },
     logs && { libelle: 'Ouvrir dans VictoriaLogs', href: 'https://vlogs.synelia.cloud' },
   ].filter(Boolean) as Array<{ libelle: string; href: string }>
 

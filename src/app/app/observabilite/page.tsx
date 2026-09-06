@@ -130,9 +130,11 @@ export default function Observabilite() {
   // Les courbes restent une synthèse illustrée (graines stables) : le backend
   // dit si la supervision répond. Un `424` dégrade le bloc plutôt que
   // d’afficher des courbes dont on ne sait plus de quand elles datent.
-  const { degrade: degradeMetriques } = useLectureDegradable<{ series: unknown[] }>(
-    '/observabilite/metriques',
-  )
+  const { donnees: metriquesDistantes, degrade: degradeMetriques } = useLectureDegradable<{
+    series: unknown[]
+    liens?: { grafana?: string }
+  }>('/observabilite/metriques')
+  const hrefGrafana = metriquesDistantes?.liens?.grafana
   const evenements = evenementsDistants?.donnees ?? EVENEMENTS_SUPERVISION
   const lignesJournal = journauxDistants?.lignes ?? LOGS_EXECUTION
   const critiques = evenements.filter(
@@ -238,7 +240,7 @@ export default function Observabilite() {
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <SegmentedControl options={PERIMETRES} value={perimetre} onChange={setPerimetre} />
-            <LiensSortie centreon grafana logs />
+            <LiensSortie centreon grafana logs hrefGrafana={hrefGrafana} />
           </div>
 
           <GrilleSparkCharts
@@ -378,7 +380,7 @@ export default function Observabilite() {
                           size="sm"
                           variant="ghost"
                           external
-                          href={`https://grafana.synelia.cloud/d/vm/${v.id}`}
+                          href={`https://grafana.synelia.dev01.ovh.smile.ci/d/vm/${v.id}`}
                         >
                           Grafana
                         </ButtonLink>
@@ -417,7 +419,7 @@ export default function Observabilite() {
                             size="sm"
                             variant="ghost"
                             external
-                            href={`https://grafana.synelia.cloud/d/app/${e.id}`}
+                            href={`https://grafana.synelia.dev01.ovh.smile.ci/d/app/${e.id}`}
                           >
                             Grafana
                           </ButtonLink>
@@ -535,7 +537,7 @@ export default function Observabilite() {
             </div>
             )}
             <div className="mt-4 border-t border-g-100 pt-4">
-              <LiensSortie centreon grafana logs />
+              <LiensSortie centreon grafana logs hrefGrafana={hrefGrafana} />
             </div>
           </Card>
         </div>

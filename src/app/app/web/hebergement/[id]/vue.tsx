@@ -553,7 +553,7 @@ export function VueHebergement({ id }: { id: string }) {
               sousTitre="Mesuré par nos sondes sur les sites de cet hébergement."
               actions={
                 <ButtonLink
-                  href="https://grafana.synelia.cloud"
+                  href="https://grafana.synelia.dev01.ovh.smile.ci"
                   variant="ghost"
                   size="sm"
                   iconAfter={<ExternalLink size={12} />}

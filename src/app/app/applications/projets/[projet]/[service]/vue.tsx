@@ -1639,7 +1639,7 @@ function Supervision({ service }: { service: ServiceProjet }) {
           <div className="space-y-2">
             {[
               { nom: 'Centreon', phrase: 'État des sondes et historique des alertes', href: 'https://centreon.synelia.tech' },
-              { nom: 'Grafana', phrase: 'Métriques détaillées et tableaux de bord', href: 'https://grafana.synelia.cloud' },
+              { nom: 'Grafana', phrase: 'Métriques détaillées et tableaux de bord', href: 'https://grafana.synelia.dev01.ovh.smile.ci' },
               { nom: 'VictoriaLogs', phrase: 'Recherche dans les journaux, toute la rétention', href: 'https://vlogs.synelia.cloud' },
             ].map((o) => (
               <a
