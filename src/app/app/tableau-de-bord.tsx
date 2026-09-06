@@ -111,7 +111,7 @@ export default function TableauDeBord() {
               Nouvel Espace Cloud
             </ButtonLink>
             <ButtonLink href="/app/applications/nouveau" iconBefore={<Plus size={14} />}>
-              Déployer une solution
+              Nouveau projet
             </ButtonLink>
           </>
         }
@@ -465,7 +465,7 @@ export default function TableauDeBord() {
           .map((c) => (
           <Link
             key={c.slug}
-            href="/app/applications/nouveau"
+            href="/app/applications/projets"
             className="group rounded-[10px] border border-dashed border-g-300 bg-white p-3.5 transition-colors hover:border-p-400 hover:bg-p-050"
           >
             <MicroLabel>Suggestion</MicroLabel>

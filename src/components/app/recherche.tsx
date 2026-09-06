@@ -68,13 +68,13 @@ function entreesClient(): Entree[] {
       href: `/app/applications/projets/${s.projetId}/${s.id}`,
       meta: `${s.environnement} · ${s.emplacement.site}`,
     })),
-    // Les modèles n'ont plus de fiche propre : ils se choisissent à l'étape
-    // « Source » de la création de projet, là où ils servent réellement.
+    // Les modèles n'ont plus de fiche propre : ils se choisissent comme
+    // source d'un service « Application », depuis un projet existant.
     ...MODELES.map((m) => ({
       id: m.slug,
       label: m.nom,
       categorie: 'Solutions à déployer',
-      href: '/app/applications/nouveau',
+      href: '/app/applications/projets',
       meta: `${m.solution} ${m.version}`,
     })),
     ...HEBERGEMENTS.map((h) => ({

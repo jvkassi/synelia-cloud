@@ -17,7 +17,7 @@ const JALONS = [
     fait: true,
     actions: [
       { libelle: 'Créer un Espace Cloud', href: '/app/espaces/new' },
-      { libelle: 'Déployer une solution', href: '/app/applications/nouveau' },
+      { libelle: 'Nouveau projet', href: '/app/applications/nouveau' },
     ],
   },
   {

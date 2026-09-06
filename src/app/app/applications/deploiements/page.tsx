@@ -316,7 +316,7 @@ export default function Deploiements() {
             vide={{
               titre: 'Aucun déploiement',
               phrase: 'L’historique se remplit dès votre premier déploiement.',
-              action: { libelle: 'Déployer une application', href: '/app/applications/nouveau' },
+              action: { libelle: 'Ouvrir un projet', href: '/app/applications/projets' },
             }}
           />
         </div>

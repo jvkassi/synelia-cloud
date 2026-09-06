@@ -6,6 +6,8 @@ import {
   Copy,
   Download,
   ExternalLink,
+  Eye,
+  EyeOff,
   Globe,
   Play,
   Plus,
@@ -316,6 +318,7 @@ function Apercu({
             colonnes={2}
             items={[
               { cle: 'Type', valeur: TYPE_SERVICE_LABEL[service.type] },
+              ...(service.description ? [{ cle: 'Description', valeur: service.description }] : []),
               { cle: 'Environnement', valeur: service.environnement },
               ...(service.source
                 ? [
@@ -329,7 +332,14 @@ function Apercu({
                       ),
                     },
                   ]
-                : []),
+                : service.type === 'application'
+                  ? [
+                      {
+                        cle: 'Source',
+                        valeur: <span className="text-g-500">Aucune — à configurer</span>,
+                      },
+                    ]
+                  : []),
               ...(service.moteur
                 ? [
                     {
@@ -1488,11 +1498,26 @@ function Deploiements({ service }: { service: ServiceProjet }) {
 
 function Variables({ service }: { service: ServiceProjet }) {
   const { autorise, refus } = useApp()
+  const executer = useOperation()
   const lesProjets = useCollection<Projet>('projets', PROJETS)
   const projet = lesProjets.items.find((p) => p.id === service.projetId)
   const heritees = (projet?.variables ?? []).filter((v) =>
     v.environnements.includes(service.environnement),
   )
+  // Révéler une valeur secrète est lui-même journalisé (§ « qui a vu quoi et
+  // quand ») : ce n'est pas une bascule d'affichage anodine.
+  const [reveles, setReveles] = useState<Record<string, boolean>>({})
+  const basculer = (id: string, cle: string) => {
+    if (!reveles[id]) {
+      executer({
+        ton: 'info',
+        titre: `Révélation de ${cle} journalisée`,
+        detail:
+          'Votre nom, l’heure et la variable concernée figurent désormais dans le journal d’audit de l’organisation.',
+      })
+    }
+    setReveles((r) => ({ ...r, [id]: !r[id] }))
+  }
 
   const propres =
     service.type === 'base'
@@ -1530,15 +1555,33 @@ function Variables({ service }: { service: ServiceProjet }) {
           }
         />
         <div className="space-y-2">
-          {propres.map((v) => (
-            <div
-              key={v.cle}
-              className="flex items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2"
-            >
-              <span className="font-mono text-[12px] font-semibold text-ink">{v.cle}</span>
-              <span className="font-mono text-[12px] text-g-700">{v.valeur}</span>
-            </div>
-          ))}
+          {propres.map((v, i) => {
+            const id = `propre-${v.cle}-${i}`
+            return (
+              <div
+                key={v.cle}
+                className="flex items-center justify-between gap-3 rounded-[6px] border border-g-300 px-3 py-2"
+              >
+                <span className="font-mono text-[12px] font-semibold text-ink">{v.cle}</span>
+                {v.secret ? (
+                  <span className="flex items-center gap-2">
+                    <span className="font-mono text-[12px] text-g-700">
+                      {reveles[id] ? v.valeur : '••••••••••••'}
+                    </span>
+                    <IconButton
+                      label={reveles[id] ? 'Masquer la valeur' : 'Révéler la valeur'}
+                      size="sm"
+                      onClick={() => basculer(id, v.cle)}
+                    >
+                      {reveles[id] ? <EyeOff size={13} /> : <Eye size={13} />}
+                    </IconButton>
+                  </span>
+                ) : (
+                  <span className="font-mono text-[12px] text-g-700">{v.valeur}</span>
+                )}
+              </div>
+            )
+          })}
         </div>
         <Callout ton="warn" className="mt-3" titre="Un changement demande un redéploiement">
           Les variables sont injectées au démarrage du conteneur. Modifier une valeur sans
@@ -1552,22 +1595,38 @@ function Variables({ service }: { service: ServiceProjet }) {
           sousTitre={`Environnement ${service.environnement}. Modifiables au niveau du projet.`}
         />
         <div className="space-y-2">
-          {heritees.map((v, i) => (
-            <div
-              key={`${v.cle}-${i}`}
-              className="flex items-center justify-between gap-3 rounded-[6px] border border-g-300 bg-g-050 px-3 py-2"
-            >
-              <span className="font-mono text-[12px] font-semibold text-ink">{v.cle}</span>
-              <span className="flex items-center gap-2">
-                <span className="font-mono text-[12px] text-g-700">
-                  {v.secret ? '••••••••' : v.valeur}
+          {heritees.map((v, i) => {
+            const id = `heritee-${v.cle}-${i}`
+            return (
+              <div
+                key={id}
+                className="flex items-center justify-between gap-3 rounded-[6px] border border-g-300 bg-g-050 px-3 py-2"
+              >
+                <span className="font-mono text-[12px] font-semibold text-ink">{v.cle}</span>
+                <span className="flex items-center gap-2">
+                  <span className="font-mono text-[12px] text-g-700">
+                    {v.secret
+                      ? reveles[id]
+                        ? 'Géré par le coffre de secrets — non stocké en clair'
+                        : '••••••••••••'
+                      : v.valeur}
+                  </span>
+                  {v.secret && (
+                    <IconButton
+                      label={reveles[id] ? 'Masquer' : 'Révéler la valeur'}
+                      size="sm"
+                      onClick={() => basculer(id, v.cle)}
+                    >
+                      {reveles[id] ? <EyeOff size={13} /> : <Eye size={13} />}
+                    </IconButton>
+                  )}
+                  <Badge tone={v.portee === 'build' ? 'info' : 'neutral'} size="sm">
+                    {v.portee === 'build' ? 'Build' : 'Exécution'}
+                  </Badge>
                 </span>
-                <Badge tone={v.portee === 'build' ? 'info' : 'neutral'} size="sm">
-                  {v.portee === 'build' ? 'Build' : 'Exécution'}
-                </Badge>
-              </span>
-            </div>
-          ))}
+              </div>
+            )
+          })}
         </div>
         <Link
           href={`/app/applications/variables/${service.projetId}`}

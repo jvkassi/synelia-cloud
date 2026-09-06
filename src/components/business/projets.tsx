@@ -226,10 +226,14 @@ export function CarteService({ service }: { service: ServiceProjet }) {
         {(service.type === 'application' || service.type === 'statique') && (
           <>
             <Ligne cle="Source">
-              <span className="truncate font-mono text-[11.5px]">
-                {service.source?.ref}
-                {service.source?.branche && ` · ${service.source.branche}`}
-              </span>
+              {service.source ? (
+                <span className="truncate font-mono text-[11.5px]">
+                  {service.source.ref}
+                  {service.source.branche && ` · ${service.source.branche}`}
+                </span>
+              ) : (
+                <span className="text-warn">à configurer</span>
+              )}
             </Ligne>
             <Ligne cle="Domaine">
               {domaines.length > 0 ? (
@@ -246,9 +250,11 @@ export function CarteService({ service }: { service: ServiceProjet }) {
                 <span className="text-g-500">aucun</span>
               )}
             </Ligne>
-            <Ligne cle="Port du conteneur">
-              <span className="tnum font-mono">{service.portConteneur}</span>
-            </Ligne>
+            {service.portConteneur && (
+              <Ligne cle="Port du conteneur">
+                <span className="tnum font-mono">{service.portConteneur}</span>
+              </Ligne>
+            )}
           </>
         )}
       </dl>

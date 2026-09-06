@@ -1,10 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
-import { Boxes, Globe, Layers, Plus } from 'lucide-react'
+import { Globe, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { MAINTENANT, money, relatif } from '@/lib/format'
+import { money, relatif } from '@/lib/format'
 import type { Projet, ServiceProjet, TypeServiceProjet } from '@/lib/types'
 import {
   PROJETS,
@@ -14,28 +13,19 @@ import {
   syntheseDeServices,
 } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
-import { Button, ButtonLink } from '@/components/ui/button'
-import { CopyField, GatedAction } from '@/components/ui/display'
-import { Field, Input, Textarea } from '@/components/ui/field'
+import { ButtonLink } from '@/components/ui/button'
+import { GatedAction } from '@/components/ui/display'
 import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
-import { Drawer } from '@/components/ui/overlay'
 import { ICONE_TYPE } from '@/components/business/projets'
 import { useApp, useEspace } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
-import { useOperation } from '@/components/app/actions'
-import { creerRessource } from '@/lib/api/client'
 
 export default function Projets() {
   const { autorise, refus } = useApp()
   const espace = useEspace()
   const lesProjets = useCollection<Projet>('projets', PROJETS)
   const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
-  const executer = useOperation()
-  const [creation, setCreation] = useState(false)
-  const [nom, setNom] = useState('')
-  const [description, setDescription] = useState('')
-  const [environnements, setEnvironnements] = useState('Production, Préproduction')
 
   const servicesDe = (projetId: string) =>
     lesServices.items.filter((x) => x.projetId === projetId)
@@ -44,40 +34,6 @@ export default function Projets() {
   // sinon le sélecteur ne dit pas la vérité. Les agrégats se recalculent donc
   // sur les projets visibles, et non sur tout le parc.
   const projets = lesProjets.items.filter((p) => p.espaceId === espace.id)
-
-  const creerProjet = () => {
-    const envs = environnements
-      .split(',')
-      .map((e) => e.trim())
-      .filter(Boolean)
-    executer({
-      action: 'app.deploy',
-      titre: `Projet « ${nom.trim()} » créé`,
-      detail: `${envs.length || 1} environnement(s), aucun service : la facturation commence au premier déploiement.`,
-      appel: () =>
-        creerRessource('/projets', {
-          nom: nom.trim(),
-          espaceId: espace.id,
-          ...(description.trim() ? { description: description.trim() } : {}),
-          environnements: envs.length > 0 ? envs : ['Production'],
-        }),
-      effet: () =>
-        lesProjets.creer({
-          id: lesProjets.identifiant('prj'),
-          nom: nom.trim(),
-          description: description.trim(),
-          espaceId: espace.id,
-          cree: MAINTENANT,
-          environnements: envs.length > 0 ? envs : ['Production'],
-          variables: [],
-        }),
-      effetFinal: () => lesProjets.recharger(),
-    })
-    setNom('')
-    setDescription('')
-    setEnvironnements('Production, Préproduction')
-    setCreation(false)
-  }
 
   const bilan = projets.reduce(
     (a, p) => {
@@ -99,9 +55,9 @@ export default function Projets() {
         sousTitre="Un projet regroupe les services qui forment un même système : l’application, sa base, son cache, ses tâches de fond. C’est la maille qui répond à « qu’est-ce qui casse si j’arrête ça ? »."
         actions={
           <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-            <Button iconBefore={<Plus size={14} />} onClick={() => setCreation(true)}>
+            <ButtonLink href="/app/applications/nouveau" iconBefore={<Plus size={14} />}>
               Créer un projet
-            </Button>
+            </ButtonLink>
           </GatedAction>
         }
       />
@@ -144,9 +100,9 @@ export default function Projets() {
             sousTitre="Un projet regroupe les services qui forment un même système : l’application, sa base, son cache, ses tâches de fond. Créez le premier ici, ou changez d’Espace Cloud dans le panneau de gauche."
             actions={
               <GatedAction autorise={autorise('app.deploy')} message={refus('app.deploy')}>
-                <Button iconBefore={<Plus size={14} />} onClick={() => setCreation(true)}>
+                <ButtonLink href="/app/applications/nouveau" iconBefore={<Plus size={14} />}>
                   Créer un projet
-                </Button>
+                </ButtonLink>
               </GatedAction>
             }
           />
@@ -259,69 +215,6 @@ export default function Projets() {
         })}
       </div>
 
-      <Drawer
-        open={creation}
-        onClose={() => setCreation(false)}
-        title="Créer un projet"
-        size="md"
-        footer={
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" onClick={() => setCreation(false)}>
-              Annuler
-            </Button>
-            <Button disabled={nom.trim().length === 0} onClick={creerProjet}>
-              Créer le projet
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <Callout ton="info" titre="Un projet ne consomme rien par lui-même">
-            Créer un projet ne facture rien : c’est un contenant. La facturation commence au premier
-            service déployé, au prorata journalier.
-          </Callout>
-          <Field
-            label="Nom du projet"
-            hint="Visible par tous les membres qui ont accès au projet."
-            required
-          >
-            <Input
-              placeholder="Plateforme de facturation"
-              value={nom}
-              onChange={(e) => setNom(e.target.value)}
-            />
-          </Field>
-          <Field
-            label="Description"
-            hint="Une phrase suffit. Elle répond à « à quoi sert ce système ? » pour la personne qui prendra l’astreinte."
-          >
-            <Textarea
-              rows={3}
-              placeholder="API de facturation, sa base et ses relances par lot."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </Field>
-          <Field
-            label="Environnements"
-            hint="Un environnement porte ses propres services et ses propres variables. Vous pourrez en ajouter ensuite."
-          >
-            <Input
-              value={environnements}
-              onChange={(e) => setEnvironnements(e.target.value)}
-            />
-          </Field>
-          <div className="rounded-[8px] border border-g-300 bg-g-050 p-3">
-            <MicroLabel>Adresse offerte pour ce projet</MicroLabel>
-            <CopyField value={`<service>-<env>.${ZONE_APPLICATIVE.zone}`} className="mt-1.5" />
-            <p className="mt-2 text-[11.5px] leading-relaxed text-g-500">
-              Chaque service recevra son adresse dans cette zone, avec certificat automatique. Rien
-              à acheter, rien à configurer.
-            </p>
-          </div>
-        </div>
-      </Drawer>
-
       <Card>
         <CardHeader
           titre="Ce que contient un projet"
@@ -367,20 +260,6 @@ export default function Projets() {
               <p className="mt-2 text-[11.5px] leading-relaxed text-g-700">{t.phrase}</p>
             </div>
           ))}
-          <div className="flex flex-col justify-center rounded-[8px] border border-dashed border-p-300 bg-p-050 p-3">
-            <span className="flex items-center gap-2 text-[12.5px] font-bold text-p-700">
-              <Layers size={14} />
-              Composer plusieurs briques
-            </span>
-            <p className="mt-2 text-[11.5px] leading-relaxed text-g-700">
-              L’assistant de création propose aussi un canvas : on pose les briques, on relie les
-              dépendances, la plateforme génère le tout.
-            </p>
-            <ButtonLink href="/app/applications/nouveau" variant="ghost" size="sm" className="mt-2 self-start">
-              Ouvrir l’assistant
-              <Boxes size={13} />
-            </ButtonLink>
-          </div>
         </div>
       </Card>
     </div>

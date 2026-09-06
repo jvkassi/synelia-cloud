@@ -416,7 +416,7 @@ export interface Application {
   id: string
   espaceId: string
   nom: string
-  source: 'git' | 'image' | 'canvas'
+  source: 'git' | 'image'
   repo?: { provider: 'github' | 'gitlab'; url: string; branche: string }
   builder?: 'nixpacks' | 'dockerfile' | 'image'
   cible: 'vm' | 'k8s'
@@ -510,6 +510,15 @@ export interface Projet {
   description: string
   espaceId: string
   cree: string
+  /** Ventilation de la dépense et recherche — pas de rôle fonctionnel. */
+  etiquettes: string[]
+  /**
+   * Le cluster Kubernetes qui héberge les services du projet — dédié
+   * (provisionné avec le projet) ou partagé avec d'autres projets du même
+   * Espace. Un projet ne consomme rien par lui-même : c'est ce cluster, et le
+   * load balancer qui pointe dessus, qui sont facturés dès la création.
+   */
+  clusterId: string
   /** Un même projet se décline par environnement, chacun avec ses services. */
   environnements: string[]
   /** Variables partagées par tous les services du projet, par environnement. */
@@ -530,6 +539,8 @@ export interface ServiceProjet {
   id: string
   projetId: string
   nom: string
+  /** Saisie à la création, à côté du nom — pas de rôle fonctionnel. */
+  description?: string
   type: TypeServiceProjet
   environnement: string
   statut: 'running' | 'building' | 'stopped' | 'degraded' | 'failed'
