@@ -52,6 +52,8 @@ export const REGISTRE_COLLECTIONS: Record<string, string> = {
   'bases-managees': '/bases',
   'regles-alertes': '/observabilite/alertes',
   impayes: '/admin/facturation/impayes',
+  'agents-ia': '/ia/agents',
+  'modeles-ia': '/ia/modeles',
   'parc-instances': '/admin/marketplace/instances',
   'campagnes-maj': '/admin/marketplace/campagnes',
   'vagues-migration': '/admin/migration/campagnes',

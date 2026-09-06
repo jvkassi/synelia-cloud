@@ -12,7 +12,8 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { seededSeries } from '@/lib/utils'
-import { TYPE_AGENT_LABEL } from '@/lib/types'
+import { estActif } from '@/lib/api/client'
+import { TYPE_AGENT_LABEL, type AgentIA, type ModeleIA } from '@/lib/types'
 import { jetons, money, num, pct } from '@/lib/format'
 import {
   AGENTS_IA,
@@ -32,6 +33,7 @@ import { Card, CardHeader, Callout, NavCard, PageHeader } from '@/components/com
 import { StackedBar, StatTile } from '@/components/composition/metrics'
 import { EventList, GrilleSparkCharts, LiensSortie } from '@/components/business/observabilite'
 import { useEspace } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
 
 const SECTIONS = [
   {
@@ -94,12 +96,26 @@ const SECTIONS = [
 
 export default function AccueilIA() {
   const espace = useEspace()
+  // Agents et modèles ont un vrai backend (`/ia/agents`, `/ia/modeles`, via
+  // LiteLLM) : `useCollection` en sert les données réelles quand l'API est
+  // active. Bases de connaissances, flux d'orchestration et clés d'accès ont
+  // un contrat et un code déjà écrits côté backend, mais pas encore déployés
+  // sur dev01 au moment de ce câblage (`/ia/connaissances`, `/ia/flux`,
+  // `/ia/cles` répondent `404` en pratique) : ils restent sur la graine, comme
+  // le reste de la plomberie (passerelle, budget, consommation, inférence
+  // dédiée) qui n'a pas de contrepartie réelle du tout.
+  const agentsCol = useCollection<AgentIA>('agents-ia', AGENTS_IA)
+  const modelesCol = useCollection<ModeleIA>('modeles-ia', MODELES_IA)
   const cles = CLES_IA.filter((c) => c.espaceId === espace.id && c.statut === 'active')
-  const souverains = MODELES_IA.filter(
+  const souverains = modelesCol.items.filter(
     (m) => m.hebergement === 'souverain' && m.statut !== 'retire',
   )
   const points = POINTS_INFERENCE.filter((p) => p.espaceId === espace.id)
-  const agentsPublies = AGENTS_IA.filter((a) => a.espaceId === espace.id && a.statut === 'publie')
+  // Le backend ne rattache pas encore un agent à un Espace Cloud (MVP LiteLLM,
+  // organisation seule) : en mode API, on ne filtre que par statut publié.
+  const agentsPublies = estActif()
+    ? agentsCol.items.filter((a) => a.statut === 'publie')
+    : agentsCol.items.filter((a) => a.espaceId === espace.id && a.statut === 'publie')
 
   const partExterne = 100 - PASSERELLE_IA.partTerritoirePct
 
