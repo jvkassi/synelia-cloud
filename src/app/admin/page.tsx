@@ -22,6 +22,7 @@ import {
   TICKETS_PLATEFORME,
   TOP_ORGANISATIONS,
 } from '@/lib/mock'
+import type { Impaye } from '@/lib/mock'
 import { BACKEND_LABEL, SITE_COURT } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
@@ -31,26 +32,58 @@ import { EventList } from '@/components/business/observabilite'
 import { BackendGauge } from '@/components/business/infra'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
-import type { ProvisioningJob } from '@/lib/types'
+import type { Backend, Incident, ProvisioningJob, Ticket } from '@/lib/types'
+import { useLectureDegradable } from '@/lib/api/degradable'
+
+/** `GET /admin/tableau-de-bord` : même forme que `SYNTHESE_PLATEFORME`. */
+interface SynthesePlateformeDistante {
+  vcpuTotal: number
+  vcpuUtilise: number
+  ramTotalGo: number
+  stockageTotalTo: number
+  tenantsActifs: number
+  espacesTotal: number
+  projetsTotal: number
+  backendsEnLigne: number
+  backendsTotal: number
+  accesRefuses24h: number
+  jobsEnEchec: number
+  ticketsSlaRisque: number
+  caMensuel: number
+}
 
 export default function VuePlateforme() {
   // Le journal vit dans l'atelier : les actions faites pendant la session s'y
   // ajoutent, refus compris. Sans atelier touché, il retombe sur la graine.
   const { journal: AUDIT, reprendreJob } = useAtelier()
 
+  // Socles, incidents, tickets, impayés et provisionnements ont chacun un
+  // vrai backend admin (`/admin/backends`, `/admin/statut/incidents`,
+  // `/admin/tickets`, `/admin/facturation/impayes`, `/admin/travaux`) : même
+  // mécanisme que le reste de la plateforme. Les agrégats de la bande 1
+  // (vCPU, mémoire, stockage, CA, organisations actives) viennent de
+  // `/admin/tableau-de-bord`, qui calcule exactement la forme de
+  // `SYNTHESE_PLATEFORME` côté backend.
   const jobs = useCollection<ProvisioningJob>('jobs-plateforme', JOBS_PLATEFORME)
-  const enSortie = BACKENDS.filter((b) => b.enSortie?.actif)
-  const satures = BACKENDS.filter((b) => (b.saturation?.j30 ?? 0) > 85)
-  const incidentsOuverts = INCIDENTS.filter((i) => i.statut !== 'resolu')
+  const backends = useCollection<Backend>('backends', BACKENDS)
+  const incidents = useCollection<Incident>('incidents', INCIDENTS)
+  const ticketsPlateforme = useCollection<Ticket>('tickets-plateforme', TICKETS_PLATEFORME)
+  const impayes = useCollection<Impaye>('impayes', IMPAYES)
+  const { donnees: syntheseDistante } = useLectureDegradable<SynthesePlateformeDistante>(
+    '/admin/tableau-de-bord',
+  )
+  const synthese = syntheseDistante ?? SYNTHESE_PLATEFORME
+
+  const enSortie = backends.items.filter((b) => b.enSortie?.actif)
+  const satures = backends.items.filter((b) => (b.saturation?.j30 ?? 0) > 85)
+  const incidentsOuverts = incidents.items.filter((i) => i.statut !== 'resolu')
   const jobsEchec = jobs.items.filter((j) => j.statut === 'failed')
-  const slaRisque = TICKETS_PLATEFORME.filter(
+  const slaRisque = ticketsPlateforme.items.filter(
     (t) => (t.slaRestantMin ?? 9999) < 120 && !['resolu', 'ferme'].includes(t.statut),
   )
-  const impayesTotal = IMPAYES.reduce((a, i) => a + i.montant, 0)
+  const impayesTotal = impayes.items.reduce((a, i) => a + i.montant, 0)
 
-  const vcpuPct = Math.round(
-    (SYNTHESE_PLATEFORME.vcpuUtilise / SYNTHESE_PLATEFORME.vcpuTotal) * 100,
-  )
+  const vcpuPct = Math.round((synthese.vcpuUtilise / synthese.vcpuTotal) * 100)
 
   return (
     <div className="space-y-5">
@@ -60,10 +93,10 @@ export default function VuePlateforme() {
         meta={
           <>
             <Badge tone="neutral" size="sm">
-              {SYNTHESE_PLATEFORME.tenantsActifs} organisations actives
+              {synthese.tenantsActifs} organisations actives
             </Badge>
             <Badge tone="neutral" size="sm">
-              {SYNTHESE_PLATEFORME.backendsEnLigne}/{SYNTHESE_PLATEFORME.backendsTotal} socles en ligne
+              {synthese.backendsEnLigne}/{synthese.backendsTotal} socles en ligne
             </Badge>
             <Badge tone="neutral" size="sm">
               Données à {dateHeure('2026-08-19T15:20:00Z')}
@@ -114,25 +147,25 @@ export default function VuePlateforme() {
           libelle="Processeur alloué"
           valeur={pct(vcpuPct)}
           ton={vcpuPct > 80 ? 'warn' : 'violet'}
-          detail={`${num(SYNTHESE_PLATEFORME.vcpuUtilise)} / ${num(SYNTHESE_PLATEFORME.vcpuTotal)} vCPU`}
+          detail={`${num(synthese.vcpuUtilise)} / ${num(synthese.vcpuTotal)} vCPU`}
           serie={trendSeries('plateforme-vcpu', 30, vcpuPct - 9, vcpuPct)}
         />
         <StatTile
           libelle="Mémoire installée"
-          valeur={`${num(Math.round(SYNTHESE_PLATEFORME.ramTotalGo / 1024))} Tio`}
-          detail={`${num(SYNTHESE_PLATEFORME.ramTotalGo)} Go sur ${SYNTHESE_PLATEFORME.backendsTotal} socles`}
+          valeur={`${num(Math.round(synthese.ramTotalGo / 1024))} Tio`}
+          detail={`${num(synthese.ramTotalGo)} Go sur ${synthese.backendsTotal} socles`}
         />
         <StatTile
           libelle="Stockage installé"
-          valeur={`${num(SYNTHESE_PLATEFORME.stockageTotalTo)} To`}
+          valeur={`${num(synthese.stockageTotalTo)} To`}
           detail="Bloc et objet confondus"
         />
         <StatTile
           libelle="Chiffre d’affaires mensuel"
-          valeur={money(SYNTHESE_PLATEFORME.caMensuel)}
+          valeur={money(synthese.caMensuel)}
           ton="ok"
-          detail={`${SYNTHESE_PLATEFORME.tenantsActifs} organisations facturées`}
-          serie={trendSeries('plateforme-ca', 12, SYNTHESE_PLATEFORME.caMensuel * 0.72, SYNTHESE_PLATEFORME.caMensuel)}
+          detail={`${synthese.tenantsActifs} organisations facturées`}
+          serie={trendSeries('plateforme-ca', 12, synthese.caMensuel * 0.72, synthese.caMensuel)}
         />
         <StatTile
           libelle="Provisionnements en échec"
@@ -160,7 +193,7 @@ export default function VuePlateforme() {
             }
           />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {BACKENDS.map((b) => (
+            {backends.items.map((b) => (
               <BackendGauge key={b.id} backend={b} />
             ))}
           </div>
@@ -200,7 +233,7 @@ export default function VuePlateforme() {
             />
             <div className="space-y-3">
               {(['ABJ', 'GBM'] as const).map((s) => {
-                const socles = BACKENDS.filter((b) => b.site === s)
+                const socles = backends.items.filter((b) => b.site === s)
                 if (socles.length === 0) return null
                 const vcpu = socles.reduce((a, b) => a + b.capacite.vcpu, 0)
                 const utilise = Math.round(
@@ -254,6 +287,12 @@ export default function VuePlateforme() {
                 </tr>
               </thead>
               <tbody>
+                {/* `GET /organisations` (collection `organisations`, déjà câblée sur
+                    `/admin/organisations`) liste bien les organisations réelles, mais
+                    sans consommation vCPU ni CA par organisation — le classement
+                    « plus consommatrices » n'a pas d'équivalent réel à ce jour et
+                    reste sur la graine plutôt que d'inventer un tri sur des champs
+                    absents de la réponse. */}
                 {TOP_ORGANISATIONS.map((o) => (
                   <tr key={o.id} className="border-b border-g-100 last:border-0">
                     <td className="px-3 py-2.5">
@@ -323,7 +362,7 @@ export default function VuePlateforme() {
               }
             />
             <div className="space-y-2">
-              {IMPAYES.map((i) => (
+              {impayes.items.map((i) => (
                 <div
                   key={i.facture}
                   className={cn(
@@ -484,8 +523,8 @@ export default function VuePlateforme() {
             titre="Accès refusés (24 h)"
             sousTitre="Un refus signale un rôle mal calibré, ou une tentative."
             actions={
-              <Badge tone={SYNTHESE_PLATEFORME.accesRefuses24h > 0 ? 'warn' : 'ok'} size="sm">
-                {SYNTHESE_PLATEFORME.accesRefuses24h}
+              <Badge tone={synthese.accesRefuses24h > 0 ? 'warn' : 'ok'} size="sm">
+                {synthese.accesRefuses24h}
               </Badge>
             }
           />
@@ -520,24 +559,24 @@ export default function VuePlateforme() {
             {[
               {
                 l: 'Tickets ouverts',
-                v: TICKETS_PLATEFORME.filter((t) => !['resolu', 'ferme'].includes(t.statut)).length,
+                v: ticketsPlateforme.items.filter((t) => !['resolu', 'ferme'].includes(t.statut)).length,
                 t: 'violet' as const,
               },
               {
                 l: 'Critiques',
-                v: TICKETS_PLATEFORME.filter(
+                v: ticketsPlateforme.items.filter(
                   (t) => t.gravite === 'critique' && !['resolu', 'ferme'].includes(t.statut),
                 ).length,
                 t: 'err' as const,
               },
               {
                 l: 'En attente client',
-                v: TICKETS_PLATEFORME.filter((t) => t.statut === 'attente_client').length,
+                v: ticketsPlateforme.items.filter((t) => t.statut === 'attente_client').length,
                 t: 'warn' as const,
               },
               {
                 l: 'Non assignés',
-                v: TICKETS_PLATEFORME.filter((t) => !t.assigneA).length,
+                v: ticketsPlateforme.items.filter((t) => !t.assigneA).length,
                 t: 'warn' as const,
               },
             ].map((x) => (
