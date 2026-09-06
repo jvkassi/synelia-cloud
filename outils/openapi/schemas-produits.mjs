@@ -272,6 +272,11 @@ const projets = {
       espaceId: chaine(),
       cree: horodatage(),
       environnements: tableau(chaine()),
+      cible: liste(
+        ['vm', 'k8s'],
+        'Cible de calcul du projet : `k8s` (namespace sur le cluster PaaS partagé, par défaut) ou `vm` (une VM Nova dédiée, ses services en conteneurs Docker Compose). Fixée à la création.',
+        { default: 'k8s' },
+      ),
       variables: tableau(
         objet(
           {
@@ -295,6 +300,7 @@ const projets = {
       description: chaine(),
       espaceId: chaine(),
       environnements: tableau(chaine(), 'Par défaut `production`.'),
+      cible: liste(['vm', 'k8s'], 'Par défaut `k8s`. Ignoré en modification (non modifiable après création).'),
     },
     ['nom', 'espaceId'],
   ),
