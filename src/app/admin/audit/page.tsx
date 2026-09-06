@@ -18,6 +18,7 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
+import { useLectureDegradable } from '@/lib/api/degradable'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, useOperation } from '@/components/app/actions'
 import type { AuditEvent } from '@/lib/types'
@@ -30,9 +31,15 @@ const ONGLETS = [
 ]
 
 export default function AuditAdmin() {
-  // Le journal vit dans l'atelier : les actions faites pendant la session s'y
-  // ajoutent, refus compris. Sans atelier touché, il retombe sur la graine.
-  const { journal: AUDIT } = useAtelier()
+  // Journal réel plateforme (`GET /admin/audit`, toutes organisations) quand le backend est
+  // joignable ; sinon l'atelier — les actions faites pendant la session s'y ajoutent, refus
+  // compris, et sans atelier touché il retombe sur la graine.
+  const { journal: journalLocal } = useAtelier()
+  const { donnees: journalDistant } = useLectureDegradable<{ donnees: AuditEvent[] }>(
+    '/admin/audit',
+    { parPage: '200' },
+  )
+  const AUDIT = journalDistant?.donnees ?? journalLocal
 
   const { autorise, refus, pousser } = useApp()
   const equipe = useCollection<MembreEquipe>('equipe-synelia', EQUIPE_SYNELIA)

@@ -17,6 +17,7 @@ import { DataTable } from '@/components/composition/data-table'
 import { Regle321 } from '@/components/business/infra'
 import { useApp } from '@/components/app/contexte'
 import { estActif, requete, supprimerRessource } from '@/lib/api/client'
+import { useLectureDegradable } from '@/lib/api/degradable'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, useOperation } from '@/components/app/actions'
 import type { AuditEvent } from '@/lib/types'
@@ -123,9 +124,14 @@ const ONGLETS = [
 ]
 
 export default function Securite() {
-  // Le journal vit dans l'atelier : les actions faites pendant la session s'y
-  // ajoutent, refus compris. Sans atelier touché, il retombe sur la graine.
-  const { journal: AUDIT } = useAtelier()
+  // Journal réel (`GET /audit`) quand le backend est joignable ; sinon l'atelier — les
+  // actions faites pendant la session s'y ajoutent, refus compris, et sans atelier touché il
+  // retombe sur la graine. C'est le même journal que `/admin/audit` y voit pour cette organisation.
+  const { journal: journalLocal } = useAtelier()
+  const { donnees: journalDistant } = useLectureDegradable<{ donnees: AuditEvent[] }>('/audit', {
+    parPage: '200',
+  })
+  const AUDIT = journalDistant?.donnees ?? journalLocal
 
   const { autorise, refus, perm, pousser, organisations, organisationId } = useApp()
   const executer = useOperation()
