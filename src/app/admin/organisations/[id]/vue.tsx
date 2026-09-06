@@ -4,13 +4,24 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Ban, KeyRound, Pause, Play, ShieldAlert, UserCog } from 'lucide-react'
 import { cn, trendSeries } from '@/lib/utils'
-import { dateCourte, dateHeure, goHumain, MAINTENANT, money, num, pct, relatif } from '@/lib/format'
+import {
+  dateCourte,
+  dateHeure,
+  goHumain,
+  MAINTENANT,
+  money,
+  moneyPerMonth,
+  num,
+  pct,
+  relatif,
+} from '@/lib/format'
 import {
   ELEVATIONS,
   EQUIPE_SYNELIA,
   ESPACES,
   FACTURES,
   IMPAYES,
+  OFFRES,
   ORGANISATIONS,
   SERVICES_MANAGES,
   SOUSCRIPTIONS,
@@ -23,6 +34,7 @@ import {
   ROLE_LABEL,
   SITE_COURT,
   type Invoice,
+  type Offer,
   type Organisation,
   type Role,
 } from '@/lib/types'
@@ -58,6 +70,11 @@ export function VueOrganisation({ id }: { id: string }) {
   const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
   const lesFactures = useCollection<Invoice>('factures', FACTURES)
+  const offres = useCollection<Offer>('offres', OFFRES)
+  const offresSouscriptibles = offres.items.filter((o) => o.statut === 'publiee')
+  // `tenantPlan` porte le code d'une offre du catalogue (facturée en ligne de base sur la
+  // facture) — sauf les trois libellés hérités (Standard/Avancé/Entreprise), affichés tels quels.
+  const libellePlan = (plan: string) => offres.items.find((o) => o.code === plan)?.nom ?? plan
   const elevations = useCollection<Elevation>(`elevations-${id}`, ELEVATIONS)
   const orgs = useCollection<Organisation>('organisations', ORGANISATIONS)
   const [onglet, setOnglet] = useState('synthese')
@@ -112,7 +129,7 @@ export function VueOrganisation({ id }: { id: string }) {
             </Badge>
             {org.tenantPlan && (
               <Badge tone="neutral" size="sm">
-                Plan {org.tenantPlan}
+                Plan {libellePlan(org.tenantPlan)}
               </Badge>
             )}
             <Badge tone="neutral" size="sm">
@@ -200,7 +217,7 @@ export function VueOrganisation({ id }: { id: string }) {
                 { cle: 'Secteur', valeur: org.secteur ?? '—' },
                 { cle: 'Numéro de contribuable', valeur: org.tva ?? '—' },
                 { cle: 'Domaine principal', valeur: org.domaine ?? '—' },
-                { cle: 'Plan de service', valeur: org.tenantPlan ?? 'Standard' },
+                { cle: 'Plan de service', valeur: libellePlan(org.tenantPlan ?? 'Standard') },
                 { cle: 'Contrat', valeur: 'Direct, sans intermédiaire' },
                 { cle: 'Créée le', valeur: dateCourte(org.createdAt) },
                 { cle: 'Royaume d’identité', valeur: `identite.synelia.cloud/realms/${org.id}` },
@@ -898,14 +915,26 @@ export function VueOrganisation({ id }: { id: string }) {
               sousTitre="Ce que nous pouvons ajuster côté super admin, sans toucher aux ressources du client."
             />
             <div className="space-y-4">
-              <Field label="Plan de service">
+              <Field
+                label="Plan de service"
+                hint="l'offre du catalogue à laquelle l'organisation est abonnée — sa facture porte cet abonnement en ligne de base, en plus de sa consommation réelle"
+              >
                 <Select
                   value={planService || (org.tenantPlan ?? 'Standard')}
                   onChange={(e) => setPlanService(e.target.value)}
                 >
-                  <option value="Standard">Standard</option>
-                  <option value="Avancé">Avancé — support prioritaire</option>
-                  <option value="Entreprise">Entreprise — interlocuteur dédié</option>
+                  <option value="Standard">Standard (héritage — aucune offre du catalogue)</option>
+                  <option value="Avancé">Avancé — support prioritaire (héritage)</option>
+                  <option value="Entreprise">Entreprise — interlocuteur dédié (héritage)</option>
+                  {offresSouscriptibles.length > 0 && (
+                    <optgroup label="Offres du catalogue">
+                      {offresSouscriptibles.map((o) => (
+                        <option key={o.code} value={o.code}>
+                          {o.nom} — {moneyPerMonth(o.prix)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </Select>
               </Field>
               <Field
