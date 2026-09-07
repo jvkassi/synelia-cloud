@@ -3,6 +3,7 @@
 import { Plus } from 'lucide-react'
 import { goHumain, num } from '@/lib/format'
 import { BASES_CONNAISSANCE, CONNECTEURS_CONNAISSANCE } from '@/lib/mock'
+import type { BaseConnaissance } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -10,11 +11,13 @@ import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/
 import { StatTile } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { useApp, useEspace } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
 
 export default function Connaissances() {
   const espace = useEspace()
   const { autorise, refus } = useApp()
-  const bases = BASES_CONNAISSANCE.filter((b) => b.espaceId === espace.id)
+  const basesCol = useCollection<BaseConnaissance>('connaissances-ia', BASES_CONNAISSANCE)
+  const bases = basesCol.items.filter((b) => b.espaceId === espace.id)
 
   return (
     <div className="space-y-5">

@@ -5,6 +5,8 @@ import { Ban, Lock, Plus, RotateCw } from 'lucide-react'
 import { dateCourte, jetons, money, num, relatif } from '@/lib/format'
 import { CLASSE_DONNEES_LABEL, type CleIA } from '@/lib/types'
 import { CLES_IA, COFFRE_CLES_FOURNISSEURS, MODELES_IA, PASSERELLE_IA } from '@/lib/mock'
+import type { ModeleIA } from '@/lib/types'
+import { estActif } from '@/lib/api/client'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, IconButton } from '@/components/ui/button'
 import { CodeBlock, CopyField, GatedAction } from '@/components/ui/display'
@@ -16,6 +18,7 @@ import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { LogPeek } from '@/components/business/observabilite'
 import { JOURNAL_PASSERELLE } from '@/lib/mock/ia'
 import { useApp, useEspace } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
 
 const TON_STATUT = { active: 'ok', suspendue: 'warn', revoquee: 'neutral' } as const
 const LIBELLE_STATUT = { active: 'Active', suspendue: 'Suspendue', revoquee: 'Révoquée' } as const
@@ -26,11 +29,19 @@ export default function Passerelle() {
   const [creation, setCreation] = useState(false)
   const [aRevoquer, setARevoquer] = useState<CleIA | null>(null)
 
-  const cles = CLES_IA.filter((c) => c.espaceId === espace.id)
+  const clesCol = useCollection<CleIA>('cles-ia', CLES_IA)
+  const modelesCol = useCollection<ModeleIA>('modeles-ia', MODELES_IA)
+  const modeles = modelesCol.items
+  const cles = clesCol.items.filter((c) => c.espaceId === espace.id)
   const actives = cles.filter((c) => c.statut === 'active')
   const jetonsConsommes = actives.reduce((a, c) => a + c.jetonsConsommes, 0)
   const budget = actives.reduce((a, c) => a + c.budgetMensuel, 0)
   const depense = actives.reduce((a, c) => a + c.budgetConsomme, 0)
+  // Vérifié en direct sur la passerelle LiteLLM (`/v1/models` + un appel réel
+  // par modèle) : les huit modèles du catalogue OpenRouter répondent tous.
+  // `invocable` distingue ceux réellement appelables des entrées catalogue
+  // (embedding, reranker…) qui n'ont pas d'équivalent chat sur cette route.
+  const modelesInvocables = modeles.filter((m) => m.invocable)
 
   const colonnes: Array<Colonne<CleIA>> = [
     {
@@ -209,6 +220,15 @@ export default function Passerelle() {
               404 qui laisserait croire à une faute de frappe.
             </p>
           </Callout>
+          {estActif() && (
+            <Callout ton="ok" className="mt-4" titre="Passerelle LiteLLM active, en amont d’OpenRouter">
+              {modelesInvocables.length} modèle{modelesInvocables.length > 1 ? 's' : ''} du catalogue
+              répond{modelesInvocables.length > 1 ? 'ent' : ''} réellement à un appel de complétion —
+              pas une liste déclarée, une vérification faite modèle par modèle contre la passerelle.
+              Les autres entrées du catalogue (embedding, reranker…) passent par un autre point d’API
+              et ne sont pas comptées ici.
+            </Callout>
+          )}
         </Card>
 
         <div className="space-y-4">
@@ -365,7 +385,7 @@ curl ${PASSERELLE_IA.base}/models \\
           <div>
             <MicroLabel className="mb-2">Modèles autorisés</MicroLabel>
             <div className="max-h-40 space-y-1.5 overflow-y-auto rounded-[6px] border border-g-300 p-2.5">
-              {MODELES_IA.filter((m) => m.statut !== 'retire').map((m) => (
+              {modeles.filter((m) => m.statut !== 'retire').map((m) => (
                 <Checkbox
                   key={m.id}
                   defaultChecked={m.hebergement === 'souverain'}

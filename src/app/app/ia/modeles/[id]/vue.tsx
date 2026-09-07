@@ -13,6 +13,7 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { GrilleSparkCharts } from '@/components/business/observabilite'
+import { useCollection } from '@/components/app/atelier'
 
 const ONGLETS = [
   { id: 'fiche', label: 'Fiche' },
@@ -55,7 +56,9 @@ const LIBELLE_STATUT = {
 
 export function VueModele({ modeleId }: { modeleId: string }) {
   const [onglet, setOnglet] = useState('fiche')
-  const modele = MODELES_IA.find((m) => m.id === modeleId)
+  const modelesCol = useCollection<ModeleIA>('modeles-ia', MODELES_IA)
+  const modeles = modelesCol.items
+  const modele = modeles.find((m) => m.id === modeleId)
 
   // Garde après les crochets : la vue dit ce qu'elle ne trouve pas.
   if (!modele) {
@@ -198,12 +201,12 @@ export function VueModele({ modeleId }: { modeleId: string }) {
                   sousTitre="Mille requêtes de 2 000 jetons entrants et 400 jetons sortants, tarif public en FCFA hors taxes."
                 />
                 <div className="space-y-1.5">
-                  {[...MODELES_IA]
+                  {[...modeles]
                     .filter((m) => m.famille === modele.famille && m.unite === modele.unite)
                     .sort((a, b) => coutReference(a) - coutReference(b))
                     .map((m) => {
                       const max = Math.max(
-                        ...MODELES_IA.filter((x) => x.famille === modele.famille).map(coutReference),
+                        ...modeles.filter((x) => x.famille === modele.famille).map(coutReference),
                       )
                       const largeur = max > 0 ? (coutReference(m) / max) * 100 : 0
                       return (

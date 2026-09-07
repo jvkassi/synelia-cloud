@@ -2,13 +2,16 @@
 
 import { FLUX_ORCHESTRATION } from '@/lib/mock'
 import type { Tone } from '@/components/ui/badge'
+import type { FluxOrchestration } from '@/lib/types'
 import { CadreSection } from '@/components/app/cadre-section'
 import { useEspace } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
 
 /** Panneau de la section — les flux d'orchestration de l'Espace. */
 export function CadreFlux({ children }: { children: React.ReactNode }) {
   const espace = useEspace()
-  const entrees = FLUX_ORCHESTRATION.filter((f) => f.espaceId === espace.id).map((f) => ({
+  const fluxCol = useCollection<FluxOrchestration>('flux-ia', FLUX_ORCHESTRATION)
+  const entrees = fluxCol.items.filter((f) => f.espaceId === espace.id).map((f) => ({
     id: f.id,
     nom: f.nom,
     sousTitre: `${f.declencheur.libelle} · ${f.version}`,

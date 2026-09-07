@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Cloud, FolderGit2, Globe, HardDrive, Plus, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateHeure, goHumain, jetons, money, num, pct, relatif } from '@/lib/format'
-import type { BaseConnaissance } from '@/lib/types'
+import type { BaseConnaissance, CleIA } from '@/lib/types'
 import {
   BASES_CONNAISSANCE,
   CLES_IA,
@@ -22,6 +22,7 @@ import { StatTile } from '@/components/composition/metrics'
 import { EmptyState, ErrorState } from '@/components/composition/states'
 import { PASSERELLE_IA } from '@/lib/mock/ia'
 import { useApp, useEspace } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
 
 const ONGLETS = [
   { id: 'source', label: 'Source & indexation' },
@@ -62,7 +63,9 @@ export function VueBase({ baseId }: { baseId: string }) {
   const { autorise, refus, pousser } = useApp()
   const [onglet, setOnglet] = useState('source')
 
-  const bases = BASES_CONNAISSANCE.filter((b) => b.espaceId === espace.id)
+  const basesCol = useCollection<BaseConnaissance>('connaissances-ia', BASES_CONNAISSANCE)
+  const clesCol = useCollection<CleIA>('cles-ia', CLES_IA)
+  const bases = basesCol.items.filter((b) => b.espaceId === espace.id)
   const base = bases.find((b) => b.id === baseId)
 
   const peutEcrire = autorise('ia.knowledge.write')
@@ -274,7 +277,7 @@ export function VueBase({ baseId }: { baseId: string }) {
                       sousTitre="Une base n’est interrogeable que par les clés qui la citent. Aucune découverte implicite."
                     />
                     <div className="space-y-2">
-                      {CLES_IA.filter((c) => c.espaceId === espace.id).map((c) => {
+                      {clesCol.items.filter((c) => c.espaceId === espace.id).map((c) => {
                         const autorisee = base.clesAutorisees.includes(c.id)
                         return (
                           <div

@@ -13,7 +13,7 @@ import {
 import Link from 'next/link'
 import { seededSeries } from '@/lib/utils'
 import { estActif } from '@/lib/api/client'
-import { TYPE_AGENT_LABEL, type AgentIA, type ModeleIA } from '@/lib/types'
+import { TYPE_AGENT_LABEL, type AgentIA, type CleIA, type ModeleIA } from '@/lib/types'
 import { jetons, money, num, pct } from '@/lib/format'
 import {
   AGENTS_IA,
@@ -96,17 +96,17 @@ const SECTIONS = [
 
 export default function AccueilIA() {
   const espace = useEspace()
-  // Agents et modèles ont un vrai backend (`/ia/agents`, `/ia/modeles`, via
-  // LiteLLM) : `useCollection` en sert les données réelles quand l'API est
-  // active. Bases de connaissances, flux d'orchestration et clés d'accès ont
-  // un contrat et un code déjà écrits côté backend, mais pas encore déployés
-  // sur dev01 au moment de ce câblage (`/ia/connaissances`, `/ia/flux`,
-  // `/ia/cles` répondent `404` en pratique) : ils restent sur la graine, comme
-  // le reste de la plomberie (passerelle, budget, consommation, inférence
-  // dédiée) qui n'a pas de contrepartie réelle du tout.
+  // Agents, modèles, bases de connaissances, flux et clés d'accès ont tous un
+  // vrai backend (`/ia/agents`, `/ia/modeles`, `/ia/connaissances`, `/ia/flux`,
+  // `/ia/cles`, via LiteLLM/OpenRouter, Docling/Infinity/Qdrant selon l'amont) :
+  // `useCollection` en sert les données réelles quand l'API est active. Le
+  // reste de la plomberie (passerelle, budget, consommation agrégée, points
+  // d'inférence dédiés, intégrations) n'a pas de contrepartie réelle et reste
+  // sur la graine.
   const agentsCol = useCollection<AgentIA>('agents-ia', AGENTS_IA)
   const modelesCol = useCollection<ModeleIA>('modeles-ia', MODELES_IA)
-  const cles = CLES_IA.filter((c) => c.espaceId === espace.id && c.statut === 'active')
+  const clesCol = useCollection<CleIA>('cles-ia', CLES_IA)
+  const cles = clesCol.items.filter((c) => c.espaceId === espace.id && c.statut === 'active')
   const souverains = modelesCol.items.filter(
     (m) => m.hebergement === 'souverain' && m.statut !== 'retire',
   )
@@ -203,29 +203,40 @@ export default function AccueilIA() {
           </p>
         ) : (
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-            {agentsPublies.map((a) => (
-              <Link
-                key={a.id}
-                href={`/app/ia/agents/${a.id}`}
-                className="rounded-[8px] border border-g-300 px-3 py-2.5 transition-colors hover:border-p-400"
-              >
-                <span className="flex items-center gap-2.5">
-                  <SolutionLogo initiales={a.initiales} teinte={a.teinte} size="sm" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[12.5px] font-semibold text-ink">
-                      {a.nom}
+            {agentsPublies.map((a) => {
+              // Le backend LiteLLM (MVP) ne porte encore ni type, ni initiales/teinte,
+              // ni métriques par agent : ces champs n'existent que côté maquette. On
+              // n'y accède donc jamais sans repli, sous peine de casser l'accueil dès
+              // qu'un agent réel passe en « publié ».
+              const initiales = a.initiales ?? a.nom.slice(0, 2).toUpperCase()
+              const teinte = a.teinte ?? 'violet'
+              const sousTitre = a.type
+                ? `${TYPE_AGENT_LABEL[a.type]} · ${num(a.metriques?.conversations7j ?? 0)} échanges / 7 j`
+                : a.modele
+              return (
+                <Link
+                  key={a.id}
+                  href={`/app/ia/agents/${a.id}`}
+                  className="rounded-[8px] border border-g-300 px-3 py-2.5 transition-colors hover:border-p-400"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <SolutionLogo initiales={initiales} teinte={teinte} size="sm" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[12.5px] font-semibold text-ink">
+                        {a.nom}
+                      </span>
+                      <span className="block truncate text-[11px] text-g-500">{sousTitre}</span>
                     </span>
-                    <span className="block truncate text-[11px] text-g-500">
-                      {TYPE_AGENT_LABEL[a.type]} · {num(a.metriques.conversations7j)} échanges / 7 j
-                    </span>
+                    {a.metriques && (
+                      <span className="tnum shrink-0 text-right text-[11px] text-g-500">
+                        {money(a.metriques.coutJour)}
+                        <span className="block">par jour</span>
+                      </span>
+                    )}
                   </span>
-                  <span className="tnum shrink-0 text-right text-[11px] text-g-500">
-                    {money(a.metriques.coutJour)}
-                    <span className="block">par jour</span>
-                  </span>
-                </span>
-              </Link>
-            ))}
+                </Link>
+              )
+            })}
           </div>
         )}
       </Card>

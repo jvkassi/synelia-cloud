@@ -1208,6 +1208,12 @@ export interface ModeleIA {
   finDeVie?: string
   usages: string[]
   description: string
+  /**
+   * Réellement appelable sur la route chat de la passerelle (`/ia/agents/{id}/invoquer`) —
+   * porté par le backend, absent de la maquette : `undefined` en mode maquette, où
+   * seuls des modèles de génération de texte figurent de toute façon.
+   */
+  invocable?: boolean
 }
 
 export interface CleIA {

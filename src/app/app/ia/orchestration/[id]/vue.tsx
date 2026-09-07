@@ -39,6 +39,7 @@ import { StatTile } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { LogPeek } from '@/components/business/observabilite'
 import { useApp, useEspace } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
 
 const ONGLETS = [
   { id: 'studio', label: 'Studio' },
@@ -807,8 +808,21 @@ export function VueFlux({ fluxId }: { fluxId: string }) {
   const { autorise, refus, pousser } = useApp()
   const [onglet, setOnglet] = useState('studio')
 
-  const flux = FLUX_ORCHESTRATION.filter((f) => f.espaceId === espace.id)
-  const courant = flux.find((f) => f.id === fluxId)
+  const fluxCol = useCollection<FluxOrchestration>('flux-ia', FLUX_ORCHESTRATION)
+  const flux = fluxCol.items.filter((f) => f.espaceId === espace.id)
+  const trouve = flux.find((f) => f.id === fluxId)
+  // Un flux réel (exécuteur natif, FONC-02) ne porte pas encore de métriques
+  // agrégées : le backend les laisse `null`, absentes du JSON. Ramenées à 0
+  // ici, les affichages `> 0 ? … : '—'` déjà en place plus bas font le reste.
+  const courant = trouve
+    ? {
+        ...trouve,
+        executions7j: trouve.executions7j ?? 0,
+        dureeMedianeS: trouve.dureeMedianeS ?? 0,
+        tauxSuccesPct: trouve.tauxSuccesPct ?? 0,
+        coutParExecution: trouve.coutParExecution ?? 0,
+      }
+    : undefined
   const [arbres, setArbres] = useState<Record<string, EtapeFlux[]>>({})
   const etapes = arbres[courant?.id ?? ''] ?? courant?.etapes ?? []
   const [selection, setSelection] = useState(courant?.etapes[0]?.id ?? '')
