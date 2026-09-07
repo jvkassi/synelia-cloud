@@ -345,6 +345,15 @@ export default function NouvelAgent() {
                         {x.nom}
                       </span>
                       <span className="block truncate text-[11px] text-g-500">{x.residence}</span>
+                      {/* Le catalogue porte la vérité sur ce qui répond réellement aujourd'hui
+                          (ex. le garde-fou OpenRouter du 2026-09-07) dans sa description — pas de
+                          badge « vérifié » figé côté interface, qui se périmerait en silence dès
+                          que le garde-fou serait corrigé côté fournisseur. */}
+                      {x.description && (
+                        <span className="mt-0.5 block truncate text-[11px] text-g-500">
+                          {x.description}
+                        </span>
+                      )}
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
                       <span className="tnum text-[11.5px] text-g-500">
