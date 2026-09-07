@@ -38,6 +38,8 @@ import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/
 import { StatTile } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { LogPeek } from '@/components/business/observabilite'
+import { creerRessource } from '@/lib/api/client'
+import { useOperation } from '@/components/app/actions'
 import { useApp, useEspace } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 
@@ -806,7 +808,9 @@ function PanneauEtape({
 export function VueFlux({ fluxId }: { fluxId: string }) {
   const espace = useEspace()
   const { autorise, refus, pousser } = useApp()
+  const executerOperation = useOperation()
   const [onglet, setOnglet] = useState('studio')
+  const [entreeTest, setEntreeTest] = useState('')
 
   const fluxCol = useCollection<FluxOrchestration>('flux-ia', FLUX_ORCHESTRATION)
   const flux = fluxCol.items.filter((f) => f.espaceId === espace.id)
@@ -861,19 +865,53 @@ export function VueFlux({ fluxId }: { fluxId: string }) {
         actions={
           <GatedAction autorise={peutEcrire} message={refus('ia.flow.write')}>
             <Button
-              onClick={() =>
+              onClick={() => {
+                fluxCol.modifier(courant.id, { statut: 'publie' })
                 pousser({
                   ton: 'ok',
                   titre: 'Flux publié',
                   detail: `${courant.nom} — les exécutions en cours terminent sur la version précédente.`,
                 })
-              }
+              }}
             >
               Publier le flux
             </Button>
           </GatedAction>
         }
       />
+
+      <Card>
+        <CardHeader
+          titre="Exécuter maintenant"
+          sousTitre="Lance réellement ce flux tel qu’enregistré côté passerelle — l’exécuteur natif (`ia_agents/flux.py`) appelle pour de vrai chaque agent qu’il référence. Suivi dans le centre de tâches."
+        />
+        <div className="flex flex-wrap items-end gap-3">
+          <Field label="Entrée du déclencheur" className="min-w-0 flex-1">
+            <Input
+              value={entreeTest}
+              placeholder={courant.declencheur.detail || 'Message de test'}
+              onChange={(e) => setEntreeTest(e.target.value)}
+            />
+          </Field>
+          <GatedAction autorise={peutEcrire} message={refus('ia.flow.write')}>
+            <Button
+              onClick={() =>
+                executerOperation({
+                  action: 'ia.flow.write',
+                  titre: `Exécution lancée · ${courant.nom}`,
+                  detail: 'Suivi dans le centre de tâches.',
+                  appel: () =>
+                    creerRessource(`/ia/flux/${courant.id}/executer`, {
+                      entree: entreeTest.trim() || courant.declencheur.detail || 'Message de test',
+                    }),
+                })
+              }
+            >
+              Exécuter
+            </Button>
+          </GatedAction>
+        </div>
+      </Card>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile

@@ -33,7 +33,7 @@ import {
   modeleParSlug,
   outilParId,
 } from '@/lib/mock'
-import { estActif } from '@/lib/api/client'
+import { ApiError, creerRessource, estActif } from '@/lib/api/client'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { CodeBlock, CopyField, GatedAction, SolutionLogo, Tabs } from '@/components/ui/display'
@@ -91,6 +91,16 @@ export function VueAgent({ agentId }: { agentId: string }) {
   const { autorise, refus, pousser } = useApp()
   const [onglet, setOnglet] = useState('consigne')
   const [aRestaurer, setARestaurer] = useState<string | null>(null)
+  const [messageTest, setMessageTest] = useState('')
+  const [testEnCours, setTestEnCours] = useState(false)
+  const [erreurTest, setErreurTest] = useState<string | null>(null)
+  const [resultatTest, setResultatTest] = useState<{
+    reponse: string
+    jetonsEntree: number
+    jetonsSortie: number
+    coutFcfa: number
+    latenceMs: number
+  } | null>(null)
 
   // L'agent est relu dans la collection à chaque rendu : un agent créé pendant
   // la session doit s'ouvrir, et une fiche ne doit pas montrer l'état d'avant.
@@ -126,6 +136,26 @@ export function VueAgent({ agentId }: { agentId: string }) {
         action={{ libelle: 'Créer un agent', href: '/app/ia/nouveau' }}
       />
     )
+  }
+
+  const tester = async () => {
+    if (!messageTest.trim() || testEnCours) return
+    setTestEnCours(true)
+    setErreurTest(null)
+    try {
+      const r = await creerRessource<{
+        reponse: string
+        jetonsEntree: number
+        jetonsSortie: number
+        coutFcfa: number
+        latenceMs: number
+      }>(`/ia/agents/${agent.id}/invoquer`, { message: messageTest })
+      setResultatTest(r as typeof resultatTest)
+    } catch (e) {
+      setErreurTest(e instanceof ApiError ? e.message : 'Le backend ne répond pas.')
+    } finally {
+      setTestEnCours(false)
+    }
   }
 
   return (
@@ -215,6 +245,37 @@ export function VueAgent({ agentId }: { agentId: string }) {
   -H "Content-Type: application/json" \\
   -d '{"message": "Bonjour"}'`}
             />
+          </div>
+          <div className="mt-4 border-t border-g-100 pt-4">
+            <MicroLabel className="mb-2">Tester cet agent</MicroLabel>
+            <p className="mb-2 text-[11.5px] text-g-500">
+              Un vrai appel à la passerelle, sans clé d’accès IA : rien n’est compté sur un quota
+              ni sur une dépense de clé — seule une trace d’audit est écrite, comme pour tout appel.
+            </p>
+            <MonoTextarea
+              value={messageTest}
+              placeholder="Bonjour, peux-tu te présenter ?"
+              onChange={(e) => setMessageTest(e.target.value)}
+            />
+            <Button
+              className="mt-2"
+              size="sm"
+              disabled={!messageTest.trim() || testEnCours}
+              onClick={tester}
+            >
+              {testEnCours ? 'Appel en cours…' : 'Tester'}
+            </Button>
+            {erreurTest && <p className="mt-2 text-[12px] text-err">{erreurTest}</p>}
+            {resultatTest && (
+              <div className="mt-3 rounded-[8px] border border-g-300 bg-g-050 p-3.5">
+                <p className="whitespace-pre-wrap text-[12.5px] text-ink">{resultatTest.reponse}</p>
+                <p className="mt-2 text-[11px] text-g-500">
+                  {modele?.nom ?? agent.modele} · {num(resultatTest.jetonsEntree)} +{' '}
+                  {num(resultatTest.jetonsSortie)} jetons · {money(resultatTest.coutFcfa)} ·{' '}
+                  {num(resultatTest.latenceMs)} ms
+                </p>
+              </div>
+            )}
           </div>
           <Callout ton="info" className="mt-4" titre="Publier ici, ce n’est pas publier une fiche de démonstration">
             « Publier » change le statut de cet agent auprès de la passerelle, immédiatement — il n’y
