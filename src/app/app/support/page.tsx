@@ -24,8 +24,32 @@ import { DataTable } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, useOperation } from '@/components/app/actions'
-import { creerRessource } from '@/lib/api/client'
+import { creerRessource, estActif } from '@/lib/api/client'
+import { useLectureDegradable } from '@/lib/api/degradable'
 import type { Ticket } from '@/lib/types'
+
+interface EngagementSlaApi {
+  composant: string
+  dispo: number
+  constate: number
+  reponseCritique: number
+  resolutionCritique: number
+}
+
+interface CreditSlaApi {
+  periode: string
+  composant: string
+  dispoConstatee: number
+  engagement: number
+  credit: number
+  statut: string
+}
+
+const LIBELLE_COMPOSANT_SLA: Record<string, string> = {
+  compute: 'Espace Cloud (calcul)',
+  stockage: 'Stockage',
+  reseau: 'Réseau & IP',
+}
 
 const ONGLETS = [
   { id: 'tickets', label: 'Mes tickets' },
@@ -76,7 +100,12 @@ export default function Support() {
 
   const executer = useOperation()
   const collection = useCollection<Ticket>('tickets', TICKETS)
-  const tickets = collection.items.filter((t) => t.orgId === ORG_COURANTE.id)
+  // Le backend filtre déjà par organisation ; ORG_COURANTE.id est un
+  // identifiant de la graine fictive, inconnu de l'API réelle — filtrer avec
+  // en mode API viderait la liste au lieu de la restreindre.
+  const tickets = estActif()
+    ? collection.items
+    : collection.items.filter((t) => t.orgId === ORG_COURANTE.id)
   const ouverts = tickets.filter((t) => !['resolu', 'ferme'].includes(t.statut))
   const enAttente = tickets.filter((t) => t.statut === 'attente_client')
   const critique = ouverts.find((t) => t.gravite === 'critique')
@@ -84,7 +113,29 @@ export default function Support() {
   const themes = ['tous', ...new Set(ARTICLES_KB.map((a) => a.theme))]
   const articles = theme === 'tous' ? ARTICLES_KB : ARTICLES_KB.filter((a) => a.theme === theme)
 
-  const creditsEnAttente = CREDITS_SLA.filter((c) => c.statut !== 'appliqué')
+  // Premières réponses réelles : premier message d'un agent Synelia après
+  // l'ouverture du ticket, médiane sur les tickets qui en ont déjà une.
+  const reponses = tickets
+    .map((t) => {
+      const premiere = t.messages.find((m) => m.role === 'synelia')
+      if (!premiere) return undefined
+      return (new Date(premiere.date).getTime() - new Date(t.createdAt).getTime()) / 60000
+    })
+    .filter((v): v is number => v !== undefined && v >= 0)
+    .sort((a, b) => a - b)
+  const reponseMedianeMin = reponses.length ? reponses[Math.floor((reponses.length - 1) / 2)] : undefined
+
+  const { donnees: slaDistant } = useLectureDegradable<{
+    engagements: EngagementSlaApi[]
+    credits: CreditSlaApi[]
+  }>('/facturation/sla')
+  const engagementsSla = estActif() ? (slaDistant?.engagements ?? []) : ENGAGEMENTS_SLA
+  const creditsSla = estActif() ? (slaDistant?.credits ?? []) : CREDITS_SLA
+  const disponibiliteConstatee = engagementsSla.length
+    ? engagementsSla.reduce((a, e) => a + e.constate, 0) / engagementsSla.length
+    : undefined
+
+  const creditsEnAttente = creditsSla.filter((c) => c.statut !== 'appliqué')
 
   return (
     <div className="space-y-5">
@@ -139,19 +190,19 @@ export default function Support() {
         />
         <StatTile
           libelle="Première réponse médiane"
-          valeur="14 min"
+          valeur={reponseMedianeMin !== undefined ? dureeMin(Math.round(reponseMedianeMin)) : '—'}
           ton="ok"
           detail="Engagement : 30 min sur critique"
         />
         <StatTile
           libelle="Disponibilité constatée 30 j"
-          valeur={pct(99.94, 2)}
+          valeur={disponibiliteConstatee !== undefined ? pct(disponibiliteConstatee, 2) : '—'}
           ton="ok"
           detail="Engagement contractuel 99,9 %"
         />
         <StatTile
           libelle="Avoirs de service"
-          valeur={money(CREDITS_SLA.reduce((a, c) => a + c.credit, 0))}
+          valeur={money(creditsSla.reduce((a, c) => a + c.credit, 0))}
           ton={creditsEnAttente.length > 0 ? 'warn' : 'neutral'}
           detail={
             creditsEnAttente.length > 0
@@ -320,7 +371,13 @@ export default function Support() {
             <Card>
               <CardHeader titre="Disponibilité globale" sousTitre="Trente derniers jours, toutes ressources." />
               <div className="flex justify-center py-2">
-                <GaugeCircle valeur={99.94} min={99} max={100} cible={99.9} libelle="Constatée" />
+                <GaugeCircle
+                  valeur={disponibiliteConstatee ?? 100}
+                  min={99}
+                  max={100}
+                  cible={99.9}
+                  libelle="Constatée"
+                />
               </div>
               <p className="mt-2 text-center text-[11.5px] leading-relaxed text-g-500">
                 Mesurée depuis l’extérieur, sur trois points de contrôle indépendants. Nous ne
@@ -350,12 +407,12 @@ export default function Support() {
                     </tr>
                   </thead>
                   <tbody>
-                    {ENGAGEMENTS_SLA.map((e) => {
+                    {engagementsSla.map((e) => {
                       const tenu = e.constate >= e.dispo
                       return (
                         <tr key={e.composant} className="border-b border-g-100 last:border-0">
                           <td className="px-3 py-2 text-[12px] font-semibold text-ink">
-                            {e.composant}
+                            {LIBELLE_COMPOSANT_SLA[e.composant] ?? e.composant}
                           </td>
                           <td className="tnum px-3 py-2 text-[12px] text-g-700">
                             {pct(e.dispo, 2)}
@@ -377,11 +434,18 @@ export default function Support() {
                   </tbody>
                 </table>
               </div>
-              {ENGAGEMENTS_SLA.some((e) => e.constate < e.dispo) && (
+              {engagementsSla.some((e) => e.constate < e.dispo) && (
                 <Callout ton="warn" className="mt-4" titre="Un engagement n’a pas été tenu">
-                  Les services managés et Kubernetes sont passés sous leur engagement sur la période.
-                  Nous n’attendons pas que vous le remarquiez : l’avoir correspondant est calculé
-                  automatiquement et apparaît sur votre prochaine facture.
+                  {engagementsSla
+                    .filter((e) => e.constate < e.dispo)
+                    .map((e) => LIBELLE_COMPOSANT_SLA[e.composant] ?? e.composant)
+                    .join(', ')}{' '}
+                  {engagementsSla.filter((e) => e.constate < e.dispo).length > 1
+                    ? 'sont passés'
+                    : 'est passé'}{' '}
+                  sous engagement sur la période. Nous n’attendons pas que vous le remarquiez :
+                  l’avoir correspondant est calculé automatiquement et apparaît sur votre prochaine
+                  facture.
                 </Callout>
               )}
             </Card>
@@ -409,10 +473,12 @@ export default function Support() {
                   </tr>
                 </thead>
                 <tbody>
-                  {CREDITS_SLA.map((c) => (
+                  {creditsSla.map((c) => (
                     <tr key={`${c.periode}-${c.composant}`} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2 text-[12px] text-ink">{c.periode}</td>
-                      <td className="px-3 py-2 text-[12px] text-g-700">{c.composant}</td>
+                      <td className="px-3 py-2 text-[12px] text-g-700">
+                        {LIBELLE_COMPOSANT_SLA[c.composant] ?? c.composant}
+                      </td>
                       <td className="px-3 py-2">
                         <Badge tone="err" size="sm">
                           {pct(c.dispoConstatee, 2)}

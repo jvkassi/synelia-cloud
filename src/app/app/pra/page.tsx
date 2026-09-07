@@ -1,25 +1,23 @@
-import type { Metadata } from 'next'
+'use client'
+
 import Link from 'next/link'
 import { ArrowRight, FileDown, Plus } from 'lucide-react'
 import { dateCourte, dureeMin, pct } from '@/lib/format'
 import { SITE_COURT } from '@/lib/types'
 import { DR_PLANS } from '@/lib/mock'
+import type { DRPlan } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { ButtonLink } from '@/components/ui/button'
 import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { DrPlanSummary } from '@/components/business/infra'
-
-export const metadata: Metadata = {
-  title: 'Plan de reprise (PRA)',
-  description:
-    'RPO et RTO en cible et en constaté, ordre de démarrage, réplication, bascule de test et exercices datés.',
-}
+import { useCollection } from '@/components/app/atelier'
 
 export default function ListePra() {
-  const testes = DR_PLANS.filter((p) => p.exercices.length > 0)
+  const DR_PLANS_ITEMS = useCollection<DRPlan>('plans-pra', DR_PLANS).items
+  const testes = DR_PLANS_ITEMS.filter((p) => p.exercices.length > 0)
   const dernier = testes.flatMap((p) => p.exercices).sort((a, b) => b.date.localeCompare(a.date))[0]
-  const conformes = DR_PLANS.filter(
+  const conformes = DR_PLANS_ITEMS.filter(
     (p) => p.rtoConstateMin > 0 && p.rtoConstateMin <= p.rtoCibleMin,
   ).length
 
@@ -37,11 +35,11 @@ export default function ListePra() {
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile libelle="Plans de reprise" valeur={DR_PLANS.length} />
+        <StatTile libelle="Plans de reprise" valeur={DR_PLANS_ITEMS.length} />
         <StatTile
           libelle="Conformes au RTO"
-          valeur={`${conformes}/${DR_PLANS.length}`}
-          ton={conformes === DR_PLANS.length ? 'ok' : 'warn'}
+          valeur={`${conformes}/${DR_PLANS_ITEMS.length}`}
+          ton={conformes === DR_PLANS_ITEMS.length ? 'ok' : 'warn'}
         />
         <StatTile
           libelle="Exercices réalisés"
@@ -50,13 +48,13 @@ export default function ListePra() {
         />
         <StatTile
           libelle="Plans jamais testés"
-          valeur={DR_PLANS.filter((p) => p.exercices.length === 0).length}
-          ton={DR_PLANS.some((p) => p.exercices.length === 0) ? 'warn' : 'ok'}
+          valeur={DR_PLANS_ITEMS.filter((p) => p.exercices.length === 0).length}
+          ton={DR_PLANS_ITEMS.some((p) => p.exercices.length === 0) ? 'warn' : 'ok'}
         />
       </div>
 
       <div className="space-y-4">
-        {DR_PLANS.map((plan) => (
+        {DR_PLANS_ITEMS.map((plan) => (
           <div key={plan.id} className="space-y-2">
             <DrPlanSummary plan={plan} />
             <div className="flex flex-wrap items-center justify-between gap-3 px-1">
@@ -100,7 +98,7 @@ export default function ListePra() {
               </tr>
             </thead>
             <tbody>
-              {DR_PLANS.flatMap((p) =>
+              {DR_PLANS_ITEMS.flatMap((p) =>
                 p.exercices.map((e) => ({ ...e, plan: p.nom, cible: p.rtoCibleMin })),
               )
                 .sort((a, b) => b.date.localeCompare(a.date))
@@ -147,20 +145,38 @@ export default function ListePra() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Callout ton="ok" titre="PRA-DBA-PROD : les chiffres tiennent">
-          RPO constaté de 11 minutes pour une cible de 15, RTO constaté de 3 h 12 pour une cible de
-          4 h. La progression est nette depuis l’exercice de janvier, qui avait échoué sur un groupe
-          de sécurité de repli absent et un ordre de démarrage incorrect. Ces deux points ont été
-          corrigés et vérifiés lors des exercices d’avril et de juillet.
-        </Callout>
-        <Callout ton="warn" titre="PRA-DBA-COLLAB n’a jamais été exercé">
-          Le plan est configuré, la réplication fonctionne avec un retard de 48 minutes, mais aucune
-          bascule de test n’a été menée. Le RTO de 8 heures affiché est donc théorique. Une bascule de
-          test en réseau isolé n’a aucun impact sur votre production — c’est précisément ce qui permet
-          de l’exercer souvent.
-        </Callout>
-      </div>
+      {(() => {
+        // Deux exemples illustratifs, calculés depuis les vrais plans plutôt que
+        // nommés en dur : un plan conforme récemment exercé, et un plan jamais
+        // testé. L'un ou l'autre — voire aucun — peut manquer sur une petite
+        // organisation, donc chaque bloc ne s'affiche que s'il a une donnée réelle
+        // à montrer.
+        const planConforme = DR_PLANS_ITEMS.find(
+          (p) => p.exercices.length > 0 && p.rtoConstateMin > 0 && p.rtoConstateMin <= p.rtoCibleMin,
+        )
+        const planJamaisTeste = DR_PLANS_ITEMS.find((p) => p.exercices.length === 0)
+        if (!planConforme && !planJamaisTeste) return null
+        return (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {planConforme && (
+              <Callout ton="ok" titre={`${planConforme.nom} : les chiffres tiennent`}>
+                RPO constaté de {dureeMin(planConforme.rpoConstateMin)} pour une cible de{' '}
+                {dureeMin(planConforme.rpoCibleMin)}, RTO constaté de{' '}
+                {dureeMin(planConforme.rtoConstateMin)} pour une cible de{' '}
+                {dureeMin(planConforme.rtoCibleMin)}.
+              </Callout>
+            )}
+            {planJamaisTeste && (
+              <Callout ton="warn" titre={`${planJamaisTeste.nom} n’a jamais été exercé`}>
+                Le plan est configuré, mais aucune bascule de test n’a été menée : le RTO de{' '}
+                {dureeMin(planJamaisTeste.rtoCibleMin)} affiché est donc théorique. Une bascule de
+                test en réseau isolé n’a aucun impact sur votre production — c’est précisément ce qui
+                permet de l’exercer souvent.
+              </Callout>
+            )}
+          </div>
+        )
+      })()}
     </div>
   )
 }

@@ -6,7 +6,7 @@ import { Download, FileDown, Plus, RotateCcw, Shield, Trash2 } from 'lucide-reac
 import { cn } from '@/lib/utils'
 import { dateCourte, dateHeure, dureeMin, goHumain, num, pct } from '@/lib/format'
 import { SITE_COURT } from '@/lib/types'
-import type { BackupPlan, ConformiteLigne, RestorePoint } from '@/lib/types'
+import type { BackupPlan, ConformiteLigne, DRPlan, RestorePoint } from '@/lib/types'
 import { BACKUP_PLANS, BUCKETS, CONFORMITE, DR_PLANS, RESTORE_POINTS, VMS } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink, IconButton } from '@/components/ui/button'
@@ -81,11 +81,18 @@ const ONGLETS = [
   { id: 'reprise', label: 'Plans de reprise' },
 ]
 
+/** `useCollection` exige un champ `id` ; la conformité s'identifie par ressource. */
+type ConformiteAvecId = ConformiteLigne & { id: string }
+const CONFORMITE_AVEC_ID: ConformiteAvecId[] = CONFORMITE.map((c) => ({ ...c, id: c.ressourceId }))
+
 export default function Sauvegarde() {
   const [onglet, setOnglet] = useState('plans')
-  const protegees = CONFORMITE.filter((c) => c.protection === 'protegee').length
-  const echecs = CONFORMITE.filter((c) => c.protection === 'echec').length
-  const nonProtegees = CONFORMITE.filter((c) => c.protection === 'non_protegee').length
+  const conformite = useCollection<ConformiteAvecId>('conformite-sauvegarde', CONFORMITE_AVEC_ID).items
+  const plans = useCollection<BackupPlan>('plans-sauvegarde', BACKUP_PLANS).items
+  const points = useCollection<RestorePoint>('points-restauration', RESTORE_POINTS).items
+  const protegees = conformite.filter((c) => c.protection === 'protegee').length
+  const echecs = conformite.filter((c) => c.protection === 'echec').length
+  const nonProtegees = conformite.filter((c) => c.protection === 'non_protegee').length
 
   return (
     <div className="space-y-5">
@@ -103,16 +110,16 @@ export default function Sauvegarde() {
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-        <StatTile libelle="Plans actifs" valeur={BACKUP_PLANS.length} />
-        <StatTile libelle="Ressources protégées" valeur={protegees} ton="ok" detail={`sur ${CONFORMITE.length}`} />
+        <StatTile libelle="Plans actifs" valeur={plans.length} />
+        <StatTile libelle="Ressources protégées" valeur={protegees} ton="ok" detail={`sur ${conformite.length}`} />
         <StatTile
           libelle="Points de restauration"
-          valeur={RESTORE_POINTS.length}
-          detail={`${RESTORE_POINTS.filter((p) => p.immuableJusquau).length} immuables`}
+          valeur={points.length}
+          detail={`${points.filter((p) => p.immuableJusquau).length} immuables`}
         />
         <StatTile
           libelle="Volume protégé"
-          valeur={goHumain(Math.round(RESTORE_POINTS.reduce((a, p) => a + p.tailleGo, 0)))}
+          valeur={goHumain(Math.round(points.reduce((a, p) => a + p.tailleGo, 0)))}
         />
         <StatTile
           libelle="Ressources en échec"
@@ -1023,6 +1030,7 @@ function AssistantRestauration() {
 
 function OngletConformite() {
   const { autorise, refus } = useApp()
+  const CONFORMITE_ITEMS = useCollection<ConformiteAvecId>('conformite-sauvegarde', CONFORMITE_AVEC_ID).items
 
   const colonnes: Array<Colonne<ConformiteLigne & { id: string }>> = [
     {
@@ -1112,34 +1120,36 @@ function OngletConformite() {
     },
   ]
 
-  const lignes = CONFORMITE.map((c) => ({ ...c, id: c.ressourceId }))
-  const conformes = CONFORMITE.filter(
+  const lignes = CONFORMITE_ITEMS
+  const conformes = CONFORMITE_ITEMS.filter(
     (c) => c.regle321.copies && c.regle321.supports && c.regle321.horsSite,
   ).length
-  const testees = CONFORMITE.filter((c) => c.dernierTestRestauration?.succes).length
+  const testees = CONFORMITE_ITEMS.filter((c) => c.dernierTestRestauration?.succes).length
+  const rpos = CONFORMITE_ITEMS.map((c) => c.rpoConstateMin).filter((v): v is number => v !== undefined).sort((a, b) => a - b)
+  const rpoMedian = rpos.length ? rpos[Math.floor((rpos.length - 1) / 2)] : undefined
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile
           libelle="Conformes 3-2-1"
-          valeur={`${conformes}/${CONFORMITE.length}`}
-          ton={conformes === CONFORMITE.length ? 'ok' : 'warn'}
-          detail={pct(Math.round((conformes / CONFORMITE.length) * 100))}
+          valeur={`${conformes}/${CONFORMITE_ITEMS.length}`}
+          ton={conformes === CONFORMITE_ITEMS.length ? 'ok' : 'warn'}
+          detail={CONFORMITE_ITEMS.length ? pct(Math.round((conformes / CONFORMITE_ITEMS.length) * 100)) : undefined}
         />
         <StatTile
           libelle="Restauration testée avec succès"
-          valeur={`${testees}/${CONFORMITE.length}`}
+          valeur={`${testees}/${CONFORMITE_ITEMS.length}`}
           ton="ok"
         />
         <StatTile
           libelle="RPO médian constaté"
-          valeur={dureeMin(14)}
+          valeur={rpoMedian !== undefined ? dureeMin(rpoMedian) : '—'}
           detail="Toutes ressources protégées confondues"
         />
         <StatTile
           libelle="Ressources hors conformité"
-          valeur={CONFORMITE.length - conformes}
+          valeur={CONFORMITE_ITEMS.length - conformes}
           ton="warn"
         />
       </div>
@@ -1233,6 +1243,7 @@ function Petit({ cle, valeur }: { cle: string; valeur: string }) {
  * échelles, le fichier et le site.
  */
 function OngletReprise() {
+  const DR_PLANS_ITEMS = useCollection<DRPlan>('plans-pra', DR_PLANS).items
   return (
     <div className="space-y-4">
       <Callout ton="info" titre="Sauvegarde et reprise ne se remplacent pas">
@@ -1242,7 +1253,7 @@ function OngletReprise() {
       </Callout>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {DR_PLANS.map((p) => {
+        {DR_PLANS_ITEMS.map((p) => {
           const dernier = p.exercices[0]
           return (
             <Card key={p.id}>

@@ -14,10 +14,9 @@ import {
   LOGS_EXECUTION,
   REGLES_ALERTES,
   VMS,
-  vmsDeLEspace,
   hrefDuService,
 } from '@/lib/mock'
-import type { AlerteRegle, EvenementSupervision, LigneLog } from '@/lib/types'
+import type { AlerteRegle, EvenementSupervision, LigneLog, VM } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink, IconButton } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
@@ -116,7 +115,11 @@ export default function Observabilite() {
   const [regleDuree, setRegleDuree] = useState(10)
   const [reglePortee, setReglePortee] = useState('espace')
 
-  const vms = vmsDeLEspace(espace.id)
+  // Les machines ont un vrai backend (`/vms`) : `useCollection` en sert les
+  // données réelles quand l'API est active, et retombe sur la graine sinon —
+  // même mécanisme que l'accueil Infrastructure. `espaceId` filtre pareil
+  // dans les deux cas.
+  const vms = useCollection<VM>('vms', VMS).items.filter((v) => v.espaceId === espace.id)
   const enMarche = vms.filter((v) => v.statut === 'running')
   // En mode API, les événements et les journaux viennent du backend ; un
   // `424` (intégration amont muette) affiche un état dégradé nommé au lieu

@@ -21,6 +21,7 @@ export const REGISTRE_COLLECTIONS: Record<string, string> = {
   'plans-sauvegarde': '/sauvegarde/plans',
   'points-restauration': '/sauvegarde/points',
   'plans-pra': '/pra',
+  'conformite-sauvegarde': '/sauvegarde/conformite',
   projets: '/projets',
   deploiements: '/deploiements',
   'domaines-applicatifs': '/domaines-applicatifs',
