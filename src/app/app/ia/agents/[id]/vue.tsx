@@ -163,6 +163,31 @@ export function VueAgent({ agentId }: { agentId: string }) {
           <CardHeader
             titre="Champs réels de cet agent"
             sousTitre="Créé via l’API, cet agent n’a que les dix champs que la passerelle LiteLLM connaît aujourd’hui — pas encore d’outils, de mémoire, de canaux publiés, de versions ni de jeu d’épreuves : cette richesse reste propre aux agents de démonstration."
+            actions={
+              <span className="flex flex-wrap gap-2">
+                {agent.statut !== 'publie' && (
+                  <GatedAction autorise={peutPublier} message={refus('ia.agent.publish')}>
+                    <Button
+                      size="sm"
+                      onClick={() => agentsCol.modifier(agent.id, { statut: 'publie' })}
+                    >
+                      Publier
+                    </Button>
+                  </GatedAction>
+                )}
+                {agent.statut === 'publie' && (
+                  <GatedAction autorise={peutEcrire} message={refus('ia.agent.write')}>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => agentsCol.modifier(agent.id, { statut: 'suspendu' })}
+                    >
+                      Suspendre
+                    </Button>
+                  </GatedAction>
+                )}
+              </span>
+            }
           />
           <KeyValueList
             colonnes={2}
@@ -181,6 +206,22 @@ export function VueAgent({ agentId }: { agentId: string }) {
               <ConsigneAnnotee texte={agent.consigne} />
             </div>
           </div>
+          <div className="mt-4 border-t border-g-100 pt-4">
+            <MicroLabel className="mb-2">Appel direct (réel)</MicroLabel>
+            <CodeBlock
+              langue="bash"
+              code={`curl -X POST {API}/ia/agents/${agent.id}/invoquer \\
+  -H "Authorization: Bearer $SYNELIA_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"message": "Bonjour"}'`}
+            />
+          </div>
+          <Callout ton="info" className="mt-4" titre="Publier ici, ce n’est pas publier une fiche de démonstration">
+            « Publier » change le statut de cet agent auprès de la passerelle, immédiatement — il n’y
+            a pas encore de jeu d’épreuves ni de bascule progressive sur 10 % du trafic côté backend :
+            cette gouvernance existe pour les agents de démonstration de cette maquette, pas encore
+            pour un agent créé via l’API.
+          </Callout>
         </Card>
       )}
 
