@@ -5,7 +5,7 @@ import { Download, Lock, Play, RotateCcw, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateCourte, dateHeure, relatif } from '@/lib/format'
 import { SITE_LABEL } from '@/lib/types'
-import { hebergementById, sauvegardeWebById } from '@/lib/mock'
+import { SAUVEGARDES_WEB, hebergementById, sauvegardeWebById, type SauvegardeWeb } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
@@ -14,8 +14,9 @@ import { PageHeader, Card, CardHeader, Callout, KeyValueList } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { Stepper } from '@/components/composition/flow'
 import { useApp } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
-import { requete } from '@/lib/api/client'
+import { estActif, requete } from '@/lib/api/client'
 
 const ONGLETS = [
   { id: 'executions', label: 'Exécutions' },
@@ -47,7 +48,8 @@ export function VueSauvegarde({ id }: { id: string }) {
   const [destination, setDestination] = useState('À côté, sur le même serveur')
   const [immuable, setImmuable] = useState(true)
 
-  const p = sauvegardeWebById(id)
+  const collection = useCollection<SauvegardeWeb>('sauvegardes-web', SAUVEGARDES_WEB)
+  const p = estActif() ? collection.items.find((s) => s.id === id) : sauvegardeWebById(id)
   if (!p) return null
   const h = hebergementById(p.hebergementId)
   const dernier = p.executions[0]

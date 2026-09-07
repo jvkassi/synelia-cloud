@@ -1,7 +1,9 @@
 'use client'
 
 import { ORGANISATIONS } from '@/lib/mock/orgs'
+import type { Organisation } from '@/lib/types'
 import { CadreSection } from '@/components/app/cadre-section'
+import { useCollection } from '@/components/app/atelier'
 import { money } from '@/lib/format'
 
 /**
@@ -17,7 +19,8 @@ import { money } from '@/lib/format'
  * revendeur à distinguer dans la liste, seulement l'état du compte.
  */
 export function CadreOrganisations({ children }: { children: React.ReactNode }) {
-  const entrees = ORGANISATIONS.map((o) => ({
+  const orgs = useCollection<Organisation>('organisations', ORGANISATIONS)
+  const entrees = orgs.items.map((o) => ({
     id: o.id,
     nom: o.nom,
     // Sans « /mois » : la colonne est étroite et le suffixe suffit à faire
