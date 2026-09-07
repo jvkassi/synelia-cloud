@@ -19,7 +19,7 @@ import { LogPeek } from '@/components/business/observabilite'
 import { JOURNAL_PASSERELLE } from '@/lib/mock/ia'
 import { useApp, useEspace } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
-import { BoutonFormulaire } from '@/components/app/actions'
+import { BoutonFormulaire, useOperation } from '@/components/app/actions'
 
 const TON_STATUT = { active: 'ok', suspendue: 'warn', revoquee: 'neutral' } as const
 const LIBELLE_STATUT = { active: 'Active', suspendue: 'Suspendue', revoquee: 'Révoquée' } as const
@@ -27,6 +27,7 @@ const LIBELLE_STATUT = { active: 'Active', suspendue: 'Suspendue', revoquee: 'R�
 export default function Passerelle() {
   const espace = useEspace()
   const { autorise, refus, pousser } = useApp()
+  const executer = useOperation()
   const [aRevoquer, setARevoquer] = useState<CleIA | null>(null)
   /** Secret renvoyé une seule fois à la création d’une clé IA. */
   const [secretCree, setSecretCree] = useState<{ prefixe: string; secret: string } | null>(null)
@@ -152,7 +153,34 @@ export default function Passerelle() {
       rendu: (c) => (
         <span className="flex justify-end gap-1">
           <GatedAction autorise={autorise('ia.key.manage')} message={refus('ia.key.manage')}>
-            <IconButton label={`Faire tourner la clé ${c.nom}`} variant="ghost" size="sm">
+            <IconButton
+              label={`Faire tourner la clé ${c.nom}`}
+              variant="ghost"
+              size="sm"
+              disabled={c.statut !== 'active'}
+              onClick={() =>
+                executer({
+                  action: 'ia.key.manage',
+                  titre: `Clé ${c.nom} tournée`,
+                  detail:
+                    'L’ancien secret cesse de fonctionner immédiatement — copiez le nouveau dans vos applications.',
+                  appel: () =>
+                    creerRessource(`/ia/cles/${c.id}/rotation`, {}).then((reponse) => {
+                      const r = reponse as { cle?: { prefixe?: string }; secret?: string } | null
+                      if (r?.secret) {
+                        setSecretCree({ prefixe: String(r.cle?.prefixe ?? c.prefixe), secret: r.secret })
+                      }
+                      return reponse
+                    }),
+                  effet: () =>
+                    setSecretCree({
+                      prefixe: c.prefixe,
+                      secret: `${c.prefixe}.${clesCol.identifiant('tournee')}`,
+                    }),
+                  effetFinal: () => clesCol.recharger(),
+                })
+              }
+            >
               <RotateCw size={13} />
             </IconButton>
           </GatedAction>

@@ -171,20 +171,37 @@ const connaissances = fusion(
   },
 )
 
-const cles = crud({
-  tag: T_CLES,
-  base: '/ia/cles',
-  idParam: idCle,
-  nomSingulier: 'CleIA',
-  nomPluriel: 'ClesIA',
-  libelle: 'une clé IA',
-  libellePluriel: 'les clés IA',
-  schema: 'CleIA',
-  creation: 'CleIACreation',
-  modification: 'CleIAModification',
-  rbacLecture: 'ia.key.manage',
-  rbacEcriture: 'ia.key.manage',
-})
+const cles = fusion(
+  crud({
+    tag: T_CLES,
+    base: '/ia/cles',
+    idParam: idCle,
+    nomSingulier: 'CleIA',
+    nomPluriel: 'ClesIA',
+    libelle: 'une clé IA',
+    libellePluriel: 'les clés IA',
+    schema: 'CleIA',
+    creation: 'CleIACreation',
+    modification: 'CleIAModification',
+    rbacLecture: 'ia.key.manage',
+    rbacEcriture: 'ia.key.manage',
+  }),
+  action({
+    tag: T_CLES,
+    chemin: `/ia/cles/{${idCle.name}}/rotation`,
+    id: 'rotationnerCleIA',
+    resume: 'Faire tourner le secret d’une clé IA',
+    detail:
+      'Invalide l’ancien secret et en émet un nouveau immédiatement — contrairement à ' +
+      '`rotationnerCleApi`, pas de délai de grâce : une clé IA n’a qu’un secret vivant à la ' +
+      'fois. Le quota, le budget consommé et le statut de la clé ne changent pas.',
+    params: [idCle],
+    ok: ref('CleIASecret'),
+    code: 200,
+    rbac: 'ia.key.manage',
+    erreurs: [409],
+  }),
+)
 // La création d'une clé renvoie le secret, ce que le CRUD générique ne sait pas dire.
 cles['/ia/cles'].post.responses['201'].content['application/json'].schema = ref('CleIASecret')
 

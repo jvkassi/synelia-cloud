@@ -779,6 +779,18 @@ const emails = fusion(
         ok: ref('Messagerie'),
         rbac: 'service.admin',
       }),
+      delete: op({
+        tag: T_MAIL,
+        id: 'supprimerMessagerie',
+        resume: 'Supprimer une messagerie',
+        detail: 'Action destructive : le domaine Zimbra et ses boîtes sont détruits ; le nom exact de la ressource est exigé en confirmation.',
+        params: [chemin('messagerieId', 'Identifiant de la messagerie.', 'mail-dba-africa')],
+        ok: ref('TravailProvisioning'),
+        code: 202,
+        destructif: true,
+        rbac: 'marketplace.subscribe',
+        erreurs: [409],
+      }),
     },
     '/web/emails/{messagerieId}/boites': {
       post: op({
