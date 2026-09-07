@@ -1289,28 +1289,6 @@ export interface BaseConnaissance {
   erreur?: string
 }
 
-export interface PointInference {
-  id: string
-  nom: string
-  modeleId: string
-  espaceId: string
-  site: Site
-  gpu: 'L40S' | 'H100' | 'A100'
-  gpuParReplica: number
-  replicas: number
-  replicasMin: number
-  replicasMax: number
-  /** Une mise à l'échelle jusqu'à zéro économise, au prix d'un démarrage à froid. */
-  veilleAutorisee: boolean
-  demarrageAFroidS: number
-  utilisationGpuPct: number
-  latenceP50Ms: number
-  debitJetonsSec: number
-  coutHeure: number
-  statut: 'en_ligne' | 'demarrage' | 'en_veille' | 'erreur'
-  creeLe: string
-}
-
 // ─── Agents et orchestration (CDC MIA, FONC-01 à FONC-06) ─────────────
 
 /**
@@ -1351,6 +1329,10 @@ export interface AgentIA {
   id: string
   slug: string
   nom: string
+  /** Le backend réel ne porte que dix champs — celui-ci en fait partie mais
+   * n'existe pas côté maquette : la démonstration a une date de création
+   * implicite (la graine), pas un horodatage. */
+  createdAt?: string
   /** Deux lettres et une teinte tiennent lieu d'icône — pas de téléversement. */
   initiales: string
   teinte: string

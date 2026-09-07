@@ -336,7 +336,7 @@ des liens vers une fiche.
 **IA & Agents : une navigation, comme Web Cloud.** Même forme, pour la même
 raison : il n'y a pas de contexte commun à tout l'univers — un agent, une base de
 connaissances et une clé d'API ne se rattachent à rien de partagé. Voir la section
-« IA & Agents » plus bas pour le détail des neuf onglets et des trois écrans qui
+« IA & Agents » plus bas pour le détail des huit onglets et des trois écrans qui
 gardent la pleine largeur sans panneau.
 
 **Clients, côté super admin : une navigation, elle aussi.** Même forme que Web
@@ -397,9 +397,9 @@ aucune page ne dit tout ce qui le concerne.
 
 ### IA & Agents
 
-Neuf sections : `Accueil · Agents · Orchestration · Connaissances · Intégrations ·
-Modèles · Inférence dédiée · Consommation · Paramètres`. Contrepartie
-fournisseur : `/admin/ia`, dans l'univers Infrastructure. Données dans
+Huit sections : `Accueil · Agents · Orchestration · Connaissances · Intégrations ·
+Modèles · Consommation · Paramètres`. Contrepartie fournisseur : `/admin/ia`
+(« IA & Agents »), dans l'univers Infrastructure. Données dans
 `src/lib/mock/ia.ts`.
 
 **Chaque section porte son propre panneau**, sur le patron de Web Cloud —
@@ -490,6 +490,7 @@ Pas de `notFound()`, pas de `!` sur un `find`, et la garde après tous les hooks
 | Marketplace | Supprimé en tant qu'univers. Le partagé (messagerie, drive, CMS) est passé dans Web Cloud, attaché au domaine ; le dédié est devenu des modèles déployables dans un projet. |
 | Bibliothèque de modèles | Plus de section ni de fiche : les modèles se choisissent à l'étape « Source » de `/app/applications/nouveau`, à côté de Git, image Docker et canvas. Une fiche de modèle qu'on ne peut pas déployer depuis elle-même était un détour. Le jeu de données `mock/modeles.ts` reste : les services en portent le `modeleSlug` et leur configuration en dépend. |
 | Registre d'images | Supprimé. Un explorateur de dépôts et d'étiquettes est l'écran principal d'un registre — donc hors périmètre. Ce qui compte (image, étiquette, signature, résultat de l'analyse) est déjà sur la fiche du déploiement. |
+| Inférence dédiée | Supprimée, section et fiche (`/app/ia/inference`), ainsi que le parc GPU côté fournisseur (`PARC_GPU`, `CONTRATS_FOURNISSEURS`). Il n'y a pas de GPU sur cette plateforme et il n'y en aura pas : le calcul IA passe entièrement par la passerelle LiteLLM devant OpenRouter, en pay-per-token — vérifié en direct, la clé `SYNELIA_OPENROUTER_KEY` configurée est une clé d'inférence standard (`is_provisioning_key: false`), pas une clé de gestion de compte. Réserver des cartes pour un client seul n'est donc pas une fonction qui pourra un jour devenir réelle, contrairement à « Bibliothèque de modèles » ou « Registre d'images » qui restaient représentables ailleurs : ici le concept lui-même ne s'applique pas à cette infrastructure. `/admin/ia` reste (rebaptisé « IA & Agents », sans le volet GPU/contrats) pour la vue d'usage — modèles appelés, agents et orchestration par organisation. |
 | Applications web | Section à part de `Hébergement Web` : « installer WordPress » et « régler PHP » ne sont pas la même intention. |
 | Bases mutualisées | Aucun accès distant, présenté comme une propriété de l'offre et non un réglage. Une base mutualisée n'a pas à être joignable depuis Internet. |
 | Sortie du propriétaire | Les socles VMware et Hyper-V restent dans le jeu de données avec `enSortie`, et `/souverainete` publie la trajectoire de sortie datée. Assumer la transition plutôt que la cacher. |

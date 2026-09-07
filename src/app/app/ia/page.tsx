@@ -4,7 +4,6 @@ import {
   Bot,
   Boxes,
   BrainCircuit,
-  Cpu,
   KeyRound,
   Plug,
   Wallet,
@@ -23,7 +22,6 @@ import {
   EVENEMENTS_IA,
   MODELES_IA,
   PASSERELLE_IA,
-  POINTS_INFERENCE,
   modeleParSlug,
 } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
@@ -72,13 +70,6 @@ const SECTIONS = [
       'Ce qui est disponible, où le calcul a lieu, combien coûte un million de jetons et quelle latence attendre.',
   },
   {
-    href: '/app/ia/inference',
-    titre: 'Inférence dédiée',
-    icone: <Cpu size={17} />,
-    description:
-      'Des GPU réservés pour vous seul quand la file mutualisée ne suffit plus. Facturé à l’heure, pas au jeton.',
-  },
-  {
     href: '/app/ia/consommation',
     titre: 'Consommation',
     icone: <Wallet size={17} />,
@@ -100,9 +91,10 @@ export default function AccueilIA() {
   // vrai backend (`/ia/agents`, `/ia/modeles`, `/ia/connaissances`, `/ia/flux`,
   // `/ia/cles`, via LiteLLM/OpenRouter, Docling/Infinity/Qdrant selon l'amont) :
   // `useCollection` en sert les données réelles quand l'API est active. Le
-  // reste de la plomberie (passerelle, budget, consommation agrégée, points
-  // d'inférence dédiés, intégrations) n'a pas de contrepartie réelle et reste
-  // sur la graine.
+  // reste de la plomberie (passerelle, budget, consommation agrégée,
+  // intégrations) n'a pas de contrepartie réelle et reste sur la graine. Il
+  // n'y a pas de GPU dédié sur cette plateforme — voir la décision « Inférence
+  // dédiée » dans CLAUDE.md.
   const agentsCol = useCollection<AgentIA>('agents-ia', AGENTS_IA)
   const modelesCol = useCollection<ModeleIA>('modeles-ia', MODELES_IA)
   const clesCol = useCollection<CleIA>('cles-ia', CLES_IA)
@@ -110,7 +102,6 @@ export default function AccueilIA() {
   const souverains = modelesCol.items.filter(
     (m) => m.hebergement === 'souverain' && m.statut !== 'retire',
   )
-  const points = POINTS_INFERENCE.filter((p) => p.espaceId === espace.id)
   // Le backend ne rattache pas encore un agent à un Espace Cloud (MVP LiteLLM,
   // organisation seule) : en mode API, on ne filtre que par statut publié.
   const agentsPublies = estActif()
@@ -284,55 +275,13 @@ export default function AccueilIA() {
           </Callout>
         </Card>
 
-        <div className="space-y-4">
-          <Card>
-            <CardHeader
-              titre="Événements de la passerelle"
-              sousTitre="Huit dernières entrées — quotas, replis, garde-fous, incidents fournisseurs."
-            />
-            <EventList evenements={EVENEMENTS_IA} max={8} />
-          </Card>
-          <Card>
-            <CardHeader titre="Points d’inférence dédiés" sousTitre={`Espace ${espace.code}`} />
-            {points.length === 0 ? (
-              <p className="text-[12.5px] leading-relaxed text-g-500">
-                Aucun GPU réservé sur cet espace : tout passe par la file mutualisée, ce qui suffit
-                tant que la latence p95 reste sous la seconde.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {points.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-[6px] border border-g-300 px-3 py-2"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate font-mono text-[12.5px] font-semibold text-ink">
-                        {p.nom}
-                      </span>
-                      <span className="block text-[11px] text-g-500">
-                        {p.gpu} ×{p.gpuParReplica * p.replicas} · {p.site === 'ABJ' ? 'Abidjan' : 'Grand-Bassam'}
-                      </span>
-                    </span>
-                    <Badge
-                      tone={p.statut === 'en_ligne' ? 'ok' : p.statut === 'erreur' ? 'err' : 'neutral'}
-                      dot
-                      size="sm"
-                    >
-                      {p.statut === 'en_ligne'
-                        ? 'En ligne'
-                        : p.statut === 'en_veille'
-                          ? 'En veille'
-                          : p.statut === 'demarrage'
-                            ? 'Démarrage'
-                            : 'Erreur'}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-        </div>
+        <Card>
+          <CardHeader
+            titre="Événements de la passerelle"
+            sousTitre="Huit dernières entrées — quotas, replis, garde-fous, incidents fournisseurs."
+          />
+          <EventList evenements={EVENEMENTS_IA} max={8} />
+        </Card>
       </div>
 
       <Card>

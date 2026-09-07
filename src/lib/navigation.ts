@@ -193,7 +193,6 @@ export const UNIVERS_CLIENT: UniversNav[] = [
         panneau: ['/app/ia/integrations'],
       },
       { nom: 'Modèles', href: '/app/ia/modeles', panneau: ['/app/ia/modeles'] },
-      { nom: 'Inférence dédiée', href: '/app/ia/inference', panneau: ['/app/ia/inference'] },
       { nom: 'Consommation', href: '/app/ia/consommation' },
       // Les réglages transverses — passerelle, routage, garde-fous, résidence,
       // budget, coffre — étaient six sections dans la barre. Ils sont devenus
@@ -264,9 +263,10 @@ export const UNIVERS_SUPER_ADMIN: UniversNav[] = [
     nom: 'Infrastructure',
     sections: [
       { nom: 'Capacité & backends', href: '/admin/capacite' },
-      // Le parc GPU se pilote à part : sa contrainte n'est pas le vCPU mais la
-      // VRAM, et sa marge dépend autant des contrats fournisseurs que du matériel.
-      { nom: 'Parc GPU & IA', href: '/admin/ia' },
+      // Pas de parc GPU sur cette plateforme (§ décision « Inférence dédiée »
+      // dans CLAUDE.md) : cette section reste une vue d'usage IA — modèles
+      // appelés, agents et orchestration par organisation — pas de matériel.
+      { nom: 'IA & Agents', href: '/admin/ia' },
       { nom: 'Sites & zones', href: '/admin/sites' },
       { nom: 'Migration inter-backend', href: '/admin/migration' },
     ],

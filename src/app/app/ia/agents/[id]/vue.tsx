@@ -33,6 +33,7 @@ import {
   modeleParSlug,
   outilParId,
 } from '@/lib/mock'
+import { estActif } from '@/lib/api/client'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { CodeBlock, CopyField, GatedAction, SolutionLogo, Tabs } from '@/components/ui/display'
@@ -42,6 +43,7 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { useApp, useEspace } from '@/components/app/contexte'
+import { useCollection } from '@/components/app/atelier'
 
 const ONGLETS = [
   { id: 'consigne', label: 'Rôle & consigne' },
@@ -92,15 +94,26 @@ export function VueAgent({ agentId }: { agentId: string }) {
 
   // L'agent est relu dans la collection à chaque rendu : un agent créé pendant
   // la session doit s'ouvrir, et une fiche ne doit pas montrer l'état d'avant.
-  const agents = AGENTS_IA.filter((a) => a.espaceId === espace.id)
+  const agentsCol = useCollection<AgentIA>('agents-ia', AGENTS_IA)
+  const agents = estActif()
+    ? agentsCol.items
+    : agentsCol.items.filter((a) => a.espaceId === espace.id)
   const agent: AgentIA | undefined = agents.find((a) => a.id === agentId)
 
   const peutEcrire = autorise('ia.agent.write')
   const peutPublier = autorise('ia.agent.publish')
 
+  // Rôle, description, slug, outils, versions, mémoire, canaux, métriques et
+  // épreuves n'existent que côté maquette (`AgentIA` réel n'a que dix champs :
+  // id, nom, consigne, espaceId, modele, temperature, topP, jetonsMax, statut,
+  // createdAt). `type` ne fait jamais partie de la réponse réelle : sa
+  // présence sert de marqueur pour distinguer un agent de démonstration d'un
+  // agent effectivement créé via l'API.
+  const demo = Boolean(agent?.type)
+
   const modele = agent ? modeleParSlug(agent.modele) : undefined
-  const versionPubliee = agent?.versions.find((v) => v.statut === 'publiee')
-  const annotations = agent ? ANNOTATIONS_IA.filter((a) => a.agentId === agent.id) : []
+  const versionPubliee = demo ? agent?.versions.find((v) => v.statut === 'publiee') : undefined
+  const annotations = demo && agent ? ANNOTATIONS_IA.filter((a) => a.agentId === agent.id) : []
 
   // La garde vient après tous les crochets, et la vue dit ce qu'elle ne trouve
   // pas plutôt que de rendre un 404 serveur : un agent créé pendant la session
@@ -128,7 +141,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
         sousTitre={agent.role}
         actions={
           <span className="flex flex-wrap items-center gap-2">
-            {agent.statut === 'publie' && agent.canaux.includes('cx-widget') && (
+            {agent.statut === 'publie' && agent.canaux?.includes('cx-widget') && (
               <ButtonLink href="https://assistant.dba.africa" external variant="accent" size="sm">
                 Ouvrir
                 <ExternalLink size={13} />
@@ -145,7 +158,33 @@ export function VueAgent({ agentId }: { agentId: string }) {
       />
 
 
-      {agent && (
+      {agent && !demo && (
+        <Card>
+          <CardHeader
+            titre="Champs réels de cet agent"
+            sousTitre="Créé via l’API, cet agent n’a que les dix champs que la passerelle LiteLLM connaît aujourd’hui — pas encore d’outils, de mémoire, de canaux publiés, de versions ni de jeu d’épreuves : cette richesse reste propre aux agents de démonstration."
+          />
+          <KeyValueList
+            colonnes={2}
+            items={[
+              { cle: 'Modèle', valeur: modele?.nom ?? agent.modele },
+              { cle: 'Statut', valeur: LIBELLE_STATUT[agent.statut] },
+              { cle: 'Température', valeur: agent.temperature },
+              { cle: 'Top-P', valeur: agent.topP },
+              { cle: 'Jetons générés au plus', valeur: num(agent.jetonsMax) },
+              { cle: 'Créé le', valeur: agent.createdAt ? dateHeure(agent.createdAt) : '—' },
+            ]}
+          />
+          <div className="mt-4 border-t border-g-100 pt-4">
+            <MicroLabel className="mb-2">Consigne</MicroLabel>
+            <div className="rounded-[8px] border border-g-300 bg-g-050 p-3.5">
+              <ConsigneAnnotee texte={agent.consigne} />
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {agent && demo && (
         <>
           <Card>
             <div className="flex flex-wrap items-start justify-between gap-4">
