@@ -41,13 +41,14 @@ import {
 import type { Elevation } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
-import { Avatar, GatedAction, Tabs } from '@/components/ui/display'
+import { Avatar, GatedAction, Skeleton, Tabs } from '@/components/ui/display'
 import { Field, Input, Select, Switch, Textarea } from '@/components/ui/field'
 import { ConfirmDialog, Modal } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
+import { EmptyState } from '@/components/composition/states'
 import { Timeline } from '@/components/composition/flow'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { modifierRessource, requete } from '@/lib/api/client'
@@ -63,6 +64,7 @@ const ONGLETS = [
 ]
 
 export function VueOrganisation({ id }: { id: string }) {
+  const maintenant = useMaintenant()
   // Le journal vit dans l'atelier : les actions faites pendant la session s'y
   // ajoutent, refus compris. Sans atelier touché, il retombe sur la graine.
   const { journal: AUDIT } = useAtelier()
@@ -93,7 +95,44 @@ export function VueOrganisation({ id }: { id: string }) {
 
   // L'organisation vient de la collection : suspendre depuis cet écran doit se
   // voir dans la liste, et une organisation créée dans la session doit s'ouvrir.
-  const org = orgs.items.find((o) => o.id === id)!
+  // Pas de `!` sur ce `find` : une organisation réelle qui n'est pas (encore)
+  // dans la page chargée ne doit pas faire planter l'écran (§ CLAUDE.md, « une
+  // entité affichée dans un tiroir doit être relue depuis la collection »).
+  const org = orgs.items.find((o) => o.id === id)
+
+  // Chargement distant en cours (lien direct, liste pas encore là) : des
+  // squelettes, pas une organisation « introuvable » qui se contredirait une
+  // seconde après.
+  if (!org && orgs.chargement) {
+    return (
+      <div className="space-y-5">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    )
+  }
+
+  if (!org) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          fil={[
+            { label: 'Espace super admin', href: '/admin' },
+            { label: 'Organisations', href: '/admin/organisations' },
+            { label: 'Organisation introuvable' },
+          ]}
+          titre="Cette organisation n’existe plus"
+        />
+        <EmptyState
+          titre="Organisation introuvable"
+          phrase="Elle a peut-être été fermée depuis ce lien, ou l’identifiant est erroné."
+          action={{ libelle: 'Retour aux organisations', href: '/admin/organisations' }}
+        />
+      </div>
+    )
+  }
+
   const membres = membresDeLOrg(org.id)
   const factures = lesFactures.items.filter((f) => f.orgId === org.id)
   const impayees = factures.filter((f) => f.statut === 'impayee')
@@ -494,7 +533,7 @@ export function VueOrganisation({ id }: { id: string }) {
                         </Badge>
                       </td>
                       <td className="px-3 py-2.5 text-[11.5px] text-g-500">
-                        {u.lastLoginAt ? relatif(u.lastLoginAt) : 'Jamais'}
+                        {u.lastLoginAt ? relatif(u.lastLoginAt, maintenant) : 'Jamais'}
                       </td>
                     </tr>
                   ))}
@@ -837,7 +876,7 @@ export function VueOrganisation({ id }: { id: string }) {
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-[11.5px] text-g-500">
-                        {relatif(t.createdAt)}
+                        {relatif(t.createdAt, maintenant)}
                       </td>
                     </tr>
                   ))}
