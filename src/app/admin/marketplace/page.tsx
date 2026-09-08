@@ -82,6 +82,7 @@ export default function MarketplaceAdmin() {
   return (
     <div className="space-y-5">
       <PageHeader
+        fil={[{ label: 'Espace super admin', href: '/admin' }, { label: 'Marketplace' }]}
         titre="Marketplace"
         sousTitre="Ces solutions sont des logiciels libres tiers, et le resteront. Nous les provisionnons, dimensionnons, sauvegardons, supervisons, mettons à jour et facturons — nous ne réimplémentons aucun de leurs écrans, et nous n’en modifions pas le code."
         actions={

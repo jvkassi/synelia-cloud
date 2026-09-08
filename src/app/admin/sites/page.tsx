@@ -88,6 +88,7 @@ export default function Sites() {
   return (
     <div className="space-y-5">
       <PageHeader
+        fil={[{ label: 'Espace super admin', href: '/admin' }, { label: 'Sites physiques' }]}
         titre="Sites physiques"
         sousTitre="Deux sites en Côte d’Ivoire, à 42 kilomètres l’un de l’autre. Assez proches pour une réplication synchrone, assez éloignés pour qu’un même sinistre — inondation, coupure de réseau électrique, incendie — ne les touche pas ensemble."
         actions={

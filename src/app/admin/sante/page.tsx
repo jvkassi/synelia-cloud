@@ -181,6 +181,7 @@ export default function SantePlateforme() {
   return (
     <div className="space-y-5">
       <PageHeader
+        fil={[{ label: 'Espace super admin', href: '/admin' }, { label: 'Santé de la plateforme' }]}
         titre="Santé de la plateforme"
         sousTitre="Ce que nous voyons, et ce que nous publions. La page de statut publique est alimentée depuis cet écran : nous ne maintenons pas deux vérités différentes, une pour nous et une pour les clients."
         actions={

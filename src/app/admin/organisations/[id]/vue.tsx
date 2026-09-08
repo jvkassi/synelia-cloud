@@ -397,7 +397,7 @@ export function VueOrganisation({ id }: { id: string }) {
                         <td className="px-3 py-2.5 font-mono text-[11px] text-g-700">
                           {s.version}
                           {s.versionDisponible && (
-                            <Badge tone="accent" size="sm" className="ml-1.5">
+                            <Badge tone="violet" size="sm" className="ml-1.5">
                               {s.versionDisponible} dispo
                             </Badge>
                           )}

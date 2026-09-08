@@ -17,6 +17,7 @@ import {
   IMPAYES,
   INCIDENTS,
   JOBS_PLATEFORME,
+  libellePlan,
   ORGANISATIONS,
   SYNTHESE_PLATEFORME,
   TICKETS_PLATEFORME,
@@ -88,6 +89,7 @@ export default function VuePlateforme() {
   return (
     <div className="space-y-5">
       <PageHeader
+        fil={[{ label: 'Espace super admin' }]}
         titre="Vue plateforme"
         sousTitre="L’état réel de la plateforme, sans arrondi favorable : capacité par socle technique, incidents en cours, provisionnements en échec, engagements de service en risque et impayés. Ce qui demande une décision est en haut."
         meta={
@@ -310,7 +312,7 @@ export default function VuePlateforme() {
                     </td>
                     <td className="px-3 py-2.5">
                       <Badge tone="neutral" size="sm">
-                        {o.tenantPlan ?? 'Standard'}
+                        {libellePlan(o.tenantPlan ?? 'Standard')}
                       </Badge>
                     </td>
                     <td className="tnum px-3 py-2.5 text-[12px] text-g-700">{o.espaces ?? 0}</td>

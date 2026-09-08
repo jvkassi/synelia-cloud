@@ -196,6 +196,7 @@ export default function Migration() {
   return (
     <div className="space-y-5">
       <PageHeader
+        fil={[{ label: 'Espace super admin', href: '/admin' }, { label: 'Migration entre socles' }]}
         titre="Migration entre socles"
         sousTitre="Nous exploitons encore des hyperviseurs propriétaires, et nous le disons. Voici le calendrier de sortie, son avancement réel, et ce qui reste à faire. Cette page a son équivalent public : nous ne communiquons pas un chiffre différent à l’extérieur."
         actions={

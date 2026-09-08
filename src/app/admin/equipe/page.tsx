@@ -180,7 +180,8 @@ export default function Equipe() {
   return (
     <div className="space-y-5">
       <PageHeader
-        titre="Équipe Synelia"
+        fil={[{ label: 'Espace super admin', href: '/admin' }, { label: 'Équipe & rôles' }]}
+        titre="Équipe & rôles"
         sousTitre="Qui a accès à quoi, du côté super admin. Les rôles sont volontairement étroits : un opérateur qui exploite la capacité n’a pas besoin de pouvoir modifier le catalogue, et personne n’a d’accès permanent aux données d’un client."
         actions={
           <GatedAction autorise={autorise('org.manage')} message={refus('org.manage')}>

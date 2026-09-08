@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Building2, Plus, ShieldAlert, UserCog } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { dateCourte, MAINTENANT, money, num, relatif } from '@/lib/format'
-import { ELEVATIONS, EQUIPE_SYNELIA, IMPAYES, ORGANISATIONS, USERS } from '@/lib/mock'
+import { ELEVATIONS, EQUIPE_SYNELIA, IMPAYES, libellePlan, ORGANISATIONS, USERS } from '@/lib/mock'
 import type { Elevation } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
@@ -93,6 +93,7 @@ export default function Organisations() {
   return (
     <div className="space-y-5">
       <PageHeader
+        fil={[{ label: 'Espace super admin', href: '/admin' }, { label: 'Organisations' }]}
         titre="Organisations"
         sousTitre="Chaque organisation est un cloisonnement complet : ses espaces, ses membres, ses données et sa facturation. Aucune donnée ne traverse la frontière entre deux organisations, y compris pour nos propres équipes."
         actions={
@@ -129,7 +130,7 @@ export default function Organisations() {
         <StatTile
           libelle="Secteurs représentés"
           valeur={new Set(ORGANISATIONS.map((o) => o.secteur ?? o.pays)).size}
-          ton="accent"
+          ton="violet"
           detail={`sur ${orgs.items.length} organisations`}
         />
         <StatTile
@@ -236,7 +237,7 @@ export default function Organisations() {
                 cle: (o) => o.tenantPlan ?? '',
                 masquable: true,
                 rendu: (o) => (
-                  <span className="text-[11.5px] text-g-700">{o.tenantPlan ?? '—'}</span>
+                  <span className="text-[11.5px] text-g-700">{libellePlan(o.tenantPlan)}</span>
                 ),
               },
               {

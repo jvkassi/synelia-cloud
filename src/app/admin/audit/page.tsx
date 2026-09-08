@@ -159,6 +159,7 @@ export default function AuditAdmin() {
   return (
     <div className="space-y-5">
       <PageHeader
+        fil={[{ label: 'Espace super admin', href: '/admin' }, { label: 'Audit' }]}
         titre="Journal d’audit de la plateforme"
         sousTitre="Toutes les actions, y compris celles de nos propres équipes et celles qui ont été refusées. Les lignes concernant une organisation apparaissent aussi dans son journal à elle : nous ne tenons pas un registre séparé que le client ne verrait pas."
         actions={

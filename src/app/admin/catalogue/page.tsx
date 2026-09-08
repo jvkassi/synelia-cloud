@@ -176,6 +176,7 @@ export default function Catalogue() {
   return (
     <div className="space-y-5">
       <PageHeader
+        fil={[{ label: 'Espace super admin', href: '/admin' }, { label: 'Catalogue d’offres' }]}
         titre="Catalogue d’offres"
         sousTitre="Ce que nous vendons et à quel prix. Une offre publiée engage un prix : la modifier à la hausse ne s’applique jamais à une souscription en cours, seulement aux nouvelles."
         actions={
@@ -222,7 +223,7 @@ export default function Catalogue() {
           valeur={moneyPerMonth(
             OFFRES.reduce((a, o) => a + o.prix * o.souscriptionsActives, 0),
           )}
-          ton="accent"
+          ton="violet"
           detail="Prix publics × souscriptions actives"
         />
       </div>
@@ -309,7 +310,7 @@ export default function Catalogue() {
                       <span className="flex items-center gap-1.5">
                         <span className="truncate text-[12.5px] font-semibold text-ink">{o.nom}</span>
                         {o.populaire && (
-                          <Badge tone="accent" size="sm">
+                          <Badge tone="violet" size="sm">
                             Populaire
                           </Badge>
                         )}
@@ -580,7 +581,7 @@ export default function Catalogue() {
                           <span
                             className={cn(
                               'block h-full rounded-full',
-                              o.populaire ? 'bg-m-600' : 'bg-p-600',
+                              o.populaire ? 'bg-p-800' : 'bg-p-600',
                             )}
                             style={{ width: `${(o.souscriptionsActives / max) * 100}%` }}
                           />

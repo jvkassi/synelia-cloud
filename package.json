@@ -2,7 +2,7 @@
   "name": "synelia-cloud",
   "version": "1.0.0",
   "private": true,
-  "description": "Synelia Cloud — plateforme de gestion de cloud multi-tenant (vitrine, espace client, espace fournisseur)",
+  "description": "Synelia Cloud — plateforme de gestion de cloud multi-tenant (vitrine, espace client, espace super admin)",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",

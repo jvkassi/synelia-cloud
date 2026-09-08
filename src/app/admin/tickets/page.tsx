@@ -130,6 +130,7 @@ export default function TicketsAdmin() {
   return (
     <div className="space-y-5">
       <PageHeader
+        fil={[{ label: 'Espace super admin', href: '/admin' }, { label: 'Tickets' }]}
         titre="Tickets"
         sousTitre="La file de traitement, toutes organisations confondues. L’ordre par défaut est celui du risque d’engagement, pas celui de l’ancienneté : un ticket critique ouvert il y a dix minutes passe avant une question posée hier."
         meta={

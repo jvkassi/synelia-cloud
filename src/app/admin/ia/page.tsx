@@ -18,8 +18,8 @@ export default function IaPlateforme() {
   return (
     <div className="space-y-5">
       <PageHeader
-        fil={[{ label: 'Espace fournisseur', href: '/admin' }, { label: 'IA & Agents' }]}
-        titre="Intelligence artificielle — vue plateforme"
+        fil={[{ label: 'Espace super admin', href: '/admin' }, { label: 'IA & Agents' }]}
+        titre="IA & Agents — vue plateforme"
         sousTitre="Aucun GPU à administrer : le calcul IA est entièrement délégué à la passerelle LiteLLM, en amont d’OpenRouter, facturé au jeton. Ce qui suit décrit l’usage — modèles appelés, agents publiés — pas une capacité matérielle."
       />
 

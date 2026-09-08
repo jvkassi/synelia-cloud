@@ -82,7 +82,8 @@ export default function Capacite() {
   return (
     <div className="space-y-5">
       <PageHeader
-        titre="Capacité et placement"
+        fil={[{ label: 'Espace super admin', href: '/admin' }, { label: 'Capacité & backends' }]}
+        titre="Capacité & backends"
         sousTitre="Le placement multi-socle transparent est un objectif de produit, pas un détail d’exploitation : un Espace Cloud peut être réparti entre plusieurs hyperviseurs, et le client voit sur quel socle tourne chacune de ses machines."
         actions={
           <BoutonFormulaire

@@ -9,6 +9,7 @@ import { telechargerCsv } from '@/lib/export'
 import type { Impaye } from '@/lib/mock'
 import {
   IMPAYES,
+  libellePlan,
   MARGE_BACKENDS,
   ORGANISATIONS,
   SYNTHESE_PLATEFORME,
@@ -154,7 +155,8 @@ export default function FacturationAdmin() {
   return (
     <div className="space-y-5">
       <PageHeader
-        titre="Facturation de la plateforme"
+        fil={[{ label: 'Espace super admin', href: '/admin' }, { label: 'Facturation & marge' }]}
+        titre="Facturation & marge"
         sousTitre="Revenus par canal, cycle d’émission, recouvrement et rentabilité par socle. Le recouvrement se fait par appel et échelonnement avant de parler de suspension : une entreprise dont la trésorerie est tendue reste un client, pas un problème."
         actions={
           <BoutonFormulaire
@@ -400,7 +402,7 @@ export default function FacturationAdmin() {
                             {o.secteur ?? '—'}
                           </td>
                           <td className="px-3 py-2.5 text-[11.5px] text-g-700">
-                            {o.tenantPlan ?? '—'}
+                            {libellePlan(o.tenantPlan)}
                           </td>
                           <td className="tnum px-3 py-2.5 text-[12px] text-g-700">
                             {o.espaces ?? 0}
