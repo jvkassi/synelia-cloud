@@ -19,7 +19,7 @@ import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile, QuotaBar } from '@/components/composition/metrics'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire } from '@/components/app/actions'
 import { creerRessource, estActif } from '@/lib/api/client'
@@ -48,6 +48,7 @@ const PALIERS = [
 ]
 
 export default function ListeHebergements() {
+  const maintenant = useMaintenant()
   const { autorise, refus } = useApp()
   const hebergements = useCollection<WebHosting>('hebergements', HEBERGEMENTS)
   const tousSites = useCollection<SiteWeb>('sites-web', SITES_WEB)
@@ -170,7 +171,9 @@ export default function ListeHebergements() {
                   {nomServi(h)}
                 </Link>
               }
-              sousTitre={`${h.palier} · ${h.serveur.nom} · ${h.serveur.os} · ${h.serveur.serveurWeb} · en service depuis ${h.serveur.uptimeJours} jours`}
+              sousTitre={`${h.palier} · ${h.serveur.nom} · ${h.serveur.os} · ${h.serveur.serveurWeb}${
+                h.serveur.uptimeJours != null ? ` · en service depuis ${h.serveur.uptimeJours} jours` : ''
+              }`}
               actions={
                 <span className="flex flex-wrap items-center gap-2">
                   {!h.domaine && <Badge tone="warn" size="sm">Nom provisoire</Badge>}
@@ -186,20 +189,24 @@ export default function ListeHebergements() {
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div className="space-y-2.5 lg:col-span-2">
-                <QuotaBar
-                  libelle="Processeur"
-                  utilise={h.serveur.chargeCpuPct}
-                  total={100}
-                  compact
-                  formateur={(v) => `${v} %`}
-                />
-                <QuotaBar
-                  libelle="Mémoire"
-                  utilise={h.serveur.ramUtiliseePct}
-                  total={100}
-                  compact
-                  formateur={(v) => `${v} %`}
-                />
+                {h.serveur.chargeCpuPct != null && (
+                  <QuotaBar
+                    libelle="Processeur"
+                    utilise={h.serveur.chargeCpuPct}
+                    total={100}
+                    compact
+                    formateur={(v) => `${v} %`}
+                  />
+                )}
+                {h.serveur.ramUtiliseePct != null && (
+                  <QuotaBar
+                    libelle="Mémoire"
+                    utilise={h.serveur.ramUtiliseePct}
+                    total={100}
+                    compact
+                    formateur={(v) => `${v} %`}
+                  />
+                )}
                 <QuotaBar
                   libelle="Disque"
                   utilise={h.espaceUtiliseGo}
@@ -243,7 +250,7 @@ export default function ListeHebergements() {
                 {taches.length > 1 ? 's' : ''}
               </Badge>
               <Badge tone={h.sauvegarde.statut === 'ok' ? 'ok' : 'err'} size="sm">
-                Sauvegarde {relatif(h.sauvegarde.derniere)}
+                Sauvegarde {h.sauvegarde.derniere ? relatif(h.sauvegarde.derniere, maintenant) : '—'}
               </Badge>
               <span className="tnum ml-auto text-[12.5px] font-bold text-ink">
                 {money(PRIX_PALIER[h.palier] ?? 0)} / mois

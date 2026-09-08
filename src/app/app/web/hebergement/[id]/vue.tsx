@@ -82,7 +82,7 @@ function genererMotDePasse(longueur = 20): string {
   return Array.from(octets, (o) => alphabet[o % alphabet.length]).join('')
 }
 
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 
 const ONGLETS = [
   { id: 'apercu', label: 'Vue d’ensemble' },
@@ -101,6 +101,7 @@ const TEINTE_SITE: Record<string, string> = {
 }
 
 export function VueHebergement({ id }: { id: string }) {
+  const maintenant = useMaintenant()
   const { autorise, refus } = useApp()
   const [onglet, setOnglet] = useState('apercu')
   const [siteOuvertId, setSiteOuvert] = useState<string | null>(null)
@@ -301,7 +302,7 @@ export function VueHebergement({ id }: { id: string }) {
             />
             <StatTile
               libelle="Dernière sauvegarde"
-              valeur={relatif(h.sauvegarde.derniere)}
+              valeur={h.sauvegarde.derniere ? relatif(h.sauvegarde.derniere, maintenant) : '—'}
               ton={h.sauvegarde.statut === 'ok' ? 'ok' : 'err'}
               detail={h.sauvegarde.taille}
             />
@@ -349,8 +350,12 @@ export function VueHebergement({ id }: { id: string }) {
               />
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2.5">
-                  <QuotaBar libelle="Processeur" utilise={h.serveur.chargeCpuPct} total={100} unite="%" seuil={85} />
-                  <QuotaBar libelle="Mémoire" utilise={h.serveur.ramUtiliseePct} total={100} unite="%" seuil={90} />
+                  {h.serveur.chargeCpuPct != null && (
+                    <QuotaBar libelle="Processeur" utilise={h.serveur.chargeCpuPct} total={100} unite="%" seuil={85} />
+                  )}
+                  {h.serveur.ramUtiliseePct != null && (
+                    <QuotaBar libelle="Mémoire" utilise={h.serveur.ramUtiliseePct} total={100} unite="%" seuil={90} />
+                  )}
                   <QuotaBar
                     libelle="Disque"
                     utilise={h.espaceUtiliseGo}
@@ -365,19 +370,32 @@ export function VueHebergement({ id }: { id: string }) {
                     { cle: 'Nom', valeur: <span className="font-mono">{h.serveur.nom}</span> },
                     { cle: 'Gabarit', valeur: `${h.serveur.vcpu} vCPU · ${h.serveur.ramGo} Go · ${h.serveur.diskGo} Go` },
                     { cle: 'Adresse IPv4', valeur: <span className="font-mono">{h.serveur.ip}</span> },
-                    { cle: 'Adresse IPv6', valeur: <span className="font-mono text-[12px]">{h.serveur.ipv6}</span> },
+                    {
+                      cle: 'Adresse IPv6',
+                      valeur: (
+                        <span className="font-mono text-[12px]">{h.serveur.ipv6 ?? '—'}</span>
+                      ),
+                    },
                     { cle: 'Système', valeur: `${h.serveur.os} · ${h.serveur.serveurWeb}` },
                     { cle: 'Site physique', valeur: SITE_LABEL[h.serveur.site] },
-                    { cle: 'En service depuis', valeur: `${h.serveur.uptimeJours} jours` },
+                    {
+                      cle: 'En service depuis',
+                      valeur: h.serveur.uptimeJours != null ? `${h.serveur.uptimeJours} jours` : '—',
+                    },
                   ]}
                 />
               </div>
               <Callout ton="info" className="mt-4" titre="Pointer votre domaine ici">
                 Créez un enregistrement <span className="font-mono">A</span> vers{' '}
-                <span className="font-mono">{h.serveur.ip}</span> et un{' '}
-                <span className="font-mono">AAAA</span> vers{' '}
-                <span className="font-mono text-[11.5px]">{h.serveur.ipv6}</span>. Si votre zone est
-                gérée chez nous, l’onglet DNS le fait en une action.
+                <span className="font-mono">{h.serveur.ip}</span>
+                {h.serveur.ipv6 && (
+                  <>
+                    {' '}
+                    et un <span className="font-mono">AAAA</span> vers{' '}
+                    <span className="font-mono text-[11.5px]">{h.serveur.ipv6}</span>
+                  </>
+                )}
+                . Si votre zone est gérée chez nous, l’onglet DNS le fait en une action.
               </Callout>
             </Card>
 
@@ -677,7 +695,7 @@ export function VueHebergement({ id }: { id: string }) {
                           ? `${c.utiliseGo.toFixed(1)} Go, sans quota`
                           : `${c.utiliseGo.toFixed(1)} Go sur ${c.quotaGo} Go`}
                         {c.derniereConnexion
-                          ? ` · dernière connexion ${relatif(c.derniereConnexion)}`
+                          ? ` · dernière connexion ${relatif(c.derniereConnexion, maintenant)}`
                           : ' · jamais connecté'}
                       </p>
                     </div>
@@ -1176,8 +1194,10 @@ export function VueHebergement({ id }: { id: string }) {
                       </div>
                       <p className="mt-1 font-mono text-[11px] text-g-500">{t.commande}</p>
                       <p className="mt-1 text-[11px] text-g-500">
-                        Exécutée {relatif(t.derniereExecution)} en {t.dureeS} s · prochaine{' '}
-                        {dateHeure(t.prochaine)}
+                        {t.derniereExecution
+                          ? `Exécutée ${relatif(t.derniereExecution, maintenant)}${t.dureeS != null ? ` en ${t.dureeS} s` : ''} · `
+                          : 'Jamais exécutée · '}
+                        prochaine {dateHeure(t.prochaine)}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">

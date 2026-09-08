@@ -38,8 +38,10 @@ import { Badge } from '@/components/ui/badge'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { useCollection } from '@/components/app/atelier'
+import { useMaintenant } from '@/components/app/contexte'
 
 export default function AccueilWebCloud() {
+  const maintenant = useMaintenant()
   // Domaines, hébergements, sites, bases, messageries, drives et certificats
   // ont chacun un vrai backend (`/web/domaines`, `/web/hebergements`,
   // `/web/sites`, `/web/bases`, `/web/emails`, `/web/drive`, `/web/ssl`,
@@ -277,20 +279,24 @@ export default function AccueilWebCloud() {
                     </Badge>
                   </div>
                   <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <QuotaBar
-                      libelle="Processeur"
-                      utilise={h.serveur.chargeCpuPct}
-                      total={100}
-                      compact
-                      formateur={(v) => `${v} %`}
-                    />
-                    <QuotaBar
-                      libelle="Mémoire"
-                      utilise={h.serveur.ramUtiliseePct}
-                      total={100}
-                      compact
-                      formateur={(v) => `${v} %`}
-                    />
+                    {h.serveur.chargeCpuPct != null && (
+                      <QuotaBar
+                        libelle="Processeur"
+                        utilise={h.serveur.chargeCpuPct}
+                        total={100}
+                        compact
+                        formateur={(v) => `${v} %`}
+                      />
+                    )}
+                    {h.serveur.ramUtiliseePct != null && (
+                      <QuotaBar
+                        libelle="Mémoire"
+                        utilise={h.serveur.ramUtiliseePct}
+                        total={100}
+                        compact
+                        formateur={(v) => `${v} %`}
+                      />
+                    )}
                     <QuotaBar
                       libelle="Disque"
                       utilise={h.espaceUtiliseGo}
@@ -324,7 +330,7 @@ export default function AccueilWebCloud() {
                         {p.nomServi}
                       </span>
                       <span className="block text-[11px] text-g-500">
-                        {d ? `${relatif(d.ts)} · ${d.taille}` : 'Aucune exécution'}
+                        {d ? `${relatif(d.ts, maintenant)} · ${d.taille}` : 'Aucune exécution'}
                       </span>
                     </span>
                     <Badge

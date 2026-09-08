@@ -791,14 +791,14 @@ export interface WebHosting {
     ramGo: number
     diskGo: number
     ip: string
-    ipv6: string
+    ipv6?: string
     site: Site
     os: string
     serveurWeb: string
     statut: 'en_ligne' | 'maintenance' | 'redemarrage'
-    chargeCpuPct: number
-    ramUtiliseePct: number
-    uptimeJours: number
+    chargeCpuPct?: number
+    ramUtiliseePct?: number
+    uptimeJours?: number
   }
   php: {
     versionDefaut: string
@@ -821,8 +821,8 @@ export interface WebHosting {
     retentionJours: number
     destination: string
     immuable: boolean
-    derniere: string
-    taille: string
+    derniere?: string
+    taille?: string
     statut: 'ok' | 'echec' | 'en_cours'
   }
   statut: 'en_ligne' | 'maintenance' | 'suspendu'
@@ -884,8 +884,8 @@ export interface TachePlanifieeWeb {
   lisible: string
   commande: string
   siteId?: string
-  derniereExecution: string
-  dureeS: number
+  derniereExecution?: string
+  dureeS?: number
   statut: 'ok' | 'echec'
   prochaine: string
   actif: boolean
