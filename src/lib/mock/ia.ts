@@ -2302,7 +2302,7 @@ export const AGENTS_PLATEFORME = [
   { org: 'Digital Business Africa', agents: 6, publies: 5, flux: 2, executions30j: 486_000, canaux: 'Widget, WhatsApp, SMS, Telegram, REST' },
   { org: 'AMUGA', agents: 4, publies: 4, flux: 1, executions30j: 214_800, canaux: 'WhatsApp, SMS, REST' },
   { org: 'BICICI Lab', agents: 3, publies: 1, flux: 0, executions30j: 42_100, canaux: 'REST' },
-  { org: 'OC²S (revendeur)', agents: 11, publies: 8, flux: 4, executions30j: 612_400, canaux: 'Tous canaux' },
+  { org: 'OC²S', agents: 11, publies: 8, flux: 4, executions30j: 612_400, canaux: 'Tous canaux' },
   { org: 'Autres organisations', agents: 19, publies: 12, flux: 3, executions30j: 328_900, canaux: 'Widget, REST' },
 ]
 
