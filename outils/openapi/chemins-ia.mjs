@@ -4,9 +4,8 @@
  * Une passerelle (LiteLLM devant OpenRouter), un catalogue de modèles, des
  * agents qu'on invoque en un aller-retour, et des flux d'orchestration qu'on
  * exécute réellement (moteur natif Python, pas de service Mastra séparé pour
- * l'instant). Bases de connaissances, outils, canaux, clés, routage,
- * garde-fous, points d'inférence dédiée et consommation détaillée restent hors
- * de cette passe.
+ * l'instant). Bases de connaissances, outils, canaux, clés, routage, garde-fous
+ * et consommation détaillée restent hors de cette passe.
  */
 
 import { action, chemin, crud, fusion, op, ref } from './socle.mjs'

@@ -436,19 +436,19 @@ est rappelée en bas de page.
 
 ## 6. IA & Agents
 
-Neuf sections (Accueil, Agents, Orchestration, Connaissances, Intégrations, Modèles, Inférence
-dédiée, Consommation, Paramètres). C'est une passerelle entre les modèles hébergés en Côte
-d'Ivoire (« souverains ») et des modèles externes — chaque section porte son propre panneau de
-ressources, sauf l'Accueil et la Consommation qui restent en pleine largeur.
+Huit sections (Accueil, Agents, Orchestration, Connaissances, Intégrations, Modèles, Consommation,
+Paramètres). C'est une passerelle entre les modèles hébergés en Côte d'Ivoire (« souverains ») et
+des modèles externes — chaque section porte son propre panneau de ressources, sauf l'Accueil et la
+Consommation qui restent en pleine largeur.
 
 ![Vue d'ensemble IA & Agents](guide-utilisateur/captures/ia-accueil.png)
 
 L'accueil (`/app/ia`) résume la passerelle : requêtes 24 h, jetons du mois, part traitée sur le
-territoire ivoirien, dépense du mois avec prévision et plafond ; un accès direct aux huit autres
+territoire ivoirien, dépense du mois avec prévision et plafond ; un accès direct aux sept autres
 sections ; les agents en production avec leur coût quotidien ; la répartition du trafic par
 modèle (souverain vs hors territoire) ; les événements de la passerelle (repli fournisseur, quota
-atteint, incidents) ; les points d'inférence dédiés ; et des métriques de santé (requêtes/minute,
-latence du premier jeton, taux d'erreur, jetons/seconde).
+atteint, incidents) ; et des métriques de santé (requêtes/minute, latence du premier jeton, taux
+d'erreur, jetons/seconde).
 
 ![Liste des agents](guide-utilisateur/captures/ia-agents-liste.png)
 
@@ -498,13 +498,6 @@ La fiche d'un modèle (`Llama 3.3 70B Instruct`) porte des onglets Fiche, Tarif,
 Comment l'appeler. La fiche donne l'éditeur, la famille, la taille, la licence, la fenêtre de
 contexte et la résidence du calcul — ici « Abidjan, datacenter Synelia », avec la garantie
 qu'aucune donnée ne franchit la frontière.
-
-![Inférence dédiée](guide-utilisateur/captures/ia-inference-detail.png)
-
-La fiche d'un point d'inférence dédié (`llama70b-prod`) réserve des GPU pour un usage exclusif
-(H100 ×2 par réplica) et facture à l'heure, pas au jeton. On y règle la mise à l'échelle
-(réplicas minimum/maximum, autorisation de mise en veille) et on y lit l'occupation observée des
-cartes.
 
 ![Consommation & coûts](guide-utilisateur/captures/ia-consommation.png)
 

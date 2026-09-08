@@ -801,9 +801,9 @@ export const EVENEMENTS_IA: EvenementSupervision[] = [
   {
     id: 'eia-6',
     ts: '2026-08-18T22:10:00Z',
-    gravite: 'info',
-    ressource: 'llama70b-prod',
-    message: 'Passage de 2 à 3 réplicas — file d’attente au-delà de 400 ms pendant 6 minutes',
+    gravite: 'mineure',
+    ressource: 'llama-3.3-70b-instruct',
+    message: 'File d’attente au-delà de 400 ms pendant 6 minutes — repli automatique vers Qwen3 32B (GBM)',
     site: 'ABJ',
   },
   {

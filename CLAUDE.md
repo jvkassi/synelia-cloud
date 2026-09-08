@@ -407,8 +407,8 @@ Modèles · Consommation · Paramètres`. Contrepartie fournisseur : `/admin/ia`
 `cadre.tsx` par section qui monte `CadreSection` depuis le `layout.tsx`. Le
 panneau liste les ressources *de la section* : les agents sous Agents, les flux
 sous Orchestration, les bases sous Connaissances, les canaux puis les outils sous
-Intégrations, les modèles, les points d'inférence, les six réglages sous
-Paramètres. Trois écrans font exception et gardent la pleine largeur sans
+Intégrations, les modèles sous Modèles, les six réglages sous Paramètres. Trois
+écrans font exception et gardent la pleine largeur sans
 panneau : l'Accueil (un tableau de bord ne porte sur aucune ressource),
 Consommation (une facture ne se choisit pas) et l'assistant `/app/ia/nouveau`.
 

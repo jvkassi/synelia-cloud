@@ -282,11 +282,7 @@ export function VueModele({ modeleId }: { modeleId: string }) {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <StatTile libelle="Médiane" valeur="18 ms" ton="ok" serie={seededSeries(`${modele.id}-q50`, 24, 8, 40)} />
                   <StatTile libelle="p95" valeur="240 ms" serie={seededSeries(`${modele.id}-q95`, 24, 120, 480)} />
-                  <StatTile
-                    libelle="Requêtes mises en file"
-                    valeur="2,4 %"
-                    detail="Au-delà de 5 %, un point d’inférence dédié se justifie"
-                  />
+                  <StatTile libelle="Requêtes mises en file" valeur="2,4 %" />
                 </div>
               </Card>
             </div>

@@ -94,7 +94,6 @@ const CIBLES = [
   ['/app/ia/connaissances/kb-procedures', 'ia-connaissance-detail'],
   ['/app/ia/integrations/cx-widget', 'ia-integration-detail'],
   ['/app/ia/modeles/m-llama-70b', 'ia-modele-detail'],
-  ['/app/ia/inference/inf-llama-prod', 'ia-inference-detail'],
   ['/app/ia/consommation', 'ia-consommation'],
   ['/app/ia/parametres', 'ia-parametres-liste'],
   ['/app/ia/parametres/routage', 'ia-parametre-routage'],
