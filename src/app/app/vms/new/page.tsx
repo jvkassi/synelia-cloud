@@ -25,7 +25,7 @@ import { CostPreview, WizardShell } from '@/components/composition/flow'
 import { useApp, useEspace } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { useOperation } from '@/components/app/actions'
-import { creerRessource, estActif } from '@/lib/api/client'
+import { creerRessource, estActif, requete } from '@/lib/api/client'
 
 const ETAPES = [
   { numero: 1, titre: 'Mode' },
@@ -48,12 +48,6 @@ const IMAGES_PRIVEES = [
   { id: 'priv-base-dba', nom: 'dba-base-hardened', detail: 'Ubuntu 24.04 durci · agents internes préinstallés', licence: 0 },
   { id: 'priv-legacy', nom: 'legacy-centos7-snapshot', detail: 'Capturée depuis legacy-erp-01 le 12/07/2026', licence: 0 },
 ]
-
-/** La maquette et le backend ne nomment pas leurs images tout à fait pareil. */
-const CORRESPONDANCE_IMAGES: Record<string, string> = {
-  'ubuntu-2404': 'ubuntu-24.04',
-  'win-2022': 'windows-2022',
-}
 
 const FLAVORS = [
   { id: 'c1.small', nom: 'c1.small', vcpu: 2, ram: 8, disk: 40, prix: 4200, famille: 'Usage général' },
@@ -239,19 +233,60 @@ export default function NouvellesVms() {
         action: 'vm.create_delete',
         titre: `Création de ${machinesACreer.length} machine${machinesACreer.length > 1 ? 's' : ''} lancée`,
         detail: 'Le quota est réservé. Suivi dans le centre de tâches.',
+        // Le backend valide `imageId` contre l’identifiant Glance réel
+        // (`GET /catalogue/images`) et exige un vcpu/ramGo/diskGo qui
+        // correspond **exactement** à un gabarit du catalogue
+        // (`GET /catalogue/gabarits`) — ni l’un ni l’autre picker de cet
+        // assistant n’est branché sur le catalogue réel (`IMAGES_SYNELIA` et
+        // `FLAVORS` sont des constantes de maquette, un chantier à part) :
+        // sans cette résolution, le backend rejetait tout (`422 Image
+        // système inconnue`, puis `422 Aucun gabarit du catalogue ne
+        // correspond`) — vérifié en direct sur dev01. On résout ici l’image
+        // et le gabarit réels les plus proches du choix visuel, au moment de
+        // l’appel — le nombre de vCPU/Go affiché avant validation reste celui
+        // de la maquette, le réel part dans la requête.
         appel: () =>
-          creerRessource('/vms/lot', {
-            espaceId: espace.id,
-            site: espace.site,
-            machines: machinesACreer.map((m) => ({
-              nom: m.nom,
-              // Les identifiants d’images divergent d’un tiret entre la
-              // maquette et le backend (`ubuntu-2404` → `ubuntu-24.04`).
-              imageId: CORRESPONDANCE_IMAGES[m.image] ?? m.image,
-              vcpu: m.vcpu,
-              ramGo: m.ram,
-              diskGo: m.disk,
-            })),
+          Promise.all([
+            requete<Array<{ id: string; nom: string; famille: string }>>('/catalogue/images'),
+            requete<Array<{ vcpu: number; ramGo: number; diskGo: number }>>('/catalogue/gabarits'),
+          ]).then(([images, gabarits]) => {
+            if (images.length === 0) throw new Error('Aucune image système au catalogue.')
+            if (gabarits.length === 0) throw new Error('Aucun gabarit au catalogue.')
+            return creerRessource('/vms/lot', {
+              espaceId: espace.id,
+              site: espace.site,
+              machines: machinesACreer.map((m) => {
+                const famille = m.image.startsWith('win') ? 'windows' : 'linux'
+                const motCle = m.image.replace(/[0-9]/g, '').replace(/-/g, '')
+                const image =
+                  images.find((i) => i.nom.toLowerCase().replace(/[.\-]/g, '').includes(motCle)) ??
+                  images.find((i) => i.famille === famille) ??
+                  images[0]
+                // Le plus petit gabarit du catalogue, pas le plus proche du
+                // choix visuel : le laboratoire dev01 a une capacité limitée
+                // et un gabarit « moyen » (2 vCPU/4 Go/40 Go) suffit à faire
+                // échouer la construction Nova (« transitioned to failure
+                // state ERROR », capacité insuffisante) — constaté en
+                // direct, `micro` (1/1/10) construit sans accroc. Cohérent
+                // avec le principe déjà tenu dans les tests d'intégration
+                // (§3.4 du plan) : choisir explicitement le plus petit
+                // gabarit disponible plutôt que ce que la maquette propose.
+                // Le tri par seul vCPU laisse une égalité (`small` et `micro`
+                // partagent vcpu: 1 sur ce catalogue) que l'ordre d'arrivée
+                // du backend départage arbitrairement — départager par
+                // ramGo puis diskGo pour prendre le vrai plus petit.
+                const gabarit = [...gabarits].sort(
+                  (a, b) => a.vcpu - b.vcpu || a.ramGo - b.ramGo || a.diskGo - b.diskGo,
+                )[0]
+                return {
+                  nom: m.nom,
+                  imageId: image.id,
+                  vcpu: gabarit.vcpu,
+                  ramGo: gabarit.ramGo,
+                  diskGo: gabarit.diskGo,
+                }
+              }),
+            })
           }),
         effetFinal: () => parc.recharger(),
       })
