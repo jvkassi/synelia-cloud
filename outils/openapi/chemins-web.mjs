@@ -938,6 +938,18 @@ const drive = fusion(
         ok: ref('Drive'),
         rbac: 'service.admin',
       }),
+      delete: op({
+        tag: T_DRIVE,
+        id: 'desactiverDrive',
+        resume: 'Désactiver le drive d’un domaine',
+        detail: 'Action destructive : le serveur Nextcloud est détruit ; le nom exact de la ressource est exigé en confirmation.',
+        params: [chemin('driveId', 'Identifiant du drive.', 'drive-dba-africa')],
+        ok: ref('TravailProvisioning'),
+        code: 202,
+        destructif: true,
+        rbac: 'service.admin',
+        erreurs: [409],
+      }),
     },
     '/web/drive/{driveId}/sieges': {
       get: op({

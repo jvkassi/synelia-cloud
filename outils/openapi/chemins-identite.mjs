@@ -665,6 +665,30 @@ const audit = {
       rbac: 'audit.view',
     }),
   },
+  '/audit/integrite': {
+    get: op({
+      tag: T_AUDIT,
+      id: 'verifierIntegriteAudit',
+      resume: 'Vérifier l’intégrité de la chaîne d’audit',
+      detail:
+        'Rejoue la chaîne de hachage de l’organisation active et recalcule chaque empreinte à ' +
+        'partir des champs enregistrés : signale `intacte: false` et la première ligne en rupture ' +
+        'dès qu’une entrée a été insérée, modifiée ou supprimée hors séquence.',
+      ok: objet(
+        {
+          intacte: booleen(),
+          entreesVerifiees: entier(),
+          totalEntrees: entier(),
+          ruptureId: chaine('Identifiant de la première entrée en rupture. Absent si la chaîne est intacte.'),
+          ruptureDate: horodatage('Absente si la chaîne est intacte.'),
+          raison: chaine('Absente si la chaîne est intacte.'),
+          empreinteFinale: chaine('Empreinte de la dernière entrée. Présente seulement si la chaîne est intacte.'),
+        },
+        ['intacte', 'entreesVerifiees', 'totalEntrees'],
+      ),
+      rbac: 'compliance.export',
+    }),
+  },
   '/audit/export': {
     post: op({
       tag: T_AUDIT,

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Download, FileCheck2, KeyRound, ShieldAlert } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
-import { dateHeure, num, pct, relatif } from '@/lib/format'
+import { MAINTENANT, dateHeure, num, pct, relatif } from '@/lib/format'
 import { telechargerCsv, telechargerTexte } from '@/lib/export'
 import { EQUIPE_SYNELIA, ORGANISATIONS } from '@/lib/mock'
 import type { MembreEquipe } from '@/lib/mock'
@@ -23,6 +23,25 @@ import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, useOperation } from '@/components/app/actions'
 import type { AuditEvent } from '@/lib/types'
 
+/** `GET /audit/integrite` : rejoue la chaîne de hachage et confirme qu'elle est intacte, ou
+ * signale la première ligne en rupture. Pas de forme mock équivalente — l'atelier ne modifie
+ * jamais le hash d'une entrée, donc la démonstration reste toujours intacte hors API réelle. */
+interface IntegriteAudit {
+  intacte: boolean
+  entreesVerifiees: number
+  totalEntrees: number
+  ruptureId?: string | null
+  ruptureDate?: string | null
+  raison?: string | null
+  empreinteFinale?: string
+}
+
+const INTEGRITE_DEMO: IntegriteAudit = {
+  intacte: true,
+  entreesVerifiees: 1_284_912,
+  totalEntrees: 1_284_912,
+}
+
 const ONGLETS = [
   { id: 'journal', label: 'Journal complet' },
   { id: 'elevations', label: 'Élévations de privilège' },
@@ -40,6 +59,8 @@ export default function AuditAdmin() {
     { parPage: '200' },
   )
   const AUDIT = journalDistant?.donnees ?? journalLocal
+  const { donnees: integriteDistante } = useLectureDegradable<IntegriteAudit>('/audit/integrite')
+  const integrite = integriteDistante ?? INTEGRITE_DEMO
 
   const { autorise, refus, pousser } = useApp()
   const equipe = useCollection<MembreEquipe>('equipe-synelia', EQUIPE_SYNELIA)
@@ -731,8 +752,8 @@ export default function AuditAdmin() {
               titre="Intégrité du journal"
               sousTitre="Chaque entrée porte une empreinte cryptographique chaînée à la précédente. Modifier ou supprimer une ligne casserait la chaîne, et serait immédiatement détectable."
               actions={
-                <Badge tone="ok" dot size="sm">
-                  Chaîne intacte
+                <Badge tone={integrite.intacte ? 'ok' : 'err'} dot size="sm">
+                  {integrite.intacte ? 'Chaîne intacte' : 'Rupture détectée'}
                 </Badge>
               }
             />
@@ -740,21 +761,36 @@ export default function AuditAdmin() {
               colonnes={2}
               items={[
                 { cle: 'Algorithme', valeur: 'SHA-256, chaînage séquentiel' },
-                { cle: 'Dernière vérification complète', valeur: dateHeure('2026-08-19T06:00:00Z') },
-                { cle: 'Entrées vérifiées', valeur: num(1_284_912) },
-                { cle: 'Ruptures détectées', valeur: '0' },
+                {
+                  cle: 'Dernière vérification complète',
+                  valeur: integriteDistante ? dateHeure(MAINTENANT) : dateHeure('2026-08-19T06:00:00Z'),
+                },
+                { cle: 'Entrées vérifiées', valeur: `${num(integrite.entreesVerifiees)} / ${num(integrite.totalEntrees)}` },
+                {
+                  cle: 'Ruptures détectées',
+                  valeur: integrite.intacte ? '0' : `1 — ${integrite.raison ?? 'voir détail'}`,
+                },
                 { cle: 'Rétention en ligne', valeur: '24 mois' },
                 { cle: 'Archivage froid', valeur: '5 ans supplémentaires' },
                 { cle: 'Suppression possible', valeur: 'Non — y compris par nous' },
                 { cle: 'Réplication', valeur: 'Abidjan et Grand-Bassam, en écriture synchrone' },
               ]}
             />
-            <Callout ton="violet" className="mt-4" titre="Personne ne peut réécrire l’histoire">
-              Ni un administrateur de la plateforme, ni la direction, ni un attaquant qui aurait obtenu
-              nos accès les plus élevés. C’est la seule façon de rendre un journal d’audit utile pour
-              une certification, un litige, ou simplement pour répondre honnêtement à la question
-              « qu’est-ce qui s’est passé le 12 mars à 14 h ? ».
-            </Callout>
+            {integrite.intacte ? (
+              <Callout ton="violet" className="mt-4" titre="Personne ne peut réécrire l’histoire">
+                Ni un administrateur de la plateforme, ni la direction, ni un attaquant qui aurait obtenu
+                nos accès les plus élevés. C’est la seule façon de rendre un journal d’audit utile pour
+                une certification, un litige, ou simplement pour répondre honnêtement à la question
+                « qu’est-ce qui s’est passé le 12 mars à 14 h ? ».
+              </Callout>
+            ) : (
+              <Callout ton="err" className="mt-4" titre="La chaîne est rompue">
+                Première entrée en rupture : <span className="font-mono">{integrite.ruptureId}</span>
+                {integrite.ruptureDate ? ` (${dateHeure(integrite.ruptureDate)})` : ''}. {integrite.raison}
+                . À traiter en priorité — c’est le signe qu’une ligne a été insérée, modifiée ou
+                supprimée hors du chemin normal d’écriture.
+              </Callout>
+            )}
           </Card>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

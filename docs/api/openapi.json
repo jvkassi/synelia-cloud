@@ -5973,6 +5973,87 @@
         }
       }
     },
+    "/audit/integrite": {
+      "get": {
+        "tags": [
+          "Audit"
+        ],
+        "operationId": "verifierIntegriteAudit",
+        "summary": "Vérifier l’intégrité de la chaîne d’audit",
+        "description": "Rejoue la chaîne de hachage de l’organisation active et recalcule chaque empreinte à partir des champs enregistrés : signale `intacte: false` et la première ligne en rupture dès qu’une entrée a été insérée, modifiée ou supprimée hors séquence.",
+        "x-rbac": "compliance.export",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organisation"
+          },
+          {
+            "$ref": "#/components/parameters/Langue"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Succès.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "intacte": {
+                      "type": "boolean"
+                    },
+                    "entreesVerifiees": {
+                      "type": "integer",
+                      "format": "int32"
+                    },
+                    "totalEntrees": {
+                      "type": "integer",
+                      "format": "int32"
+                    },
+                    "ruptureId": {
+                      "type": "string",
+                      "description": "Identifiant de la première entrée en rupture. Absent si la chaîne est intacte."
+                    },
+                    "ruptureDate": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "Absente si la chaîne est intacte."
+                    },
+                    "raison": {
+                      "type": "string",
+                      "description": "Absente si la chaîne est intacte."
+                    },
+                    "empreinteFinale": {
+                      "type": "string",
+                      "description": "Empreinte de la dernière entrée. Présente seulement si la chaîne est intacte."
+                    }
+                  },
+                  "required": [
+                    "intacte",
+                    "entreesVerifiees",
+                    "totalEntrees"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAuthentifie"
+          },
+          "403": {
+            "$ref": "#/components/responses/Interdit"
+          },
+          "429": {
+            "$ref": "#/components/responses/TropDeRequetes"
+          },
+          "500": {
+            "$ref": "#/components/responses/Serveur"
+          }
+        }
+      }
+    },
     "/auth/connexion": {
       "post": {
         "tags": [
@@ -35162,6 +35243,72 @@
           },
           "404": {
             "$ref": "#/components/responses/Introuvable"
+          },
+          "422": {
+            "$ref": "#/components/responses/Invalidee"
+          },
+          "429": {
+            "$ref": "#/components/responses/TropDeRequetes"
+          },
+          "500": {
+            "$ref": "#/components/responses/Serveur"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Web Cloud — drive"
+        ],
+        "operationId": "desactiverDrive",
+        "summary": "Désactiver le drive d’un domaine",
+        "description": "Action destructive : le serveur Nextcloud est détruit ; le nom exact de la ressource est exigé en confirmation.",
+        "x-rbac": "service.admin",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Organisation"
+          },
+          {
+            "$ref": "#/components/parameters/Langue"
+          },
+          {
+            "$ref": "#/components/parameters/Confirmation"
+          },
+          {
+            "name": "driveId",
+            "in": "path",
+            "required": true,
+            "description": "Identifiant du drive.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "drive-dba-africa"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Accepté — travail de provisioning créé.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TravailProvisioning"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Invalide"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAuthentifie"
+          },
+          "403": {
+            "$ref": "#/components/responses/Interdit"
+          },
+          "404": {
+            "$ref": "#/components/responses/Introuvable"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflit"
           },
           "422": {
             "$ref": "#/components/responses/Invalidee"

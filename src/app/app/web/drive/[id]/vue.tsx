@@ -16,7 +16,7 @@ import { ConfigurationServicePanel } from '@/components/business/configuration-s
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
-import { creerRessource, estActif, modifierRessource, requete } from '@/lib/api/client'
+import { creerRessource, estActif, modifierRessource, requete, supprimerRessource } from '@/lib/api/client'
 
 const ONGLETS = [
   { id: 'sieges', label: 'Sièges' },
@@ -150,6 +150,43 @@ export function VueDrive({ id }: { id: string }) {
               <Button variant="accent" iconAfter={<ExternalLink size={13} />} onClick={ouvrirDrive}>
                 Ouvrir
               </Button>
+              <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
+                <BoutonAction
+                  libelle="Désactiver"
+                  variant="danger"
+                  size="md"
+                  icone={<Trash2 size={14} />}
+                  operation={{
+                    action: 'service.admin',
+                    ton: 'err',
+                    titre: `Drive de ${d.domaine} en cours de désactivation`,
+                    detail: 'Le serveur Nextcloud est détruit ; les fichiers restent dans la sauvegarde le temps de la rétention.',
+                    appel: () => supprimerRessource('/web/drive', d.id, d.domaine),
+                    job: {
+                      type: 'web.drive.desactiver',
+                      label: `Désactivation du drive ${d.domaine}`,
+                      etapes: ['Supprimer le serveur Nextcloud', 'Retirer la route du load balancer'],
+                    },
+                    effetFinal: () => {
+                      if (estActif()) {
+                        drives.recharger()
+                        return
+                      }
+                      drives.modifier(d.id, { actif: false })
+                    },
+                  }}
+                  confirmation={{
+                    ressource: d.domaine,
+                    titre: 'Désactiver ce drive ?',
+                    pertes: [
+                      'Le serveur Nextcloud sera détruit',
+                      `Les ${d.sieges.attribues} siège(s) attribué(s) perdront l’accès`,
+                      'Les fichiers restent dans la sauvegarde le temps de la rétention',
+                    ],
+                    libelleAction: 'Désactiver le drive',
+                  }}
+                />
+              </GatedAction>
             </>
           ) : (
             <GatedAction autorise={autorise('service.admin')} message={refus('service.admin')}>
