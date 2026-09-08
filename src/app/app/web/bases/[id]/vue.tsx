@@ -66,7 +66,7 @@ export function VueServeurBases({ id }: { id: string }) {
       <PageHeader
         fil={[
           { label: 'Espace client', href: '/app' },
-          { label: 'Databases', href: '/app/web/bases' },
+          { label: 'Bases de données', href: '/app/web/bases' },
           { label: MOTEUR_WEB_LABEL[s.moteur] },
         ]}
         titre={

@@ -32,7 +32,7 @@ export default function BackupTousProjets() {
         fil={[
           { label: 'Espace client', href: '/app' },
           { label: 'Applications', href: '/app/applications' },
-          { label: 'Backup' },
+          { label: 'Sauvegardes' },
         ]}
         titre="Sauvegardes applicatives"
         sousTitre="Ce qui est protégé dans vos projets, et ce qui ne l’est pas. Choisissez un projet dans le panneau de gauche pour ses points de restauration et son bouton de restauration."

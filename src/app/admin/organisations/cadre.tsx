@@ -1,6 +1,7 @@
 'use client'
 
 import { ORGANISATIONS } from '@/lib/mock/orgs'
+import { libellePlan } from '@/lib/mock/commerce'
 import type { Organisation } from '@/lib/types'
 import { CadreSection } from '@/components/app/cadre-section'
 import { useCollection } from '@/components/app/atelier'
@@ -27,7 +28,11 @@ export function CadreOrganisations({ children }: { children: React.ReactNode }) 
     // tronquer le secteur, qui est l'information de repérage la plus utile.
     sousTitre: `${o.secteur ?? o.pays} · ${money(o.caMensuel ?? 0)}`,
     etat:
-      o.statut === 'active' ? o.tenantPlan : o.statut === 'suspendue' ? 'Suspendue' : 'Fermée',
+      o.statut === 'active'
+        ? libellePlan(o.tenantPlan)
+        : o.statut === 'suspendue'
+          ? 'Suspendue'
+          : 'Fermée',
     ton:
       o.statut === 'active'
         ? ('neutral' as const)

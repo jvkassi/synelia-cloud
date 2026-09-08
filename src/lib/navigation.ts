@@ -136,7 +136,7 @@ export const UNIVERS_CLIENT: UniversNav[] = [
         panneau: ['/app/applications/observabilite'],
       },
       {
-        nom: 'Backup',
+        nom: 'Sauvegardes',
         href: '/app/applications/backup',
         panneau: ['/app/applications/backup'],
       },
@@ -212,12 +212,12 @@ export const UNIVERS_CLIENT: UniversNav[] = [
       { nom: 'Accueil', href: '/app/web' },
       { nom: 'Domaines', href: '/app/web/domaines', panneau: ['/app/web/domaines'] },
       { nom: 'Hébergement Web', href: '/app/web/hebergement', panneau: ['/app/web/hebergement'] },
-      { nom: 'Databases', href: '/app/web/bases', panneau: ['/app/web/bases'] },
-      { nom: 'Emails', href: '/app/web/emails', panneau: ['/app/web/emails'] },
+      { nom: 'Bases de données', href: '/app/web/bases', panneau: ['/app/web/bases'] },
+      { nom: 'Messagerie', href: '/app/web/emails', panneau: ['/app/web/emails'] },
       { nom: 'Drive', href: '/app/web/drive', panneau: ['/app/web/drive'] },
       { nom: 'Applications', href: '/app/web/applications', panneau: ['/app/web/applications'] },
       { nom: 'SSL', href: '/app/web/ssl', panneau: ['/app/web/ssl'] },
-      { nom: 'Backup', href: '/app/web/backup', panneau: ['/app/web/backup'] },
+      { nom: 'Sauvegardes', href: '/app/web/backup', panneau: ['/app/web/backup'] },
       { nom: 'Relais SMTP', href: '/app/smtp' },
     ],
   },
@@ -225,7 +225,7 @@ export const UNIVERS_CLIENT: UniversNav[] = [
     id: 'iam',
     nom: 'IAM & sécurité',
     sections: [
-      { nom: 'Utilisateurs & rôles', href: '/app/membres' },
+      { nom: 'Membres & rôles', href: '/app/membres' },
       { nom: "Fédération d'identité", href: '/app/sso' },
       // « Mon compte » (double authentification personnelle) n'a pas d'onglet
       // propre, sur le patron du lanceur : on y arrive par le menu du compte.

@@ -129,7 +129,7 @@ export default function AccueilApplications() {
       detail: 'services hors de leurs seuils',
     },
     {
-      nom: 'Backup',
+      nom: 'Sauvegardes',
       href: '/app/applications/backup',
       icone: <HardDrive size={16} />,
       valeur: sauvegardes.length,

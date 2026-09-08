@@ -48,7 +48,7 @@ export function VueBackup({ id }: { id: string }) {
   )
   const restauration = services.find((x) => x.id === restaurationId) ?? null
 
-  if (!projet) return <ProjetIntrouvable section="Backup" />
+  if (!projet) return <ProjetIntrouvable section="Sauvegardes" />
 
   const proteges = services.filter((s) => s.sauvegarde)
   const nus = services.filter((s) => !s.sauvegarde)
@@ -70,7 +70,7 @@ export function VueBackup({ id }: { id: string }) {
     <div className="space-y-5">
       <EnteteProjet
         projet={projet}
-        section="Backup"
+        section="Sauvegardes"
         titre="Sauvegardes du projet"
         sousTitre="Ce qui est protégé dans ce projet, à quelle fréquence, et jusqu’à quand on peut revenir en arrière. Les plans réutilisables et le tableau de conformité 3-2-1 vivent dans Infrastructure."
         meta={

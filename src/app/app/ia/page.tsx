@@ -114,7 +114,7 @@ export default function AccueilIA() {
     <div className="space-y-5">
       <PageHeader
         fil={[{ label: 'Espace client', href: '/app' }, { label: 'IA & Agents' }]}
-        titre="Intelligence artificielle"
+        titre="IA & Agents"
         sousTitre="Une passerelle unique devant deux mondes : les modèles que nous hébergeons à Abidjan et à Grand-Bassam, et ceux des fournisseurs étrangers. Vous décidez, usage par usage, ce qui reste sur le territoire — et le portail compte ce qui en sort."
         meta={
           <span className="flex flex-wrap items-center gap-2">

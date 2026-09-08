@@ -935,7 +935,7 @@ export function VueEspace({ id }: { id: string }) {
           <Callout ton="info" className="mt-3.5" titre="Portée des rôles">
             Un rôle de portée espace ne s’applique qu’à cet espace. Un rôle de portée organisation
             s’applique à tous les espaces. La matrice complète des droits est consultable dans
-            Utilisateurs & rôles.
+            Membres & rôles.
           </Callout>
         </Card>
       )}

@@ -72,7 +72,7 @@ export function VueMessagerie({ id }: { id: string }) {
       <PageHeader
         fil={[
           { label: 'Espace client', href: '/app' },
-          { label: 'Emails', href: '/app/web/emails' },
+          { label: 'Messagerie', href: '/app/web/emails' },
           { label: m.domaine },
         ]}
         titre={<span className="break-words font-mono">{m.domaine}</span>}

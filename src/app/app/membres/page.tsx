@@ -125,8 +125,8 @@ export default function Membres() {
   return (
     <div className="space-y-5">
       <PageHeader
-        fil={[{ label: 'Espace client', href: '/app' }, { label: 'Membres' }]}
-        titre="Membres et rôles"
+        fil={[{ label: 'Espace client', href: '/app' }, { label: 'Membres & rôles' }]}
+        titre="Membres & rôles"
         sousTitre="Qui a le droit de faire quoi, et sur quel périmètre. Les rôles sont volontairement nombreux et étroits : donner à un développeur le droit de déployer ne devrait pas lui donner celui de voir les factures."
         actions={
           <GatedAction autorise={autorise('member.invite')} message={refus('member.invite')}>

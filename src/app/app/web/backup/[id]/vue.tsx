@@ -59,7 +59,7 @@ export function VueSauvegarde({ id }: { id: string }) {
       <PageHeader
         fil={[
           { label: 'Espace client', href: '/app' },
-          { label: 'Backup', href: '/app/web/backup' },
+          { label: 'Sauvegardes', href: '/app/web/backup' },
           { label: p.nomServi },
         ]}
         titre={<span className="break-words font-mono">{p.nomServi}</span>}

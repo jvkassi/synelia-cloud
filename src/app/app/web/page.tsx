@@ -131,14 +131,14 @@ export default function AccueilWebCloud() {
       detail: `${sites.length} sites installés`,
     },
     {
-      nom: 'Databases',
+      nom: 'Bases de données',
       href: '/app/web/bases',
       icone: <Database size={16} />,
       valeur: moteurs.filter((m) => m.actif).length,
       detail: `${moteurs.length - moteurs.filter((m) => m.actif).length} à activer`,
     },
     {
-      nom: 'Emails',
+      nom: 'Messagerie',
       href: '/app/web/emails',
       icone: <Mail size={16} />,
       valeur: boites,
@@ -166,7 +166,7 @@ export default function AccueilWebCloud() {
       detail: `${certificats.filter((c) => c.etat === 'en_emission').length} en émission`,
     },
     {
-      nom: 'Backup',
+      nom: 'Sauvegardes',
       href: '/app/web/backup',
       icone: <HardDrive size={16} />,
       valeur: plans.length,

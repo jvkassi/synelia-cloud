@@ -24,7 +24,7 @@ export default function ListeSauvegardes() {
         fil={[
           { label: 'Espace client', href: '/app' },
           { label: 'Web Cloud', href: '/app/web' },
-          { label: 'Backup' },
+          { label: 'Sauvegardes' },
         ]}
         titre="Sauvegardes"
         sousTitre="Un plan par hébergement, qui prend les fichiers, les bases, la configuration et la messagerie dans la même exécution. Les copies sont immuables et vivent sur l’autre site."

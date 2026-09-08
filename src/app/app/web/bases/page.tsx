@@ -39,7 +39,7 @@ export default function ListeBases() {
         fil={[
           { label: 'Espace client', href: '/app' },
           { label: 'Web Cloud', href: '/app/web' },
-          { label: 'Databases' },
+          { label: 'Bases de données' },
         ]}
         titre="Bases de données"
         sousTitre="MariaDB, PostgreSQL et Redis tournent sur le serveur de votre hébergement, à côté d’Apache. Compris dans le prix, sans haute disponibilité — et sans accès depuis l’extérieur."
