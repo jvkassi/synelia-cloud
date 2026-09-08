@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   Camera,
   Copy,
@@ -38,7 +38,7 @@ import { EmptyState } from '@/components/composition/states'
 import { EventList, GrilleSparkCharts } from '@/components/business/observabilite'
 import { useApp } from '@/components/app/contexte'
 import { useCollection, useEntite } from '@/components/app/atelier'
-import { creerRessource, requete, supprimerRessource } from '@/lib/api/client'
+import { ApiError, creerRessource, estActif, requete, supprimerRessource } from '@/lib/api/client'
 import {
   BoutonAction,
   BoutonFormulaire,
@@ -56,6 +56,13 @@ interface Snapshot {
   taille?: number
   tailleGo?: number
   type?: string
+}
+
+/** `POST /vms/{id}/console` — URL de console à usage unique (~2 h de validité). */
+interface ConsoleVm {
+  url: string
+  protocole: 'vnc' | 'spice' | 'serie'
+  expire: string
 }
 
 /** Les snapshots ne sont pas dans le jeu de données : graine locale. */
@@ -88,6 +95,35 @@ export function VueVm({ id }: { id: string }) {
   const [console_, setConsole] = useState(false)
   const [suppression, setSuppression] = useState(false)
   const [redimensionnement, setRedimensionnement] = useState(false)
+
+  const [consoleUrl, setConsoleUrl] = useState<string | null>(null)
+  const [consoleChargement, setConsoleChargement] = useState(false)
+  const [consoleErreur, setConsoleErreur] = useState<{ message: string; correlationId?: string } | null>(
+    null,
+  )
+
+  const ouvrirConsole = useCallback(() => {
+    setConsoleChargement(true)
+    setConsoleErreur(null)
+    setConsoleUrl(null)
+    requete<ConsoleVm>(`/vms/${encodeURIComponent(id)}/console`, { methode: 'POST', corps: {} })
+      .then(
+        (c) => setConsoleUrl(c.url),
+        (e: unknown) =>
+          setConsoleErreur(
+            e instanceof ApiError
+              ? { message: e.message, correlationId: e.correlationId }
+              : { message: 'Le backend ne répond pas.' },
+          ),
+      )
+      .finally(() => setConsoleChargement(false))
+  }, [id])
+
+  // Une URL de console est à usage unique et expire ~2 h : on en redemande
+  // une à chaque ouverture du tiroir plutôt que de la garder en cache.
+  useEffect(() => {
+    if (console_ && estActif()) ouvrirConsole()
+  }, [console_, ouvrirConsole])
 
   const vm = parc.items.find((v) => v.id === id) ?? isolee
 
@@ -1109,32 +1145,32 @@ export function VueVm({ id }: { id: string }) {
             <span className="mr-auto text-[11.5px] text-g-500">
               Session console chiffrée · déconnexion automatique après 15 minutes d’inactivité
             </span>
+            {/*
+              Envoyer Ctrl+Alt+Suppr a été retiré plutôt que simulé : `vnc_lite.html`
+              (noVNC) n'expose ni contrôle à l'écran ni API `postMessage` pour piloter
+              la session depuis la page parente. Le rendre réel demanderait de modifier
+              la page noVNC vendée côté backend/Apache — hors périmètre d'un correctif
+              frontend. Un bouton manquant est honnête ; un bouton qui fait semblant ne
+              l'est pas.
+            */}
             <Button
               variant="ghost"
               iconBefore={<Maximize2 size={13} />}
-              onClick={() =>
-                executer({
-                  ton: 'info',
-                  titre: 'Console en plein écran',
-                  detail: 'La console s’ouvre dans un onglet dédié, hors du portail.',
-                })
-              }
+              disabled={estActif() && !consoleUrl}
+              title={estActif() && !consoleUrl ? 'La console se connecte encore.' : undefined}
+              onClick={() => {
+                if (!estActif()) {
+                  executer({
+                    ton: 'info',
+                    titre: 'Console en plein écran',
+                    detail: 'Démonstration : il n’y a pas de console réelle à ouvrir en mode maquette.',
+                  })
+                  return
+                }
+                if (consoleUrl) window.open(consoleUrl, '_blank')
+              }}
             >
               Plein écran
-            </Button>
-            <Button
-              variant="secondary"
-              iconBefore={<RotateCw size={13} />}
-              onClick={() =>
-                executer({
-                  action: 'vm.power',
-                  ton: 'info',
-                  titre: 'Ctrl+Alt+Suppr envoyé',
-                  detail: `Séquence transmise à la console de ${vm.nom}.`,
-                })
-              }
-            >
-              Envoyer Ctrl+Alt+Suppr
             </Button>
             <Button variant="ghost" onClick={() => setConsole(false)}>
               Fermer
@@ -1144,12 +1180,29 @@ export function VueVm({ id }: { id: string }) {
       >
         <div className="flex h-full min-h-[60vh] flex-col overflow-hidden rounded-[8px] border border-g-300 bg-p-900">
           <div className="flex items-center gap-2 border-b border-white/10 px-3 py-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-ok animate-pulse-dot" />
+            <span
+              className={cn(
+                'h-1.5 w-1.5 rounded-full',
+                !estActif() || consoleUrl
+                  ? 'bg-ok animate-pulse-dot'
+                  : consoleErreur
+                    ? 'bg-err'
+                    : 'bg-warn animate-pulse-dot',
+              )}
+            />
             <span className="type-micro text-p-300">
-              Connecté · {vm.nom} · {vm.os}
+              {!estActif()
+                ? `Démonstration · ${vm.nom} · ${vm.os}`
+                : consoleUrl
+                  ? `Connecté · ${vm.nom} · ${vm.os}`
+                  : consoleErreur
+                    ? `Échec de connexion · ${vm.nom}`
+                    : `Connexion à la console de ${vm.nom}…`}
             </span>
           </div>
-          <pre className="flex-1 overflow-auto px-4 py-3 font-mono text-[12.5px] leading-relaxed text-[#C9E4CA]">
+
+          {!estActif() ? (
+            <pre className="flex-1 overflow-auto px-4 py-3 font-mono text-[12.5px] leading-relaxed text-[#C9E4CA]">
 {`Ubuntu 24.04.1 LTS ${vm.nom} tty1
 
 ${vm.nom} login: ops
@@ -1178,7 +1231,33 @@ ops@${vm.nom}:~$ systemctl is-system-running
 running
 
 ops@${vm.nom}:~$ _`}
-          </pre>
+            </pre>
+          ) : consoleChargement ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <span className="type-micro text-p-300">Ouverture de la console…</span>
+            </div>
+          ) : consoleErreur ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+              <p className="text-[13px] font-semibold text-white">Impossible d’ouvrir la console</p>
+              <p className="max-w-md text-[12.5px] leading-relaxed text-p-300">{consoleErreur.message}</p>
+              {consoleErreur.correlationId && (
+                <div className="w-full max-w-xs [color-scheme:light]">
+                  <CopyField label="Identifiant de corrélation" value={consoleErreur.correlationId} />
+                </div>
+              )}
+              <Button size="sm" variant="secondary" onClick={ouvrirConsole}>
+                Réessayer
+              </Button>
+            </div>
+          ) : consoleUrl ? (
+            <iframe
+              src={consoleUrl}
+              title={`Console de ${vm.nom}`}
+              className="flex-1 border-0"
+              allow="clipboard-read; clipboard-write"
+            />
+          ) : null}
         </div>
       </Drawer>
 
