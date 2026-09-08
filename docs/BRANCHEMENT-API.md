@@ -1,4 +1,6 @@
-# Branchement API — vague 1 : la couture données
+# Branchement API — la couture données
+
+Ce document décrit la couture ; `CLAUDE.md` en donne le résumé.
 
 Quand `NEXT_PUBLIC_API_URL` est renseignée (`.env.local`), l’interface parle au
 backend FastAPI ; sans elle, tout vient de `src/lib/mock/` comme avant. Les
@@ -71,7 +73,10 @@ visible dans `/app/taches` ; visite sans session → `/login`. Mode maquette
 
 ## Vague 2 — mutations branchées (vérifié 2026-09-05, 23/23 verts)
 
-Scénario `/tmp/w2-verif.mjs` (Chromium système, backend local) :
+Scénario `/tmp/w2-verif.mjs` (Chromium système, backend local), non versionné —
+la suite d'intégration versionnée qui lui succède est `tests/integration/`
+(`bun run test:integration`, backend réel dev01, voir son en-tête et
+`docs/PLAN-ARCHITECTURE-SUITE.md` §3) :
 
 - VM : création par l’assistant UI (`POST /vms/lot` → `202`, la taille par
   défaut 2×4 vCPU répond `402` — quota, le toast porte le motif) ; arrêt et
@@ -157,3 +162,117 @@ panneaux Web Cloud, membres (utilisateur embarqué), moyens, sessions, jetons.
 - Bannières dégradées `424` (`integration`/`dateDonnees`) et erreurs de
   champs `422` vers les formulaires : transportées (`ApiError.champs`,
   toast), pas encore câblées écran par écran.
+
+## État réel par collection (2026-09-08)
+
+Quatre états, et pas un de plus :
+
+| État | Sens |
+|---|---|
+| **réel** | le backend répond et pilote un amont réel (Nova, Neutron, Cinder, Magnum, Octavia, Designate, MinIO, Zimbra, LiteLLM/OpenRouter, SSH) |
+| **persisté** | le backend répond depuis sa base ; il n'y a pas d'amont à piloter par nature (membres, jetons, tickets, factures, journal d'audit…) |
+| **simulé côté backend** | le backend répond `2xx`/`202` mais l'amont est un stub vide ou l'exécuteur n'appelle rien : un faux succès |
+| **maquette seule** | la collection n'est pas dans le registre, ou l'écran lit une graine : rien ne part vers le backend même en mode API |
+
+Dérivé le 2026-09-08 par lecture du code backend (`synelia-cloud-backend`,
+`packages/openstack/synelia_openstack/` pour les connecteurs `*Simule` /
+`*OpenStack`/`*Reel`, `apps/synelia/synelia/modules/<module>/service.py` pour
+leur usage réel dans les exécuteurs de mutation), pas vérifié en direct
+collection par collection — seuls les points déjà vérifiés lors des passes
+2026-09-04/05/07 sont marqués comme tels.
+
+| Collection | Endpoint | Module backend | État | Remarque |
+|---|---|---|---|---|
+| `vms` | `/vms` | `vms` | réel | Création, arrêt/démarrage, redimensionnement, suppression, instantané (création) **et restauration** réels (`ComputeOpenStack`). La restauration d'instantané (`ExecuteurVmRestore`) a longtemps été un faux succès (mémoire `vm-snapshot-restore-fake-success-bug`) ; le code actuel a un `etape()` réel (`amont().restaurer` = `rebuild_server`) — corrigé côté backend depuis, ce document le dit à jour. |
+| `espaces` | `/espaces` | `espaces` | réel | Keystone (projet) + Neutron (réseau) via `IdentiteOpenStack`. |
+| `volumes` | `/volumes` | `stockage` | réel | Cinder (`BlockStorageOpenStack`). |
+| `buckets` | `/buckets` | `stockage` | réel | MinIO (`MinioReel`). |
+| `cles-s3` | `/cles-s3` | `stockage` | réel | MinIO. |
+| `clusters` | `/kubernetes` | `kubernetes` | réel | Magnum (`MagnumOpenStack`). |
+| `reseaux` | `/reseaux` | `reseau` | réel | Neutron. |
+| `ips` | `/ips` | `reseau` | réel | IP flottantes, Neutron. |
+| `groupes-securite` | `/groupes-securite` | `reseau` | réel | Neutron. |
+| `load-balancers` | `/load-balancers` | `reseau` | réel | Octavia. |
+| `tunnels` | `/vpn` | `reseau` | réel | Neutron VPNaaS. |
+| `plans-sauvegarde` | `/sauvegarde/plans` | `sauvegarde` | réel | Réel et honnête sur l'échec. |
+| `points-restauration` | `/sauvegarde/points` | `sauvegarde` | réel | |
+| `plans-pra` | `/pra` | `pra` | réel | |
+| `conformite-sauvegarde` | `/sauvegarde/conformite` | `sauvegarde` | réel | Tableau calculé depuis les données réelles de sauvegarde. |
+| `projets` | `/projets` | `projets` | réel | PaaS : Magnum/`K8sWorkloadReel`, dépôts (`DepotsReel`). |
+| `deploiements` | `/deploiements` | `deploiements` | réel | |
+| `domaines-applicatifs` | `/domaines-applicatifs` | `projets` (`router_domaines`) | réel | |
+| `factures` | `/facturation/factures` | `facturation` | persisté | |
+| `souscriptions` | `/facturation/souscriptions` | `facturation` | persisté | |
+| `moyens-paiement` | `/facturation/moyens-paiement` | `facturation` | persisté | |
+| `memberships` | `/membres` | `membres` | persisté | |
+| `invitations` | `/invitations` | `membres` (`router_invitations`) | persisté | |
+| `jetons-api` | `/securite/cles-api` | `securite` | persisté | |
+| `sessions` | `/securite/sessions` | `securite` | persisté | |
+| `tickets` | `/support/tickets` | `support` | persisté | |
+| `jobs` | `/travaux` | `travaux` | persisté | Lecture d'état ; les exécuteurs qu'un travail suit sont réels ou non selon leur propre ligne dans cette table. |
+| `organisations` | `/organisations` | `organisations` | persisté | |
+| `offres` | `/admin/catalogue/offres` | `admin_catalogue` | persisté | |
+| `backends` | `/admin/backends` | `admin` | réel | `capacite_plateforme()` via Nova, réel depuis 2026-09-07. |
+| `incidents` | `/admin/statut/incidents` | `admin` | persisté | |
+| `equipe-synelia` | `/admin/equipe` | `admin` | persisté | |
+| `hebergements` | `/web/hebergements` | `web_hebergement` (`router_hebergements`) | réel | Nova + SSH + Network. |
+| `sites-web` | `/web/sites` | `web_hebergement` (`router_sites`) | réel | SSH (déploiement/retrait de sites). |
+| `serveurs-bases` | `/web/bases` | `web_hebergement` (`router_bases`) | simulé côté backend | Aucun MariaDB mutualisé derrière — à ne pas confondre avec la collection `bases-managees` (`/bases`), réelle, qui provisionne une VM Nova dédiée par base. |
+| `domaines` | `/web/domaines` | `web_domaines` | simulé côté backend | `RegistrarOpenStack` hérite intégralement de `RegistrarSimule` sans surcharger une seule méthode : commande, transfert, code-auth renvoient des valeurs figées même en mode `openstack`. |
+| `messageries` | `/web/emails` | `web_emails` | réel | Zimbra (`ZimbraReel`, SOAP admin). |
+| `drives` | `/web/drive` | `web_drive` | réel | SSH + règles de load-balancer réelles. |
+| `certificats` | `/web/ssl` | `web_ssl` | réel, non vérifié en direct | `AcmeReel` fait de vrais appels HTTP ; pas de `SYNELIA_ACME_URL` configurée sur le laboratoire au dernier relevé. |
+| `cles-smtp` | `/web/smtp/cles` | `web_smtp` | réel | `RelaisSmtpReel`. |
+| `webhooks-smtp` | `/web/smtp/webhooks` | `web_smtp` | persisté | Configuration seule (URL, secret) ; aucun appel amont à leur création. |
+| `zones-dns` | `/web/dns` | `web_dns` | réel | Designate (`DesignateOpenStack`). |
+| `sauvegardes-web` | `/web/backup` | `web_backup` | réel | Instantané/restauration/test via `Compute` ; le code note que ce chemin était un no-op complet avant d'être câblé. |
+| `devis` | `/facturation/devis` | `facturation` | persisté | |
+| `bases-managees` | `/bases` | `bases` | réel | VM Nova dédiée par base (`ComputeOpenStack`), pas un moteur mutualisé — à ne pas confondre avec `serveurs-bases` ci-dessus. |
+| `regles-alertes` | `/observabilite/alertes` | `observabilite` | persisté | Règles seules ; pas d'amont par nature (comme une règle RBAC). |
+| `impayes` | `/admin/facturation/impayes` | `admin` | persisté | |
+| `agents-ia` | `/ia/agents` | `ia_agents` | réel | LiteLLM/OpenRouter. |
+| `modeles-ia` | `/ia/modeles` | `ia_agents` | persisté (catalogue) | Seuls les modèles `invocable: true` sont réellement appelés via LiteLLM/OpenRouter à l'exécution. |
+| `connaissances-ia` | `/ia/connaissances` | `ia_agents` (`connaissances.py`) | simulé côté backend, sauf `SYNELIA_QDRANT_URL` définie | Le code se déclare explicitement « réel seulement si `SYNELIA_QDRANT_URL` est défini... sans cette variable, tout reste simulé et sans réseau » (docstring du fichier). Présence de la variable sur dev01 : à vérifier. |
+| `flux-ia` | `/ia/flux` | `ia_agents` (`flux.py`) | réel | Passerelle LiteLLM + recherche documentaire. |
+| `cles-ia` | `/ia/cles` | `ia_agents` | réel | Gestion de clés côté LiteLLM. |
+| `parc-instances` | `/admin/marketplace/instances` | `admin` | persisté | Inventaire, lecture seule. |
+| `campagnes-maj` | `/admin/marketplace/campagnes` | `admin` | simulé côté backend | `ExecuteurMaj.terminer()` ne fait que `definir_statut(..., "terminee")` en base — aucun appel amont. |
+| `vagues-migration` | `/admin/migration/campagnes` | `admin` | simulé côté backend | `ExecuteurMigration.terminer()` ne fait que `definir_statut(..., "terminee")` en base — aucun appel amont. |
+| `tickets-plateforme` | `/admin/tickets` | `admin` | persisté | |
+| `jobs-plateforme` | `/admin/travaux` | `admin` | persisté | |
+| `attestations-generees` | `/attestations` | `conformite` | persisté | Générées depuis les données de conformité déjà en base. |
+| `snapshots-<vmId>` (motif) | `/vms/{id}/instantanes` | `vms` | réel | |
+| `services-<projetId>` (motif) | `/projets/{id}/services` | `projets`/`applications` | réel | |
+| `variables-<projetId>` (motif) | `/projets/{id}/variables` | `projets` | réel | `env_projet()` fait réellement atteindre le conteneur applicatif déployé (Docker Compose ou Deployment k8s) — pas un simple aller-retour DB. |
+| `elevations-<id>` (motif) | `/admin/equipe/{id}/elevation` | `admin` | persisté | |
+
+### Maquette seule
+
+Clés lues par `useCollection` sans entrée dans `REGISTRE_COLLECTIONS` (ni motif
+à suffixe) : la graine locale s'affiche même en mode API.
+
+- `bases-hebergement`, `certifications-catalogue`, `comptes-fichiers`,
+  `correspondances-sso`, `taches-web` — pas d'équivalent backend identifié à
+  ce jour.
+- `placements` — le backend expose pourtant `PUT /admin/placements` : c'est un
+  écart du registre, pas une absence de capacité backend. À ajouter au
+  registre si l'écran doit devenir réel.
+- `services-projet` (littéral, pas un identifiant de projet) — désigne la vue
+  « tous les projets » des racines de section ; `endpointDe()` le distingue
+  explicitement de `services-<projetId>` (voir le commentaire du code) et ne
+  lui donne pas d'endpoint.
+
+Hors `useCollection` : les pages de la vitrine (`(site)/…` — offres,
+témoignages, équipe, communauté, histoire, souveraineté, datacenters,
+`marketplace/[service]`, pages légales) lisent `src/lib/mock/` par conception,
+dans les deux modes — c'est du contenu public éditorial, pas une donnée de
+tenant, il n'y a pas de gain à le rendre dynamique ici. Les séries de
+supervision (`seededSeries`) et `LogPeek` sur les écrans d'observabilité
+restent des graines tant que ces écrans ne sont pas branchés (§ « Reste pour
+la vague 3 » ci-dessus). Un grand nombre de `[id]/page.tsx` serveur sous
+`/app` et `/admin` importent `src/lib/mock/` — vérifié sur `vms/[vm]` et
+`espaces/[id]` : c'est uniquement pour `generateMetadata` (titre d'onglet), la
+donnée affichée vient du composant client voisin (`vue.tsx`) via
+`useCollection`/`useEntite`. Une ressource créée uniquement par l'API aura donc
+un titre d'onglet générique (« … introuvable ») mais un contenu de page
+correct — un défaut cosmétique, pas un défaut de données.

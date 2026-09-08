@@ -1,8 +1,18 @@
 # Synelia Cloud — repères pour travailler sur ce dépôt
 
-Maquette fonctionnelle d'une plateforme de gestion de cloud multi-tenant :
-vitrine publique, espace client, espace super admin. **Toutes les données sont
-fictives** et vivent dans `src/lib/mock/`. Aucun appel réseau, aucune base.
+Plateforme de gestion de cloud multi-tenant : vitrine publique, espace client,
+espace super admin. La console Next.js a deux modes de fonctionnement, décidés
+**à la construction** par `NEXT_PUBLIC_API_URL` (Next inline la variable dans
+le bundle) : sans elle, tout vient de `src/lib/mock/` et aucun appel réseau ne
+part ; avec elle, les collections du registre (`src/lib/api/collections.ts`)
+lisent et **écrivent** sur le backend FastAPI (dépôt frère
+`synelia-cloud-backend`), qui pilote un vrai OpenStack (Nova, Neutron, Cinder,
+Magnum, Octavia, Designate), MinIO, Zimbra, Designate et LiteLLM/OpenRouter.
+
+La couture entre les deux modes (`estActif()`, le registre, les hooks) est
+décrite dans `docs/BRANCHEMENT-API.md`, qui tient aussi l'état réel/persisté/
+simulé/maquette de chaque collection — n'employez pas le mot « maquette » pour
+désigner l'application, réservez-le au mode sans `NEXT_PUBLIC_API_URL`.
 
 Le cahier des charges d'origine (`SPECBUILDSYNELIACLOUD.md`, 1143 lignes) et la
 charte graphique (`Design.md`) ne sont pas dans le dépôt : ils ont été fournis en
@@ -21,6 +31,13 @@ décisions déjà prises.
 | Lint | `bun run lint` |
 | Audit du rendu | `bun run build && bun run start` puis `node outils/audit.mjs` |
 | Contrat d'API | `bun run api:spec` — régénère `docs/api/openapi.json` |
+| Tests unitaires | `bun run test` (= `bun test src`, borné à `src/` — le glob par défaut de bun matcherait aussi `tests/integration/*.spec.ts`) |
+| Tests d'intégration (backend réel) | `bun run test:integration` — `tests/integration/`, à la main, voir son en-tête |
+| Dérive du contrat | `bun run api:derive` — `types.ts` ↔ `openapi.json`, informatif |
+
+La construction fige le mode : `NEXT_PUBLIC_API_URL= bun run build` force le
+mode maquette même avec un `.env.local` présent — une variable déjà dans
+l'environnement l'emporte sur `.env.local`.
 
 **Tout passe par bun** — `bun install`, `bun run`, `bunx`. Jamais npm, yarn ni
 pnpm, pas même pour un essai : chacun écrit son propre fichier de verrouillage et
@@ -39,9 +56,11 @@ l'installation locale de la distante. Ne remettez pas de caret.
 
 ### Le contrat d'API
 
-`docs/api/openapi.json` (OpenAPI 3.0.3, 527 opérations) décrit l'API que le
-backend doit servir pour remplacer `src/lib/mock/`. Il est **généré** par
-`outils/openapi/` : ne l'éditez pas à la main, éditez le générateur, qui refuse
+`docs/api/openapi.json` (OpenAPI 3.0.3) décrit l'API — le générateur affiche le
+compte d'opérations à chaque exécution. Le backend le sert déjà et le
+consomme : `uv run tools/contrat_sync.py ../synelia-cloud` côté backend copie
+`openapi.json` et régénère ses modèles. Il est **généré** par `outils/openapi/`
+côté frontend : ne l'éditez pas à la main, éditez le générateur, qui refuse
 d'écrire un document incohérent — référence morte, `operationId` en doublon,
 paramètre de chemin non déclaré. Les conventions — enveloppe `{ erreur }`,
 asynchrone par travail de provisioning, confirmation par le nom sur les actions
@@ -50,15 +69,24 @@ amont tombe — sont détaillées dans `docs/api/README.md`. Les noms de champs
 reprennent `src/lib/types.ts` à l'identique : l'interface les consomme tels
 quels.
 
+`bun run api:derive` compare `src/lib/types.ts` au contrat (table de
+correspondance `outils/contrat/correspondances.ts`, noms non alignés entre les
+deux fichiers) et signale la dérive — informatif tant que
+`CONTRAT_STRICT`/`--strict` n'est pas posé.
+
 Il a remplacé une première version rédigée à la main : trois cents opérations de
 JSON tenues à jour manuellement dérivent au premier ajout. Un contrat qui décrit
 un écran disparu est pire qu'un contrat incomplet.
 
 ### L'audit
 
-`outils/audit.mjs` ouvre les 191 routes de `outils/routes.json` dans Chromium et
+`outils/audit.mjs` ouvre les routes de `outils/routes.json` dans Chromium et
 relève : erreurs console et HTTP, débordement horizontal, contraste sous le seuil
 WCAG AA, boutons sans nom accessible, titres d'onglet laissés par défaut.
+
+L'audit tourne **en mode maquette** (sans `NEXT_PUBLIC_API_URL`) : ses zéros ne
+disent rien du mode API, que couvrent les tests d'intégration
+(`tests/integration/`, `docs/BRANCHEMENT-API.md`).
 
 ```
 bun add -d playwright          # une fois, si absent
@@ -114,7 +142,7 @@ Deux garde-fous appris en les posant :
 corriger, refactorer, choisir une dépendance : à chaque fois. Il impose la
 solution la plus paresseuse qui marche — se demander d'abord si le besoin
 existe, réutiliser ce qui est déjà là, une ligne plutôt que cinquante, aucune
-dépendance nouvelle sans raison. Cette maquette a 106 routes et un seul jeu de
+dépendance nouvelle sans raison. Ce portail a un grand nombre de routes et un seul jeu de
 composants : ce qu'on n'ajoute pas est ce qu'on n'aura pas à maintenir en
 cohérence partout.
 
@@ -136,7 +164,9 @@ SSO. Sur fond violet foncé, utiliser `m-400` — `m-600` n'y tient pas le contr
 **Cinq états par écran** : chargement en squelettes, vide avec une phrase qui
 explique la valeur, erreur avec identifiant de corrélation copiable, droits
 insuffisants en grisé nommant le rôle requis, dégradé quand une intégration
-externe ne répond pas.
+externe ne répond pas. En mode API, `chargement`/`erreur` viennent de
+`useCollection` et le dégradé de `useLectureDegradable`
+(`src/lib/api/degradable.ts`, `424`).
 
 **Une action interdite n'est jamais masquée** : elle est désactivée, avec une
 infobulle qui nomme le rôle requis. Enveloppez-la dans `GatedAction`.
@@ -156,12 +186,44 @@ libellé dit « non désactivable » porte `disabled`, il n'est pas simplement m
 
 ## L'atelier — l'état mutable de la démonstration
 
-`src/components/app/atelier.tsx` garde, le temps de la session, les collections
-qui ont été modifiées. Une collection jamais touchée n'existe pas dans l'état :
-la lecture retombe sur la graine importée de `src/lib/mock/`, si bien que le
-rendu serveur et le premier rendu client restent identiques. Un rechargement
-complet remet la démonstration à zéro, et le menu du compte propose
-« Réinitialiser la démonstration » dès qu'une collection a bougé.
+L'atelier est l'état mutable **du mode maquette** et, dans les deux modes,
+l'hôte du cache distant (`CACHE_DISTANT`). En mode maquette,
+`src/components/app/atelier.tsx` garde, le temps de la session, les
+collections qui ont été modifiées. Une collection jamais touchée n'existe pas
+dans l'état : la lecture retombe sur la graine importée de `src/lib/mock/`, si
+bien que le rendu serveur et le premier rendu client restent identiques. Un
+rechargement complet remet la démonstration à zéro, et le menu du compte
+propose « Réinitialiser la démonstration » dès qu'une collection a bougé.
+
+### Le mode API
+
+`estActif()` (`src/lib/api/client.ts`) dit si la construction porte
+`NEXT_PUBLIC_API_URL`. Le registre `collections.ts` fait la loi : une nouvelle
+collection n'existe côté API que si elle y a une entrée (ou un des quatre
+motifs à suffixe — `snapshots-`, `services-`, `variables-`, `elevations-`) ;
+sans entrée, l'écran garde la graine, même en mode API.
+
+`useCollection(nom, graine)` charge `GET {endpoint}?parPage=200` dans un effet
+au montage — la graine s'affiche jusqu'à la première réponse, donc pas de
+divergence d'hydratation. `creer`/`modifier`/`supprimer` appellent
+`POST`/`PATCH {id}`/`DELETE {id}?confirmation=` puis `recharger()`.
+`useEntite` lit une fiche dont l'item n'est pas (encore) dans la liste chargée
+— le cas d'une ressource créée par l'API hors du jeu figé. `useOperation()`
+exécute `appel` et, si la réponse est un `TravailDistant` (`202`), suit son
+avancement par `suivreTravail` (sondage `GET /travaux/{id}` toutes les 1,5 s).
+
+**Règle : `effet` ne rejoue jamais en mode API** — c'est le chemin maquette
+seul, la mutation distante partirait en double si les deux se déclenchaient.
+`effetFinal` reste la réconciliation commune aux deux modes et fait
+`recharger()` après un appel réel.
+
+La confirmation d'un `DELETE` utilise `champConfirmation()` — dix collections
+confirment par un champ autre que `nom` (`code` pour un espace, `adresse` pour
+une IP…), relevées des `exiger_confirmation()` du backend.
+
+Le détail de la couture (transport, session, opérations, recherche,
+onboarding) et l'état réel/persisté/simulé/maquette de chaque collection sont
+dans `docs/BRANCHEMENT-API.md`.
 
 ```tsx
 const parc = useCollection<VM>('vms', VMS)     // items, creer, modifier, supprimer
@@ -250,6 +312,14 @@ Trois raisons, et ce sont trois règles à tenir :
 cas de succès — un renouvellement de certificat qui échoue laisse le certificat
 « en émission », il ne le marque pas actif.
 
+En mode API, le job affiché est le `TravailProvisioning` du backend, sondé
+toutes les 1,5 s et fondu dans la collection `jobs` par `integrerTravail` : les
+durées annoncées et les deux échecs volontaires décrits ci-dessus ne
+s'appliquent qu'en mode maquette, le backend a ses propres échecs réels. Le
+backend partage le vocabulaire des workflows via `contrat_sync`
+(`tools/exporter_frontend.mts` lit `src/lib/mock/workflows.ts`) : renommer un
+workflow ici casse le backend.
+
 La forme sans catalogue (`etapes: string[]` au site d'appel) reste disponible et
 reste juste quand les étapes **dépendent d'un choix de l'utilisateur** : la
 restauration granulaire nomme l'étape « Parcourir l'arborescence » ou « Copier
@@ -267,8 +337,12 @@ notification qui dit ce qui se passerait, sans prétendre le faire.
 
 Les formulaires de la vitrine passent par `FormulaireSite`
 (`src/components/site/formulaire.tsx`) : champs obligatoires réellement exigés,
-accusé de réception avec référence, et la phrase qui dit qu'aucun courriel ne
-part d'une maquette.
+accusé de réception avec référence. En mode API, le formulaire de contact
+(`(site)/entreprises/formulaire-contact.tsx`) et la demande de devis du
+simulateur (`(site)/simulateur/vue.tsx`) postent réellement sur
+`/public/contact` et `/public/devis` via `requete()` ; la mention « aucun
+courriel ne part » ne s'affiche que sans `envoi`/hors mode API — déjà
+conditionnelle dans le code, aucun correctif nécessaire ici.
 
 ## Architecture de la navigation
 
@@ -484,7 +558,7 @@ Pas de `notFound()`, pas de `!` sur un `find`, et la garde après tous les hooks
 | Sujet | Décision |
 |---|---|
 | Polices | Montserrat + Open Sans + JetBrains Mono. La charte interdit Inter, qui était pourtant suggéré par le cahier : la charte gagne. |
-| Socle du PaaS | Kubernetes managé via OpenStack Magnum, namespace par projet. Sans effet sur la maquette. |
+| Socle du PaaS | Kubernetes managé via OpenStack Magnum, namespace par projet. Réel depuis 2026-09-07 : Magnum pilote les clusters clients et le cluster PaaS des projets. |
 | Sauvegardes | Un onglet par ressource **et** une section transverse `Sauvegardes & PRA` dans Infrastructure, qui porte les plans réutilisables, la restauration granulaire et le tableau de conformité 3-2-1 qu'on montre à un auditeur. |
 | Revendeurs | **Il n'y en a pas.** Deux acteurs seulement : l'organisation cliente et le super admin qui exploite la plateforme. Ni rôle `reseller_admin`, ni type d'organisation indirect, ni grille d'achat partenaire, ni revshare, ni page `/partenaires`. Une offre porte **un** prix, celui de la vitrine. |
 | Marketplace | Supprimé en tant qu'univers. Le partagé (messagerie, drive, CMS) est passé dans Web Cloud, attaché au domaine ; le dédié est devenu des modèles déployables dans un projet. |
@@ -515,6 +589,14 @@ lien, deux ancres imbriquées étant du HTML que React refuse d'hydrater.
 
 **Hooks.** Jamais de `useState` après un retour anticipé.
 
+**Le mode est figé à la construction.** Un `next start` bâti avec `.env.local`
+sert le mode API : l'audit y verra des appels réseau, ce n'est pas une
+régression de l'audit lui-même.
+
+**`waitForURL` dans un test Playwright.** `/\/app/` matche déjà
+`https://app.synelia…/login` (le nom d'hôte contient `app`) : utiliser
+`u => u.pathname.startsWith('/app')`.
+
 **Titres d'onglet.** Une page `'use client'` ne peut pas exporter `metadata` : un
 `layout.tsx` minimal à côté d'elle nomme le segment.
 
@@ -536,10 +618,13 @@ lien, deux ancres imbriquées étant du HTML que React refuse d'hydrater.
    affichés viennent du jeu de données. Rendre la promesse vraie demanderait que
    `GatedAction` intercepte le clic au lieu de le bloquer — ce qui change le
    comportement arbitré « désactivée, jamais masquée ». À trancher.
-5. **Tableau de bord client** — `/app` est un composant serveur : il lit la
-   graine `AUDIT` et non le journal de l'atelier. Les entrées créées pendant la
-   session n'y apparaissent donc pas, contrairement à `/admin/audit` et
-   `/app/securite`.
+5. ~~Tableau de bord client — composant serveur figé sur la graine.~~ Résolu
+   par le commit `fb0e455` (2026-09-08) : `/app/tableau-de-bord.tsx` est un
+   composant client qui lit les collections réelles (`espaces`, `vms`,
+   `clusters`, `projets` via `useCollection`) ; les deux tuiles sans
+   contrepartie backend (services managés, sièges) s'affichent en
+   « démonstration » plutôt que de se faire passer pour du réel. Les écarts
+   réel/simulé restants sont tenus dans `docs/BRANCHEMENT-API.md`.
 
 Fait depuis : le découpage du catalogue par famille (`/admin/catalogue`, cinq
 tuiles qui filtrent le tableau), le journal d'audit alimenté par l'atelier —
@@ -572,7 +657,8 @@ est terminé**, sans pull request. Le travail lui-même se fait sur une branche
 La séquence, à la fin de chaque changement :
 
 ```
-bun run typecheck && bun run lint && bun run build   # avant tout
+bun run typecheck && bun run lint && bun run test && bun run build   # avant tout
+bun run api:derive                                                # informatif
 git push -u origin claude/<sujet>
 git checkout main && git pull && git merge claude/<sujet>
 ```
@@ -622,3 +708,17 @@ Pour déployer à la main malgré tout — un correctif urgent, un essai :
 est créé côté Vercel et continue. Vérifiez avec
 `bunx vercel@latest inspect <url> --token "$VERCEL_TOKEN"` plutôt que de
 relancer, sinon vous empilez les déploiements.
+
+### Deux cibles
+
+**Vercel** — ce qui précède reste vrai. Production Vercel : mode maquette au
+dernier relevé (2026-09-05), à confirmer (`bunx vercel@latest env ls --token
+"$VERCEL_TOKEN"` ne montrait pas `NEXT_PUBLIC_API_URL` en production à cette
+date ; `$VERCEL_TOKEN` n'était pas dans l'environnement au moment d'écrire
+cette phrase, la commande n'a pas pu être rejouée).
+
+**Bac à sable dev01** — `https://app.synelia.dev01.ovh.smile.ci`, construit
+**avec** `NEXT_PUBLIC_API_URL` par
+`/var/lib/synelia-cloud/deploy-dev01/redeploy-front.sh [ref]` (défaut
+`branchement-api` — la branche de travail actuelle est `dev01-real-infra`,
+passez-la explicitement : `redeploy-front.sh dev01-real-infra`).
