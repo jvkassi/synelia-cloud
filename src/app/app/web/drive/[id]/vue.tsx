@@ -13,7 +13,7 @@ import { PageHeader, Card, CardHeader, Callout, KeyValueList } from '@/component
 import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { ConfigurationServicePanel } from '@/components/business/configuration-service'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { creerRessource, estActif, modifierRessource, requete, supprimerRessource } from '@/lib/api/client'
@@ -26,6 +26,7 @@ const ONGLETS = [
 ]
 
 export function VueDrive({ id }: { id: string }) {
+  const maintenant = useMaintenant()
   const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
   const drives = useCollection<DriveDomaine>('drives', DRIVES)
@@ -250,7 +251,7 @@ export function VueDrive({ id }: { id: string }) {
             />
             <StatTile
               libelle="Dernière sauvegarde"
-              valeur={d.derniereSauvegarde ? relatif(d.derniereSauvegarde) : '—'}
+              valeur={d.derniereSauvegarde ? relatif(d.derniereSauvegarde, maintenant) : '—'}
               ton="ok"
             />
           </div>

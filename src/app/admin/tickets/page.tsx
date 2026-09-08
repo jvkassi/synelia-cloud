@@ -16,7 +16,7 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { Timeline } from '@/components/composition/flow'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { estActif, modifierRessource, requete } from '@/lib/api/client'
@@ -60,6 +60,7 @@ const TON_GRAVITE: Record<Ticket['gravite'], 'err' | 'warn' | 'info' | 'neutral'
 }
 
 export default function TicketsAdmin() {
+  const maintenant = useMaintenant()
   const { autorise, refus } = useApp()
   const tickets = useCollection<Ticket>('tickets-plateforme', TICKETS_PLATEFORME)
   // En mode API, organisations et intervenants viennent du backend : les
@@ -377,7 +378,7 @@ export default function TicketsAdmin() {
                   aligne: 'right',
                   cle: (t) => t.createdAt,
                   rendu: (t) => (
-                    <span className="text-[11.5px] text-g-500">{relatif(t.createdAt)}</span>
+                    <span className="text-[11.5px] text-g-500">{relatif(t.createdAt, maintenant)}</span>
                   ),
                 },
                 {
@@ -498,7 +499,7 @@ export default function TicketsAdmin() {
                           </span>
                         </td>
                         <td className="px-3 py-2.5 text-[11.5px] text-g-500">
-                          {relatif(m.dernierAcces)}
+                          {relatif(m.dernierAcces, maintenant)}
                         </td>
                       </tr>
                     )

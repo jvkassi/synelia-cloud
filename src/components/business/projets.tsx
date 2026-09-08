@@ -11,6 +11,7 @@ import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Card, PageHeader } from '@/components/composition/card'
 import { EmptyState } from '@/components/composition/states'
 import type { Projet } from '@/lib/types'
+import { useMaintenant } from '@/components/app/contexte'
 
 /**
  * En-tête commun aux sections d'un projet.
@@ -140,6 +141,7 @@ export function couleurStatut(statut: ServiceProjet['statut']): string {
  * sa dernière sauvegarde, une tâche planifiée sa prochaine exécution.
  */
 export function CarteService({ service }: { service: ServiceProjet }) {
+  const maintenant = useMaintenant()
   const domaines = domainesDuService(service.id)
   const href = `/app/applications/projets/${service.projetId}/${service.id}`
 
@@ -183,7 +185,7 @@ export function CarteService({ service }: { service: ServiceProjet }) {
             <Ligne cle="Dernière sauvegarde">
               {service.sauvegarde ? (
                 <span>
-                  {relatif(service.sauvegarde.dernier)} · {service.sauvegarde.taille}
+                  {relatif(service.sauvegarde.dernier, maintenant)} · {service.sauvegarde.taille}
                 </span>
               ) : (
                 <span className="text-warn">aucun plan</span>
@@ -199,11 +201,11 @@ export function CarteService({ service }: { service: ServiceProjet }) {
             </Ligne>
             <Ligne cle="Dernière exécution">
               <span className={service.cron.statut === 'echec' ? 'text-err' : undefined}>
-                {relatif(service.cron.derniereExecution)} ·{' '}
+                {relatif(service.cron.derniereExecution, maintenant)} ·{' '}
                 {service.cron.statut === 'echec' ? 'échec' : 'succès'}
               </span>
             </Ligne>
-            <Ligne cle="Prochaine">{relatif(service.cron.prochaine)}</Ligne>
+            <Ligne cle="Prochaine">{relatif(service.cron.prochaine, maintenant)}</Ligne>
           </>
         )}
 

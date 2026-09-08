@@ -20,7 +20,7 @@ import { Drawer } from '@/components/ui/overlay'
 import { PageHeader, Card, CardHeader, Callout, KeyValueList } from '@/components/composition/card'
 import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { creerRessource, estActif, modifierRessource, requete } from '@/lib/api/client'
@@ -34,6 +34,7 @@ function genererMotDePasse(longueur = 20): string {
 }
 
 export function VueServeurBases({ id }: { id: string }) {
+  const maintenant = useMaintenant()
   const { autorise, refus } = useApp()
   const executer = useOperation()
   const serveurs = useCollection<ServeurBases>('serveurs-bases', SERVEURS_BASES)
@@ -153,7 +154,7 @@ export function VueServeurBases({ id }: { id: string }) {
             />
             <StatTile
               libelle="Dernière sauvegarde"
-              valeur={s.sauvegarde.derniere === '—' ? '—' : relatif(s.sauvegarde.derniere)}
+              valeur={s.sauvegarde.derniere === '—' ? '—' : relatif(s.sauvegarde.derniere, maintenant)}
               detail={s.sauvegarde.frequence}
               ton={s.sauvegarde.derniere === '—' ? 'neutral' : 'ok'}
             />

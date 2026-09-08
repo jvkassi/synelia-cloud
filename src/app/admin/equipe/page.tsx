@@ -16,7 +16,7 @@ import { ConfirmDialog, Drawer, Modal } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { RoleMatrix } from '@/components/business/rbac-canvas'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import {
@@ -102,6 +102,7 @@ const POLITIQUE = [
 ]
 
 export default function Equipe() {
+  const maintenant = useMaintenant()
   // Le journal vit dans l'atelier : les actions faites pendant la session s'y
   // ajoutent, refus compris. Sans atelier touché, il retombe sur la graine.
   const { journal: AUDIT } = useAtelier()
@@ -309,7 +310,7 @@ export default function Equipe() {
                           )}
                         </td>
                         <td className="px-3 py-2.5 text-[11.5px] text-g-500">
-                          {relatif(m.dernierAcces)}
+                          {relatif(m.dernierAcces, maintenant)}
                         </td>
                         <td className="px-3 py-2.5 text-right">
                           <span className="flex items-center justify-end gap-1.5">
@@ -399,7 +400,7 @@ export default function Equipe() {
                         >
                           {a.result === 'ok' ? 'Succès' : a.result === 'refuse' ? 'Refusé' : 'Erreur'}
                         </Badge>
-                        <span className="text-[10.5px] text-g-500">{relatif(a.ts)}</span>
+                        <span className="text-[10.5px] text-g-500">{relatif(a.ts, maintenant)}</span>
                       </span>
                     </div>
                   ))}
@@ -857,7 +858,7 @@ export default function Equipe() {
                 { cle: 'Équipe', valeur: detail.equipe },
                 { cle: 'Rôle', valeur: ROLE_LABEL[detail.role] ?? detail.role },
                 { cle: 'Compte privilégié', valeur: detail.privilegie ? 'Oui' : 'Non' },
-                { cle: 'Dernier accès', valeur: `${dateHeure(detail.dernierAcces)} (${relatif(detail.dernierAcces)})` },
+                { cle: 'Dernier accès', valeur: `${dateHeure(detail.dernierAcces)} (${relatif(detail.dernierAcces, maintenant)})` },
                 { cle: 'Deuxième facteur', valeur: 'Actif — obligatoire' },
                 {
                   cle: 'Tickets en cours',

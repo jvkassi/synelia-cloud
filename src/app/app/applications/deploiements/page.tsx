@@ -14,7 +14,7 @@ import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { DeploymentPipeline, SecurityFindings } from '@/components/business/paas'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
 import { estActif, requete } from '@/lib/api/client'
@@ -43,6 +43,7 @@ const TON_STATUT: Record<Deployment['statut'], 'ok' | 'err' | 'warn' | 'info'> =
 }
 
 export default function Deploiements() {
+  const maintenant = useMaintenant()
   const { autorise, refus } = useApp()
   const lesDeploiements = useCollection<Deployment>('deploiements', DEPLOIEMENTS)
   const [ouvert, setOuvert] = useState<string | null>(
@@ -253,7 +254,7 @@ export default function Deploiements() {
                 cle: (d) => d.startedAt,
                 rendu: (d) => (
                   <span className="block text-right">
-                    <span className="block text-[12px] text-ink">{relatif(d.startedAt)}</span>
+                    <span className="block text-[12px] text-ink">{relatif(d.startedAt, maintenant)}</span>
                     <span className="block text-[10.5px] text-g-500">{dateHeure(d.startedAt)}</span>
                   </span>
                 ),

@@ -13,7 +13,7 @@ import { Modal } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { GaugeCircle, QuotaBar, StackedBar, StatTile } from '@/components/composition/metrics'
 import { DegradedState } from '@/components/composition/states'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import {
@@ -113,6 +113,7 @@ interface IdentifiantsSmtp {
 }
 
 export default function Smtp() {
+  const maintenant = useMaintenant()
   const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
   const cles = useCollection<CleSmtp>('cles-smtp', SMTP.cles)
@@ -694,7 +695,7 @@ with smtplib.SMTP("smtp.synelia.cloud", 587) as s:
                         <span className="block text-[12.5px] font-semibold text-ink">{c.nom}</span>
                         <span className="block text-[11px] text-g-500">
                           Créée le {dateCourte(c.creee)} · dernier envoi{' '}
-                          {c.derniereUtilisation ? relatif(c.derniereUtilisation) : 'jamais'}
+                          {c.derniereUtilisation ? relatif(c.derniereUtilisation, maintenant) : 'jamais'}
                         </span>
                       </span>
                     </span>

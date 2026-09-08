@@ -17,7 +17,7 @@ import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { LogPeek } from '@/components/business/observabilite'
 import { JOURNAL_PASSERELLE } from '@/lib/mock/ia'
-import { useApp, useEspace } from '@/components/app/contexte'
+import { useApp, useEspace, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire, useOperation } from '@/components/app/actions'
 
@@ -25,6 +25,7 @@ const TON_STATUT = { active: 'ok', suspendue: 'warn', revoquee: 'neutral' } as c
 const LIBELLE_STATUT = { active: 'Active', suspendue: 'Suspendue', revoquee: 'Révoquée' } as const
 
 export default function Passerelle() {
+  const maintenant = useMaintenant()
   const espace = useEspace()
   const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
@@ -132,7 +133,7 @@ export default function Passerelle() {
       cle: (c) => c.derniereUtilisation ?? '',
       rendu: (c) => (
         <span className="text-[12px] text-g-500">
-          {c.derniereUtilisation ? relatif(c.derniereUtilisation) : 'Jamais'}
+          {c.derniereUtilisation ? relatif(c.derniereUtilisation, maintenant) : 'Jamais'}
         </span>
       ),
     },

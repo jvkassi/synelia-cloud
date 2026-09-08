@@ -10,12 +10,13 @@ import { Button, ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile, QuotaBar } from '@/components/composition/metrics'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire } from '@/components/app/actions'
 import { creerRessource, estActif } from '@/lib/api/client'
 
 export default function ListeDrives() {
+  const maintenant = useMaintenant()
   const { autorise, refus } = useApp()
   const collection = useCollection<DriveDomaine>('drives', DRIVES)
   // Le backend filtre déjà par organisation ; la maquette restreint au
@@ -120,7 +121,7 @@ export default function ListeDrives() {
                 </div>
                 {d.derniereSauvegarde && (
                   <p className="mt-2 text-[11px] text-g-500">
-                    Dernière sauvegarde {relatif(d.derniereSauvegarde)}
+                    Dernière sauvegarde {relatif(d.derniereSauvegarde, maintenant)}
                   </p>
                 )}
               </>

@@ -13,7 +13,7 @@ import { Field, Input, Select, Switch } from '@/components/ui/field'
 import { PageHeader, Card, CardHeader, Callout, KeyValueList } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { Stepper } from '@/components/composition/flow'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
 import { estActif, requete } from '@/lib/api/client'
@@ -40,6 +40,7 @@ function granulariteDu(perimetre: string): 'complete' | 'fichiers' | 'base' | 'b
 }
 
 export function VueSauvegarde({ id }: { id: string }) {
+  const maintenant = useMaintenant()
   const { autorise, refus } = useApp()
   const [onglet, setOnglet] = useState('executions')
   const [etape, setEtape] = useState(1)
@@ -110,7 +111,7 @@ export function VueSauvegarde({ id }: { id: string }) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
           libelle="Dernière exécution"
-          valeur={dernier ? relatif(dernier.ts) : '—'}
+          valeur={dernier ? relatif(dernier.ts, maintenant) : '—'}
           detail={dernier?.taille}
           ton={dernier?.statut === 'ok' ? 'ok' : 'warn'}
         />

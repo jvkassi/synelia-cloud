@@ -26,6 +26,7 @@ import { AnomalieCard } from '@/components/business/paas'
 import { useCollection } from '@/components/app/atelier'
 import { useServicesProjet } from '@/lib/api/services-projet'
 import { EnteteProjet, StatutServiceBadge, couleurStatut, ProjetIntrouvable } from '@/components/business/projets'
+import { useMaintenant } from '@/components/app/contexte'
 
 /**
  * Observabilité d'un projet — les quatre formats autorisés, et rien de plus.
@@ -36,6 +37,7 @@ import { EnteteProjet, StatutServiceBadge, couleurStatut, ProjetIntrouvable } fr
  * portail répond à « est-ce que ça va, et depuis quand ? » puis ouvre la porte.
  */
 export function VueObservabilite({ id }: { id: string }) {
+  const maintenant = useMaintenant()
   const lesProjets = useCollection<Projet>('projets', PROJETS)
   const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
 
@@ -212,7 +214,7 @@ export function VueObservabilite({ id }: { id: string }) {
                     <span className="block truncate text-[11px] text-g-500">
                       {s.emplacement.site} · {s.emplacement.backend}
                       {s.emplacement.namespace && ` · ${s.emplacement.namespace}`} · maj{' '}
-                      {relatif(s.derniereMaj)}
+                      {relatif(s.derniereMaj, maintenant)}
                     </span>
                   </span>
                   <StatutServiceBadge statut={s.statut} />

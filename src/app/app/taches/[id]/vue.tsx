@@ -13,6 +13,7 @@ import { JobTracker } from '@/components/business/paas'
 import { LIBELLE_STATUT_JOB, TON_STATUT_JOB } from '@/lib/workflows'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
+import { useMaintenant } from '@/components/app/contexte'
 
 /**
  * Les tâches nées pendant la session vivent dans l'atelier, pas dans le jeu
@@ -20,6 +21,7 @@ import { BoutonAction } from '@/components/app/actions'
  * ici, les liens de la maquette pointant vers les deux jeux.
  */
 export function VueSuiviTache({ id }: { id: string }) {
+  const maintenant = useMaintenant()
   const jobs = useCollection<ProvisioningJob>('jobs', JOBS)
   const { reprendreJob } = useAtelier()
   const job = jobs.items.find((j) => j.id === id) ?? JOBS_PLATEFORME.find((j) => j.id === id)
@@ -148,7 +150,7 @@ export function VueSuiviTache({ id }: { id: string }) {
                         <span className="block truncate text-[12.5px] text-ink group-hover:text-p-700">
                           {j.label}
                         </span>
-                        <span className="block text-[11px] text-g-500">{relatif(j.startedAt)}</span>
+                        <span className="block text-[11px] text-g-500">{relatif(j.startedAt, maintenant)}</span>
                       </span>
                       <Badge size="sm" tone={TON_STATUT_JOB[j.statut]} className="mt-0.5 shrink-0">
                         {LIBELLE_STATUT_JOB[j.statut]}

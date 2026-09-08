@@ -18,10 +18,11 @@ import { GatedAction } from '@/components/ui/display'
 import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { ICONE_TYPE } from '@/components/business/projets'
-import { useApp, useEspace } from '@/components/app/contexte'
+import { useApp, useEspace, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 
 export default function Projets() {
+  const maintenant = useMaintenant()
   const { autorise, refus } = useApp()
   const espace = useEspace()
   const lesProjets = useCollection<Projet>('projets', PROJETS)
@@ -186,7 +187,7 @@ export default function Projets() {
                       <span className="shrink-0 text-[11px] text-g-500">{svc.environnement}</span>
                     </Link>
                     <span className="shrink-0 text-[11px] text-g-500">
-                      {relatif(svc.derniereMaj)}
+                      {relatif(svc.derniereMaj, maintenant)}
                     </span>
                   </li>
                 ))}

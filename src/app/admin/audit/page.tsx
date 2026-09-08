@@ -17,7 +17,7 @@ import { Drawer } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useLectureDegradable } from '@/lib/api/degradable'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, useOperation } from '@/components/app/actions'
@@ -50,6 +50,7 @@ const ONGLETS = [
 ]
 
 export default function AuditAdmin() {
+  const maintenant = useMaintenant()
   // Journal réel plateforme (`GET /admin/audit`, toutes organisations) quand le backend est
   // joignable ; sinon l'atelier — les actions faites pendant la session s'y ajoutent, refus
   // compris, et sans atelier touché il retombe sur la graine.
@@ -313,7 +314,7 @@ export default function AuditAdmin() {
                   rendu: (a) => (
                     <span className="block">
                       <span className="block text-[11px] text-ink">{dateHeure(a.ts)}</span>
-                      <span className="block text-[10px] text-g-500">{relatif(a.ts)}</span>
+                      <span className="block text-[10px] text-g-500">{relatif(a.ts, maintenant)}</span>
                     </span>
                   ),
                 },
@@ -933,7 +934,7 @@ synelia-audit verify audit-plateforme-2026-07-19_2026-08-19.csv \\
             <KeyValueList
               colonnes={1}
               items={[
-                { cle: 'Horodatage', valeur: `${dateHeure(detail.ts)} (${relatif(detail.ts)})` },
+                { cle: 'Horodatage', valeur: `${dateHeure(detail.ts)} (${relatif(detail.ts, maintenant)})` },
                 {
                   cle: 'Acteur',
                   valeur: `${detail.actor.nom} — ${detail.actor.email} (${detail.actor.type})`,

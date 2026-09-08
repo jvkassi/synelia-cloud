@@ -12,8 +12,10 @@ import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { LIBELLE_STATUT_JOB, TON_STATUT_JOB } from '@/lib/workflows'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
+import { useMaintenant } from '@/components/app/contexte'
 
 export default function CentreDeTaches() {
+  const maintenant = useMaintenant()
   const jobs = useCollection<ProvisioningJob>('jobs', JOBS)
   const { reprendreJob } = useAtelier()
 
@@ -86,7 +88,7 @@ export default function CentreDeTaches() {
       id: 'debut',
       entete: 'Démarrée',
       cle: (j) => j.startedAt,
-      rendu: (j) => <span className="text-[12px] text-g-700">{relatif(j.startedAt)}</span>,
+      rendu: (j) => <span className="text-[12px] text-g-700">{relatif(j.startedAt, maintenant)}</span>,
     },
     {
       id: 'actions',

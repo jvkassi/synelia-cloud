@@ -15,7 +15,7 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { Regle321 } from '@/components/business/infra'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { estActif, requete, supprimerRessource } from '@/lib/api/client'
 import { useLectureDegradable } from '@/lib/api/degradable'
 import { useAtelier, useCollection } from '@/components/app/atelier'
@@ -124,6 +124,7 @@ const ONGLETS = [
 ]
 
 export default function Securite() {
+  const maintenant = useMaintenant()
   // Journal réel (`GET /audit`) quand le backend est joignable ; sinon l'atelier — les
   // actions faites pendant la session s'y ajoutent, refus compris, et sans atelier touché il
   // retombe sur la graine. C'est le même journal que `/admin/audit` y voit pour cette organisation.
@@ -318,7 +319,7 @@ export default function Securite() {
                     rendu: (a) => (
                       <span className="block">
                         <span className="block text-[11.5px] text-ink">{dateHeure(a.ts)}</span>
-                        <span className="block text-[10px] text-g-500">{relatif(a.ts)}</span>
+                        <span className="block text-[10px] text-g-500">{relatif(a.ts, maintenant)}</span>
                       </span>
                     ),
                   },
@@ -714,7 +715,7 @@ export default function Securite() {
                     </div>
                     <p className="mt-1 text-[11.5px] text-g-500">
                       <span className="font-mono">{x.ip}</span> · {x.lieu} · ouverte{' '}
-                      {relatif(x.ouverte)} · dernière activité {relatif(x.derniereActivite)}
+                      {relatif(x.ouverte, maintenant)} · dernière activité {relatif(x.derniereActivite, maintenant)}
                     </p>
                   </div>
                   <BoutonAction
@@ -816,7 +817,7 @@ export default function Securite() {
                         </Badge>
                       </td>
                       <td className="px-3 py-2 text-[11.5px] text-g-500">
-                        {c.dernierSucces ? relatif(c.dernierSucces) : 'Jamais'}
+                        {c.dernierSucces ? relatif(c.dernierSucces, maintenant) : 'Jamais'}
                       </td>
                       <td className="px-3 py-2">
                         <Badge tone={conforme321(c) ? 'ok' : 'warn'} dot size="sm">
@@ -991,7 +992,7 @@ synelia-audit verify audit-org-dba-2026-07-19_2026-08-19.csv \\
             <KeyValueList
               colonnes={1}
               items={[
-                { cle: 'Horodatage', valeur: `${dateHeure(evenement.ts)} (${relatif(evenement.ts)})` },
+                { cle: 'Horodatage', valeur: `${dateHeure(evenement.ts)} (${relatif(evenement.ts, maintenant)})` },
                 { cle: 'Acteur', valeur: `${evenement.actor.nom} (${evenement.actor.email})` },
                 {
                   cle: 'Rôle au moment de l’action',

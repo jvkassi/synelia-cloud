@@ -12,8 +12,10 @@ import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/
 import { StatTile } from '@/components/composition/metrics'
 import { useCollection } from '@/components/app/atelier'
 import { estActif } from '@/lib/api/client'
+import { useMaintenant } from '@/components/app/contexte'
 
 export default function ListeSauvegardes() {
+  const maintenant = useMaintenant()
   const collection = useCollection<SauvegardeWeb>('sauvegardes-web', SAUVEGARDES_WEB)
   const plans = estActif() ? collection.items : sauvegardesWebDeLOrg()
   const echecs = plans.flatMap((p) => p.executions).filter((e) => e.statut !== 'ok')
@@ -45,7 +47,7 @@ export default function ListeSauvegardes() {
         />
         <StatTile
           libelle="Dernière exécution"
-          valeur={plans[0]?.executions[0] ? relatif(plans[0].executions[0].ts) : '—'}
+          valeur={plans[0]?.executions[0] ? relatif(plans[0].executions[0].ts, maintenant) : '—'}
           ton="ok"
         />
         <StatTile

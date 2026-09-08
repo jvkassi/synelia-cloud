@@ -18,7 +18,7 @@ import { StatTile } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { ConfirmDialog } from '@/components/ui/overlay'
 import { EnteteProjet, ICONE_TYPE, ProjetIntrouvable } from '@/components/business/projets'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { useServicesProjet } from '@/lib/api/services-projet'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
@@ -32,6 +32,7 @@ import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/a
  * qu'est-ce que je récupère si je restaure maintenant ?
  */
 export function VueBackup({ id }: { id: string }) {
+  const maintenant = useMaintenant()
   const lesProjets = useCollection<Projet>('projets', PROJETS)
   const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
   const executer = useOperation()
@@ -238,7 +239,7 @@ export function VueBackup({ id }: { id: string }) {
                   actions={
                     <span className="flex items-center gap-2">
                       <Badge tone="ok" size="sm" dot>
-                        {relatif(plan.dernier)}
+                        {relatif(plan.dernier, maintenant)}
                       </Badge>
                       <GatedAction
                         autorise={autorise('backup.restore')}

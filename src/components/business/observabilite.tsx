@@ -9,6 +9,7 @@ import { SearchInput, SegmentedControl } from '@/components/ui/field'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader } from '@/components/composition/card'
 import { DegradedState } from '@/components/composition/states'
+import { useMaintenant } from '@/components/app/contexte'
 
 export type Periode = '24h' | '7j' | '30j'
 
@@ -239,6 +240,7 @@ export function EventList({
   hrefSortie?: string
   className?: string
 }) {
+  const maintenant = useMaintenant()
   const tons = {
     critique: 'err',
     majeure: 'warn',
@@ -264,7 +266,7 @@ export function EventList({
               <p className="text-[12.5px] leading-snug text-ink">{e.message}</p>
               <p className="mt-0.5 text-[11.5px] text-g-500">
                 {e.ressource}
-                {e.site && ` · ${e.site}`} · {relatif(e.ts)}
+                {e.site && ` · ${e.site}`} · {relatif(e.ts, maintenant)}
               </p>
             </div>
           </li>

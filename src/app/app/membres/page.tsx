@@ -24,7 +24,7 @@ import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/component
 import { StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
 import { RoleMatrix } from '@/components/business/rbac-canvas'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { creerRessource, estActif, requete, supprimerRessource } from '@/lib/api/client'
@@ -78,6 +78,7 @@ interface LigneMembre {
 }
 
 export default function Membres() {
+  const maintenant = useMaintenant()
   const { autorise, refus, role: roleCourant } = useApp()
   const executer = useOperation()
   const adhesions = useCollection<Membership>('memberships', MEMBERSHIPS)
@@ -289,7 +290,7 @@ export default function Membres() {
                   cle: (l) => l.dernier ?? '',
                   rendu: (l) => (
                     <span className="text-[11.5px] text-g-500">
-                      {l.dernier ? relatif(l.dernier) : 'Jamais connecté'}
+                      {l.dernier ? relatif(l.dernier, maintenant) : 'Jamais connecté'}
                     </span>
                   ),
                 },
@@ -346,7 +347,7 @@ export default function Membres() {
                     <span className="block text-[11px] text-g-500">
                       {ROLE_LABEL[i.role]} ·{' '}
                       {i.envoyee
-                        ? `envoyée ${relatif(i.envoyee)}${i.par ? ` par ${i.par}` : ''}`
+                        ? `envoyée ${relatif(i.envoyee, maintenant)}${i.par ? ` par ${i.par}` : ''}`
                         : `expire le ${i.expire ? dateCourte(i.expire) : '—'}`}
                     </span>
                   </span>
@@ -825,7 +826,7 @@ export default function Membres() {
                 },
                 {
                   cle: 'Dernière connexion',
-                  valeur: membreDetail.dernier ? relatif(membreDetail.dernier) : 'Jamais connecté',
+                  valeur: membreDetail.dernier ? relatif(membreDetail.dernier, maintenant) : 'Jamais connecté',
                 },
                 { cle: 'Statut', valeur: membreDetail.statut },
               ]}

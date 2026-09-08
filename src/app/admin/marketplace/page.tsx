@@ -20,7 +20,7 @@ import { ConfirmDialog, Drawer } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { HealthBadge, StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection, type Entite } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { creerRessource, estActif, requete } from '@/lib/api/client'
@@ -57,6 +57,7 @@ function certifierFiche(slug: string): Promise<unknown> {
 }
 
 export default function MarketplaceAdmin() {
+  const maintenant = useMaintenant()
   const { autorise, refus } = useApp()
   const parc = useCollection<InstanceParc>('parc-instances', PARC_INSTANCES)
   const campagnes = useCollection<CampagneMaj>('campagnes-maj', CAMPAGNES_MAJ)
@@ -415,7 +416,7 @@ export default function MarketplaceAdmin() {
                   cle: (i) => i.derniereSauvegarde,
                   rendu: (i) => (
                     <span className="text-[11.5px] text-g-500">
-                      {relatif(i.derniereSauvegarde)}
+                      {relatif(i.derniereSauvegarde, maintenant)}
                     </span>
                   ),
                 },

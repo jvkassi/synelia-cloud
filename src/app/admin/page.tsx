@@ -35,6 +35,7 @@ import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
 import type { Backend, Incident, ProvisioningJob, Ticket } from '@/lib/types'
 import { useLectureDegradable } from '@/lib/api/degradable'
+import { useMaintenant } from '@/components/app/contexte'
 
 /** `GET /admin/tableau-de-bord` : même forme que `SYNTHESE_PLATEFORME`. */
 interface SynthesePlateformeDistante {
@@ -54,6 +55,7 @@ interface SynthesePlateformeDistante {
 }
 
 export default function VuePlateforme() {
+  const maintenant = useMaintenant()
   // Le journal vit dans l'atelier : les actions faites pendant la session s'y
   // ajoutent, refus compris. Sans atelier touché, il retombe sur la graine.
   const { journal: AUDIT, reprendreJob } = useAtelier()
@@ -512,7 +514,7 @@ export default function VuePlateforme() {
                   </div>
                   <p className="mt-0.5 text-[10.5px] text-g-700">
                     <span className="font-mono">{t.numero}</span> ·{' '}
-                    {t.assigneA ?? 'non assigné'} · {relatif(t.createdAt)}
+                    {t.assigneA ?? 'non assigné'} · {relatif(t.createdAt, maintenant)}
                   </p>
                 </Link>
               ))}
@@ -541,7 +543,7 @@ export default function VuePlateforme() {
                   </p>
                   <p className="mt-0.5 font-mono text-[10.5px] text-p-700">{a.action}</p>
                   <p className="mt-0.5 text-[10.5px] text-g-500">
-                    {a.scope.label} · {relatif(a.ts)}
+                    {a.scope.label} · {relatif(a.ts, maintenant)}
                   </p>
                 </div>
               ))}

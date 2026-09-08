@@ -25,7 +25,7 @@ import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/
 import { HealthBadge, StatTile } from '@/components/composition/metrics'
 import { EventList, GrilleSparkCharts, LiensSortie, LogPeek } from '@/components/business/observabilite'
 import { DegradedState } from '@/components/composition/states'
-import { useApp, useEspace } from '@/components/app/contexte'
+import { useApp, useEspace, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import {
@@ -99,6 +99,7 @@ const PERIMETRES = [
 ]
 
 export default function Observabilite() {
+  const maintenant = useMaintenant()
   const espace = useEspace()
   const { autorise, refus, pousser } = useApp()
   const alertes = useCollection<AlerteRegle>('regles-alertes', REGLES_ALERTES)
@@ -497,7 +498,7 @@ export default function Observabilite() {
                   <span className="min-w-0">
                     <span className="block text-[12.5px] font-semibold text-ink">{e.message}</span>
                     <span className="block text-[11px] text-g-500">
-                      {e.ressource} · {dateHeure(e.ts)} · {relatif(e.ts)}
+                      {e.ressource} · {dateHeure(e.ts)} · {relatif(e.ts, maintenant)}
                     </span>
                   </span>
                   <span className="flex shrink-0 items-center gap-2">

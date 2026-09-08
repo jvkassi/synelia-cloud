@@ -30,7 +30,7 @@ import {
   ICONE_TYPE,
   ProjetIntrouvable,
 } from '@/components/business/projets'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { useOperation } from '@/components/app/actions'
 import { creerRessource, estActif } from '@/lib/api/client'
@@ -45,6 +45,7 @@ import { useServicesProjet } from '@/lib/api/services-projet'
  * position ; la barre en tient un seul, et le panneau garde le projet.
  */
 export function VueProjet({ id }: { id: string }) {
+  const maintenant = useMaintenant()
   const lesProjets = useCollection<Projet>('projets', PROJETS)
   const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
   const { autorise, refus } = useApp()
@@ -86,7 +87,7 @@ export function VueProjet({ id }: { id: string }) {
               Espace <span className="font-mono">{projet.espaceId.toUpperCase()}</span>
             </Badge>
             <span className="text-[11.5px] text-g-500">
-              créé le {dateCourte(projet.cree)} · dernière activité {relatif(synthese.derniereMaj)}
+              créé le {dateCourte(projet.cree)} · dernière activité {relatif(synthese.derniereMaj, maintenant)}
             </span>
           </>
         }

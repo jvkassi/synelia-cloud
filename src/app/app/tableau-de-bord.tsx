@@ -15,7 +15,7 @@ import { EventList } from '@/components/business/observabilite'
 import { MODELES } from '@/lib/mock/modeles'
 import { ServiceCard } from '@/components/business/service-card'
 import { PanneauOnboarding } from '@/components/app/onboarding'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { ApiError } from '@/lib/api/client'
 import type { EspaceCloud, K8sCluster, Projet, VM } from '@/lib/types'
@@ -51,6 +51,7 @@ const LIBELLES_ACTION: Record<string, string> = {
 }
 
 export default function TableauDeBord() {
+  const maintenant = useMaintenant()
   const s = SYNTHESE_CLIENT
   // Le sélecteur d'organisation de la barre supérieure lit `organisations` /
   // `organisationId` du contexte, pas `ORG_COURANTE` : en mode API, c'est la
@@ -475,7 +476,7 @@ export default function TableauDeBord() {
                 </>
               ),
               detail: e.detail,
-              horodatage: relatif(e.ts),
+              horodatage: relatif(e.ts, maintenant),
             }))}
         />
       </Card>

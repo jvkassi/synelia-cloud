@@ -12,6 +12,7 @@ import {
 import { useRouter } from 'next/navigation'
 import type { EspaceCloud, Role } from '@/lib/types'
 import { can, messageRefus, type Permission } from '@/lib/rbac'
+import { MAINTENANT } from '@/lib/format'
 import { ESPACES, ESPACE_DEFAUT } from '@/lib/mock/iaas'
 import {
   MES_ORGANISATIONS,
@@ -67,6 +68,13 @@ interface CtxValeur {
   /** Session réhydratée (toujours vrai en mode maquette). */
   pret: boolean
   connecte: boolean
+  /**
+   * Référence « maintenant » pour `relatif()`. Reste à `MAINTENANT` (figé)
+   * en mode maquette, et pendant le rendu serveur et la première passe
+   * cliente en mode API — donc pas de divergence d'hydratation — puis
+   * bascule sur l'heure réelle une fois montée (§ voir l'effet ci-dessous).
+   */
+  maintenant: string
 }
 
 const Ctx = createContext<CtxValeur | null>(null)
@@ -93,6 +101,14 @@ export function AppProvider({
   const [session, setSession] = useState<SessionApi | null>(null)
   const [permissions, setPermissions] = useState<string[] | null>(null)
   const [pret, setPret] = useState(!api)
+  const [maintenant, setMaintenant] = useState(MAINTENANT)
+
+  // Bascule sur l'heure réelle une fois montée, en mode API seulement — le
+  // rendu serveur et la première passe cliente restent tous deux sur
+  // `MAINTENANT` (déterminisme d'hydratation), l'effet ne joue qu'après.
+  useEffect(() => {
+    if (api) setMaintenant(new Date().toISOString())
+  }, [api])
 
   // En mode API la session vit dans `localStorage` (voir `src/lib/api/`) :
   // on la relit au montage — jamais pendant le rendu serveur — puis on
@@ -237,6 +253,7 @@ export function AppProvider({
       deconnecter,
       pret,
       connecte: api ? !!session?.accessToken : true,
+      maintenant,
     }),
     [
       role,
@@ -254,6 +271,7 @@ export function AppProvider({
       changerOrganisation,
       deconnecter,
       pret,
+      maintenant,
     ],
   )
 
@@ -270,6 +288,16 @@ export function useApp(): CtxValeur {
   const v = useContext(Ctx)
   if (!v) throw new Error('useApp doit être utilisé dans un AppProvider')
   return v
+}
+
+/**
+ * Référence « maintenant » à passer en second argument de `relatif()` — voir
+ * `CtxValeur.maintenant`. Sans elle, `relatif()` retombe sur `MAINTENANT`
+ * figé, correct en mode maquette mais faux en mode API pour une donnée
+ * réelle (un horodatage d'aujourd'hui s'affichait « dans 20 j »).
+ */
+export function useMaintenant(): string {
+  return useApp().maintenant
 }
 
 /**

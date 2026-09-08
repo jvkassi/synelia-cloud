@@ -20,7 +20,7 @@ import { StatTile } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { DeploymentPipeline, SecurityFindings } from '@/components/business/paas'
 import { EnteteProjet, ProjetIntrouvable } from '@/components/business/projets'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { useServicesProjet } from '@/lib/api/services-projet'
 import { BoutonAction } from '@/components/app/actions'
@@ -49,6 +49,7 @@ const TON_STATUT: Record<Deployment['statut'], 'ok' | 'err' | 'warn' | 'info'> =
 }
 
 export function VueDeploiements({ id }: { id: string }) {
+  const maintenant = useMaintenant()
   const lesProjets = useCollection<Projet>('projets', PROJETS)
   const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
   const lesDeploiements = useCollection<Deployment>('deploiements', DEPLOIEMENTS)
@@ -185,7 +186,7 @@ export function VueDeploiements({ id }: { id: string }) {
                         </p>
                       )}
                       <p className="mt-0.5 text-[11px] text-g-500">
-                        {relatif(d.startedAt)} · {d.auteur}
+                        {relatif(d.startedAt, maintenant)} · {d.auteur}
                         {d.dureeS ? ` · ${duree(d.dureeS)}` : ''}
                       </p>
                     </div>

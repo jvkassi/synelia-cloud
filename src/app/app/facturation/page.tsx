@@ -34,7 +34,7 @@ import { Drawer } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { StackedBar, StatTile } from '@/components/composition/metrics'
 import { DataTable } from '@/components/composition/data-table'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { CostPreview } from '@/components/composition/flow'
@@ -147,6 +147,7 @@ async function telechargerPdfFacture(id: string, nomFichier: string): Promise<vo
 }
 
 export default function Facturation() {
+  const maintenant = useMaintenant()
   const { autorise, refus, perm } = useApp()
   const executer = useOperation()
   const lesFactures = useCollection<Invoice>('factures', FACTURES)
@@ -540,7 +541,7 @@ export default function Facturation() {
                       >
                         {dateCourte(f.echeance)}
                         {f.statut === 'impayee' && (
-                          <span className="block text-[10px]">{relatif(f.echeance)}</span>
+                          <span className="block text-[10px]">{relatif(f.echeance, maintenant)}</span>
                         )}
                       </span>
                     ) : (

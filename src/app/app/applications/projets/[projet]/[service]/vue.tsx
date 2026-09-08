@@ -46,7 +46,7 @@ import { EmplacementReel, StatutServiceBadge } from '@/components/business/proje
 import { ConfigurationServicePanel } from '@/components/business/configuration-service'
 import { configurationDuService } from '@/lib/configurations'
 import { modeleBySlug } from '@/lib/mock/modeles'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { creerRessource, estActif, requete, supprimerRessource } from '@/lib/api/client'
@@ -121,6 +121,7 @@ function ongletsDu(service: ServiceProjet) {
 }
 
 export function VueService({ id, projetId }: { id: string; projetId?: string }) {
+  const maintenant = useMaintenant()
   const services = useServices()
   const lesProjets = useCollection<Projet>('projets', PROJETS)
   const lesDomaines = useCollection<DomaineApplicatif>('domaines-applicatifs', DOMAINES_APPLICATIFS)
@@ -177,7 +178,7 @@ export function VueService({ id, projetId }: { id: string; projetId?: string }) 
             </Badge>
             <Badge tone="violet">{money(service.coutMensuel)}/mois</Badge>
             <span className="text-[11.5px] text-g-500">
-              dernière modification {relatif(service.derniereMaj)}
+              dernière modification {relatif(service.derniereMaj, maintenant)}
             </span>
           </>
         }
@@ -1076,6 +1077,7 @@ export function LigneDomaine({
   domaine: DomaineApplicatif
   portDefaut: number
 }) {
+  const maintenant = useMaintenant()
   const domaines = useCollection<DomaineApplicatif>('domaines-applicatifs', DOMAINES_APPLICATIFS)
   return (
     <div className="rounded-[8px] border border-g-300 p-3">
@@ -1174,7 +1176,7 @@ export function LigneDomaine({
             />
             {d.verification.verifieLe && (
               <span className="text-[11px] text-g-500">
-                dernière vérification {relatif(d.verification.verifieLe)}
+                dernière vérification {relatif(d.verification.verifieLe, maintenant)}
               </span>
             )}
             {d.verification.correlationId && (
@@ -1393,6 +1395,7 @@ function TiroirDomaine({
 // ─── Déploiements ─────────────────────────────────────────────────────
 
 function Deploiements({ service }: { service: ServiceProjet }) {
+  const maintenant = useMaintenant()
   const deploiements = service.appId ? deploiementsDeLApp(service.appId).slice(0, 6) : []
 
   if (deploiements.length === 0) {
@@ -1430,7 +1433,7 @@ function Deploiements({ service }: { service: ServiceProjet }) {
                     <span className="font-mono text-[12.5px] font-semibold text-ink">
                       {d.version}
                     </span>
-                    <span className="block text-[11px] text-g-500">{relatif(d.startedAt)}</span>
+                    <span className="block text-[11px] text-g-500">{relatif(d.startedAt, maintenant)}</span>
                   </td>
                   <td className="px-3 py-2.5">
                     <span className="font-mono text-[11.5px] text-g-700">{d.commit ?? '—'}</span>

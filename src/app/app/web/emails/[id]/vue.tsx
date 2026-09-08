@@ -15,7 +15,7 @@ import { PageHeader, Card, CardHeader, Callout, KeyValueList } from '@/component
 import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { ConfigurationServicePanel } from '@/components/business/configuration-service'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { creerRessource, estActif, requete } from '@/lib/api/client'
@@ -29,6 +29,7 @@ const ONGLETS = [
 ]
 
 export function VueMessagerie({ id }: { id: string }) {
+  const maintenant = useMaintenant()
   const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
   const messageries = useCollection<MessagerieDomaine>('messageries', MESSAGERIES)
@@ -202,7 +203,7 @@ export function VueMessagerie({ id }: { id: string }) {
                           </Badge>
                         </td>
                         <td className="px-3 py-2.5 text-[11.5px] text-g-700">
-                          {b.derniereConnexion ? relatif(b.derniereConnexion) : 'jamais'}
+                          {b.derniereConnexion ? relatif(b.derniereConnexion, maintenant) : 'jamais'}
                         </td>
                         <td className="px-3 py-2.5">
                           <Badge

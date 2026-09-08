@@ -17,12 +17,13 @@ import { Button } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { StatTile, QuotaBar } from '@/components/composition/metrics'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
 import { estActif, modifierRessource } from '@/lib/api/client'
 
 export default function ListeBases() {
+  const maintenant = useMaintenant()
   const { autorise, refus } = useApp()
   const serveurs = useCollection<ServeurBases>('serveurs-bases', SERVEURS_BASES)
   // Le périmètre de l'organisation vient du jeu de données ; l'état vient de
@@ -117,7 +118,7 @@ export default function ListeBases() {
                   <p className="mt-1 text-[11.5px] text-g-500">
                     {m.sauvegarde.derniere === '—'
                       ? m.sauvegarde.frequence
-                      : `Sauvegarde ${relatif(m.sauvegarde.derniere)}`}
+                      : `Sauvegarde ${relatif(m.sauvegarde.derniere, maintenant)}`}
                   </p>
                 </>
               ) : (

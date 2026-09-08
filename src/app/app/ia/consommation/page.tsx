@@ -8,13 +8,14 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/card'
 import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
-import { useEspace } from '@/components/app/contexte'
+import { useEspace, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 
 const TON_STATUT = { active: 'ok', suspendue: 'warn', revoquee: 'neutral' } as const
 const LIBELLE_STATUT = { active: 'Active', suspendue: 'Suspendue', revoquee: 'Révoquée' } as const
 
 export default function ConsommationIA() {
+  const refMaintenant = useMaintenant()
   const espace = useEspace()
   const clesCol = useCollection<CleIA>('cles-ia', CLES_IA)
   const cles = clesCol.items.filter((c) => c.espaceId === espace.id)
@@ -91,7 +92,7 @@ export default function ConsommationIA() {
       cle: (c) => c.derniereUtilisation ?? '',
       rendu: (c) => (
         <span className="text-[12px] text-g-500">
-          {c.derniereUtilisation ? relatif(c.derniereUtilisation) : 'Jamais'}
+          {c.derniereUtilisation ? relatif(c.derniereUtilisation, refMaintenant) : 'Jamais'}
         </span>
       ),
     },

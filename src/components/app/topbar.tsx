@@ -36,7 +36,7 @@ import { Badge } from '@/components/ui/badge'
 import { Popover } from '@/components/ui/overlay'
 import { Logo, BadgeSuperAdmin } from '@/components/brand/logo'
 import { RechercheGlobale } from './recherche'
-import { useApp, useEspace } from './contexte'
+import { useApp, useEspace, useMaintenant } from './contexte'
 import { useAtelier, useCollection } from './atelier'
 
 const NOTIFICATIONS = [
@@ -494,6 +494,7 @@ function CentreDeTaches({ superAdmin }: { superAdmin: boolean }) {
 }
 
 function NotificationsPopover() {
+  const maintenant = useMaintenant()
   return (
     <Popover
       width="w-80"
@@ -525,7 +526,7 @@ function NotificationsPopover() {
                 <div className="min-w-0">
                   <p className="text-[12.5px] font-medium leading-snug text-ink">{n.titre}</p>
                   <p className="mt-0.5 text-[11.5px] text-g-500">{n.detail}</p>
-                  <p className="mt-0.5 text-[10.5px] text-g-500">{relatif(n.ts)}</p>
+                  <p className="mt-0.5 text-[10.5px] text-g-500">{relatif(n.ts, maintenant)}</p>
                 </div>
               </div>
             </div>

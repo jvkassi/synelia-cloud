@@ -30,6 +30,7 @@ import { StatTile, QuotaBar } from '@/components/composition/metrics'
 import { StatutServiceBadge } from '@/components/business/projets'
 import { useCollection } from '@/components/app/atelier'
 import { useLectureDegradable } from '@/lib/api/degradable'
+import { useMaintenant } from '@/components/app/contexte'
 
 /**
  * `GET /projets/synthese` : agrégats calculés côté backend sur l'organisation
@@ -48,6 +49,7 @@ interface SyntheseProjets {
 }
 
 export default function AccueilApplications() {
+  const maintenant = useMaintenant()
   // Le tableau de bord lit l'état de la session : un service créé ou arrêté
   // ailleurs doit se compter ici aussi.
   const lesProjets = useCollection<Projet>('projets', PROJETS)
@@ -79,7 +81,7 @@ export default function AccueilApplications() {
   const aSurveiller = [
     ...enEchec.map((s) => ({
       quoi: `${s.nom} — en échec`,
-      detail: `${s.environnement} · le service ne répond plus depuis ${relatif(s.derniereMaj)}.`,
+      detail: `${s.environnement} · le service ne répond plus depuis ${relatif(s.derniereMaj, maintenant)}.`,
       href: `/app/applications/projets/${s.projetId}/${s.id}`,
       rang: 0,
     })),
@@ -334,7 +336,7 @@ export default function AccueilApplications() {
                         {appById(d.appId)?.nom ?? d.appId} {d.version}
                       </span>
                       <span className="block text-[11px] text-g-500">
-                        {relatif(d.startedAt)} · {d.auteur}
+                        {relatif(d.startedAt, maintenant)} · {d.auteur}
                       </span>
                     </span>
                     <Badge

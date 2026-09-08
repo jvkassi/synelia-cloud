@@ -42,7 +42,7 @@ import { ConfirmDialog } from '@/components/ui/overlay'
 import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
-import { useApp, useEspace } from '@/components/app/contexte'
+import { useApp, useEspace, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 
 const ONGLETS = [
@@ -87,6 +87,7 @@ function ConsigneAnnotee({ texte }: { texte: string }) {
 }
 
 export function VueAgent({ agentId }: { agentId: string }) {
+  const maintenant = useMaintenant()
   const espace = useEspace()
   const { autorise, refus, pousser } = useApp()
   const [onglet, setOnglet] = useState('consigne')
@@ -609,7 +610,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                               {b.nom}
                             </span>
                             <span className="block text-[11px] text-g-500">
-                              {num(b.documents)} documents · indexée {relatif(b.derniereIndexation)}
+                              {num(b.documents)} documents · indexée {relatif(b.derniereIndexation, maintenant)}
                             </span>
                           </span>
                           <Badge
@@ -974,7 +975,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                     formateur={(v) => `${v} cas`}
                   />
                   <p className="mt-3 text-[12px] text-g-500">
-                    Dernier passage {relatif(agent.epreuves.dernierPassage)} ·{' '}
+                    Dernier passage {relatif(agent.epreuves.dernierPassage, maintenant)} ·{' '}
                     {pct((agent.epreuves.reussis / agent.epreuves.cas) * 100)} de réussite
                   </p>
                   {agent.epreuves.reussis / agent.epreuves.cas < 0.8 ? (
@@ -1119,7 +1120,7 @@ export function VueAgent({ agentId }: { agentId: string }) {
                         </p>
                         <p className="mt-1 text-[12px] text-ink">{a.correction}</p>
                         <p className="mt-1.5 text-[11px] text-g-500">
-                          {a.auteur} · {relatif(a.date)} · réutilisée {num(a.reutilisations)} fois
+                          {a.auteur} · {relatif(a.date, maintenant)} · réutilisée {num(a.reutilisations)} fois
                         </p>
                       </div>
                     ))}

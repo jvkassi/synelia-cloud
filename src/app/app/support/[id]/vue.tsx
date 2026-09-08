@@ -24,6 +24,7 @@ import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, useOperation } from '@/components/app/actions'
 import { creerRessource, modifierRessource } from '@/lib/api/client'
 import type { Ticket } from '@/lib/types'
+import { useMaintenant } from '@/components/app/contexte'
 
 const LIBELLE_STATUT: Record<Ticket['statut'], string> = {
   ouvert: 'Ouvert',
@@ -62,6 +63,7 @@ const ONGLETS = [
 ]
 
 export function VueTicket({ id }: { id: string }) {
+  const maintenant = useMaintenant()
   const executer = useOperation()
   const tickets = useCollection<Ticket>('tickets', TICKETS)
   const [onglet, setOnglet] = useState('echanges')
@@ -260,7 +262,7 @@ export function VueTicket({ id }: { id: string }) {
                   </span>
                   <span className="shrink-0 text-right">
                     <span className="block text-[11px] text-g-700">{dateHeure(m.date)}</span>
-                    <span className="block text-[10px] text-g-500">{relatif(m.date)}</span>
+                    <span className="block text-[10px] text-g-500">{relatif(m.date, maintenant)}</span>
                   </span>
                 </div>
                 <p className="mt-3 whitespace-pre-line text-[13px] leading-relaxed text-ink">
@@ -725,7 +727,7 @@ export function VueTicket({ id }: { id: string }) {
                         </Badge>
                       </div>
                       <p className="mt-0.5 font-mono text-[10.5px] text-g-500">
-                        {x.numero} · {relatif(x.createdAt)}
+                        {x.numero} · {relatif(x.createdAt, maintenant)}
                       </p>
                     </Link>
                   ))}

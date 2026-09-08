@@ -13,12 +13,13 @@ import { GatedAction } from '@/components/ui/display'
 import { PageHeader, Card, Callout } from '@/components/composition/card'
 import { HealthBadge, StatTile } from '@/components/composition/metrics'
 import { DataTable, type Colonne } from '@/components/composition/data-table'
-import { useApp, useEspace } from '@/components/app/contexte'
+import { useApp, useEspace, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { requete } from '@/lib/api/client'
 
 export default function ListeVms() {
+  const maintenant = useMaintenant()
   const { autorise, refus } = useApp()
   const espace = useEspace()
   const parc = useCollection<VM>('vms', VMS)
@@ -148,7 +149,7 @@ export default function ListeVms() {
       cle: (v) => v.derniereSauvegarde ?? '',
       rendu: (v) =>
         v.derniereSauvegarde ? (
-          <span className="text-[12px] text-g-700">{relatif(v.derniereSauvegarde)}</span>
+          <span className="text-[12px] text-g-700">{relatif(v.derniereSauvegarde, maintenant)}</span>
         ) : (
           <Badge tone="warn" size="sm">
             Non protégée

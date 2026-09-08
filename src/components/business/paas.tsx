@@ -19,6 +19,7 @@ import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, Callout } from '@/components/composition/card'
 import { CodeBlock } from '@/components/ui/display'
+import { useMaintenant } from '@/components/app/contexte'
 
 const ETAPE_LABELS: Record<string, { titre: string; detail: string }> = {
   build: { titre: 'Build', detail: 'Nixpacks, Dockerfile ou image pré-construite' },
@@ -224,6 +225,7 @@ export function SecurityFindings({
  * le raisonnement qui y conduit.
  */
 export function AnomalieCard({ anomalie, className }: { anomalie: Anomalie; className?: string }) {
+  const maintenant = useMaintenant()
   const [applique, setApplique] = useState(false)
   const tons = { critique: 'err', majeure: 'warn', mineure: 'info' } as const
 
@@ -236,7 +238,7 @@ export function AnomalieCard({ anomalie, className }: { anomalie: Anomalie; clas
               Anomalie détectée
             </Badge>
             <span className="text-[11.5px] text-g-500">
-              {anomalie.envNom} · {relatif(anomalie.detecteA)}
+              {anomalie.envNom} · {relatif(anomalie.detecteA, maintenant)}
             </span>
           </div>
           <h3 className="type-h2 mt-2">{anomalie.enonce}</h3>
@@ -329,6 +331,7 @@ export function JobTracker({
   job: ProvisioningJob
   className?: string
 }) {
+  const maintenant = useMaintenant()
   const total = job.taches.length
   const faites = job.taches.filter((t) => t.statut === 'ok').length
 
@@ -336,7 +339,7 @@ export function JobTracker({
     <Card className={className}>
       <CardHeader
         titre={job.label}
-        sousTitre={`Démarré ${relatif(job.startedAt)}${job.dureeS ? ` · durée ${duree(job.dureeS)}` : ''}`}
+        sousTitre={`Démarré ${relatif(job.startedAt, maintenant)}${job.dureeS ? ` · durée ${duree(job.dureeS)}` : ''}`}
         actions={
           <Badge
             tone={

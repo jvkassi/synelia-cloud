@@ -31,7 +31,7 @@ import { Timeline } from '@/components/composition/flow'
 import { EventList, GrilleSparkCharts, LiensSortie } from '@/components/business/observabilite'
 import { BackendGauge } from '@/components/business/infra'
 import { JobTracker } from '@/components/business/paas'
-import { useApp } from '@/components/app/contexte'
+import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { creerRessource, estActif, modifierRessource, requete } from '@/lib/api/client'
@@ -46,6 +46,7 @@ const ONGLETS = [
 ]
 
 export default function SantePlateforme() {
+  const maintenant = useMaintenant()
   const { autorise, refus } = useApp()
   const executer = useOperation()
   const jobs = useCollection<ProvisioningJob>('jobs-plateforme', JOBS_PLATEFORME)
@@ -835,7 +836,7 @@ export default function SantePlateforme() {
                       <td className="tnum px-3 py-2 text-[11.5px] text-g-700">
                         {j.dureeS ? duree(j.dureeS) : '—'}
                       </td>
-                      <td className="px-3 py-2 text-[11.5px] text-g-500">{relatif(j.startedAt)}</td>
+                      <td className="px-3 py-2 text-[11.5px] text-g-500">{relatif(j.startedAt, maintenant)}</td>
                       <td className="px-3 py-2">
                         <Badge
                           tone={
