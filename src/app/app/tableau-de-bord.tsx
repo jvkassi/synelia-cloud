@@ -15,6 +15,7 @@ import { EventList } from '@/components/business/observabilite'
 import { MODELES } from '@/lib/mock/modeles'
 import { ServiceCard } from '@/components/business/service-card'
 import { PanneauOnboarding } from '@/components/app/onboarding'
+import { useApp } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { ApiError } from '@/lib/api/client'
 import type { EspaceCloud, K8sCluster, Projet, VM } from '@/lib/types'
@@ -51,6 +52,14 @@ const LIBELLES_ACTION: Record<string, string> = {
 
 export default function TableauDeBord() {
   const s = SYNTHESE_CLIENT
+  // Le sélecteur d'organisation de la barre supérieure lit `organisations` /
+  // `organisationId` du contexte, pas `ORG_COURANTE` : en mode API, c'est la
+  // vraie organisation connectée. La reprendre ici évite qu'un client voie son
+  // vrai nom en haut d'écran et un autre nom, fictif, dans la salutation en
+  // dessous — deux vérités différentes sur le même tableau de bord.
+  const { api, organisations, organisationId } = useApp()
+  const orgActive = organisations.find((o) => o.id === organisationId) ?? organisations[0]
+  const nomOrg = orgActive?.nom ?? ORG_COURANTE.nom
   // Espaces Cloud, machines, clusters et projets ont un vrai backend
   // (`/espaces`, `/vms`, `/kubernetes`, `/projets`) : `useCollection` en sert
   // les données réelles quand l'API est active, et retombe sur la graine de
@@ -103,8 +112,12 @@ export default function TableauDeBord() {
   return (
     <div className="space-y-6">
       <PageHeader
-        titre={`Bonjour, voici l’état de ${ORG_COURANTE.nom}`}
-        sousTitre={`Organisation ${ORG_COURANTE.tenantPlan} · ${ORG_COURANTE.pays} · TVA ${ORG_COURANTE.tva} · données hébergées à Abidjan et Grand-Bassam.`}
+        titre={`Bonjour, voici l’état de ${nomOrg}`}
+        sousTitre={
+          api
+            ? 'Données hébergées à Abidjan et Grand-Bassam.'
+            : `Organisation ${ORG_COURANTE.tenantPlan} · ${ORG_COURANTE.pays} · TVA ${ORG_COURANTE.tva} · données hébergées à Abidjan et Grand-Bassam.`
+        }
         actions={
           <>
             <ButtonLink href="/app/espaces/new" variant="secondary" iconBefore={<Plus size={14} />}>
@@ -138,8 +151,12 @@ export default function TableauDeBord() {
         <StatTile
           libelle="Services managés"
           valeur={s.servicesManages}
-          detail="1 en provisioning · 1 mise à jour disponible"
-          ton="accent"
+          detail={
+            api
+              ? 'Démonstration — pas encore une lecture réelle'
+              : '1 en provisioning · 1 mise à jour disponible'
+          }
+          ton="violet"
           serie={trendSeries('svc', 24, 4, 6, 0)}
         />
         <StatTile
@@ -151,7 +168,11 @@ export default function TableauDeBord() {
         <StatTile
           libelle="Sièges utilisés"
           valeur={`${s.siegesUtilises}/${s.siegesSouscrits}`}
-          detail={`${pct(Math.round((s.siegesUtilises / s.siegesSouscrits) * 100))} des sièges souscrits`}
+          detail={
+            api
+              ? 'Démonstration — pas encore une lecture réelle'
+              : `${pct(Math.round((s.siegesUtilises / s.siegesSouscrits) * 100))} des sièges souscrits`
+          }
           ton="ok"
           serie={trendSeries('sieges', 24, 58, 67, 2)}
         />

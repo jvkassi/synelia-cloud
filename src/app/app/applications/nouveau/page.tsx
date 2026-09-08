@@ -6,7 +6,7 @@ import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MAINTENANT, TVA_PCT } from '@/lib/format'
 import { ESPACES, K8S_CLUSTERS, PROJETS, ZONE_APPLICATIVE } from '@/lib/mock'
-import { SITE_LABEL, type K8sCluster, type Projet } from '@/lib/types'
+import { SITE_LABEL, type EspaceCloud, type K8sCluster, type Projet } from '@/lib/types'
 import { MicroLabel } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox, Field, Input, Select, Textarea } from '@/components/ui/field'
@@ -72,6 +72,7 @@ export default function NouveauProjet() {
   const espaceCourant = useEspace()
   const projets = useCollection<Projet>('projets', PROJETS)
   const grappes = useCollection<K8sCluster>('clusters', K8S_CLUSTERS)
+  const espacesCol = useCollection<EspaceCloud>('espaces', ESPACES)
   const { lancerJob, integrerTravail } = useAtelier()
 
   const [etape, setEtape] = useState(1)
@@ -87,7 +88,7 @@ export default function NouveauProjet() {
 
   const [conditions, setConditions] = useState(false)
 
-  const espace = ESPACES.find((e) => e.id === espaceId) ?? espaceCourant
+  const espace = espacesCol.items.find((e) => e.id === espaceId) ?? espaceCourant
   const clustersDisponibles = K8S_CLUSTERS.filter((c) => c.espaceId === espaceId)
   const clusterExistantChoisi = clustersDisponibles.find((c) => c.id === clusterExistantId)
   const tailleChoisie = TAILLES_CLUSTER.find((t) => t.id === tailleClusterId)!
@@ -361,7 +362,7 @@ export default function NouveauProjet() {
                 if (dispo.length === 0) setClusterMode('nouveau')
               }}
             >
-              {ESPACES.map((e) => (
+              {espacesCol.items.map((e) => (
                 <option key={e.id} value={e.id}>
                   {e.code} · {SITE_LABEL[e.site]} · {e.quota.vcpu - e.usage.vcpu} vCPU libres
                 </option>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Plus, Trash2 } from 'lucide-react'
 import { money } from '@/lib/format'
 import { ESPACES, PROJETS, SERVICES_PROJET } from '@/lib/mock'
-import type { Projet, ServiceProjet } from '@/lib/types'
+import type { EspaceCloud, Projet, ServiceProjet } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -23,6 +23,7 @@ export function VueParametres({ id }: { id: string }) {
   const router = useRouter()
   const lesProjets = useCollection<Projet>('projets', PROJETS)
   const lesServices = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET)
+  const espacesCol = useCollection<EspaceCloud>('espaces', ESPACES)
   const executer = useOperation()
   const { autorise, refus } = useApp()
 
@@ -85,7 +86,7 @@ export function VueParametres({ id }: { id: string }) {
               hint="Détermine le quota consommé et le site physique par défaut des services."
             >
               <Select value={espaceId} onChange={(e) => setEspaceId(e.target.value)}>
-                {ESPACES.map((e) => (
+                {espacesCol.items.map((e) => (
                   <option key={e.id} value={e.id}>
                     {e.code} — {e.offreNom}
                   </option>

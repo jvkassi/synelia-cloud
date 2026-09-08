@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MAINTENANT, money, num } from '@/lib/format'
-import { SITE_LABEL, type K8sCluster, type Site } from '@/lib/types'
+import { SITE_LABEL, type EspaceCloud, type K8sCluster, type Site } from '@/lib/types'
 import { ESPACES, K8S_CLUSTERS } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, IconButton } from '@/components/ui/button'
@@ -114,6 +114,7 @@ export default function NouveauCluster() {
   const { pousser } = useApp()
   const espaceCourant = useEspace()
   const grappes = useCollection<K8sCluster>('clusters', K8S_CLUSTERS)
+  const espacesCol = useCollection<EspaceCloud>('espaces', ESPACES)
   const { lancerJob } = useAtelier()
   const executer = useOperation()
 
@@ -128,7 +129,7 @@ export default function NouveauCluster() {
   const [modules, setModules] = useState<string[]>(MODULES.filter((m) => m.conseille).map((m) => m.id))
   const [conditions, setConditions] = useState(false)
 
-  const espace = ESPACES.find((e) => e.id === espaceId) ?? espaceCourant
+  const espace = espacesCol.items.find((e) => e.id === espaceId) ?? espaceCourant
 
   const noeuds = pools.reduce((a, p) => a + p.nodes, 0)
   const vcpu = pools.reduce((a, p) => {
@@ -329,12 +330,12 @@ export default function NouveauCluster() {
             <Select
               value={espaceId}
               onChange={(e) => {
-                const cible = ESPACES.find((x) => x.id === e.target.value)
+                const cible = espacesCol.items.find((x) => x.id === e.target.value)
                 setEspaceId(e.target.value)
                 if (cible) setSite(cible.site)
               }}
             >
-              {ESPACES.map((e) => (
+              {espacesCol.items.map((e) => (
                 <option key={e.id} value={e.id}>
                   {e.code} · {SITE_LABEL[e.site]} · {e.quota.vcpu - e.usage.vcpu} vCPU disponibles
                 </option>

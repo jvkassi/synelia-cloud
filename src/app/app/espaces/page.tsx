@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { num, pct, toHumain } from '@/lib/format'
 import { SITE_COURT, type EspaceCloud, type VM } from '@/lib/types'
-import { ESPACES, SYNTHESE_CLIENT, VMS } from '@/lib/mock'
+import { ESPACES, VMS } from '@/lib/mock'
 import { Badge } from '@/components/ui/badge'
 import { ButtonLink } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -123,7 +123,19 @@ export default function ListeEspaces() {
   const { autorise, refus } = useApp()
   const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
   const parc = useCollection<VM>('vms', VMS)
-  const s = SYNTHESE_CLIENT
+  // Somme des vrais Espaces Cloud plutôt que `SYNTHESE_CLIENT` : sinon les
+  // trois tuiles de quota restent fictives à côté d'un compte « Espaces
+  // Cloud » réel, comme sur le tableau de bord (§ même motif).
+  const quota = {
+    vcpu: espaces.items.reduce((a, e) => a + e.quota.vcpu, 0),
+    ramGo: espaces.items.reduce((a, e) => a + e.quota.ramGo, 0),
+    stockageTo: Math.round(espaces.items.reduce((a, e) => a + e.quota.stockageTo, 0) * 10) / 10,
+  }
+  const usage = {
+    vcpu: espaces.items.reduce((a, e) => a + e.usage.vcpu, 0),
+    ramGo: espaces.items.reduce((a, e) => a + e.usage.ramGo, 0),
+    stockageTo: Math.round(espaces.items.reduce((a, e) => a + e.usage.stockageTo, 0) * 10) / 10,
+  }
 
   return (
     <div className="space-y-6">
@@ -144,18 +156,18 @@ export default function ListeEspaces() {
         <StatTile libelle="Espaces Cloud" valeur={espaces.items.length} detail="Répartis sur 2 sites" />
         <StatTile
           libelle="vCPU consommés"
-          valeur={`${s.usage.vcpu}/${s.quota.vcpu}`}
-          detail={pct(Math.round((s.usage.vcpu / s.quota.vcpu) * 100))}
+          valeur={`${usage.vcpu}/${quota.vcpu}`}
+          detail={quota.vcpu > 0 ? pct(Math.round((usage.vcpu / quota.vcpu) * 100)) : '—'}
         />
         <StatTile
           libelle="Mémoire consommée"
-          valeur={`${num(s.usage.ramGo)}/${num(s.quota.ramGo)}`}
+          valeur={`${num(usage.ramGo)}/${num(quota.ramGo)}`}
           unite="Go"
-          detail={pct(Math.round((s.usage.ramGo / s.quota.ramGo) * 100))}
+          detail={quota.ramGo > 0 ? pct(Math.round((usage.ramGo / quota.ramGo) * 100)) : '—'}
         />
         <StatTile
           libelle="Stockage consommé"
-          valeur={`${s.usage.stockageTo}/${s.quota.stockageTo}`}
+          valeur={`${usage.stockageTo}/${quota.stockageTo}`}
           unite="To"
           ton="warn"
           detail="Premier facteur limitant"

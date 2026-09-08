@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Camera, Plus, Power, RotateCw, Shield, Tag, Layers} from 'lucide-react'
 import { num, relatif } from '@/lib/format'
-import { SITE_COURT, type VM } from '@/lib/types'
+import { SITE_COURT, type EspaceCloud, type VM } from '@/lib/types'
 import { BACKUP_PLANS, ESPACES, VMS,
   hrefDuService,
 } from '@/lib/mock'
@@ -22,6 +22,10 @@ export default function ListeVms() {
   const { autorise, refus } = useApp()
   const espace = useEspace()
   const parc = useCollection<VM>('vms', VMS)
+  // Même collection que le panneau `CadreEspace` : en mode API, la liste des
+  // « autres Espaces » ci-dessous doit suivre le backend, pas rester sur la
+  // graine de démonstration alors que le reste de l'écran est déjà réel.
+  const espacesCol = useCollection<EspaceCloud>('espaces', ESPACES)
   const executer = useOperation()
   const vms = parc.items.filter((v) => v.espaceId === espace.id)
 
@@ -401,9 +405,9 @@ export default function ListeVms() {
         </Callout>
       )}
 
-      {ESPACES.length > 1 && (
+      {espacesCol.items.length > 1 && (
         <Callout ton="info" titre="Machines dans les autres espaces">
-          {ESPACES.filter((e) => e.id !== espace.id).map((e) => (
+          {espacesCol.items.filter((e) => e.id !== espace.id).map((e) => (
             <span key={e.id} className="mr-4 inline-block">
               <Link href={`/app/espaces/${e.id}`} className="font-semibold text-p-700 hover:text-m-600">
                 {e.code}

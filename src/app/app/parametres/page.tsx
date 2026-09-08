@@ -5,7 +5,7 @@ import { Building2, Globe, Palette, Terminal, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { MAINTENANT, dateCourte, money } from '@/lib/format'
 import { ESPACES, MES_ORGANISATIONS, ORG_COURANTE } from '@/lib/mock'
-import { ROLE_LABEL, SITE_LABEL } from '@/lib/types'
+import { ROLE_LABEL, SITE_LABEL, type EspaceCloud } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { CodeBlock, CopyField, GatedAction, Tabs } from '@/components/ui/display'
@@ -77,6 +77,9 @@ export default function Parametres() {
   const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
   const jetons = useCollection<Jeton>('jetons-api', JETONS)
+  // Même collection que `/app/espaces` : le nombre d'Espaces Cloud affiché ici
+  // doit suivre le backend, pas rester figé sur la graine.
+  const espacesCol = useCollection<EspaceCloud>('espaces', ESPACES)
   /** Secret renvoyé une seule fois à la création — jamais réaffiché ensuite. */
   const [secretCree, setSecretCree] = useState<string | null>(null)
   const [onglet, setOnglet] = useState('organisation')
@@ -182,7 +185,7 @@ export default function Parametres() {
                   { cle: 'Identifiant d’organisation', valeur: ORG_COURANTE.id },
                   { cle: 'Contrat', valeur: 'Direct avec Synelia Cloud' },
                   { cle: 'Plan de service', valeur: ORG_COURANTE.tenantPlan ?? 'Standard' },
-                  { cle: 'Espaces Cloud', valeur: String(ESPACES.length) },
+                  { cle: 'Espaces Cloud', valeur: String(espacesCol.items.length) },
                   { cle: 'Cliente depuis', valeur: dateCourte(ORG_COURANTE.createdAt) },
                   {
                     cle: 'Dépense mensuelle',
@@ -471,7 +474,7 @@ export default function Parametres() {
                     type: 'select',
                     options: [
                       { value: 'Organisation', label: 'Toute l’organisation' },
-                      ...ESPACES.map((e) => ({ value: e.code, label: `Espace ${e.code}` })),
+                      ...espacesCol.items.map((e) => ({ value: e.code, label: `Espace ${e.code}` })),
                     ],
                   },
                   { id: 'expiration', label: 'Expire dans', type: 'nombre', demi: true, min: 1, max: 730, suffixe: 'jours' },
@@ -863,7 +866,7 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
         ressource={ORG_COURANTE.nom}
         libelleAction="Enregistrer la demande de clôture"
         pertes={[
-          `${ESPACES.length} Espaces Cloud et toutes leurs ressources, arrêtés au jour 30`,
+          `${espacesCol.items.length} Espaces Cloud et toutes leurs ressources, arrêtés au jour 30`,
           'Toutes les données, effacées définitivement au jour 60',
           'Les accès de tous les membres de l’organisation',
           'Les domaines non transférés reviendront au registre à leur échéance',
