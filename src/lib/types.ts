@@ -1,6 +1,7 @@
 /**
  * Modèle de données — Synelia Cloud (spécification Partie 9).
- * Toutes les données de l'application sont fictives (Partie 11).
+ * Modèle de données partagé par la maquette (`src/lib/mock/`) et le contrat
+ * d'API (`docs/api/openapi.json`) ; les noms de champs y font foi.
  */
 
 export type Site = 'ABJ' | 'GBM'
@@ -96,6 +97,8 @@ export interface Membership {
   scopeType: ScopeType
   scopeId?: string
   scopeLabel?: string
+  /** Utilisateur embarqué par le backend (`GET /membres`) ; absent côté maquette. */
+  utilisateur?: User
 }
 
 // ─── IaaS ─────────────────────────────────────────────────────────────
@@ -521,6 +524,11 @@ export interface Projet {
   clusterId: string
   /** Un même projet se décline par environnement, chacun avec ses services. */
   environnements: string[]
+  /**
+   * Cible de calcul, fixée à la création (`k8s` par défaut) : servie par le
+   * backend, pas encore affichée côté maquette.
+   */
+  cible?: 'vm' | 'k8s'
   /** Variables partagées par tous les services du projet, par environnement. */
   variables: Array<{
     cle: string
@@ -677,6 +685,11 @@ export interface CatalogService {
    * pas la nôtre. Les initiales et la teinte restent le repli.
    */
   icone: string
+  /**
+   * URL de logo servie par le backend — approche différente de `icone` (nom
+   * de pictogramme local), pas encore réconciliée entre maquette et contrat.
+   */
+  logoUrl?: string
   /** Couleur d'accent du logo de la solution, pour la vignette. */
   logoTeinte: string
   logoInitiales: string
@@ -745,6 +758,8 @@ export interface Seat {
   id: string
   managedServiceId: string
   userId: string
+  /** Utilisateur embarqué par le backend ; absent côté maquette. */
+  utilisateur?: User
   statut: 'actif' | 'suspendu'
   quotaUtilise?: number
   quotaTotal?: number
@@ -1006,6 +1021,8 @@ export interface Devis {
   validite: string
   statut: 'envoye' | 'accepte' | 'refuse' | 'expire'
   createdAt: string
+  /** Servi par le backend une fois le devis édité ; absent côté maquette. */
+  pdfUrl?: string
 }
 
 export interface Ticket {

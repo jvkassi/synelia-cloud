@@ -51081,6 +51081,17 @@
               "type": "string"
             }
           },
+          "etiquettes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Ventilation de la dépense et recherche — pas de rôle fonctionnel."
+          },
+          "clusterId": {
+            "type": "string",
+            "description": "Le cluster Kubernetes qui héberge les services du projet — dédié ou partagé avec d'autres projets du même Espace."
+          },
           "cible": {
             "type": "string",
             "enum": [
@@ -51135,6 +51146,8 @@
           "espaceId",
           "cree",
           "environnements",
+          "etiquettes",
+          "clusterId",
           "variables"
         ]
       },
@@ -51156,6 +51169,17 @@
               "type": "string"
             },
             "description": "Par défaut `production`."
+          },
+          "etiquettes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Ventilation de la dépense et recherche."
+          },
+          "clusterId": {
+            "type": "string",
+            "description": "Cluster Kubernetes à rattacher, existant ou en cours de provisioning."
           },
           "cible": {
             "type": "string",
@@ -52735,6 +52759,10 @@
           },
           "nom": {
             "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "description": "Saisie à la création, à côté du nom — pas de rôle fonctionnel."
           },
           "type": {
             "type": "string",
