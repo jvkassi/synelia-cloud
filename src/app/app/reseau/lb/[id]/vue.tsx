@@ -198,7 +198,7 @@ export function VueLb({ id }: { id: string }) {
             <StatTile
               libelle="Requêtes / s"
               valeur={num(lb.metriques.rps)}
-              ton="accent"
+              ton="violet"
               serie={seededSeries(`${id}-rps`, 24, lb.metriques.rps * 0.6, lb.metriques.rps * 1.3)}
             />
             <StatTile

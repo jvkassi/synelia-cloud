@@ -162,7 +162,7 @@ export function VueVm({ id }: { id: string }) {
             <HealthBadge etat={vm.statut} />
             {ipPrivee && <span className="font-mono text-[12px] text-g-500">{ipPrivee}</span>}
             {ipPublique && (
-              <Badge tone="accent" size="sm">
+              <Badge tone="violet" size="sm">
                 {ipPublique}
               </Badge>
             )}
@@ -406,7 +406,7 @@ export function VueVm({ id }: { id: string }) {
               libelle="Réseau"
               valeur={vm.statut === 'running' ? 148 : 0}
               unite="Mbit/s"
-              ton="accent"
+              ton="violet"
               serie={seededSeries(`${id}-net`, 24, 40, 280)}
             />
           </div>

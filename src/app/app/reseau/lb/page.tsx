@@ -162,7 +162,7 @@ export default function LoadBalancers() {
         <StatTile
           libelle="Requêtes par seconde"
           valeur={num(lbs.reduce((a, l) => a + l.metriques.rps, 0))}
-          ton="accent"
+          ton="violet"
         />
         <StatTile
           libelle="Backends sains"

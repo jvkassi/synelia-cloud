@@ -367,7 +367,7 @@ export default function Facturation() {
                       <span
                         className={cn(
                           'block rounded-t-sm transition-colors',
-                          j.montant > max * 0.98 ? 'bg-m-600' : 'bg-p-600 group-hover:bg-p-700',
+                          j.montant > max * 0.98 ? 'bg-p-800' : 'bg-p-600 group-hover:bg-p-700',
                         )}
                         style={{ height: `${20 + (j.montant / max) * 120}px` }}
                       />
@@ -908,7 +908,7 @@ export default function Facturation() {
               />
               <BarresShowback
                 lignes={ventilationApplications?.lignes ?? SHOWBACK_APPLICATIONS}
-                couleur="bg-m-600"
+                couleur="bg-p-400"
                 peutVoir={peutVoir}
               />
             </Card>

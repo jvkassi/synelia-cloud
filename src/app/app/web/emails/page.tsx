@@ -31,7 +31,7 @@ export default function ListeMessageries() {
         fil={[
           { label: 'Espace client', href: '/app' },
           { label: 'Web Cloud', href: '/app/web' },
-          { label: 'Emails' },
+          { label: 'Messagerie' },
         ]}
         titre="Messagerie"
         sousTitre="Une messagerie par domaine : boîtes, alias, redirections, antispam et authentification d’expédition. Le courrier se lit dans le webmail, jamais ici."
@@ -219,7 +219,7 @@ export default function ListeMessageries() {
             </ul>
           </div>
           <div className="rounded-[8px] border border-g-300 bg-white p-3">
-            <p className="flex items-center gap-1.5 text-m-600">
+            <p className="flex items-center gap-1.5 text-p-700">
               <Mail size={14} />
               <span className="text-[12.5px] font-bold text-ink">Là-bas, dans le webmail</span>
             </p>
