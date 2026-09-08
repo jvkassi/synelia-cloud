@@ -8,7 +8,11 @@ import TableauDeBord from './tableau-de-bord'
 // layout.tsx voisin : `src/app/app/layout.tsx` existe déjà à ce niveau et sert
 // tout l'espace client, on ne peut pas lui en ajouter un second.
 export const metadata: Metadata = {
-  title: 'Tableau de bord',
+  // `absolute` plutôt qu'une chaîne simple : `page.tsx` et `layout.tsx`
+  // partagent le même segment `/app`, et un titre simple ici ne reprend pas le
+  // gabarit du layout voisin (§ piège Next.js) — il faut écrire le titre
+  // complet une fois, identique au gabarit partagé.
+  title: { absolute: 'Tableau de bord · Espace client Synelia Cloud' },
   description:
     'Capacité souscrite contre consommée, disponibilité, services managés, santé de l’infrastructure et activité récente.',
 }
