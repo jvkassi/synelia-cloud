@@ -18,7 +18,7 @@ import { PanneauOnboarding } from '@/components/app/onboarding'
 import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { ApiError } from '@/lib/api/client'
-import type { EspaceCloud, K8sCluster, Projet, VM } from '@/lib/types'
+import type { EspaceCloud, Invoice, K8sCluster, Projet, Ticket, VM } from '@/lib/types'
 import {
   CATALOGUE,
   ESPACES,
@@ -61,16 +61,22 @@ export default function TableauDeBord() {
   const { api, organisations, organisationId } = useApp()
   const orgActive = organisations.find((o) => o.id === organisationId) ?? organisations[0]
   const nomOrg = orgActive?.nom ?? ORG_COURANTE.nom
-  // Espaces Cloud, machines, clusters et projets ont un vrai backend
-  // (`/espaces`, `/vms`, `/kubernetes`, `/projets`) : `useCollection` en sert
-  // les données réelles quand l'API est active, et retombe sur la graine de
-  // démonstration sinon — même mécanisme que `/app/espaces`, `/app/vms`, etc.
-  // Le reste de la synthèse (services managés, facturation, support, SLA) n'a
-  // pas de contrepartie réelle et continue de lire `SYNTHESE_CLIENT`.
+  // Espaces Cloud, machines, clusters, projets, factures et tickets ont un
+  // vrai backend (`/espaces`, `/vms`, `/kubernetes`, `/projets`,
+  // `/facturation/factures`, `/support/tickets`) : `useCollection` en sert les
+  // données réelles quand l'API est active, et retombe sur la graine de
+  // démonstration sinon — même mécanisme que `/app/espaces`, `/app/vms`,
+  // `/app/facturation`, `/app/support`. Les services managés (catalogue
+  // `/app/lanceur`) et les événements Centreon n'ont, eux, aucune
+  // contrepartie réelle sur ce lab (13-slug catalogue jamais raccordé à une
+  // infra, pas d'intégration Centreon) : les tuiles concernées le disent
+  // plutôt que de se faire passer pour du réel.
   const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
   const vms = useCollection<VM>('vms', VMS)
   const clusters = useCollection<K8sCluster>('clusters', K8S_CLUSTERS)
   const projets = useCollection<Projet>('projets', PROJETS)
+  const factures = useCollection<Invoice>('factures', FACTURES)
+  const tickets = useCollection<Ticket>('tickets', TICKETS)
   const { journal } = useAtelier()
 
   const espacesN = espaces.items.length
@@ -111,9 +117,25 @@ export default function TableauDeBord() {
       : null
 
   const servicesVedette = SERVICES_MANAGES.filter((x) => x.statut !== 'provisioning').slice(0, 4)
-  const factureEnCours = FACTURES.find((f) => f.statut === 'brouillon')
-  const ticketsOuverts = TICKETS.filter((t) => t.statut !== 'resolu' && t.statut !== 'ferme')
-  const attenteClient = TICKETS.filter((t) => t.statut === 'attente_client')
+  const factureEnCours = factures.items.find((f) => f.statut === 'brouillon')
+  const facturesImpayees = factures.items.filter((f) => f.statut === 'impayee')
+  const ticketsOuverts = tickets.items.filter((t) => t.statut !== 'resolu' && t.statut !== 'ferme')
+  const attenteClient = tickets.items.filter((t) => t.statut === 'attente_client')
+  // Pas de champ `updatedAt` sur un ticket : impossible de dater la résolution
+  // sans le fabriquer, donc un compte total plutôt qu'un « ce mois » inventé.
+  const ticketsResolus = tickets.items.filter((t) => t.statut === 'resolu').length
+
+  const periodeCourante = maintenant.slice(0, 7)
+  const [anneeCourante, moisCourant] = periodeCourante.split('-').map(Number)
+  const periodePrecedente = `${moisCourant === 1 ? anneeCourante - 1 : anneeCourante}-${String(
+    moisCourant === 1 ? 12 : moisCourant - 1,
+  ).padStart(2, '0')}`
+  const depenseMoisReelle = factures.items
+    .filter((f) => f.periode === periodeCourante)
+    .reduce((a, f) => a + f.total, 0)
+  const depenseMoisPrecedenteReelle = factures.items
+    .filter((f) => f.periode === periodePrecedente)
+    .reduce((a, f) => a + f.total, 0)
 
   return (
     <div className="space-y-6">
@@ -336,6 +358,12 @@ export default function TableauDeBord() {
               />
             ))}
           </div>
+          {api && (
+            <p className="mt-2 text-[11px] font-semibold text-g-500">
+              Démonstration — le catalogue de services managés n’est pas encore raccordé à une
+              infrastructure réelle sur ce lab.
+            </p>
+          )}
         </Section>
 
         <Card>
@@ -344,6 +372,11 @@ export default function TableauDeBord() {
             sousTitre="Six derniers événements de supervision"
           />
           <EventList evenements={EVENEMENTS_SUPERVISION} max={6} />
+          {api && (
+            <p className="mt-2 text-[11px] font-semibold text-g-500">
+              Démonstration — aucune intégration Centreon réelle sur ce lab.
+            </p>
+          )}
         </Card>
 
         <div className="space-y-4">
@@ -353,33 +386,39 @@ export default function TableauDeBord() {
               <div className="flex items-baseline justify-between gap-2">
                 <dt className="text-[12.5px] text-g-500">Dépense du mois en cours</dt>
                 <dd className="tnum text-[16px] font-bold [font-family:var(--font-display)] text-ink">
-                  {money(s.depenseMois)}
+                  {money(api ? depenseMoisReelle : s.depenseMois)}
                 </dd>
               </div>
-              <div className="flex items-baseline justify-between gap-2">
-                <dt className="text-[12.5px] text-g-500">Prévision de fin de mois</dt>
-                <dd className="tnum text-[13px] font-semibold text-warn">
-                  {money(s.previsionMois)}
-                </dd>
-              </div>
+              {!api && (
+                <div className="flex items-baseline justify-between gap-2">
+                  <dt className="text-[12.5px] text-g-500">Prévision de fin de mois</dt>
+                  <dd className="tnum text-[13px] font-semibold text-warn">
+                    {money(s.previsionMois)}
+                  </dd>
+                </div>
+              )}
               <div className="flex items-baseline justify-between gap-2">
                 <dt className="text-[12.5px] text-g-500">Mois précédent</dt>
-                <dd className="tnum text-[13px] text-g-700">{money(s.depenseMoisPrecedent)}</dd>
+                <dd className="tnum text-[13px] text-g-700">
+                  {money(api ? depenseMoisPrecedenteReelle : s.depenseMoisPrecedent)}
+                </dd>
               </div>
             </dl>
-            <div className="mt-3 border-t border-g-100 pt-3">
-              <QuotaBar
-                utilise={s.depenseMois}
-                total={s.previsionMois}
-                seuil={90}
-                compact
-                formateur={(v) => money(v)}
-              />
-              <p className="mt-1.5 text-[11px] text-g-500">
-                Hausse de {pct(Math.round(((s.previsionMois - s.depenseMoisPrecedent) / s.depenseMoisPrecedent) * 100))}{' '}
-                attendue : souscription GED au prorata et troisième Espace Cloud.
-              </p>
-            </div>
+            {!api && (
+              <div className="mt-3 border-t border-g-100 pt-3">
+                <QuotaBar
+                  utilise={s.depenseMois}
+                  total={s.previsionMois}
+                  seuil={90}
+                  compact
+                  formateur={(v) => money(v)}
+                />
+                <p className="mt-1.5 text-[11px] text-g-500">
+                  Hausse de {pct(Math.round(((s.previsionMois - s.depenseMoisPrecedent) / s.depenseMoisPrecedent) * 100))}{' '}
+                  attendue : souscription GED au prorata et troisième Espace Cloud.
+                </p>
+              </div>
+            )}
             {factureEnCours && (
               <div className="mt-3 flex items-center justify-between gap-2 rounded-[6px] bg-g-050 px-2.5 py-2">
                 <span className="flex items-center gap-1.5 text-[12px] text-g-700">
@@ -394,9 +433,11 @@ export default function TableauDeBord() {
                 </Link>
               </div>
             )}
-            {s.facturesEnAttente > 0 && (
+            {(api ? facturesImpayees.length : s.facturesEnAttente) > 0 && (
               <p className="mt-2 rounded-[6px] bg-err-bg px-2.5 py-2 text-[11.5px] text-err">
-                {s.facturesEnAttente} facture impayée · INV-1962, échue depuis le 10 juin
+                {api
+                  ? `${facturesImpayees.length} facture${facturesImpayees.length > 1 ? 's' : ''} impayée${facturesImpayees.length > 1 ? 's' : ''}${facturesImpayees[0] ? ` · ${facturesImpayees[0].numero}` : ''}`
+                  : `${s.facturesEnAttente} facture impayée · INV-1962, échue depuis le 10 juin`}
               </p>
             )}
           </Card>
@@ -406,7 +447,7 @@ export default function TableauDeBord() {
             <div className="grid grid-cols-3 gap-2">
               <Compteur libelle="Ouverts" valeur={ticketsOuverts.length} ton="warn" />
               <Compteur libelle="Vous attendent" valeur={attenteClient.length} ton="err" />
-              <Compteur libelle="Résolus ce mois" valeur={2} ton="ok" />
+              <Compteur libelle="Résolus" valeur={api ? ticketsResolus : 2} ton="ok" />
             </div>
             <ul className="mt-3 space-y-2 border-t border-g-100 pt-3">
               {ticketsOuverts.slice(0, 3).map((t) => (

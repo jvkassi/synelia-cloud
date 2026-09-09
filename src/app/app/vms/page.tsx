@@ -16,13 +16,24 @@ import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { useApp, useEspace, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire, useOperation } from '@/components/app/actions'
-import { requete } from '@/lib/api/client'
+import { estActif, requete } from '@/lib/api/client'
+import { useEffect, useState } from 'react'
 
 export default function ListeVms() {
   const maintenant = useMaintenant()
   const { autorise, refus } = useApp()
   const espace = useEspace()
   const parc = useCollection<VM>('vms', VMS)
+  // `/catalogue/images` résout l'UUID Glance que le backend pose sur `vm.os` — même
+  // contrat que la fiche détail (`vms/[vm]/vue.tsx`). Sans ça, la colonne « Système »
+  // affiche un UUID au lieu d'un nom lisible.
+  const [catalogueImages, setCatalogueImages] = useState<Record<string, string>>({})
+  useEffect(() => {
+    if (!estActif()) return
+    requete<Array<{ id: string; nom: string }>>('/catalogue/images')
+      .then((images) => setCatalogueImages(Object.fromEntries(images.map((i) => [i.id, i.nom]))))
+      .catch(() => {})
+  }, [])
   // Même collection que le panneau `CadreEspace` : en mode API, la liste des
   // « autres Espaces » ci-dessous doit suivre le backend, pas rester sur la
   // graine de démonstration alors que le reste de l'écran est déjà réel.
@@ -84,7 +95,12 @@ export default function ListeVms() {
       cle: (v) => v.statut,
       rendu: (v) => <HealthBadge etat={v.statut} size="sm" />,
     },
-    { id: 'os', entete: 'Système', cle: (v) => v.os, rendu: (v) => v.os },
+    {
+      id: 'os',
+      entete: 'Système',
+      cle: (v) => catalogueImages[v.os] ?? v.os,
+      rendu: (v) => catalogueImages[v.os] ?? v.os,
+    },
     {
       id: 'gabarit',
       entete: 'Gabarit',
@@ -254,7 +270,9 @@ export default function ListeVms() {
           {
             id: 'os',
             libelle: 'Système',
-            options: Array.from(new Set(vms.map((v) => v.os.split(' ')[0]))).map((o) => ({
+            options: Array.from(
+              new Set(vms.map((v) => (catalogueImages[v.os] ?? v.os).split(' ')[0])),
+            ).map((o) => ({
               value: o,
               label: o,
             })),
@@ -270,7 +288,7 @@ export default function ListeVms() {
         ]}
         selection={(v, id, val) => {
           if (id === 'statut') return v.statut === val
-          if (id === 'os') return v.os.startsWith(val)
+          if (id === 'os') return (catalogueImages[v.os] ?? v.os).startsWith(val)
           return val === 'oui' ? Boolean(v.backupPlanId) : !v.backupPlanId
         }}
         href={(v) => `/app/vms/${v.id}`}
