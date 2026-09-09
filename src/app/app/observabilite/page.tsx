@@ -4,20 +4,24 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { BellRing, FlaskConical, Plus, Trash2 } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
-import { dateHeure, num, pct, relatif } from '@/lib/format'
+import { dateHeure, pct, relatif } from '@/lib/format'
 import {
-  ALERTES_PLATEFORME,
-  COMPOSANTS,
-  APPLICATIONS,
-  ENVIRONNEMENTS,
   EVENEMENTS_SUPERVISION,
   LOGS_EXECUTION,
+  PROJETS,
   REGLES_ALERTES,
+  SERVICES_PROJET,
   VMS,
-  hrefDuService,
 } from '@/lib/mock'
-import type { AlerteRegle, EvenementSupervision, LigneLog, VM } from '@/lib/types'
-import { Badge, MicroLabel } from '@/components/ui/badge'
+import type {
+  AlerteRegle,
+  EvenementSupervision,
+  LigneLog,
+  Projet,
+  ServiceProjet,
+  VM,
+} from '@/lib/types'
+import { Badge } from '@/components/ui/badge'
 import { Button, ButtonLink, IconButton } from '@/components/ui/button'
 import { GatedAction, Tabs } from '@/components/ui/display'
 import { Field, Input, SegmentedControl, Select, Switch } from '@/components/ui/field'
@@ -76,13 +80,12 @@ const LIBELLE_GRAVITE = {
   info: 'Information',
 } as const
 
-/** Emplacement réel d'exécution d'un environnement, déduit de ses composants (§5.4). */
-function emplacementDeLEnv(envId: string) {
-  const cs = COMPOSANTS.filter((c) => c.envId === envId)
-  const ns = cs.find((c) => c.emplacement.namespace)?.emplacement.namespace
-  if (ns) return ns
-  const vms = cs.flatMap((c) => c.emplacement.vms ?? [])
-  return vms.length > 0 ? [...new Set(vms)].slice(0, 2).join(', ') : '—'
+const LIBELLE_TYPE_SERVICE: Record<ServiceProjet['type'], string> = {
+  application: 'Service applicatif',
+  base: 'Base de données',
+  statique: 'Site statique',
+  cron: 'Tâche planifiée',
+  worker: 'Worker',
 }
 
 const ONGLETS = [
@@ -122,6 +125,19 @@ export default function Observabilite() {
   // dans les deux cas.
   const vms = useCollection<VM>('vms', VMS).items.filter((v) => v.espaceId === espace.id)
   const enMarche = vms.filter((v) => v.statut === 'running')
+  // Les projets et leurs services ont eux aussi un vrai backend (`/projets`,
+  // `/projets/{id}/services` sous la clé `services-projet`) : même mécanisme
+  // que les machines, pour que cette vue transverse cesse de montrer une
+  // liste d'applications figée, sans rapport avec ce que le compte possède
+  // réellement (c'était l'ancien modèle « Partie 11 », resté ici alors que
+  // `/app/applications` était déjà passé à `projets`/`services-projet`).
+  const projetsEspace = useCollection<Projet>('projets', PROJETS).items.filter(
+    (p) => p.espaceId === espace.id,
+  )
+  const idsProjetsEspace = new Set(projetsEspace.map((p) => p.id))
+  const services = useCollection<ServiceProjet>('services-projet', SERVICES_PROJET).items.filter(
+    (s) => idsProjetsEspace.has(s.projetId),
+  )
   // En mode API, les événements et les journaux viennent du backend ; un
   // `424` (intégration amont muette) affiche un état dégradé nommé au lieu
   // des graines. Les autres échecs gardent les graines, sans bruit.
@@ -144,8 +160,8 @@ export default function Observabilite() {
   const critiques = evenements.filter(
     (e) => e.gravite === 'critique' || e.gravite === 'majeure',
   ).length
-  const appsDegradees = APPLICATIONS.filter(
-    (a) => a.sante === 'degrade' || a.sante === 'echec',
+  const appsDegradees = services.filter(
+    (s) => s.statut === 'degraded' || s.statut === 'failed',
   ).length
 
   /** Les métriques instantanées sont dérivées d'une graine stable pour rester identiques au rendu serveur. */
@@ -215,8 +231,8 @@ export default function Observabilite() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
           libelle="Ressources supervisées"
-          valeur={vms.length + ENVIRONNEMENTS.length}
-          detail={`${vms.length} machines · ${ENVIRONNEMENTS.length} environnements`}
+          valeur={vms.length + services.length}
+          detail={`${vms.length} machines · ${services.length} services applicatifs`}
         />
         <StatTile
           libelle="Charge processeur moyenne"
@@ -234,7 +250,11 @@ export default function Observabilite() {
           libelle="Applications en alerte"
           valeur={appsDegradees}
           ton={appsDegradees > 0 ? 'err' : 'ok'}
-          detail={appsDegradees > 0 ? 'analytics dégradé, batch en échec' : 'Toutes saines'}
+          detail={
+            appsDegradees > 0
+              ? `${appsDegradees} service${appsDegradees > 1 ? 's' : ''} dégradé${appsDegradees > 1 ? 's' : ''} ou en échec`
+              : 'Tous sains'
+          }
         />
       </div>
 
@@ -391,39 +411,40 @@ export default function Observabilite() {
                       </td>
                     </tr>
                   ))}
-                  {ENVIRONNEMENTS.slice(0, 8).map((e) => {
-                    const app = APPLICATIONS.find((a) => a.id === e.appId)
+                  {services.slice(0, 8).map((s) => {
+                    const projet = projetsEspace.find((p) => p.id === s.projetId)
                     return (
-                      <tr key={e.id} className="border-b border-g-100 last:border-0">
+                      <tr key={s.id} className="border-b border-g-100 last:border-0">
                         <td className="px-3 py-2.5">
                           <Link
-                            href={hrefDuService(e.appId)}
+                            href={`/app/applications/projets/${s.projetId}/${s.id}`}
                             className="font-mono text-[12px] font-semibold text-ink hover:text-p-700"
                           >
-                            {app?.nom} / {e.nom}
+                            {projet?.nom} / {s.nom}
                           </Link>
                         </td>
                         <td className="px-3 py-2.5 text-[11.5px] text-g-700">
-                          {app?.cible === 'k8s' ? 'Namespace Kubernetes' : 'Machines dédiées'}
+                          {LIBELLE_TYPE_SERVICE[s.type]}
                         </td>
                         <td className="px-3 py-2.5 font-mono text-[11px] text-g-500">
-                          {emplacementDeLEnv(e.id)}
+                          {SITE_COURT[s.emplacement.site]} ·{' '}
+                          {s.emplacement.namespace ?? s.emplacement.vms?.slice(0, 2).join(', ') ?? '—'}
                         </td>
                         <td className="px-3 py-2.5">
-                          <Jauge valeur={e.sante.cpu} seuil={85} />
+                          <Jauge valeur={charge(`cpu-${s.id}`, 12, 88)} seuil={85} />
                         </td>
                         <td className="px-3 py-2.5">
-                          <Jauge valeur={e.sante.ram} seuil={90} />
+                          <Jauge valeur={charge(`ram-${s.id}`, 30, 92)} seuil={90} />
                         </td>
                         <td className="px-3 py-2.5">
-                          <HealthBadge etat={e.statut} size="sm" />
+                          <HealthBadge etat={s.statut} size="sm" />
                         </td>
                         <td className="px-3 py-2.5 text-right">
                           <ButtonLink
                             size="sm"
                             variant="ghost"
                             external
-                            href={`https://grafana.synelia.dev01.ovh.smile.ci/d/app/${e.id}`}
+                            href={`https://grafana.synelia.dev01.ovh.smile.ci/d/app/${s.id}`}
                           >
                             Grafana
                           </ButtonLink>
@@ -844,26 +865,23 @@ export default function Observabilite() {
 
             <Card>
               <CardHeader
-                titre="Alertes déclenchées récemment"
-                sousTitre="L’historique des déclenchements permet de repérer une règle trop sensible."
+                titre="Événements récents"
+                sousTitre="Les mêmes événements de supervision que l’onglet « Événements », pour repérer vite une règle trop sensible."
               />
-              <EventList evenements={ALERTES_PLATEFORME} max={6} />
-              <MicroLabel className="mt-4 mb-2">Volume de déclenchements sur 30 jours</MicroLabel>
-              <div className="flex items-end gap-1">
-                {seededSeries('alertes-30j', 30, 0, 9).map((v, i) => (
-                  <span
-                    key={i}
-                    className={cn('flex-1 rounded-t-sm', v > 6 ? 'bg-warn' : 'bg-p-300')}
-                    style={{ height: `${8 + v * 5}px` }}
-                    title={`${num(v)} déclenchement${v > 1 ? 's' : ''}`}
-                  />
-                ))}
-              </div>
-              <Callout ton="warn" className="mt-4" titre="Une règle se déclenche trop souvent">
-                La règle « Charge processeur supérieure à 80 % » s’est déclenchée 34 fois ce mois-ci
-                sur <span className="font-mono text-[12px]">{VMS[0]?.nom}</span>, sans incident
-                associé. Un seuil à 80 % sur une machine dimensionnée pour tourner à 75 % produit du
-                bruit, pas de l’information. Portez le seuil à 90 % ou la durée à 20 minutes.
+              {degradeEvenements ? (
+                <DegradedState
+                  source="supervision"
+                  integration={degradeEvenements.integration}
+                  dateDonnees={degradeEvenements.dateDonnees}
+                />
+              ) : (
+                <EventList evenements={evenements} max={6} />
+              )}
+              <Callout ton="info" className="mt-4" titre="Repérer une règle trop sensible">
+                Une règle qui se déclenche à presque chaque cycle de collecte, sans incident réel en
+                face, produit du bruit plutôt que de l’information. Le bon réflexe est de monter le
+                seuil ou d’allonger la durée de dépassement — pas de couper le canal de
+                notification, qui finirait par masquer une vraie alerte.
               </Callout>
             </Card>
           </div>
