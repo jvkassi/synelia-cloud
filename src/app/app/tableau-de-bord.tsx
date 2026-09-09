@@ -18,7 +18,8 @@ import { PanneauOnboarding } from '@/components/app/onboarding'
 import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { ApiError } from '@/lib/api/client'
-import type { EspaceCloud, Invoice, K8sCluster, Projet, Ticket, VM } from '@/lib/types'
+import { useLectureDegradable } from '@/lib/api/degradable'
+import type { AuditEvent, EspaceCloud, Invoice, K8sCluster, Projet, Ticket, VM } from '@/lib/types'
 import {
   CATALOGUE,
   ESPACES,
@@ -77,7 +78,14 @@ export default function TableauDeBord() {
   const projets = useCollection<Projet>('projets', PROJETS)
   const factures = useCollection<Invoice>('factures', FACTURES)
   const tickets = useCollection<Ticket>('tickets', TICKETS)
-  const { journal } = useAtelier()
+  // Même motif que /app/securite : `journal` (atelier local) sert de repli,
+  // `/audit` réel prime quand il répond — l'activité récente lisait jusqu'ici
+  // uniquement le journal local, jamais le vrai journal d'audit en mode API.
+  const { journal: journalLocal } = useAtelier()
+  const { donnees: journalDistant } = useLectureDegradable<{ donnees: AuditEvent[] }>('/audit', {
+    parPage: '8',
+  })
+  const journal = journalDistant?.donnees ?? journalLocal
 
   const espacesN = espaces.items.length
   // Détail réel de la tuile « Espaces Cloud » : sites et offres distincts
@@ -483,10 +491,14 @@ export default function TableauDeBord() {
                 </li>
               ))}
             </ul>
-            <div className="mt-3 flex items-center gap-2 border-t border-g-100 pt-3 text-[11.5px] text-g-700">
-              <CalendarClock size={13} className="shrink-0 text-p-700" />
-              Prochain point d’exploitation : {dateHeure(s.prochainRdv)}
-            </div>
+            {/* Pas de planification de point d'exploitation réelle sur ce lab :
+                simplifié plutôt que de garder une date fabriquée en mode API. */}
+            {!api && (
+              <div className="mt-3 flex items-center gap-2 border-t border-g-100 pt-3 text-[11.5px] text-g-700">
+                <CalendarClock size={13} className="shrink-0 text-p-700" />
+                Prochain point d’exploitation : {dateHeure(s.prochainRdv)}
+              </div>
+            )}
             <Link
               href="/app/support"
               className="mt-2 inline-flex items-center gap-1 text-[12px] font-semibold text-p-700 hover:text-m-600"
@@ -514,7 +526,7 @@ export default function TableauDeBord() {
         />
         <Timeline
           evenements={journal
-            .filter((e) => e.orgId === ORG_COURANTE.id || !e.orgId)
+            .filter((e) => e.orgId === (api ? organisationId : ORG_COURANTE.id) || !e.orgId)
             .slice(0, 8)
             .map((e) => ({
               id: e.id,

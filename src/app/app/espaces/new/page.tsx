@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Check, Network, Server, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money, num, ventilationTva } from '@/lib/format'
@@ -12,7 +12,7 @@ import { BACKUP_PLANS, ESPACES, OFFRES } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox, Field, Input, Select, Switch } from '@/components/ui/field'
-import { Card, CardHeader, Callout, KeyValueList } from '@/components/composition/card'
+import { Card, CardHeader, Callout, KeyValueList, PageHeader } from '@/components/composition/card'
 import { CostPreview, WizardShell } from '@/components/composition/flow'
 import { BoutonPrepaiementPaystack } from '@/components/composition/paystack'
 import { useApp } from '@/components/app/contexte'
@@ -59,7 +59,18 @@ export default function NouvelEspace() {
   const executer = useOperation()
 
   const [etape, setEtape] = useState(1)
-  const [offerId, setOfferId] = useState('off-pro')
+  const [offerId, setOfferId] = useState('')
+  // `OFFRES_ESPACE` arrive après le premier rendu en mode API (`useCollection`
+  // charge dans un effet) : un `offerId` par défaut figé sur un id de maquette
+  // survivait jusqu'à la création si l'utilisateur ne cliquait pas une carte —
+  // `offerId: "off-flex"` inconnu du vrai catalogue, la facture créée n'avait
+  // alors aucun `offreNom` à afficher. On resynchronise dès que la vraie liste
+  // arrive, tant que l'utilisateur n'a pas déjà choisi une offre qui y figure.
+  useEffect(() => {
+    if (OFFRES_ESPACE.length === 0) return
+    if (!OFFRES_ESPACE.some((o) => o.id === offerId)) setOfferId(OFFRES_ESPACE[0].id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [OFFRES_ESPACE])
   const [site, setSite] = useState<Site>('ABJ')
   const [code, setCode] = useState('EC-DBA-04')
   const [cidr, setCidr] = useState('10.6.0.0/22')
@@ -71,7 +82,10 @@ export default function NouvelEspace() {
   const [periodicite, setPeriodicite] = useState<'mensuelle' | 'annuelle'>('mensuelle')
   const [conditions, setConditions] = useState(false)
 
-  const offre = OFFRES_ESPACE.find((o) => o.id === offerId)!
+  // `offerId` reste vide le temps que l'effet ci-dessus synchronise sur la
+  // liste réelle (un seul rendu, en mode API) : retomber sur la première
+  // offre plutôt que planter sur un `find` vide.
+  const offre = OFFRES_ESPACE.find((o) => o.id === offerId) ?? OFFRES_ESPACE[0]
 
   const lignes = useMemo(() => {
     const l = [
@@ -111,6 +125,22 @@ export default function NouvelEspace() {
 
   const peutContinuer =
     etape === 3 ? codeValide && cidrValide : etape === 5 ? conditions : true
+
+  // Catalogue réel pas encore chargé (mode API, premier rendu) : un état
+  // d'attente plutôt qu'un plantage sur `offre.specs`/`offre.prix` undefined.
+  if (!offre) {
+    return (
+      <div className="space-y-4">
+        <PageHeader
+          fil={[{ label: 'Espace client', href: '/app' }, { label: 'Espaces Cloud', href: '/app/espaces' }, { label: 'Nouvel Espace Cloud' }]}
+          titre="Nouvel Espace Cloud"
+        />
+        <Card>
+          <p className="text-[12.5px] text-g-500">Chargement du catalogue…</p>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <WizardShell
