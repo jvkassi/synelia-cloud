@@ -962,7 +962,7 @@ export function VueVm({ id }: { id: string }) {
                             appel: () =>
                               requete(
                                 `/vms/${encodeURIComponent(vm.id)}/instantanes/${encodeURIComponent(s.id)}`,
-                                { methode: 'POST', corps: {} },
+                                { methode: 'POST', corps: {}, query: { confirmation: s.nom } },
                               ),
                             effet: () => parc.modifier(vm.id, { statut: 'creating' }),
                             job: {
@@ -980,7 +980,7 @@ export function VueVm({ id }: { id: string }) {
                             },
                           }}
                           confirmation={{
-                            ressource: vm.nom,
+                            ressource: s.nom,
                             titre: `Revenir au snapshot « ${s.nom} » ?`,
                             pertes: [
                               `Toutes les écritures postérieures au ${dateHeure(s.date ?? s.cree ?? MAINTENANT)} seront perdues`,
