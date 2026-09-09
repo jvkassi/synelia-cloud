@@ -169,13 +169,27 @@ export function VueVm({ id }: { id: string }) {
   // Sans cette résolution, la fiche affiche des UUID au lieu de noms lisibles.
   const [catalogueImages, setCatalogueImages] = useState<Record<string, string>>({})
   const [catalogueGabarits, setCatalogueGabarits] = useState<Record<string, string>>({})
+  // Le redimensionnement en garde la liste complète : Nova ne sait redimensionner
+  // que vers un gabarit existant du catalogue (vcpu/ramGo/diskGo exacts, jamais une
+  // valeur arbitraire) — voir `_gabarit_pour_specs` côté backend. Sans cette liste,
+  // la modale ne pouvait proposer que des vCPU/Go libres qui échouaient en 422 dès
+  // que le disque ne suivait pas (constaté en direct : tout redimensionnement autre
+  // qu'un no-op échouait).
+  const [gabaritsReels, setGabaritsReels] = useState<
+    Array<{ id: string; nom: string; vcpu: number; ramGo: number; diskGo: number }>
+  >([])
   useEffect(() => {
     if (!estActif()) return
     requete<Array<{ id: string; nom: string }>>('/catalogue/images')
       .then((images) => setCatalogueImages(Object.fromEntries(images.map((i) => [i.id, i.nom]))))
       .catch(() => {})
-    requete<Array<{ id: string; nom: string }>>('/catalogue/gabarits')
-      .then((gabarits) => setCatalogueGabarits(Object.fromEntries(gabarits.map((g) => [g.id, g.nom]))))
+    requete<Array<{ id: string; nom: string; vcpu: number; ramGo: number; diskGo: number }>>(
+      '/catalogue/gabarits',
+    )
+      .then((gabarits) => {
+        setCatalogueGabarits(Object.fromEntries(gabarits.map((g) => [g.id, g.nom])))
+        setGabaritsReels(gabarits)
+      })
       .catch(() => {})
   }, [])
 
@@ -233,6 +247,15 @@ export function VueVm({ id }: { id: string }) {
       </div>
     )
   }
+
+  // Cibles de redimensionnement : uniquement des gabarits réels qui améliorent
+  // les trois dimensions à la fois (vcpu, ramGo, diskGo) — un disque ne se
+  // réduit jamais (règle backend) et Nova rejette tout triplet qui ne
+  // correspond pas exactement à un gabarit existant.
+  const gabaritsCibles = gabaritsReels
+    .filter((g) => g.vcpu >= vm.vcpu && g.ramGo >= vm.ramGo && g.diskGo >= vm.diskGo)
+    .filter((g) => g.vcpu > vm.vcpu || g.ramGo > vm.ramGo || g.diskGo > vm.diskGo)
+    .sort((a, b) => a.vcpu - b.vcpu || a.ramGo - b.ramGo || a.diskGo - b.diskGo)
 
   const espace = espaces.items.find((e) => e.id === vm.espaceId)
   const osAffiche = catalogueImages[vm.os] ?? vm.os
@@ -1552,32 +1575,51 @@ ops@${vm.nom}:~$ _`}
         ouvert={redimensionnement}
         onFermer={() => setRedimensionnement(false)}
         titre={`Redimensionner ${vm.nom}`}
-        description="L’ajout de vCPU et de mémoire s’applique à chaud sur cette image ; un retrait exige un redémarrage."
-        champs={[
-          { id: 'vcpu', label: 'vCPU', type: 'nombre', demi: true, min: 1, max: 64 },
-          { id: 'ram', label: 'Mémoire', type: 'nombre', demi: true, min: 1, max: 256, suffixe: 'Go' },
-        ]}
-        valeursDepart={{ vcpu: vm.vcpu, ram: vm.ramGo }}
+        description={
+          gabaritsCibles.length > 0
+            ? 'L’ajout de vCPU et de mémoire s’applique à chaud sur cette image ; un retrait exige un redémarrage. Seuls les gabarits réels du catalogue sont proposés : Nova ne sait redimensionner que vers un gabarit existant, jamais vers un vCPU/Go choisi librement.'
+            : 'Aucun gabarit du catalogue n’offre plus de vCPU, de mémoire et de disque que le gabarit actuel : cette machine est déjà sur le plus grand gabarit disponible.'
+        }
+        champs={
+          gabaritsCibles.length > 0
+            ? [
+                {
+                  id: 'gabaritId',
+                  label: 'Nouveau gabarit',
+                  type: 'select',
+                  obligatoire: true,
+                  options: gabaritsCibles.map((g) => ({
+                    value: g.id,
+                    label: `${g.nom} — ${g.vcpu} vCPU · ${g.ramGo} Go · ${g.diskGo} Go`,
+                  })),
+                },
+              ]
+            : []
+        }
+        valeursDepart={{ gabaritId: gabaritsCibles[0]?.id ?? '' }}
         libelleValider="Redimensionner"
-        onValider={(v) =>
+        onValider={(v) => {
+          const cible = gabaritsCibles.find((g) => g.id === v.gabaritId)
+          if (!cible) return
           executer({
             action: 'vm.hardware.update',
             titre: `${vm.nom} redimensionnée`,
-            detail: `${v.vcpu} vCPU · ${v.ram} Go`,
+            detail: `${cible.vcpu} vCPU · ${cible.ramGo} Go · ${cible.diskGo} Go`,
             appel: () =>
               requete(`/vms/${encodeURIComponent(vm.id)}/redimensionnement`, {
                 methode: 'POST',
-                corps: { vcpu: Number(v.vcpu), ramGo: Number(v.ram) },
+                corps: { vcpu: cible.vcpu, ramGo: cible.ramGo, diskGo: cible.diskGo },
               }),
             effet: () =>
               parc.modifier(vm.id, {
-                vcpu: Number(v.vcpu),
-                ramGo: Number(v.ram),
-                flavor: 'personnalisé',
+                vcpu: cible.vcpu,
+                ramGo: cible.ramGo,
+                diskGo: cible.diskGo,
+                flavor: cible.id,
               }),
             effetFinal: () => parc.recharger(),
           })
-        }
+        }}
       />
 
       <ConfirmDialog
