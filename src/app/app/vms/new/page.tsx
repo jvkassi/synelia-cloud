@@ -1,12 +1,12 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Copy, Layers, Plus, Server, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money, num } from '@/lib/format'
-import { BACKUP_PLANS, ESPACES, OFFRES, SECURITY_GROUPS, PUBLIC_IPS, LOAD_BALANCERS, VMS } from '@/lib/mock'
-import type { EspaceCloud, Offer, VM } from '@/lib/types'
+import { BACKUP_PLANS, ESPACES, SECURITY_GROUPS, PUBLIC_IPS, LOAD_BALANCERS, VMS } from '@/lib/mock'
+import type { EspaceCloud, VM } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, IconButton } from '@/components/ui/button'
 import {
@@ -97,7 +97,20 @@ export default function NouvellesVms() {
   const espaceCourant = useEspace()
   const parc = useCollection<VM>('vms', VMS)
   const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
-  const offresVm = useCollection<Offer>('offres', OFFRES)
+  // `GET /catalogue/gabarits` est le même catalogue que `/tarifs` publie
+  // (`familles_tarifs()` le dérive des mêmes `GABARITS` OpenStack côté
+  // backend) : on l'utilise ici pour que le prix affiché dans l'assistant
+  // ne contredise jamais celui de la vitrine.
+  const [gabaritsReels, setGabaritsReels] = useState<
+    Array<{ vcpu: number; ramGo: number; prixMensuel: number }>
+  >([])
+  useEffect(() => {
+    if (!estActif()) return
+    requete<Array<{ vcpu: number; ramGo: number; prixMensuel: number }>>('/catalogue/gabarits').then(
+      setGabaritsReels,
+      () => {},
+    )
+  }, [])
   const { lancerJob } = useAtelier()
   const executer = useOperation()
 
@@ -137,17 +150,14 @@ export default function NouvellesVms() {
   // Les gabarits (vCPU/RAM/disque) restent ceux de la maquette — le choix
   // visuel ne correspond de toute façon pas au gabarit réel provisionné
   // (voir le commentaire plus bas sur `creerLeLot`) — mais le tarif affiché
-  // vient du catalogue réel publié (`/admin/catalogue`) quand il existe une
-  // offre `image_vm` proche en vCPU, pour ne plus contredire `/tarifs`.
-  const OFFRES_VM_REELLES = offresVm.items.filter((o) => o.categorie === 'image_vm' && o.statut === 'publiee')
+  // vient du catalogue réel (`/catalogue/gabarits`) quand il a chargé, pour
+  // ne plus contredire `/tarifs`.
   const prixReel = (vcpu: number) => {
-    if (OFFRES_VM_REELLES.length === 0) return undefined
-    const proche = OFFRES_VM_REELLES.reduce((best, o) => {
-      const vcpuOffre = Number(o.specs.match(/[\d.]+/)?.[0] ?? o.prix)
-      const vcpuBest = Number(best.specs.match(/[\d.]+/)?.[0] ?? best.prix)
-      return Math.abs(vcpuOffre - vcpu) < Math.abs(vcpuBest - vcpu) ? o : best
-    })
-    return proche.prix
+    if (gabaritsReels.length === 0) return undefined
+    const proche = gabaritsReels.reduce((best, g) =>
+      Math.abs(g.vcpu - vcpu) < Math.abs(best.vcpu - vcpu) ? g : best,
+    )
+    return proche.prixMensuel
   }
   const FLAVORS_AFFICHES = FLAVORS.map((f) => ({ ...f, prix: prixReel(f.vcpu) ?? f.prix }))
   const flavorChoisi = FLAVORS_AFFICHES.find((f) => f.id === flavor)!
