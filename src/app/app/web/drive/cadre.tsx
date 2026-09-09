@@ -28,7 +28,6 @@ export function CadreDrive({ children }: { children: React.ReactNode }) {
       titre="Drives"
       base="/app/web/drive"
       entrees={entrees}
-      actionPrincipale={{ libelle: 'Activer un drive', href: '/app/web/drive' }}
       placeholderRecherche="Rechercher un domaine…"
       compteur={(visibles, total) =>
         visibles === total ? `${total} domaine${total > 1 ? 's' : ''}` : `${visibles} sur ${total}`

@@ -27,7 +27,6 @@ export function CadreEmails({ children }: { children: React.ReactNode }) {
       titre="Messageries"
       base="/app/web/emails"
       entrees={entrees}
-      actionPrincipale={{ libelle: 'Activer une messagerie', href: '/app/web/emails' }}
       placeholderRecherche="Rechercher un domaine…"
       compteur={(visibles, total) =>
         visibles === total ? `${total} domaine${total > 1 ? 's' : ''}` : `${visibles} sur ${total}`

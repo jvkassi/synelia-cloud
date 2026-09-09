@@ -41,7 +41,6 @@ export function CadreConnaissances({ children }: { children: React.ReactNode }) 
       titre="Bases"
       base="/app/ia/connaissances"
       entrees={entrees}
-      actionPrincipale={{ libelle: 'Créer une base', href: '/app/ia/connaissances' }}
       placeholderRecherche="Rechercher une base, une source…"
       compteur={(visibles, total) =>
         visibles === total ? `${total} base${total > 1 ? 's' : ''}` : `${visibles} sur ${total}`

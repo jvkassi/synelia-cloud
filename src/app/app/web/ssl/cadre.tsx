@@ -35,7 +35,6 @@ export function CadreSsl({ children }: { children: React.ReactNode }) {
       titre="Certificats"
       base="/app/web/ssl"
       entrees={entrees}
-      actionPrincipale={{ libelle: 'Commander un certificat', href: '/app/web/ssl' }}
       placeholderRecherche="Rechercher un hôte…"
       compteur={(visibles, total) =>
         visibles === total ? `${total} certificat${total > 1 ? 's' : ''}` : `${visibles} sur ${total}`

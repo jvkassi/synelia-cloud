@@ -28,7 +28,6 @@ export function CadreBackup({ children }: { children: React.ReactNode }) {
       titre="Sauvegardes"
       base="/app/web/backup"
       entrees={entrees}
-      actionPrincipale={{ libelle: 'Ajouter un plan', href: '/app/web/backup' }}
       placeholderRecherche="Rechercher un plan…"
       compteur={(visibles, total) =>
         visibles === total ? `${total} plan${total > 1 ? 's' : ''}` : `${visibles} sur ${total}`

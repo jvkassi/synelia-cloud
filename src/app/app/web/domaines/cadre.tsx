@@ -31,7 +31,6 @@ export function CadreDomaines({ children }: { children: React.ReactNode }) {
       titre="Domaines"
       base="/app/web/domaines"
       entrees={liste}
-      actionPrincipale={{ libelle: 'Commander', href: '/app/web/domaines' }}
       placeholderRecherche="Rechercher un domaine…"
       compteur={(visibles, total) =>
         visibles === total ? `${total} domaine${total > 1 ? 's' : ''}` : `${visibles} sur ${total}`

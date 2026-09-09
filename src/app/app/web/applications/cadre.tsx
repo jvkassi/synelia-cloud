@@ -36,7 +36,6 @@ export function CadreApplications({ children }: { children: React.ReactNode }) {
       titre="Applications"
       base="/app/web/applications"
       entrees={entrees}
-      actionPrincipale={{ libelle: 'Installer une application', href: '/app/web/applications' }}
       placeholderRecherche="Rechercher une application…"
       compteur={(visibles, total) =>
         visibles === total ? `${total} application${total > 1 ? 's' : ''}` : `${visibles} sur ${total}`

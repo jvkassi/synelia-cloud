@@ -25,7 +25,6 @@ export function CadreBases({ children }: { children: React.ReactNode }) {
       titre="Serveurs de bases"
       base="/app/web/bases"
       entrees={entrees}
-      actionPrincipale={{ libelle: 'Activer un moteur', href: '/app/web/bases' }}
       placeholderRecherche="Rechercher un moteur…"
       compteur={(visibles, total) =>
         visibles === total ? `${total} moteur${total > 1 ? 's' : ''}` : `${visibles} sur ${total}`
