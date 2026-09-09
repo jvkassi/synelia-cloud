@@ -67,6 +67,14 @@ interface Snapshot {
   type?: string
 }
 
+/** `GET /vms/{id}/metriques` — une série par métrique (`cpu`, `ram`, `disque`,
+ * `reseau_entrant`), au plus un point : c'est un instantané réel, pas un historique. */
+interface SerieMetriqueVm {
+  metrique: string
+  unite: string
+  points: { valeur: number }[]
+}
+
 /** `POST /vms/{id}/console` — URL de console à usage unique (~2 h de validité). */
 interface ConsoleVm {
   url: string
@@ -80,6 +88,16 @@ const SNAPSHOTS_GRAINE: Snapshot[] = [
   { id: 'snap-2', nom: 'pre-deploiement-v2.7.1', date: '2026-08-19T15:04:00Z', taille: 44, type: 'à chaud' },
   { id: 'snap-3', nom: 'reference-installation', date: '2026-03-11T09:12:00Z', taille: 28, type: 'à froid' },
 ]
+
+/** Pourquoi une tuile CPU/Mémoire/Réseau n'a pas de lecture réelle — distingue « la machine
+ * est arrêtée, rien à lire côté hyperviseur » (fait durable) de « l'appel n'a pas encore
+ * répondu ou l'hyperviseur ne répond pas » (transitoire), plutôt que la même mention
+ * « Démonstration » dans les deux cas, qui ne serait vraie ni dans l'un ni dans l'autre. */
+function detailLectureVm(series: SerieMetriqueVm[] | null, statut: VM['statut']): string {
+  if (series === null) return 'Lecture en cours…'
+  if (statut !== 'running') return 'Machine arrêtée — rien à lire côté hyperviseur'
+  return 'Lecture hyperviseur indisponible pour le moment'
+}
 
 const ONGLETS = [
   { id: 'apercu', label: 'Aperçu' },
@@ -160,6 +178,25 @@ export function VueVm({ id }: { id: string }) {
       .then((gabarits) => setCatalogueGabarits(Object.fromEntries(gabarits.map((g) => [g.id, g.nom]))))
       .catch(() => {})
   }, [])
+
+  // `GET /vms/{id}/metriques` : un point instantané réel (diagnostics Nova/libvirt — temps
+  // CPU, mémoire, E/S réseau depuis l'hyperviseur), pas une série historique. Vide pour une
+  // machine arrêtée (rien à lire côté hyperviseur) ou tant que l'appel n'a pas répondu — les
+  // trois tuiles concernées retombent alors sur l'état « pas de lecture », jamais une valeur
+  // inventée. Le disque n'a pas d'équivalent : les diagnostics donnent des E/S, jamais
+  // l'occupation, qu'aucune intégration ne remonte aujourd'hui pour une VM — cette tuile reste
+  // en démonstration.
+  const [metriquesVm, setMetriquesVm] = useState<SerieMetriqueVm[] | null>(null)
+  useEffect(() => {
+    if (!estActif()) return
+    setMetriquesVm(null)
+    requete<{ series: SerieMetriqueVm[] }>(`/vms/${encodeURIComponent(id)}/metriques`)
+      .then((r) => setMetriquesVm(r.series ?? []))
+      .catch(() => setMetriquesVm([]))
+  }, [id])
+  const lectureVm = (metrique: string) =>
+    metriquesVm?.find((s) => s.metrique === metrique)?.points.at(-1)?.valeur
+  const uniteVm = (metrique: string) => metriquesVm?.find((s) => s.metrique === metrique)?.unite
 
   const vm = parc.items.find((v) => v.id === id) ?? isolee
 
@@ -471,29 +508,53 @@ export function VueVm({ id }: { id: string }) {
       {onglet === 'apercu' && (
         <div className="space-y-4">
           {/*
-            `GET /vms/{id}/metriques` existe côté backend mais n'est encore
-            câblé sur aucune source réelle (Ceilometer/Gnocchi) : il répond
-            toujours `points: []`. Plutôt que d'afficher des valeurs
-            inventées comme si elles venaient de cette réponse, le mode API
-            l'annonce comme « Démonstration », au même endroit que
-            `tableau-de-bord.tsx` pour les tuiles sans contrepartie réelle. Le
-            mode maquette garde les valeurs illustratives déterministes.
+            `GET /vms/{id}/metriques` renvoie un point instantané réel pour CPU/Mémoire/Réseau
+            (diagnostics Nova/libvirt, `synelia.modules.vms.service.diagnostics_instantanes`) —
+            vide (`metriquesVm === null` tant que l'appel n'a pas répondu, `[]` si la machine
+            est arrêtée ou l'hyperviseur injoignable) plutôt qu'une valeur inventée. Le disque
+            reste en démonstration : les diagnostics donnent des E/S, jamais l'occupation, et
+            rien ne la remonte aujourd'hui pour une VM. Le mode maquette garde les valeurs
+            illustratives déterministes.
           */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatTile
               libelle="CPU"
-              valeur={api ? '—' : vm.statut === 'running' ? 34 : 0}
-              unite={api ? undefined : '%'}
+              valeur={
+                api
+                  ? lectureVm('cpu') !== undefined
+                    ? Math.round(lectureVm('cpu')!)
+                    : '—'
+                  : vm.statut === 'running'
+                    ? 34
+                    : 0
+              }
+              unite={api ? (lectureVm('cpu') !== undefined ? '%' : undefined) : '%'}
               variation={api ? undefined : vm.statut === 'running' ? 6 : 0}
-              detail={api ? 'Démonstration — pas encore une lecture réelle' : undefined}
+              detail={
+                api && lectureVm('cpu') === undefined
+                  ? detailLectureVm(metriquesVm, vm.statut)
+                  : undefined
+              }
               serie={api ? undefined : seededSeries(`${id}-cpu`, 24, 18, 48)}
             />
             <StatTile
               libelle="Mémoire"
-              valeur={api ? '—' : vm.statut === 'running' ? 61 : 0}
-              unite={api ? undefined : '%'}
+              valeur={
+                api
+                  ? lectureVm('ram') !== undefined
+                    ? Math.round(lectureVm('ram')!)
+                    : '—'
+                  : vm.statut === 'running'
+                    ? 61
+                    : 0
+              }
+              unite={api ? (lectureVm('ram') !== undefined ? '%' : undefined) : '%'}
               variation={api ? undefined : vm.statut === 'running' ? -2 : 0}
-              detail={api ? 'Démonstration — pas encore une lecture réelle' : undefined}
+              detail={
+                api && lectureVm('ram') === undefined
+                  ? detailLectureVm(metriquesVm, vm.statut)
+                  : undefined
+              }
               serie={api ? undefined : seededSeries(`${id}-mem`, 24, 52, 68)}
             />
             <StatTile
@@ -502,16 +563,34 @@ export function VueVm({ id }: { id: string }) {
               unite={api ? undefined : '%'}
               detail={
                 api
-                  ? 'Démonstration — pas encore une lecture réelle'
+                  ? 'Démonstration — les diagnostics de l’hyperviseur donnent des E/S disque, pas l’occupation'
                   : `${goHumain(Math.round(vm.diskGo * 0.57))} sur ${goHumain(vm.diskGo)}`
               }
               serie={api ? undefined : seededSeries(`${id}-disk`, 24, 55, 58)}
             />
             <StatTile
               libelle="Réseau"
-              valeur={api ? '—' : vm.statut === 'running' ? 148 : 0}
-              unite={api ? undefined : 'Mbit/s'}
-              detail={api ? 'Démonstration — pas encore une lecture réelle' : undefined}
+              valeur={
+                api
+                  ? lectureVm('reseau_entrant') !== undefined
+                    ? Number(lectureVm('reseau_entrant')!.toFixed(2))
+                    : '—'
+                  : vm.statut === 'running'
+                    ? 148
+                    : 0
+              }
+              unite={
+                api
+                  ? lectureVm('reseau_entrant') !== undefined
+                    ? uniteVm('reseau_entrant')
+                    : undefined
+                  : 'Mbit/s'
+              }
+              detail={
+                api && lectureVm('reseau_entrant') === undefined
+                  ? detailLectureVm(metriquesVm, vm.statut)
+                  : undefined
+              }
               ton="violet"
               serie={api ? undefined : seededSeries(`${id}-net`, 24, 40, 280)}
             />
@@ -565,8 +644,11 @@ export function VueVm({ id }: { id: string }) {
             <Card>
               <CardHeader titre="Historique des métriques" />
               <p className="rounded-[8px] border border-dashed border-g-300 bg-g-050 px-3.5 py-4 text-center text-[12.5px] text-g-500">
-                Démonstration — `GET /vms/{'{id}'}/metriques` répond, mais aucune source de séries
-                (Ceilometer/Gnocchi) n’y est encore branchée : pas de courbe à afficher.
+                Démonstration — le CPU, la mémoire et le réseau des tuiles ci-dessus sont une
+                lecture réelle de l’hyperviseur (diagnostics Nova/libvirt), mais instantanée :
+                rien ne persiste de série dans le temps côté backend, donc pas de courbe 24 h à
+                afficher ici. L’occupation disque reste indisponible : les diagnostics donnent
+                des E/S, jamais l’espace occupé.
               </p>
             </Card>
           ) : (
