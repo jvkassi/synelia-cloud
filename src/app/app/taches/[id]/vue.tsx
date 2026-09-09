@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft, RotateCcw } from 'lucide-react'
 import { relatif } from '@/lib/format'
 import type { ProvisioningJob } from '@/lib/types'
-import { JOBS, JOBS_PLATEFORME, TACHES_PROVISIONING } from '@/lib/mock'
+import { JOBS, JOBS_PLATEFORME } from '@/lib/mock'
 import { PageHeader, Card, CardHeader, Callout } from '@/components/composition/card'
 import { ButtonLink } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -114,28 +114,15 @@ export function VueSuiviTache({ id }: { id: string }) {
         </div>
 
         <aside className="space-y-4">
-          <Card>
-            <CardHeader
-              titre="Les sept tâches de l’orchestrateur"
-              sousTitre="Séquence appliquée à toute souscription du marketplace."
-            />
-            <ol className="space-y-1.5">
-              {TACHES_PROVISIONING.map((t, i) => (
-                <li key={t} className="flex items-start gap-2.5">
-                  <span className="tnum mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-g-100 text-[9.5px] font-bold text-g-700">
-                    {i + 1}
-                  </span>
-                  <span className="text-[12px] leading-snug text-g-700">{t}</span>
-                </li>
-              ))}
-            </ol>
-            <p className="mt-3 border-t border-g-100 pt-3 text-[11.5px] leading-relaxed text-g-500">
-              États possibles : En file → En cours → Prêt. En cas d’échec, un diagnostic lisible est
-              produit — jamais une trace brute — et un rollback automatique libère les ressources
-              réservées.
-            </p>
-          </Card>
-
+          {/*
+            Un encart « Les sept tâches de l'orchestrateur » listait ici une
+            séquence marketplace fixe (§6.4), affichée sous n'importe quel job
+            — y compris des jobs réels sans rapport (`vm.delete`…). `JobTracker`
+            ci-contre montre déjà les étapes réelles de *ce* job
+            (`job.taches`) : le texte générique ne faisait qu'ajouter un
+            discours marketing sous des données réelles. Retiré plutôt que
+            réétiqueté « Démonstration », faute d'information qu'il ajoutait.
+          */}
           {autres.length > 0 && (
             <Card>
               <CardHeader titre="Autres tâches récentes" />

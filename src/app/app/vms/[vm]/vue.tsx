@@ -16,15 +16,15 @@ import {
 } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { MAINTENANT, dateCourte, dateHeure, goHumain, num, pct, relatif } from '@/lib/format'
-import { SITE_LABEL, type VM, type Volume } from '@/lib/types'
+import { SITE_LABEL, type EspaceCloud, type VM, type Volume } from '@/lib/types'
 import {
   BACKUP_PLANS,
+  ESPACES,
   EVENEMENTS_SUPERVISION,
   RESTORE_POINTS,
   SECURITY_GROUPS,
   VMS,
   VOLUMES,
-  espaceById,
   hrefDuService,
 } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -83,7 +83,7 @@ const ONGLETS = [
 
 export function VueVm({ id }: { id: string }) {
   const router = useRouter()
-  const { autorise, refus } = useApp()
+  const { autorise, refus, api } = useApp()
   const executer = useOperation()
   const parc = useCollection<VM>('vms', VMS)
   const disques = useCollection<Volume>('volumes', VOLUMES)
@@ -125,6 +125,24 @@ export function VueVm({ id }: { id: string }) {
     if (console_ && estActif()) ouvrirConsole()
   }, [console_, ouvrirConsole])
 
+  const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
+
+  // `/catalogue/images` et `/catalogue/gabarits` résolvent les identifiants
+  // bruts (Glance, gabarit) que le backend pose sur `vm.os`/`vm.flavor` — le
+  // même contrat que consulte l'assistant de création (`vms/new/page.tsx`).
+  // Sans cette résolution, la fiche affiche des UUID au lieu de noms lisibles.
+  const [catalogueImages, setCatalogueImages] = useState<Record<string, string>>({})
+  const [catalogueGabarits, setCatalogueGabarits] = useState<Record<string, string>>({})
+  useEffect(() => {
+    if (!estActif()) return
+    requete<Array<{ id: string; nom: string }>>('/catalogue/images')
+      .then((images) => setCatalogueImages(Object.fromEntries(images.map((i) => [i.id, i.nom]))))
+      .catch(() => {})
+    requete<Array<{ id: string; nom: string }>>('/catalogue/gabarits')
+      .then((gabarits) => setCatalogueGabarits(Object.fromEntries(gabarits.map((g) => [g.id, g.nom]))))
+      .catch(() => {})
+  }, [])
+
   const vm = parc.items.find((v) => v.id === id) ?? isolee
 
   // Chargement distant en cours (lien direct, liste pas encore là) : des
@@ -161,7 +179,9 @@ export function VueVm({ id }: { id: string }) {
     )
   }
 
-  const espace = espaceById(vm.espaceId)
+  const espace = espaces.items.find((e) => e.id === vm.espaceId)
+  const osAffiche = catalogueImages[vm.os] ?? vm.os
+  const flavorAffiche = vm.flavor ? (catalogueGabarits[vm.flavor] ?? vm.flavor) : undefined
   const ipPrivee = vm.ips.find((i) => i.type === 'privee')?.adresse
   const ipPublique = vm.ips.find((i) => i.type === 'publique')?.adresse
   const volumes = disques.items.filter((v) => v.attachedTo === vm.id)
@@ -192,7 +212,7 @@ export function VueVm({ id }: { id: string }) {
           { label: vm.nom },
         ]}
         titre={<span className="font-mono">{vm.nom}</span>}
-        sousTitre={`${vm.os} · ${vm.vcpu} vCPU / ${vm.ramGo} Go / ${num(vm.diskGo)} Go · ${SITE_LABEL[vm.site]}`}
+        sousTitre={`${osAffiche} · ${vm.vcpu} vCPU / ${vm.ramGo} Go / ${num(vm.diskGo)} Go · ${SITE_LABEL[vm.site]}`}
         meta={
           <>
             <HealthBadge etat={vm.statut} />
@@ -416,34 +436,50 @@ export function VueVm({ id }: { id: string }) {
       {/* ─── Aperçu ──────────────────────────────────────────────────── */}
       {onglet === 'apercu' && (
         <div className="space-y-4">
+          {/*
+            `GET /vms/{id}/metriques` existe côté backend mais n'est encore
+            câblé sur aucune source réelle (Ceilometer/Gnocchi) : il répond
+            toujours `points: []`. Plutôt que d'afficher des valeurs
+            inventées comme si elles venaient de cette réponse, le mode API
+            l'annonce comme « Démonstration », au même endroit que
+            `tableau-de-bord.tsx` pour les tuiles sans contrepartie réelle. Le
+            mode maquette garde les valeurs illustratives déterministes.
+          */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <StatTile
               libelle="CPU"
-              valeur={vm.statut === 'running' ? 34 : 0}
-              unite="%"
-              variation={vm.statut === 'running' ? 6 : 0}
-              serie={seededSeries(`${id}-cpu`, 24, 18, 48)}
+              valeur={api ? '—' : vm.statut === 'running' ? 34 : 0}
+              unite={api ? undefined : '%'}
+              variation={api ? undefined : vm.statut === 'running' ? 6 : 0}
+              detail={api ? 'Démonstration — pas encore une lecture réelle' : undefined}
+              serie={api ? undefined : seededSeries(`${id}-cpu`, 24, 18, 48)}
             />
             <StatTile
               libelle="Mémoire"
-              valeur={vm.statut === 'running' ? 61 : 0}
-              unite="%"
-              variation={vm.statut === 'running' ? -2 : 0}
-              serie={seededSeries(`${id}-mem`, 24, 52, 68)}
+              valeur={api ? '—' : vm.statut === 'running' ? 61 : 0}
+              unite={api ? undefined : '%'}
+              variation={api ? undefined : vm.statut === 'running' ? -2 : 0}
+              detail={api ? 'Démonstration — pas encore une lecture réelle' : undefined}
+              serie={api ? undefined : seededSeries(`${id}-mem`, 24, 52, 68)}
             />
             <StatTile
               libelle="Disque"
-              valeur={vm.statut === 'running' ? 57 : 57}
-              unite="%"
-              detail={`${goHumain(Math.round(vm.diskGo * 0.57))} sur ${goHumain(vm.diskGo)}`}
-              serie={seededSeries(`${id}-disk`, 24, 55, 58)}
+              valeur={api ? '—' : vm.statut === 'running' ? 57 : 57}
+              unite={api ? undefined : '%'}
+              detail={
+                api
+                  ? 'Démonstration — pas encore une lecture réelle'
+                  : `${goHumain(Math.round(vm.diskGo * 0.57))} sur ${goHumain(vm.diskGo)}`
+              }
+              serie={api ? undefined : seededSeries(`${id}-disk`, 24, 55, 58)}
             />
             <StatTile
               libelle="Réseau"
-              valeur={vm.statut === 'running' ? 148 : 0}
-              unite="Mbit/s"
+              valeur={api ? '—' : vm.statut === 'running' ? 148 : 0}
+              unite={api ? undefined : 'Mbit/s'}
+              detail={api ? 'Démonstration — pas encore une lecture réelle' : undefined}
               ton="violet"
-              serie={seededSeries(`${id}-net`, 24, 40, 280)}
+              serie={api ? undefined : seededSeries(`${id}-net`, 24, 40, 280)}
             />
           </div>
 
@@ -454,8 +490,8 @@ export function VueVm({ id }: { id: string }) {
                 colonnes={2}
                 items={[
                   { cle: 'Identifiant', valeur: <span className="font-mono text-[12px]">{vm.id}</span> },
-                  { cle: 'Système', valeur: vm.os },
-                  { cle: 'Gabarit', valeur: <span className="font-mono">{vm.flavor}</span> },
+                  { cle: 'Système', valeur: osAffiche },
+                  { cle: 'Gabarit', valeur: <span className="font-mono">{flavorAffiche ?? '—'}</span> },
                   { cle: 'vCPU', valeur: `${vm.vcpu} vCPU` },
                   { cle: 'Mémoire', valeur: `${vm.ramGo} Go` },
                   { cle: 'Disque système', valeur: goHumain(vm.diskGo) },
@@ -491,16 +527,26 @@ export function VueVm({ id }: { id: string }) {
             </Card>
           </div>
 
-          <GrilleSparkCharts
-            seed={`vm-${id}`}
-            metriques={[
-              { titre: 'CPU', unite: '%', min: 18, max: 48 },
-              { titre: 'Mémoire', unite: '%', min: 52, max: 68, seuil: 90 },
-              { titre: 'Disque', unite: '%', min: 55, max: 58, seuil: 85 },
-              { titre: 'Réseau', unite: 'Mbit/s', min: 40, max: 280, couleur: 'var(--color-m-600)' },
-            ]}
-            degrade={vm.statut === 'stopped'}
-          />
+          {api ? (
+            <Card>
+              <CardHeader titre="Historique des métriques" />
+              <p className="rounded-[8px] border border-dashed border-g-300 bg-g-050 px-3.5 py-4 text-center text-[12.5px] text-g-500">
+                Démonstration — `GET /vms/{'{id}'}/metriques` répond, mais aucune source de séries
+                (Ceilometer/Gnocchi) n’y est encore branchée : pas de courbe à afficher.
+              </p>
+            </Card>
+          ) : (
+            <GrilleSparkCharts
+              seed={`vm-${id}`}
+              metriques={[
+                { titre: 'CPU', unite: '%', min: 18, max: 48 },
+                { titre: 'Mémoire', unite: '%', min: 52, max: 68, seuil: 90 },
+                { titre: 'Disque', unite: '%', min: 55, max: 58, seuil: 85 },
+                { titre: 'Réseau', unite: 'Mbit/s', min: 40, max: 280, couleur: 'var(--color-m-600)' },
+              ]}
+              degrade={vm.statut === 'stopped'}
+            />
+          )}
 
           <Card>
             <CardHeader titre="Cinq derniers événements" />

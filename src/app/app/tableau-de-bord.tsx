@@ -74,6 +74,11 @@ export default function TableauDeBord() {
   const { journal } = useAtelier()
 
   const espacesN = espaces.items.length
+  // Détail réel de la tuile « Espaces Cloud » : sites et offres distincts
+  // parmi les Espaces réellement chargés, plutôt que le texte fixe qui
+  // s'affichait quel que soit le nombre d'Espaces.
+  const sitesN = new Set(espaces.items.map((e) => e.site)).size
+  const offresN = new Set(espaces.items.map((e) => e.offerId)).size
   const vmsN = vms.items.length
   const clustersN = clusters.items.length
   const applicationsN = projets.items.length
@@ -138,15 +143,17 @@ export default function TableauDeBord() {
         <StatTile
           libelle="Espaces Cloud"
           valeur={espacesN}
-          detail="2 sites · 3 offres souscrites"
+          detail={
+            espacesN > 0
+              ? `${sitesN} site(s) · ${offresN} offre(s) souscrite(s)`
+              : 'Aucun Espace Cloud pour le moment'
+          }
           serie={trendSeries('espaces', 24, Math.max(0, espacesN - 1), espacesN, 0)}
         />
         <StatTile
           libelle="Machines virtuelles"
           valeur={vmsN}
           detail={`${clustersN} clusters Kubernetes`}
-          variation={2}
-          variationUnite="ce mois"
           serie={trendSeries('vms', 24, Math.max(0, vmsN - 3), vmsN + 1, 1)}
         />
         <StatTile
@@ -267,8 +274,17 @@ export default function TableauDeBord() {
         <Card>
           <CardHeader
             titre="Disponibilité"
-            sousTitre="Moyenne pondérée sur 30 jours"
+            sousTitre={
+              api
+                ? 'Démonstration — pas encore une lecture réelle'
+                : 'Moyenne pondérée sur 30 jours'
+            }
           />
+          {/* Pas de supervision SLA/incidents branchée côté backend : en
+              mode API, la jauge et les trois lignes gardent les valeurs
+              illustratives du jeu de démonstration, mais l'écran le dit —
+              même convention que les tuiles « Services managés » et
+              « Sièges utilisés » plus haut sur cette page. */}
           <GaugeCircle
             valeur={s.uptime30j}
             cible={s.slaContractuel}
@@ -282,6 +298,11 @@ export default function TableauDeBord() {
             <Ligne cle="Incidents ouverts" valeur="1 critique · 2 majeurs" ton="err" />
             <Ligne cle="Crédit SLA en cours de calcul" valeur={money(12200)} ton="ok" />
           </dl>
+          {api && (
+            <p className="mt-2 text-[11px] font-semibold text-g-500">
+              Démonstration — pas encore une lecture réelle
+            </p>
+          )}
           <Link
             href="/app/support"
             className="mt-3 inline-flex items-center gap-1 border-t border-g-100 pt-3 text-[12px] font-semibold text-p-700 hover:text-m-600"
