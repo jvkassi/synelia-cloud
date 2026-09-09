@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { Container, Link2, Plus, Server, Settings2, TrendingUp, Unlink } from 'lucide-react'
 import { cn, seededSeries, trendSeries } from '@/lib/utils'
 import { dateCourte, dateHeure, goHumain, money, num, pct, toHumain } from '@/lib/format'
-import { SITE_LABEL, type EspaceCloud, type K8sCluster, type VM, type Volume } from '@/lib/types'
+import { SITE_LABEL, type EspaceCloud, type K8sCluster, type Offer, type VM, type Volume } from '@/lib/types'
 import {
   APPLICATIONS,
   BACKUP_PLANS,
@@ -51,6 +51,9 @@ export function VueEspace({ id }: { id: string }) {
   const parc = useCollection<VM>('vms', VMS)
   const disques = useCollection<Volume>('volumes', VOLUMES)
   const grappes = useCollection<K8sCluster>('clusters', K8S_CLUSTERS)
+  // Le catalogue réel prime sur la graine : un tarif changé côté
+  // /admin/catalogue doit se voir ici, pas seulement dans l'admin.
+  const offresReelles = useCollection<Offer>('offres', OFFRES)
   const [onglet, setOnglet] = useState('apercu')
 
   const espace = espaces.items.find((e) => e.id === id)
@@ -157,7 +160,7 @@ export function VueEspace({ id }: { id: string }) {
                   id: 'offre',
                   label: 'Offre',
                   type: 'select',
-                  options: OFFRES.filter((o) => o.categorie === 'espace_cloud').map((o) => ({
+                  options: offresReelles.items.filter((o) => o.categorie === 'espace_cloud').map((o) => ({
                     value: o.id,
                     label: `${o.nom} · ${o.specs}`,
                   })),
@@ -166,7 +169,7 @@ export function VueEspace({ id }: { id: string }) {
               valeursDepart={{ offre: espace.offerId }}
               libelleValider="Changer d’offre"
               operation={(v) => {
-                const offre = OFFRES.find((o) => o.id === v.offre)
+                const offre = offresReelles.items.find((o) => o.id === v.offre)
                 return {
                   titre: `Offre de ${espace.code} changée`,
                   detail: offre ? `${offre.nom} · effet à la prochaine période` : undefined,

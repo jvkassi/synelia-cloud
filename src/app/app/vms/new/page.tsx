@@ -5,8 +5,8 @@ import { useMemo, useState } from 'react'
 import { Copy, Layers, Plus, Server, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money, num } from '@/lib/format'
-import { BACKUP_PLANS, ESPACES, SECURITY_GROUPS, PUBLIC_IPS, LOAD_BALANCERS, VMS } from '@/lib/mock'
-import type { EspaceCloud, VM } from '@/lib/types'
+import { BACKUP_PLANS, ESPACES, OFFRES, SECURITY_GROUPS, PUBLIC_IPS, LOAD_BALANCERS, VMS } from '@/lib/mock'
+import type { EspaceCloud, Offer, VM } from '@/lib/types'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, IconButton } from '@/components/ui/button'
 import {
@@ -97,6 +97,7 @@ export default function NouvellesVms() {
   const espaceCourant = useEspace()
   const parc = useCollection<VM>('vms', VMS)
   const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
+  const offresVm = useCollection<Offer>('offres', OFFRES)
   const { lancerJob } = useAtelier()
   const executer = useOperation()
 
@@ -133,7 +134,23 @@ export default function NouvellesVms() {
 
   const images = sourceImage === 'synelia' ? IMAGES_SYNELIA : IMAGES_PRIVEES
   const imageChoisie = [...IMAGES_SYNELIA, ...IMAGES_PRIVEES].find((i) => i.id === image)
-  const flavorChoisi = FLAVORS.find((f) => f.id === flavor)!
+  // Les gabarits (vCPU/RAM/disque) restent ceux de la maquette — le choix
+  // visuel ne correspond de toute façon pas au gabarit réel provisionné
+  // (voir le commentaire plus bas sur `creerLeLot`) — mais le tarif affiché
+  // vient du catalogue réel publié (`/admin/catalogue`) quand il existe une
+  // offre `image_vm` proche en vCPU, pour ne plus contredire `/tarifs`.
+  const OFFRES_VM_REELLES = offresVm.items.filter((o) => o.categorie === 'image_vm' && o.statut === 'publiee')
+  const prixReel = (vcpu: number) => {
+    if (OFFRES_VM_REELLES.length === 0) return undefined
+    const proche = OFFRES_VM_REELLES.reduce((best, o) => {
+      const vcpuOffre = Number(o.specs.match(/[\d.]+/)?.[0] ?? o.prix)
+      const vcpuBest = Number(best.specs.match(/[\d.]+/)?.[0] ?? best.prix)
+      return Math.abs(vcpuOffre - vcpu) < Math.abs(vcpuBest - vcpu) ? o : best
+    })
+    return proche.prix
+  }
+  const FLAVORS_AFFICHES = FLAVORS.map((f) => ({ ...f, prix: prixReel(f.vcpu) ?? f.prix }))
+  const flavorChoisi = FLAVORS_AFFICHES.find((f) => f.id === flavor)!
   // L’espace choisi peut ne plus figurer dans la liste (supprimé pendant la
   // session, autre organisation) : on retombe sur le premier au lieu de
   // planter sur `espace.usage`.
@@ -167,8 +184,8 @@ export default function NouvellesVms() {
 
   const coutCalcul = machinesACreer.reduce((a, m) => {
     const proche =
-      FLAVORS.find((f) => f.vcpu === m.vcpu && f.ram === m.ram) ??
-      FLAVORS.reduce((best, f) =>
+      FLAVORS_AFFICHES.find((f) => f.vcpu === m.vcpu && f.ram === m.ram) ??
+      FLAVORS_AFFICHES.reduce((best, f) =>
         Math.abs(f.vcpu - m.vcpu) < Math.abs(best.vcpu - m.vcpu) ? f : best,
       )
     return a + Math.round((proche.prix * m.vcpu) / proche.vcpu)
@@ -561,7 +578,7 @@ export default function NouvellesVms() {
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {FLAVORS.map((f) => (
+                  {FLAVORS_AFFICHES.map((f) => (
                     <button
                       key={f.id}
                       type="button"

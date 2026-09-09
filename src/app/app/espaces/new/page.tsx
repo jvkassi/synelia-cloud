@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { money, num } from '@/lib/format'
 import { MAINTENANT } from '@/lib/format'
 import { SITE_LABEL, type EspaceCloud, type Site } from '@/lib/types'
+import type { Offer } from '@/lib/types'
 import { BACKUP_PLANS, ESPACES, OFFRES } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,8 +26,6 @@ const ETAPES = [
   { numero: 4, titre: 'Options' },
   { numero: 5, titre: 'Récapitulatif' },
 ]
-
-const OFFRES_ESPACE = OFFRES.filter((o) => o.categorie === 'espace_cloud' && o.statut === 'publiee')
 
 const LATENCE: Record<Site, string> = {
   ABJ: '2 à 4 ms depuis Abidjan · 6 à 9 ms depuis Grand-Bassam',
@@ -48,6 +47,14 @@ export default function NouvelEspace() {
   const { pousser } = useApp()
   const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
   const { lancerJob } = useAtelier()
+  // En mode API, les prix viennent du catalogue réel (`/admin/catalogue`) au
+  // lieu de la graine figée : un tarif changé côté admin doit se refléter ici.
+  const offresCollection = useCollection<Offer>('offres', OFFRES)
+  const OFFRES_ESPACE = useMemo(
+    () =>
+      offresCollection.items.filter((o) => o.categorie === 'espace_cloud' && o.statut === 'publiee'),
+    [offresCollection.items],
+  )
   const executer = useOperation()
 
   const [etape, setEtape] = useState(1)
@@ -499,7 +506,7 @@ export default function NouvelEspace() {
               checked={conditions}
               onChange={(e) => setConditions(e.target.checked)}
               label="J’accepte les conditions générales de vente et l’annexe SLA"
-              description={`Montants hors taxes en FCFA, TVA 18 % appliquée à la facturation. Prorata du mois en cours ajouté à la prochaine facture. ${periodicite === 'annuelle' ? 'Engagement de douze mois, résiliable à l’échéance avec trente jours de préavis.' : 'Sans engagement, résiliable en fin de mois.'}`}
+              description={`Montants hors taxes en FCFA, TVA 18 % appliquée à la facturation. Prorata du mois en cours ajouté à la prochaine facture. ${periodicite === 'annuelle' ? 'Engagement de douze mois, résiliable à l’échéance avec trente jours de préavis.' : 'Sans engagement, résiliable en fin de mois.'} Paiement simulé sur cet environnement de démonstration : aucun prélèvement réel n’est effectué.`}
             />
           </Card>
 

@@ -48,7 +48,7 @@ import {
   supprimerRessource,
 } from '@/lib/api/client'
 import { useLectureDegradable } from '@/lib/api/degradable'
-import type { Devis, Invoice, MoyenPaiement, Subscription } from '@/lib/types'
+import type { Devis, Invoice, MoyenPaiement, Offer, Subscription } from '@/lib/types'
 
 const ONGLETS = [
   { id: 'apercu', label: 'Aperçu' },
@@ -156,6 +156,9 @@ export default function Facturation() {
   const souscriptions = useCollection<Subscription>('souscriptions', SOUSCRIPTIONS)
   const lesDevis = useCollection<Devis>('devis', DEVIS)
   const moyens = useCollection<MoyenEnregistre>('moyens-paiement', MOYENS)
+  // Catalogue réel : un tarif changé côté /admin/catalogue doit se refléter
+  // dans les suggestions faites au client, pas seulement dans l'admin.
+  const offresReelles = useCollection<Offer>('offres', OFFRES)
   // Le backend nomme les mêmes champs autrement (`type`, `defaut`) : on
   // normalise une fois pour que l’onglet lise une seule forme.
   const moyensNorm = moyens.items.map((m) => ({
@@ -851,7 +854,7 @@ export default function Facturation() {
             <Card>
               <CardHeader titre="Offres du catalogue" sousTitre="Ce qui pourrait compléter votre périmètre." />
               <div className="space-y-2">
-                {OFFRES.filter(
+                {offresReelles.items.filter(
                   (o) =>
                     o.statut === 'publiee' &&
                     !abonnements.some((s) => s.cible.ref === o.id) &&
