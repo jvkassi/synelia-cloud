@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Ban, KeyRound, Pause, Play, ShieldAlert, UserCog } from 'lucide-react'
 import { cn, trendSeries } from '@/lib/utils'
@@ -33,10 +33,13 @@ import {
   MOYEN_LABEL,
   ROLE_LABEL,
   SITE_COURT,
+  type EspaceCloud,
   type Invoice,
+  type Membership,
   type Offer,
   type Organisation,
   type Role,
+  type Ticket,
 } from '@/lib/types'
 import type { Elevation } from '@/lib/mock'
 import { Badge, MicroLabel } from '@/components/ui/badge'
@@ -51,7 +54,38 @@ import { Timeline } from '@/components/composition/flow'
 import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
-import { modifierRessource, requete } from '@/lib/api/client'
+import { estActif, modifierRessource, requete } from '@/lib/api/client'
+
+/**
+ * Ressources d'une organisation *autre* que celle de l'admin connecté : `useCollection` filtre
+ * toujours par `ctx.org_id` (l'organisation du principal), jamais par un `orgId` choisi — donc
+ * inutilisable ici. `GET /admin/organisations/{orgId}/{ressource}` existe pour cette seule lecture
+ * cross-tenant, réservée à `exige_admin` côté backend (voir DEMO-TODO.md, « onglets
+ * Ressources/Membres/Support »). En mode maquette, la donnée reste celle du jeu figé.
+ */
+function useRessourcesOrganisation<T>(orgId: string, ressource: 'espaces' | 'membres' | 'tickets') {
+  const [items, setItems] = useState<T[]>([])
+  const [chargement, setChargement] = useState(estActif())
+  useEffect(() => {
+    if (!estActif()) return
+    let annule = false
+    setChargement(true)
+    requete<T[]>(`/admin/organisations/${encodeURIComponent(orgId)}/${ressource}`)
+      .then((donnees) => {
+        if (!annule) setItems(donnees)
+      })
+      .catch(() => {
+        if (!annule) setItems([])
+      })
+      .finally(() => {
+        if (!annule) setChargement(false)
+      })
+    return () => {
+      annule = true
+    }
+  }, [orgId, ressource])
+  return { items, chargement }
+}
 
 const ONGLETS = [
   { id: 'synthese', label: 'Synthèse' },
@@ -79,6 +113,9 @@ export function VueOrganisation({ id }: { id: string }) {
   const libellePlan = (plan: string) => offres.items.find((o) => o.code === plan)?.nom ?? plan
   const elevations = useCollection<Elevation>(`elevations-${id}`, ELEVATIONS)
   const orgs = useCollection<Organisation>('organisations', ORGANISATIONS)
+  const espacesOrg = useRessourcesOrganisation<EspaceCloud>(id, 'espaces')
+  const membresOrg = useRessourcesOrganisation<Membership>(id, 'membres')
+  const ticketsOrg = useRessourcesOrganisation<Ticket>(id, 'tickets')
   const [onglet, setOnglet] = useState('synthese')
   const [elevation, setElevation] = useState(false)
   const [suspension, setSuspension] = useState(false)
@@ -133,12 +170,19 @@ export function VueOrganisation({ id }: { id: string }) {
     )
   }
 
-  const membres = membresDeLOrg(org.id)
+  // En mode API, les trois onglets suivants (Ressources/Membres/Support) viennent de la
+  // lecture cross-tenant `/admin/organisations/{id}/**` (`useRessourcesOrganisation`
+  // ci-dessus) — jamais de la maquette, même pour une organisation qui s'y trouve aussi.
+  const membres = estActif()
+    ? membresOrg.items.map((m) => ({ membership: m, user: m.utilisateur! }))
+    : membresDeLOrg(org.id)
   const factures = lesFactures.items.filter((f) => f.orgId === org.id)
   const impayees = factures.filter((f) => f.statut === 'impayee')
-  const tickets = TICKETS_PLATEFORME.filter((t) => t.orgId === org.id)
+  const tickets = estActif() ? ticketsOrg.items : TICKETS_PLATEFORME.filter((t) => t.orgId === org.id)
   const audit = AUDIT.filter((a) => a.orgId === org.id)
-  const espaces = org.id === 'org-dba' ? ESPACES : []
+  const espaces = estActif() ? espacesOrg.items : org.id === 'org-dba' ? ESPACES : []
+  // Services managés : catalogue entièrement simulé côté backend (pas d'endpoint réel),
+  // reste sur la maquette dans les deux modes — cf. mémoire « services_manages fully simulated ».
   const services = org.id === 'org-dba' ? SERVICES_MANAGES : []
   const souscriptions = SOUSCRIPTIONS.filter((s) => s.orgId === org.id)
   const impayeReleve = IMPAYES.find((i) => i.org === org.nom)
