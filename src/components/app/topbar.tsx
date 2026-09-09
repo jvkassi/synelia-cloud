@@ -388,12 +388,28 @@ function SelecteurContexte({ avecEspace }: { avecEspace: boolean }) {
 
 // ─── Contrôles de droite ───────────────────────────────────────────────
 
+/**
+ * `jobs-plateforme` (`/admin/travaux`) est réservé à `exige_admin` côté backend : un client
+ * ordinaire y reçoit un `403` à chaque fois que ce composant montait, avant même d'ouvrir le
+ * popover — `useCollection` charge dans un effet au montage, sans lien avec `superAdmin`.
+ * Deux composants distincts, chacun un seul `useCollection`, plutôt qu'un appel conditionnel
+ * (interdit par les règles des hooks) : le client ne déclenche plus jamais cette requête.
+ */
 function CentreDeTaches({ superAdmin }: { superAdmin: boolean }) {
-  // Lu depuis l'atelier : une création lancée dans la session doit apparaître
-  // ici, et sa barre d'avancement bouger, sans recharger la page.
+  return superAdmin ? <CentreDeTachesAdmin /> : <CentreDeTachesClient />
+}
+
+function CentreDeTachesClient() {
   const client = useCollection<ProvisioningJob>('jobs', JOBS)
+  return <CentreDeTachesCorps jobs={client.items} superAdmin={false} />
+}
+
+function CentreDeTachesAdmin() {
   const plateforme = useCollection<ProvisioningJob>('jobs-plateforme', JOBS_PLATEFORME)
-  const jobs = superAdmin ? plateforme.items : client.items
+  return <CentreDeTachesCorps jobs={plateforme.items} superAdmin />
+}
+
+function CentreDeTachesCorps({ jobs, superAdmin }: { jobs: ProvisioningJob[]; superAdmin: boolean }) {
   const enCours = jobs.filter((j) => j.statut === 'running' || j.statut === 'queued')
   const echecs = jobs.filter((j) => j.statut === 'failed')
 
