@@ -4,7 +4,14 @@ import Link from 'next/link'
 import { Mail, Plus, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { money } from '@/lib/format'
-import { MESSAGERIES, messageriesDeLOrg, type MessagerieDomaine } from '@/lib/mock'
+import {
+  DOMAINES,
+  MESSAGERIES,
+  domainesDeLOrg,
+  messageriesDeLOrg,
+  type MessagerieDomaine,
+} from '@/lib/mock'
+import type { Domaine } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { GatedAction } from '@/components/ui/display'
@@ -15,11 +22,54 @@ import { useCollection } from '@/components/app/atelier'
 import { BoutonFormulaire } from '@/components/app/actions'
 import { creerRessource, estActif } from '@/lib/api/client'
 
+/**
+ * Une carte « à activer » pour un domaine du portefeuille qui n'a encore aucun
+ * enregistrement `web_messagerie` — le cas normal d'un domaine tout juste
+ * enregistré. Sans cette carte, un domaine réel n'apparaît dans cette liste
+ * qu'après un premier appel à `POST /web/emails`, ce qui n'a lieu que si le
+ * bouton « Activer » existe déjà — cercle vicieux qui rendait la messagerie
+ * inaccessible à tout domaine créé après le jeu de données figé.
+ */
+/** Les clés reprennent celles de `PALIERS` côté backend (`web_emails/service.py`) : le
+ * libellé affiché à l'écran n'est pas la valeur envoyée à l'API. */
+const PALIER_LABEL: Record<string, string> = {
+  starter: 'Essentiel · 5 Go par boîte',
+  pro: 'Pro · 25 Go par boîte',
+  business: 'Archivage · 100 Go par boîte',
+}
+
+function messagerieDefaut(domaine: string): MessagerieDomaine {
+  return {
+    id: `nouveau:${domaine}`,
+    domaine,
+    actif: false,
+    palier: 'pro',
+    solutionOSS: 'zimbra',
+    hoteWebmail: 'webmail.synelia.cloud',
+    boites: [],
+    boitesIncluses: 25,
+    alias: [],
+    redirections: [],
+    authentification: { spf: 'absent', dkim: 'absent', dmarc: '' },
+    antispam: { actif: true, niveau: 'standard', quarantaine: 0 },
+    prixSiege: 800,
+  }
+}
+
 export default function ListeMessageries() {
   const { autorise, refus } = useApp()
   const collection = useCollection<MessagerieDomaine>('messageries', MESSAGERIES)
+  const domaines = useCollection<Domaine>('domaines', DOMAINES)
   const perimetre = new Set(messageriesDeLOrg().map((m) => m.id))
-  const messageries = estActif() ? collection.items : collection.items.filter((m) => perimetre.has(m.id))
+  const scopeMessageries = estActif()
+    ? collection.items
+    : collection.items.filter((m) => perimetre.has(m.id))
+  const scopeDomaines = estActif() ? domaines.items : domainesDeLOrg()
+  const nomsAvecMessagerie = new Set(scopeMessageries.map((m) => m.domaine))
+  const messageries = [
+    ...scopeMessageries,
+    ...scopeDomaines.filter((d) => !nomsAvecMessagerie.has(d.nom)).map((d) => messagerieDefaut(d.nom)),
+  ]
   const actives = messageries.filter((m) => m.actif)
   const boites = actives.reduce((a, m) => a + m.boites.length, 0)
   const stockage = actives.reduce((a, m) => a + m.boites.reduce((x, b) => x + b.utiliseGo, 0), 0)
@@ -74,16 +124,20 @@ export default function ListeMessageries() {
             <Card key={m.id} className={cn(!m.actif && 'border-dashed')}>
               <CardHeader
                 titre={
-                  <Link
-                    href={`/app/web/emails/${m.id}`}
-                    className="font-mono text-[14px] hover:text-p-700"
-                  >
-                    {m.domaine}
-                  </Link>
+                  m.id.startsWith('nouveau:') ? (
+                    <span className="font-mono text-[14px] text-ink">{m.domaine}</span>
+                  ) : (
+                    <Link
+                      href={`/app/web/emails/${m.id}`}
+                      className="font-mono text-[14px] hover:text-p-700"
+                    >
+                      {m.domaine}
+                    </Link>
+                  )
                 }
                 sousTitre={
                   m.actif
-                    ? `${m.solutionOSS} · ${m.palier} · webmail sur ${m.hoteWebmail}`
+                    ? `${m.solutionOSS} · ${PALIER_LABEL[m.palier] ?? m.palier} · webmail sur ${m.hoteWebmail}`
                     : `Messagerie non activée · ${money(m.prixSiege)} par boîte et par mois`
                 }
                 actions={
@@ -155,18 +209,18 @@ export default function ListeMessageries() {
                         type: 'select',
                         demi: true,
                         options: [
-                          { value: 'Essentiel · 5 Go', label: 'Essentiel · 5 Go par boîte' },
-                          { value: 'Pro · 25 Go', label: 'Pro · 25 Go par boîte' },
-                          { value: 'Archivage · 100 Go', label: 'Archivage · 100 Go par boîte' },
+                          { value: 'starter', label: 'Essentiel · 5 Go par boîte' },
+                          { value: 'pro', label: 'Pro · 25 Go par boîte' },
+                          { value: 'business', label: 'Archivage · 100 Go par boîte' },
                         ],
                       },
                       { id: 'import', label: 'Importer depuis un autre fournisseur', type: 'switch', placeholder: 'Après vérification' },
                     ]}
-                    valeursDepart={{ boites: 5, palier: 'Pro · 25 Go' }}
+                    valeursDepart={{ boites: 5, palier: 'pro' }}
                     libelleValider="Activer"
                     operation={(v) => ({
                       titre: `Messagerie de ${m.domaine} en cours d’activation`,
-                      detail: `${v.boites} boîte(s) · ${v.palier}`,
+                      detail: `${v.boites} boîte(s) · ${PALIER_LABEL[String(v.palier)] ?? v.palier}`,
                       appel: () =>
                         creerRessource('/web/emails', {
                           domaine: m.domaine,
@@ -180,11 +234,16 @@ export default function ListeMessageries() {
                           collection.recharger()
                           return
                         }
-                        collection.modifier(m.id, {
-                          actif: true,
-                          palier: String(v.palier),
-                          boitesIncluses: Number(v.boites),
-                        })
+                        const patch = { actif: true, palier: String(v.palier), boitesIncluses: Number(v.boites) }
+                        if (m.id.startsWith('nouveau:')) {
+                          collection.creer({
+                            ...messagerieDefaut(m.domaine),
+                            ...patch,
+                            id: collection.identifiant('mail'),
+                          })
+                        } else {
+                          collection.modifier(m.id, patch)
+                        }
                       },
                     })}
                   />
