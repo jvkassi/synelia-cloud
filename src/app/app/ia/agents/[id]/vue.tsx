@@ -33,7 +33,7 @@ import {
   modeleParSlug,
   outilParId,
 } from '@/lib/mock'
-import { ApiError, creerRessource, estActif } from '@/lib/api/client'
+import { ApiError, creerRessource, estActif, modifierRessource } from '@/lib/api/client'
 import { Badge, MicroLabel } from '@/components/ui/badge'
 import { Button, ButtonLink } from '@/components/ui/button'
 import { CodeBlock, CopyField, GatedAction, SolutionLogo, Tabs } from '@/components/ui/display'
@@ -44,6 +44,7 @@ import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { EmptyState } from '@/components/composition/states'
 import { useApp, useEspace, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
+import { BoutonFormulaire } from '@/components/app/actions'
 
 const ONGLETS = [
   { id: 'consigne', label: 'Rôle & consigne' },
@@ -322,11 +323,28 @@ export function VueAgent({ agentId }: { agentId: string }) {
                     titre="Consigne"
                     sousTitre="Le rôle, le ton, les contraintes et ce que l’agent doit refuser de faire. Les variables entre doubles accolades sont remplacées à chaque appel."
                     actions={
-                      <GatedAction autorise={peutEcrire} message={refus('ia.agent.write')}>
-                        <Button size="sm" variant="secondary">
-                          Enregistrer une version
-                        </Button>
-                      </GatedAction>
+                      <BoutonFormulaire
+                        libelle="Enregistrer une version"
+                        variant="secondary"
+                        size="sm"
+                        action="ia.agent.write"
+                        titre="Enregistrer une nouvelle consigne"
+                        description="La consigne est réécrite immédiatement sur cet agent — pas encore de versionnement distinct côté backend pour un agent créé via l’API."
+                        champs={[
+                          { id: 'consigne', label: 'Consigne', type: 'mono', obligatoire: true },
+                        ]}
+                        valeursDepart={{ consigne: agent.consigne }}
+                        libelleValider="Enregistrer"
+                        operation={(v) => ({
+                          titre: 'Consigne enregistrée',
+                          appel: () =>
+                            modifierRessource('/ia/agents', agent.id, {
+                              consigne: String(v.consigne),
+                            }),
+                          effet: () => agentsCol.modifier(agent.id, { consigne: String(v.consigne) }),
+                          effetFinal: () => agentsCol.recharger(),
+                        })}
+                      />
                     }
                   />
                   <div className="rounded-[8px] border border-g-300 bg-g-050 p-3.5">
