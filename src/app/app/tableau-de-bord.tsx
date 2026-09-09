@@ -19,13 +19,23 @@ import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { ApiError } from '@/lib/api/client'
 import { useLectureDegradable } from '@/lib/api/degradable'
-import type { AuditEvent, EspaceCloud, Invoice, K8sCluster, Projet, Ticket, VM } from '@/lib/types'
+import type {
+  AuditEvent,
+  EspaceCloud,
+  Invoice,
+  K8sCluster,
+  Membership,
+  Projet,
+  Ticket,
+  VM,
+} from '@/lib/types'
 import {
   CATALOGUE,
   ESPACES,
   EVENEMENTS_SUPERVISION,
   FACTURES,
   K8S_CLUSTERS,
+  MEMBERSHIPS,
   ORG_COURANTE,
   PROJETS,
   SERVICES_MANAGES,
@@ -78,6 +88,11 @@ export default function TableauDeBord() {
   const projets = useCollection<Projet>('projets', PROJETS)
   const factures = useCollection<Invoice>('factures', FACTURES)
   const tickets = useCollection<Ticket>('tickets', TICKETS)
+  // Idem pour les membres (`/membres`) : il existe un vrai compte
+  // d'utilisateurs par organisation côté backend, même si aucune offre ne
+  // porte de quota de sièges — `organisations/service.py::nb_utilisateurs`
+  // ne compte que les adhésions de portée `org`, la tuile fait de même.
+  const memberships = useCollection<Membership>('memberships', MEMBERSHIPS)
   // Même motif que /app/securite : `journal` (atelier local) sert de repli,
   // `/audit` réel prime quand il répond — l'activité récente lisait jusqu'ici
   // uniquement le journal local, jamais le vrai journal d'audit en mode API.
@@ -97,6 +112,9 @@ export default function TableauDeBord() {
   const clustersN = clusters.items.length
   const applicationsN = projets.items.length
   const environnementsN = projets.items.reduce((a, p) => a + p.environnements.length, 0)
+  const membresOrgN = memberships.items.filter(
+    (m) => m.scopeType === 'org' && m.orgId === (api ? organisationId : ORG_COURANTE.id),
+  ).length
 
   // Quota/usage souscrits contre consommés : somme des Espaces Cloud réels,
   // le champ `quota`/`usage` de chacun ayant exactement la forme `Quota`
@@ -204,15 +222,24 @@ export default function TableauDeBord() {
           serie={trendSeries('apps', 24, Math.max(0, applicationsN - 1), applicationsN, 0)}
         />
         <StatTile
-          libelle="Sièges utilisés"
-          valeur={`${s.siegesUtilises}/${s.siegesSouscrits}`}
+          libelle={api ? 'Membres de l’organisation' : 'Sièges utilisés'}
+          valeur={api ? membresOrgN : `${s.siegesUtilises}/${s.siegesSouscrits}`}
           detail={
             api
-              ? 'Démonstration — pas encore une lecture réelle'
+              ? // Le compte de membres est réel (`/membres`, même filtre que
+                // `nb_utilisateurs` côté backend) ; aucune offre ne porte
+                // aujourd'hui de quota de sièges par organisation, donc pas de
+                // « souscrits » à afficher en face — un « Démonstration »
+                // aurait caché une donnée réelle disponible.
+                `${membresOrgN > 1 ? 'membres actifs' : 'membre actif'} · pas de quota de sièges par offre`
               : `${pct(Math.round((s.siegesUtilises / s.siegesSouscrits) * 100))} des sièges souscrits`
           }
           ton="ok"
-          serie={trendSeries('sieges', 24, 58, 67, 2)}
+          serie={
+            api
+              ? trendSeries('sieges', 24, Math.max(0, membresOrgN - 1), membresOrgN, 2)
+              : trendSeries('sieges', 24, 58, 67, 2)
+          }
         />
       </div>
 
@@ -313,8 +340,8 @@ export default function TableauDeBord() {
           {/* Pas de supervision SLA/incidents branchée côté backend : en
               mode API, la jauge et les trois lignes gardent les valeurs
               illustratives du jeu de démonstration, mais l'écran le dit —
-              même convention que les tuiles « Services managés » et
-              « Sièges utilisés » plus haut sur cette page. */}
+              même convention que la tuile « Services managés » plus haut sur
+              cette page (catalogue jamais raccordé à une infra réelle). */}
           <GaugeCircle
             valeur={s.uptime30j}
             cible={s.slaContractuel}
