@@ -83,13 +83,13 @@ export default function NouveauProjet() {
   const [espaceId, setEspaceId] = useState(espaceCourant.id)
   const [clusterMode, setClusterMode] = useState<'nouveau' | 'existant'>('nouveau')
   const [tailleClusterId, setTailleClusterId] = useState('moyen')
-  const clustersDisponiblesInitial = K8S_CLUSTERS.filter((c) => c.espaceId === espaceCourant.id)
+  const clustersDisponiblesInitial = grappes.items.filter((c) => c.espaceId === espaceCourant.id)
   const [clusterExistantId, setClusterExistantId] = useState(clustersDisponiblesInitial[0]?.id ?? '')
 
   const [conditions, setConditions] = useState(false)
 
   const espace = espacesCol.items.find((e) => e.id === espaceId) ?? espaceCourant
-  const clustersDisponibles = K8S_CLUSTERS.filter((c) => c.espaceId === espaceId)
+  const clustersDisponibles = grappes.items.filter((c) => c.espaceId === espaceId)
   const clusterExistantChoisi = clustersDisponibles.find((c) => c.id === clusterExistantId)
   const tailleChoisie = TAILLES_CLUSTER.find((t) => t.id === tailleClusterId)!
 
@@ -357,7 +357,7 @@ export default function NouveauProjet() {
               onChange={(e) => {
                 const id = e.target.value
                 setEspaceId(id)
-                const dispo = K8S_CLUSTERS.filter((c) => c.espaceId === id)
+                const dispo = grappes.items.filter((c) => c.espaceId === id)
                 setClusterExistantId(dispo[0]?.id ?? '')
                 if (dispo.length === 0) setClusterMode('nouveau')
               }}
