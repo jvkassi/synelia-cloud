@@ -13,6 +13,7 @@ import { HealthBadge, QuotaBar, StatTile } from '@/components/composition/metric
 import { DataTable, type Colonne } from '@/components/composition/data-table'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
+import { estActif } from '@/lib/api/client'
 
 const colonnesEspaces = (vms: VM[]): Array<Colonne<EspaceCloud>> => [
   {
@@ -218,11 +219,13 @@ export default function ListeEspaces() {
       </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Callout ton="warn" titre="EC-DBA-01 approche de son plafond de stockage">
-          7,1 To utilisés sur 8 To, soit 89 %. Le devis DEV-0418 propose une extension à 12 To
-          accompagnée de 16 vCPU supplémentaires, applicable à chaud et sans interruption. Il est en
-          attente de validation dans votre espace facturation.
-        </Callout>
+        {!estActif() && (
+          <Callout ton="warn" titre="EC-DBA-01 approche de son plafond de stockage">
+            7,1 To utilisés sur 8 To, soit 89 %. Le devis DEV-0418 propose une extension à 12 To
+            accompagnée de 16 vCPU supplémentaires, applicable à chaud et sans interruption. Il est
+            en attente de validation dans votre espace facturation.
+          </Callout>
+        )}
         <Callout ton="violet" titre="Pourquoi plusieurs espaces ?">
           C’est la façon habituelle de séparer production, préproduction et site de repli : chacun
           avec son quota, sa plage réseau et son site. Le peering entre deux Espaces Cloud d’une même
