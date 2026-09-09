@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { Check, Network, Server, ShieldCheck } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { money, num } from '@/lib/format'
+import { money, num, ventilationTva } from '@/lib/format'
 import { MAINTENANT } from '@/lib/format'
 import { SITE_LABEL, type EspaceCloud, type Site } from '@/lib/types'
 import type { Offer } from '@/lib/types'
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox, Field, Input, Select, Switch } from '@/components/ui/field'
 import { Card, CardHeader, Callout, KeyValueList } from '@/components/composition/card'
 import { CostPreview, WizardShell } from '@/components/composition/flow'
+import { BoutonPrepaiementPaystack } from '@/components/composition/paystack'
 import { useApp } from '@/components/app/contexte'
 import { useAtelier, useCollection } from '@/components/app/atelier'
 import { useOperation } from '@/components/app/actions'
@@ -97,6 +98,14 @@ export default function NouvelEspace() {
     return l
   }, [offre, site, cidr, planSauvegarde, pra])
 
+  const montantTtc = useMemo(() => {
+    const mensuelHt = lignes.reduce((a, l) => a + l.montant, 0)
+    const remise = periodicite === 'annuelle' ? Math.round((mensuelHt * 15) / 100) : 0
+    const { total } = ventilationTva(mensuelHt - remise)
+    return total
+  }, [lignes, periodicite])
+  const [paye, setPaye] = useState(false)
+
   const codeValide = /^EC-[A-Z0-9]{2,6}-\d{2}$/.test(code) && !ESPACES.some((e) => e.code === code)
   const cidrValide = /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}\/(2[0-4]|1[6-9])$/.test(cidr)
 
@@ -137,6 +146,16 @@ export default function NouvelEspace() {
             <Button disabled={!peutContinuer} onClick={() => setEtape(etape + 1)}>
               Continuer
             </Button>
+          ) : estActif() && !paye ? (
+            conditions ? (
+              <BoutonPrepaiementPaystack
+                montant={montantTtc}
+                libelle={`Espace Cloud ${code}`}
+                onSuccess={() => setPaye(true)}
+              />
+            ) : (
+              <Button disabled>Payer maintenant (carte / mobile money)</Button>
+            )
           ) : (
             <Button
               disabled={!conditions}
@@ -506,7 +525,7 @@ export default function NouvelEspace() {
               checked={conditions}
               onChange={(e) => setConditions(e.target.checked)}
               label="J’accepte les conditions générales de vente et l’annexe SLA"
-              description={`Montants hors taxes en FCFA, TVA 18 % appliquée à la facturation. Prorata du mois en cours ajouté à la prochaine facture. ${periodicite === 'annuelle' ? 'Engagement de douze mois, résiliable à l’échéance avec trente jours de préavis.' : 'Sans engagement, résiliable en fin de mois.'} Paiement simulé sur cet environnement de démonstration : aucun prélèvement réel n’est effectué.`}
+              description={`Montants hors taxes en FCFA, TVA 18 % appliquée à la facturation. ${periodicite === 'annuelle' ? 'Engagement de douze mois, résiliable à l’échéance avec trente jours de préavis.' : 'Sans engagement, résiliable en fin de mois.'} ${estActif() ? 'Le paiement (Paystack, environnement de test) est exigé avant la création de l’espace — aucune carte réelle n’est débitée sur ce lab.' : 'Paiement simulé sur cet environnement de démonstration : aucun prélèvement réel n’est effectué.'}`}
             />
           </Card>
 

@@ -20,6 +20,7 @@ import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { ApiError, creerRessource, estActif, requete } from '@/lib/api/client'
+import { payerAvantDeCreer } from '@/components/composition/paystack'
 
 /** Tarifs annuels indicatifs, en francs CFA. */
 const EXTENSIONS = [
@@ -223,11 +224,15 @@ export default function PortefeuilleWebCloud() {
               libelleValider="Enregistrer"
               operation={(v) => {
                 const nom = `${String(v.nom).trim().toLowerCase()}${v.extension}`
+                const prixAnnuel = EXTENSIONS.find((x) => x.ext === v.extension)?.prix ?? 9500
                 return {
                   titre: `${nom} enregistré`,
-                  detail: `${money(EXTENSIONS.find((x) => x.ext === v.extension)?.prix ?? 9500)} par an, au prorata du mois en cours.`,
-                  appel: () =>
-                    creerRessource('/web/domaines', {
+                  detail: `${money(prixAnnuel)} par an${estActif() ? ', payé maintenant' : ', au prorata du mois en cours'}.`,
+                  appel: async () => {
+                    // Le paiement est exigé avant l'enregistrement au registre — pas de
+                    // domaine réservé sans réservation payée derrière.
+                    if (estActif()) await payerAvantDeCreer(prixAnnuel * Number(v.duree))
+                    return creerRessource('/web/domaines', {
                       nom,
                       dureeAnnees: Number(v.duree),
                       renouvellementAuto: Boolean(v.auto),
@@ -241,7 +246,8 @@ export default function PortefeuilleWebCloud() {
                         pays: String(v.titulairePays),
                       },
                       creerZoneDns: true,
-                    }),
+                    })
+                  },
                   job: {
                     type: 'domaine.register',
                     label: `Enregistrement de ${nom}`,
