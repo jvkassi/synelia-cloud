@@ -212,6 +212,8 @@ export default function NouveauCluster() {
               nodes: p.nodes,
               flavor: p.flavor,
               diskGo: p.diskGo,
+              type: p.type,
+              autoscale: p.autoscale ? { min: p.min, max: p.max } : undefined,
             })),
           }),
         effetFinal: () => grappes.recharger(),
