@@ -35,6 +35,7 @@ import { useAtelier, useCollection } from '@/components/app/atelier'
 import { BoutonAction } from '@/components/app/actions'
 import type { Backend, Incident, ProvisioningJob, Ticket } from '@/lib/types'
 import { useLectureDegradable } from '@/lib/api/degradable'
+import { estActif } from '@/lib/api/client'
 import { useMaintenant } from '@/components/app/contexte'
 
 /** `GET /admin/tableau-de-bord` : même forme que `SYNTHESE_PLATEFORME`. */
@@ -59,6 +60,7 @@ export default function VuePlateforme() {
   // Le journal vit dans l'atelier : les actions faites pendant la session s'y
   // ajoutent, refus compris. Sans atelier touché, il retombe sur la graine.
   const { journal: AUDIT, reprendreJob } = useAtelier()
+  const api = estActif()
 
   // Socles, incidents, tickets, impayés et provisionnements ont chacun un
   // vrai backend admin (`/admin/backends`, `/admin/statut/incidents`,
@@ -268,7 +270,11 @@ export default function VuePlateforme() {
           <div className="border-b border-g-100 px-4 py-3.5">
             <CardHeader
               titre="Organisations les plus consommatrices"
-              sousTitre="Par processeur alloué. Une organisation qui croît vite mérite un contact commercial avant qu’elle ne se heurte à un quota."
+              sousTitre={
+                api
+                  ? 'Démonstration — pas encore une lecture réelle, y compris la colonne CA mensuel (qui ne reflète pas le chiffre d’affaires ci-dessus)'
+                  : 'Par processeur alloué. Une organisation qui croît vite mérite un contact commercial avant qu’elle ne se heurte à un quota.'
+              }
               className="mb-0"
               actions={
                 <ButtonLink size="sm" variant="ghost" href="/admin/organisations">

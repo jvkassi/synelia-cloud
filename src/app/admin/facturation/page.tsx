@@ -26,7 +26,7 @@ import { StackedBar, StatTile } from '@/components/composition/metrics'
 import { useApp } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
-import { requete } from '@/lib/api/client'
+import { estActif, requete } from '@/lib/api/client'
 
 const ONGLETS = [
   { id: 'revenus', label: 'Revenus' },
@@ -132,6 +132,7 @@ export default function FacturationAdmin() {
     setRelanceId(null)
   }
 
+  const api = estActif()
   const caMensuel = SYNTHESE_PLATEFORME.caMensuel
   const impayesTotal = impayes.items.reduce((a, i) => a + i.montant, 0)
   const coutInfra = MARGE_BACKENDS.reduce((a, m) => a + m.coutInfra, 0)
@@ -249,6 +250,7 @@ export default function FacturationAdmin() {
           libelle="CA mensuel récurrent"
           valeur={money(caMensuel)}
           ton="ok"
+          detail={api ? 'Démonstration — pas encore une lecture réelle' : undefined}
           serie={trendSeries('admin-ca', 12, caMensuel * 0.68, caMensuel)}
         />
         <StatTile

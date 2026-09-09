@@ -221,7 +221,7 @@ export default function Catalogue() {
         <StatTile
           libelle="Revenu récurrent"
           valeur={moneyPerMonth(
-            OFFRES.reduce((a, o) => a + o.prix * o.souscriptionsActives, 0),
+            offres.items.reduce((a, o) => a + o.prix * o.souscriptionsActives, 0),
           )}
           ton="violet"
           detail="Prix publics × souscriptions actives"

@@ -11,9 +11,19 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, Callout, PageHeader } from '@/components/composition/card'
 import { StatTile } from '@/components/composition/metrics'
+import { useCollection } from '@/components/app/atelier'
+import { estActif } from '@/lib/api/client'
+import { ORGANISATIONS } from '@/lib/mock'
+import type { Organisation } from '@/lib/types'
 
 export default function IaPlateforme() {
   const s = SYNTHESE_IA_PLATEFORME
+  const api = estActif()
+  // `orgsActives` de la graine (41) dépassait le total réel d'organisations
+  // (20, vu sur `/admin/organisations`) — on relit la collection réelle plutôt
+  // que d'inventer un sous-ensemble « actif IA » qui n'existe pas côté API.
+  const orgs = useCollection<Organisation>('organisations', ORGANISATIONS)
+  const orgsActives = api ? orgs.items.length : s.orgsActives
 
   return (
     <div className="space-y-5">
@@ -41,8 +51,9 @@ export default function IaPlateforme() {
           libelle="Chiffre d’affaires IA"
           valeur={money(s.caIaMensuel)}
           ton="ok"
+          detail={api ? 'Démonstration — pas encore une lecture réelle' : undefined}
         />
-        <StatTile libelle="Organisations actives" valeur={s.orgsActives} />
+        <StatTile libelle="Organisations actives" valeur={orgsActives} />
       </div>
 
       <Card>
