@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowUpRight, CalendarClock, FileText, LifeBuoy, Plus } from 'lucide-react'
+import { ArrowUpRight, CalendarClock, FileText, LifeBuoy, PackageSearch, Plus } from 'lucide-react'
 import { dateHeure, money, num, pct, relatif, toHumain } from '@/lib/format'
 import { trendSeries } from '@/lib/utils'
 import { ButtonLink } from '@/components/ui/button'
@@ -356,21 +356,29 @@ export default function TableauDeBord() {
             </Link>
           }
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            {servicesVedette.map((svc) => (
-              <ServiceCard
-                key={svc.id}
-                service={svc}
-                catalogue={serviceCatalogue(svc.catalogSlug)}
-                compact
-              />
-            ))}
-          </div>
-          {api && (
-            <p className="mt-2 text-[11px] font-semibold text-g-500">
-              Démonstration — le catalogue de services managés n’est pas encore raccordé à une
-              infrastructure réelle sur ce lab.
-            </p>
+          {api ? (
+            <div className="flex flex-col items-center justify-center gap-2 rounded-[8px] border border-dashed border-g-300 bg-g-050 px-4 py-8 text-center">
+              <PackageSearch size={20} className="text-g-400" />
+              <p className="text-[12.5px] font-semibold text-g-700">
+                Catalogue non raccordé sur ce lab
+              </p>
+              <p className="max-w-xs text-[11.5px] leading-relaxed text-g-500">
+                Drive, messagerie, visioconférence et ERP existent dans le catalogue de services
+                managés, mais aucun n’est aujourd’hui provisionné derrière une infrastructure
+                réelle. Parcourez le catalogue depuis le lanceur.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
+              {servicesVedette.map((svc) => (
+                <ServiceCard
+                  key={svc.id}
+                  service={svc}
+                  catalogue={serviceCatalogue(svc.catalogSlug)}
+                  compact
+                />
+              ))}
+            </div>
           )}
         </Section>
 
