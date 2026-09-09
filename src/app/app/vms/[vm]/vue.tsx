@@ -20,6 +20,7 @@ import {
   SITE_LABEL,
   type BackupPlan,
   type EspaceCloud,
+  type PublicIP,
   type RestorePoint,
   type VM,
   type Volume,
@@ -28,6 +29,7 @@ import {
   BACKUP_PLANS,
   ESPACES,
   EVENEMENTS_SUPERVISION,
+  PUBLIC_IPS,
   RESTORE_POINTS,
   SECURITY_GROUPS,
   VMS,
@@ -133,6 +135,7 @@ export function VueVm({ id }: { id: string }) {
   }, [console_, ouvrirConsole])
 
   const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
+  const lesIps = useCollection<PublicIP>('ips', PUBLIC_IPS)
   // Même collections que la section transverse `/app/sauvegarde` (`OngletPoints`,
   // `OngletPlans`) : avant ce correctif, l'onglet Sauvegardes de la fiche lisait
   // `RESTORE_POINTS`/`BACKUP_PLANS` (les graines) sans jamais passer par l'atelier,
@@ -200,6 +203,7 @@ export function VueVm({ id }: { id: string }) {
   const ipPrivee = vm.ips.find((i) => i.type === 'privee')?.adresse
   const ipPublique = vm.ips.find((i) => i.type === 'publique')?.adresse
   const volumes = disques.items.filter((v) => v.attachedTo === vm.id)
+  const ipsDisponibles = lesIps.items.filter((i) => i.espaceId === vm.espaceId && !i.attachedTo)
   const points = pointsRestauration.items.filter((p) => p.resourceId === vm.id)
   // Un plan protège cette VM par portée directe (`ressource` == son id) ou par
   // Espace (`espace` == son espaceId). `tag`/`service` sont traités par le
@@ -595,7 +599,94 @@ export function VueVm({ id }: { id: string }) {
       {onglet === 'reseau' && (
         <div className="space-y-4">
           <Card>
-            <CardHeader titre="Interfaces réseau" sousTitre={`${vm.hardware.nics} carte(s) virtuelle(s)`} />
+            <CardHeader
+              titre="Interfaces réseau"
+              sousTitre={`${vm.hardware.nics} carte(s) virtuelle(s)`}
+              actions={
+                <BoutonFormulaire
+                  libelle="Attacher une IP publique"
+                  action="network.manage"
+                  titre={`Attacher une IP publique à ${vm.nom}`}
+                  description="Une IP publique permet d’atteindre cette machine depuis Internet. Choisissez une adresse déjà réservée et libre dans cet Espace Cloud, ou faites-en réserver une nouvelle — facturée 3 500 FCFA par mois."
+                  champs={[
+                    {
+                      id: 'source',
+                      label: 'Adresse',
+                      type: 'select',
+                      options: [
+                        ...ipsDisponibles.map((ip) => ({
+                          value: ip.id,
+                          label: `${ip.adresse}${ip.ptr ? ` · ${ip.ptr}` : ''} (déjà réservée)`,
+                        })),
+                        { value: 'nouvelle', label: 'Réserver une nouvelle IP publique' },
+                      ],
+                    },
+                  ]}
+                  valeursDepart={{ source: ipsDisponibles[0]?.id ?? 'nouvelle' }}
+                  libelleValider="Attacher"
+                  operation={(v) => {
+                    const nouvelle = String(v.source) === 'nouvelle'
+                    const ipChoisie = nouvelle
+                      ? undefined
+                      : ipsDisponibles.find((ip) => ip.id === v.source)
+                    return {
+                      titre: nouvelle
+                        ? `IP publique attachée à ${vm.nom}`
+                        : `${ipChoisie?.adresse ?? ''} attachée à ${vm.nom}`,
+                      detail: nouvelle ? 'Facturée au prorata du mois en cours.' : undefined,
+                      appel: async () => {
+                        let ipId = String(v.source)
+                        if (nouvelle) {
+                          const reservee = (await creerRessource<PublicIP>('/ips', {
+                            espaceId: vm.espaceId,
+                            site: espace?.site,
+                            antiDdos: false,
+                          })) as PublicIP
+                          ipId = reservee.id
+                        }
+                        return requete(`/ips/${encodeURIComponent(ipId)}/attachement`, {
+                          methode: 'PUT',
+                          corps: { cibleId: vm.id },
+                        })
+                      },
+                      effet: () => {
+                        const adresse = nouvelle
+                          ? `102.176.20.${200 + lesIps.items.length}`
+                          : ipChoisie?.adresse
+                        if (!adresse) return
+                        if (nouvelle) {
+                          lesIps.creer({
+                            id: lesIps.identifiant('ip'),
+                            espaceId: vm.espaceId,
+                            adresse,
+                            antiDdos: false,
+                            attachedTo: vm.id,
+                            attachedLabel: vm.nom,
+                          })
+                        } else if (ipChoisie) {
+                          lesIps.modifier(ipChoisie.id, { attachedTo: vm.id, attachedLabel: vm.nom })
+                        }
+                        parc.modifier(vm.id, (m) => ({
+                          ips: [...m.ips, { adresse, type: 'publique' as const, ptr: ipChoisie?.ptr }],
+                        }))
+                      },
+                      job: {
+                        type: 'network.ip.attach',
+                        label: `IP publique · ${vm.nom}`,
+                        etapes: nouvelle
+                          ? ['Réserver l’adresse dans le pool', 'Annoncer la route', 'Attacher au port réseau']
+                          : ['Attacher au port réseau'],
+                        dureeEtapeMs: 900,
+                      },
+                      effetFinal: () => {
+                        parc.recharger()
+                        lesIps.recharger()
+                      },
+                    }
+                  }}
+                />
+              }
+            />
             <div className="overflow-x-auto">
               <table className="w-full min-w-max border-collapse">
                 <thead>
