@@ -55082,6 +55082,10 @@
           "cleSsh": {
             "type": "string"
           },
+          "cloudInit": {
+            "type": "string",
+            "description": "Script d’amorçage, encodé en clair, commun au lot."
+          },
           "antiAffinite": {
             "type": "boolean",
             "description": "Répartit les machines du lot sur des hôtes distincts."

@@ -728,6 +728,7 @@ const iaas = {
         'Plan de déploiement composé dans l’écran de composition.',
       ),
       cleSsh: chaine(),
+      cloudInit: chaine('Script d’amorçage, encodé en clair, commun au lot.'),
       antiAffinite: booleen('Répartit les machines du lot sur des hôtes distincts.'),
     },
     ['espaceId', 'machines'],
