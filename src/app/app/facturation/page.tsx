@@ -38,6 +38,7 @@ import { useApp, useMaintenant } from '@/components/app/contexte'
 import { useCollection } from '@/components/app/atelier'
 import { BoutonAction, BoutonFormulaire, useOperation } from '@/components/app/actions'
 import { CostPreview } from '@/components/composition/flow'
+import { BoutonPaiementPaystack } from '@/components/composition/paystack'
 import {
   ApiError,
   creerRessource,
@@ -621,9 +622,17 @@ export default function Facturation() {
                           autorise={autorise('payment.update')}
                           message={refus('payment.update')}
                         >
-                          <Button size="sm" variant="secondary" onClick={() => regler(f)}>
-                            Régler
-                          </Button>
+                          <span className="flex items-center gap-1.5">
+                            {estActif() && (
+                              <BoutonPaiementPaystack
+                                factureId={f.id}
+                                onSuccess={() => lesFactures.recharger()}
+                              />
+                            )}
+                            <Button size="sm" variant="secondary" onClick={() => regler(f)}>
+                              Régler
+                            </Button>
+                          </span>
                         </GatedAction>
                       )}
                     </span>
