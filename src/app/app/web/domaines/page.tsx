@@ -479,8 +479,8 @@ export default function PortefeuilleWebCloud() {
             titre="Enregistrer un nom de domaine"
             sousTitre="Le titulaire déclaré au registre est votre organisation, jamais Synelia. Vous pouvez demander le code de transfert à tout moment, sans justification."
           />
-          <div className="flex flex-wrap items-end gap-2">
-            <Field label="Nom recherché" className="min-w-0 flex-1">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+            <Field label="Nom recherché" className="min-w-0 sm:flex-1">
               <Input
                 value={recherche}
                 onChange={(e) => setRecherche(e.target.value)}

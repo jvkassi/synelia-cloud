@@ -264,8 +264,8 @@ export default function ListeCertificats() {
           titre="Commander un certificat"
           sousTitre="Le gratuit convient à presque tout. Les payants servent quand il faut une garantie financière, le nom de l’entreprise dans le certificat, ou tous les sous-domaines d’un coup."
         />
-        <div className="flex flex-wrap items-end gap-2">
-          <Field label="Hôte à couvrir" className="min-w-0 flex-1">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+          <Field label="Hôte à couvrir" className="min-w-0 sm:flex-1">
             <Input
               value={hote}
               onChange={(e) => setHote(e.target.value)}
