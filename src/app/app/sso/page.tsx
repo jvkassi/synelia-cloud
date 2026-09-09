@@ -81,7 +81,9 @@ interface ResultatTestSso {
 }
 
 export default function Sso() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, pousser, organisations, organisationId } = useApp()
+  const orgActive = organisations.find((o) => o.id === organisationId) ?? organisations[0]
+  const nomOrg = orgActive?.nom ?? ORG_COURANTE.nom
   const executer = useOperation()
   const correspondances = useCollection<Correspondance>('correspondances-sso', CORRESPONDANCES)
   const [onglet, setOnglet] = useState('etat')
@@ -252,7 +254,7 @@ export default function Sso() {
               {servicesSso} services raccordés
             </Badge>
             <Badge tone="neutral" size="sm">
-              {ORG_COURANTE.nom}
+              {nomOrg}
             </Badge>
           </>
         }

@@ -90,7 +90,9 @@ const TON_GRAVITE: Record<Ticket['gravite'], 'err' | 'warn' | 'info' | 'neutral'
 
 export default function Support() {
   const maintenant = useMaintenant()
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, pousser, organisations, organisationId } = useApp()
+  const orgActive = organisations.find((o) => o.id === organisationId) ?? organisations[0]
+  const nomOrg = orgActive?.nom ?? ORG_COURANTE.nom
   const [onglet, setOnglet] = useState('tickets')
   const [nouveau, setNouveau] = useState(false)
   const [sujet, setSujet] = useState('')
@@ -152,7 +154,7 @@ export default function Support() {
         meta={
           <>
             <Badge tone="neutral" size="sm">
-              {ORG_COURANTE.nom}
+              {nomOrg}
             </Badge>
             <Badge tone="ok" dot size="sm">
               Support ouvert · 8 h – 19 h GMT

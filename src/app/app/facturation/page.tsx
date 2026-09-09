@@ -148,7 +148,9 @@ async function telechargerPdfFacture(id: string, nomFichier: string): Promise<vo
 
 export default function Facturation() {
   const maintenant = useMaintenant()
-  const { autorise, refus, perm } = useApp()
+  const { autorise, refus, perm, organisations, organisationId } = useApp()
+  const orgActive = organisations.find((o) => o.id === organisationId) ?? organisations[0]
+  const nomOrg = orgActive?.nom ?? ORG_COURANTE.nom
   const executer = useOperation()
   const lesFactures = useCollection<Invoice>('factures', FACTURES)
   const souscriptions = useCollection<Subscription>('souscriptions', SOUSCRIPTIONS)
@@ -264,7 +266,7 @@ export default function Facturation() {
         meta={
           <>
             <Badge tone="neutral" size="sm">
-              {ORG_COURANTE.nom}
+              {nomOrg}
             </Badge>
             <Badge tone="neutral" size="sm">
               {consommationDistante

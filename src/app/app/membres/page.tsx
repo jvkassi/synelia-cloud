@@ -79,7 +79,9 @@ interface LigneMembre {
 
 export default function Membres() {
   const maintenant = useMaintenant()
-  const { autorise, refus, role: roleCourant } = useApp()
+  const { autorise, refus, role: roleCourant, organisations, organisationId } = useApp()
+  const orgActive = organisations.find((o) => o.id === organisationId) ?? organisations[0]
+  const nomOrg = orgActive?.nom ?? ORG_COURANTE.nom
   const executer = useOperation()
   const adhesions = useCollection<Membership>('memberships', MEMBERSHIPS)
   const invitations = useCollection<Invitation>('invitations', INVITATIONS)
@@ -139,7 +141,7 @@ export default function Membres() {
         meta={
           <>
             <Badge tone="neutral" size="sm">
-              {ORG_COURANTE.nom}
+              {nomOrg}
             </Badge>
             <Badge tone="neutral" size="sm">
               {lignes.length} membres

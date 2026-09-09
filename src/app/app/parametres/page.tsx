@@ -74,7 +74,9 @@ const ONGLETS = [
 ]
 
 export default function Parametres() {
-  const { autorise, refus, pousser } = useApp()
+  const { autorise, refus, pousser, organisations, organisationId } = useApp()
+  const orgActive = organisations.find((o) => o.id === organisationId) ?? organisations[0]
+  const orgReelle = orgActive ?? ORG_COURANTE
   const executer = useOperation()
   const jetons = useCollection<Jeton>('jetons-api', JETONS)
   // Même collection que `/app/espaces` : le nombre d'Espaces Cloud affiché ici
@@ -108,10 +110,10 @@ export default function Parametres() {
         meta={
           <>
             <Badge tone="neutral" size="sm">
-              {ORG_COURANTE.nom}
+              {orgReelle.nom}
             </Badge>
             <Badge tone="neutral" size="sm">
-              Cliente depuis {dateCourte(ORG_COURANTE.createdAt)}
+              Cliente depuis {dateCourte(ORG_COURANTE.createdAt)} (démonstration)
             </Badge>
             <Badge tone={ORG_COURANTE.statut === 'active' ? 'ok' : 'warn'} dot size="sm">
               {ORG_COURANTE.statut === 'active' ? 'Active' : ORG_COURANTE.statut}
@@ -131,7 +133,7 @@ export default function Parametres() {
             />
             <div className="space-y-4">
               <Field label="Raison sociale">
-                <Input defaultValue={ORG_COURANTE.nom} />
+                <Input defaultValue={orgReelle.nom} />
               </Field>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Field label="Pays">
@@ -182,11 +184,11 @@ export default function Parametres() {
               <KeyValueList
                 colonnes={1}
                 items={[
-                  { cle: 'Identifiant d’organisation', valeur: ORG_COURANTE.id },
+                  { cle: 'Identifiant d’organisation', valeur: orgReelle.id },
                   { cle: 'Contrat', valeur: 'Direct avec Synelia Cloud' },
                   { cle: 'Plan de service', valeur: ORG_COURANTE.tenantPlan ?? 'Standard' },
                   { cle: 'Espaces Cloud', valeur: String(espacesCol.items.length) },
-                  { cle: 'Cliente depuis', valeur: dateCourte(ORG_COURANTE.createdAt) },
+                  { cle: 'Cliente depuis (démonstration)', valeur: dateCourte(ORG_COURANTE.createdAt) },
                   {
                     cle: 'Dépense mensuelle',
                     valeur: ORG_COURANTE.caMensuel ? money(ORG_COURANTE.caMensuel) : '—',
@@ -540,7 +542,7 @@ export default function Parametres() {
               />
               <div className="space-y-3">
                 <CopyField label="Adresse de l’API" value="https://api.synelia.cloud/v1" />
-                <CopyField label="Organisation" value={ORG_COURANTE.id} />
+                <CopyField label="Organisation" value={orgReelle.id} />
               </div>
               <MicroLabel className="mt-4 mb-2">Exemple</MicroLabel>
               <CodeBlock
@@ -863,7 +865,7 @@ synelia vm create --espace EC-DBA-01 --gabarit c2.medium \\
         open={fermeture}
         onClose={() => setFermeture(false)}
         titre="Demander la clôture de l’organisation"
-        ressource={ORG_COURANTE.nom}
+        ressource={orgReelle.nom}
         libelleAction="Enregistrer la demande de clôture"
         pertes={[
           `${espacesCol.items.length} Espaces Cloud et toutes leurs ressources, arrêtés au jour 30`,

@@ -210,7 +210,7 @@ export default function Securite() {
         meta={
           <>
             <Badge tone="neutral" size="sm">
-              {ORG_COURANTE.nom}
+              {nomOrg}
             </Badge>
             <Badge tone="neutral" size="sm">
               Rétention 24 mois
@@ -236,7 +236,7 @@ export default function Securite() {
         <StatTile
           libelle="Événements 30 jours"
           valeur={AUDIT.length * 84}
-          detail="Toutes actions, tous membres"
+          detail={api ? 'Démonstration — pas encore une lecture réelle' : 'Toutes actions, tous membres'}
         />
         <StatTile
           libelle="Actions refusées"
@@ -250,7 +250,11 @@ export default function Securite() {
             Math.round((USERS.filter((u) => u.mfaEnabled).length / USERS.length) * 100),
           )}
           ton={USERS.every((u) => u.mfaEnabled) ? 'ok' : 'warn'}
-          detail={`${USERS.filter((u) => !u.mfaEnabled).length} membre(s) sans deuxième facteur`}
+          detail={
+            api
+              ? 'Démonstration — pas encore une lecture réelle'
+              : `${USERS.filter((u) => !u.mfaEnabled).length} membre(s) sans deuxième facteur`
+          }
         />
         <StatTile
           libelle="Règle 3-2-1 respectée"
@@ -1002,7 +1006,7 @@ synelia-audit verify audit-org-dba-2026-07-19_2026-08-19.csv \\
                 { cle: 'Action', valeur: evenement.action },
                 { cle: 'Ressource visée', valeur: evenement.target },
                 { cle: 'Adresse source', valeur: evenement.ip ?? '—' },
-                { cle: 'Organisation', valeur: ORG_COURANTE.nom },
+                { cle: 'Organisation', valeur: nomOrg },
                 { cle: 'Motif', valeur: evenement.detail ?? '—' },
               ]}
             />
@@ -1024,7 +1028,7 @@ synelia-audit verify audit-org-dba-2026-07-19_2026-08-19.csv \\
                   {
                     id: evenement.id,
                     ts: evenement.ts,
-                    org: ORG_COURANTE.id,
+                    org: organisationId,
                     acteur: evenement.actor,
                     role: evenement.role,
                     portee: evenement.scope,
