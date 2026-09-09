@@ -38,6 +38,10 @@ export default function Capacite() {
   const { autorise, refus, pousser } = useApp()
   const executer = useOperation()
   const socles = useCollection<Backend>('backends', BACKENDS)
+  // `BACKENDS` est la graine de maquette ; en mode API, les socles réels
+  // viennent de `socles.items` (cf. la même dérive déjà corrigée sur
+  // /admin/sites — un socle fabriqué (GBM) ne doit plus apparaître ici).
+  const BACKENDS_LUS = estActif() ? socles.items : BACKENDS
   const placements = useCollection<Placement>('placements', PLACEMENTS)
   // En mode API, les espaces viennent du backend : le sélecteur local
   // filtrerait sur des identifiants inconnus de l’API.
@@ -163,7 +167,7 @@ export default function Capacite() {
         meta={
           <>
             <Badge tone="neutral" size="sm">
-              {BACKENDS.length} socles
+              {BACKENDS_LUS.length} socles
             </Badge>
             <Badge tone="neutral" size="sm">
               {num(SYNTHESE_PLATEFORME.vcpuTotal)} vCPU installés
@@ -233,7 +237,7 @@ export default function Capacite() {
       {onglet === 'socles' && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {BACKENDS.map((b) => (
+            {BACKENDS_LUS.map((b) => (
               <BackendGauge key={b.id} backend={b} />
             ))}
           </div>
@@ -260,7 +264,7 @@ export default function Capacite() {
                   </tr>
                 </thead>
                 <tbody>
-                  {BACKENDS.map((b) => (
+                  {BACKENDS_LUS.map((b) => (
                     <tr key={b.id} className="border-b border-g-100 last:border-0">
                       <td className="px-3 py-2.5">
                         <span className="block font-mono text-[12px] font-semibold text-ink">
@@ -475,7 +479,7 @@ export default function Capacite() {
                   initial={
                     placementsEspace.length > 0
                       ? placementsEspace.map((p) => ({ backendId: p.backendId, percent: p.percent }))
-                      : [{ backendId: BACKENDS[1].id, percent: 100 }]
+                      : [{ backendId: BACKENDS_LUS[0]?.id ?? BACKENDS[1].id, percent: 100 }]
                   }
                   onChange={setRepartition}
                   onAppliquer={appliquerRepartition}
@@ -549,7 +553,7 @@ export default function Capacite() {
                           ) : (
                             <span className="flex flex-wrap gap-1">
                               {pls.map((p) => {
-                                const b = BACKENDS.find((x) => x.id === p.backendId)
+                                const b = BACKENDS_LUS.find((x) => x.id === p.backendId)
                                 return (
                                   <Badge
                                     key={p.backendId}
@@ -610,7 +614,7 @@ export default function Capacite() {
                   </tr>
                 </thead>
                 <tbody>
-                  {BACKENDS.filter((b) => b.saturation).map((b) => {
+                  {BACKENDS_LUS.filter((b) => b.saturation).map((b) => {
                     const s = b.saturation!
                     return (
                       <tr key={b.id} className="border-b border-g-100 last:border-0">
@@ -779,7 +783,7 @@ export default function Capacite() {
                   {[...MARGE_BACKENDS]
                     .sort((a, b) => b.marge - a.marge)
                     .map((m) => {
-                      const socle = BACKENDS.find((b) => b.code === m.backend)
+                      const socle = BACKENDS_LUS.find((b) => b.code === m.backend)
                       return (
                         <tr key={m.backend} className="border-b border-g-100 last:border-0">
                           <td className="px-3 py-2.5">

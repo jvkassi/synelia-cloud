@@ -14,6 +14,7 @@ import { QuotaBar, StatTile } from '@/components/composition/metrics'
 import { GrilleSparkCharts } from '@/components/business/observabilite'
 import { useCollection } from '@/components/app/atelier'
 import { useLectureDegradable } from '@/lib/api/degradable'
+import { estActif } from '@/lib/api/client'
 
 const ONGLETS = [
   { id: 'sites', label: 'Sites physiques' },
@@ -22,7 +23,10 @@ const ONGLETS = [
   { id: 'contraintes', label: 'Contraintes de placement' },
 ]
 
-const SITES: Site[] = ['ABJ', 'GBM']
+// Grand-Bassam (GBM) n'existe pas réellement sur ce lab — un seul site physique (ABJ) est
+// adossé à de la vraie infrastructure (cf. GET /admin/sites, qui ne renvoie qu'ABJ). GBM
+// reste un second site de démonstration en mode maquette uniquement, jamais en mode API.
+const SITES: Site[] = estActif() ? ['ABJ'] : ['ABJ', 'GBM']
 
 const CARACTERISTIQUES: Record<
   Site,
