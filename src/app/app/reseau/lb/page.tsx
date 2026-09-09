@@ -204,7 +204,7 @@ export default function LoadBalancers() {
           titre: 'Aucun load balancer',
           phrase:
             'Un load balancer répartit le trafic entre plusieurs cibles, termine le TLS et applique un pare-feu applicatif. C’est la brique qui rend une application réellement redondante.',
-          action: { libelle: 'Créer un load balancer', href: '#' },
+          action: { libelle: 'Créer un load balancer', onClick: () => setAssistant(true) },
         }}
       />
 
