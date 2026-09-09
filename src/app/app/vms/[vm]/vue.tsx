@@ -16,7 +16,14 @@ import {
 } from 'lucide-react'
 import { cn, seededSeries } from '@/lib/utils'
 import { MAINTENANT, dateCourte, dateHeure, goHumain, num, pct, relatif } from '@/lib/format'
-import { SITE_LABEL, type EspaceCloud, type VM, type Volume } from '@/lib/types'
+import {
+  SITE_LABEL,
+  type BackupPlan,
+  type EspaceCloud,
+  type RestorePoint,
+  type VM,
+  type Volume,
+} from '@/lib/types'
 import {
   BACKUP_PLANS,
   ESPACES,
@@ -126,6 +133,14 @@ export function VueVm({ id }: { id: string }) {
   }, [console_, ouvrirConsole])
 
   const espaces = useCollection<EspaceCloud>('espaces', ESPACES)
+  // Même collections que la section transverse `/app/sauvegarde` (`OngletPoints`,
+  // `OngletPlans`) : avant ce correctif, l'onglet Sauvegardes de la fiche lisait
+  // `RESTORE_POINTS`/`BACKUP_PLANS` (les graines) sans jamais passer par l'atelier,
+  // donc en mode API il affichait des points de restauration fabriqués au lieu des
+  // vrais `/sauvegarde/points` — un point de restauration inventé est pire qu'un
+  // écran vide.
+  const plansSauvegarde = useCollection<BackupPlan>('plans-sauvegarde', BACKUP_PLANS)
+  const pointsRestauration = useCollection<RestorePoint>('points-restauration', RESTORE_POINTS)
 
   // `/catalogue/images` et `/catalogue/gabarits` résolvent les identifiants
   // bruts (Glance, gabarit) que le backend pose sur `vm.os`/`vm.flavor` — le
@@ -185,8 +200,23 @@ export function VueVm({ id }: { id: string }) {
   const ipPrivee = vm.ips.find((i) => i.type === 'privee')?.adresse
   const ipPublique = vm.ips.find((i) => i.type === 'publique')?.adresse
   const volumes = disques.items.filter((v) => v.attachedTo === vm.id)
-  const points = RESTORE_POINTS.filter((p) => p.resourceId === vm.id)
-  const plan = BACKUP_PLANS.find((p) => p.id === vm.backupPlanId)
+  const points = pointsRestauration.items.filter((p) => p.resourceId === vm.id)
+  // Un plan protège cette VM par portée directe (`ressource` == son id) ou par
+  // Espace (`espace` == son espaceId). `tag`/`service` sont traités par le
+  // backend comme couvrant toutes les ressources non-en-erreur — même règle que
+  // `_ressources_protegees` (`sauvegarde/service.py`) — donc comptés ici aussi ;
+  // `service` cible les services managés, jamais une VM, et reste exclu.
+  const plan = plansSauvegarde.items.find(
+    (p) =>
+      (p.scope.type === 'ressource' && p.scope.valeur === vm.id) ||
+      (p.scope.type === 'espace' && p.scope.valeur === vm.espaceId) ||
+      p.scope.type === 'tag',
+  )
+  const pointPlusRecent = points.reduce<RestorePoint | undefined>(
+    (plusRecent, p) => (!plusRecent || p.date > plusRecent.date ? p : plusRecent),
+    undefined,
+  )
+  const derniereSauvegarde = pointPlusRecent?.date
 
   const prendreUnSnapshot = (nom: string) => {
     snapshots.creer({
@@ -424,7 +454,7 @@ export function VueVm({ id }: { id: string }) {
           pendant le transfert de la mémoire.
         </Callout>
       )}
-      {!vm.backupPlanId && (
+      {!plan && (
         <Callout ton="warn" titre="Aucun plan de sauvegarde">
           Cette machine n’est pas protégée : aucune restauration n’est possible en cas d’incident ou
           d’erreur humaine. Appliquez un plan depuis l’onglet Sauvegardes.
@@ -503,7 +533,7 @@ export function VueVm({ id }: { id: string }) {
                   },
                   {
                     cle: 'Dernière sauvegarde',
-                    valeur: vm.derniereSauvegarde ? dateHeure(vm.derniereSauvegarde) : 'Aucune',
+                    valeur: derniereSauvegarde ? dateHeure(derniereSauvegarde) : 'Aucune',
                   },
                 ]}
               />
@@ -1079,20 +1109,29 @@ export function VueVm({ id }: { id: string }) {
               titre="Points de restauration"
               sousTitre="La restauration granulaire descend jusqu’au fichier."
               actions={
+                // `BoutonFormulaire` n'a pas de prop `disabled` : sans point réel à
+                // restaurer, `pointPlusRecent` serait absent et l'`appel` retomberait
+                // sur `undefined`, ce qui rejouerait le job simulé (le bug corrigé
+                // ci-dessous) au lieu de rester inerte. Ne pas rendre le bouton du tout
+                // tant qu'aucun point n'existe est la seule façon honnête de le
+                // désactiver ici — l'`EmptyState` en dessous explique déjà pourquoi.
+                points.length > 0 ? (
                 <BoutonFormulaire
                   libelle="Lancer une restauration"
                   variant="primary"
                   action="backup.restore"
                   titre={`Restaurer ${vm.nom}`}
-                  description="La granularité descend jusqu’au fichier. La destination peut être la machine d’origine, une nouvelle machine, ou un téléchargement."
+                  description="La granularité descend jusqu’au fichier. La destination peut être la machine d’origine, une nouvelle machine, ou l’autre site. Restaure le point le plus récent."
                   champs={[
                     {
                       id: 'granularite',
                       label: 'Granularité',
                       type: 'select',
+                      // Valeurs alignées sur `DemandeRestauration.granularite` (backend) :
+                      // pas de « volume » distinct côté contrat pour une VM, contrairement à
+                      // ce que la maquette laissait croire.
                       options: [
-                        { value: 'machine', label: 'Machine entière' },
-                        { value: 'volume', label: 'Un volume' },
+                        { value: 'complete', label: 'Machine entière' },
                         { value: 'fichiers', label: 'Fichiers et dossiers' },
                       ],
                     },
@@ -1110,10 +1149,29 @@ export function VueVm({ id }: { id: string }) {
                   operation={(v) => ({
                     ton: 'info',
                     titre: 'Restauration lancée',
-                    detail: `${v.granularite === 'machine' ? 'Machine entière' : v.granularite === 'volume' ? 'Volume' : 'Fichiers'} · ${v.destination === 'origine' ? 'sur place' : 'vers une autre cible'}`,
+                    detail: `${v.granularite === 'complete' ? 'Machine entière' : 'Fichiers'} · ${v.destination === 'origine' ? 'sur place' : 'vers une autre cible'}`,
+                    // Avant ce correctif, ce bouton ne passait aucun `appel` : en mode
+                    // API, il jouait un job simulé et un toast de succès sans jamais
+                    // appeler `POST /sauvegarde/restaurations` — vérifié en direct sur
+                    // dev01 (aucune requête réseau). Cible le point le plus récent,
+                    // comme l'annonce la description.
+                    appel: pointPlusRecent
+                      ? () =>
+                          creerRessource('/sauvegarde/restaurations', {
+                            pointId: pointPlusRecent.id,
+                            cible:
+                              v.destination === 'origine'
+                                ? 'origine'
+                                : v.destination === 'autre-site'
+                                  ? 'autre_site'
+                                  : 'nouvelle_ressource',
+                            granularite: v.granularite,
+                          })
+                      : undefined,
                     job: { workflow: 'backup.restore', cible: vm.nom },
                   })}
                 />
+                ) : undefined
               }
             />
             {points.length === 0 ? (
@@ -1160,6 +1218,16 @@ export function VueVm({ id }: { id: string }) {
                               action: 'backup.restore',
                               ton: 'info',
                               titre: `Restauration du ${dateHeure(p.date)}`,
+                              // Même correctif que `/app/sauvegarde` (`OngletPoints`) : sans
+                              // `appel`, ce bouton ne faisait jamais l'aller-retour réel —
+                              // toast de succès et job simulés sans que
+                              // `POST /sauvegarde/restaurations` ne parte.
+                              appel: () =>
+                                creerRessource('/sauvegarde/restaurations', {
+                                  pointId: p.id,
+                                  cible: 'origine',
+                                  granularite: 'complete',
+                                }),
                               job: { workflow: 'backup.restore', cible: `${vm.nom} · ${dateCourte(p.date)}` },
                             }}
                           />
@@ -1369,7 +1437,7 @@ ops@${vm.nom}:~$ _`}
           'Le disque système et son contenu seront détruits',
           `${volumes.length} volume(s) attaché(s) seront détaché(s) puis conservé(s) séparément`,
           `${snapshots.items.length} snapshot(s) seront supprimés`,
-          vm.backupPlanId
+          points.length > 0
             ? `Les points de restauration restent disponibles pendant ${plan?.retentionJours ?? 30} jours`
             : 'Aucun point de restauration n’existe : la perte sera définitive',
           `${vm.vcpu} vCPU et ${vm.ramGo} Go seront rendus au quota de ${espace?.code}`,

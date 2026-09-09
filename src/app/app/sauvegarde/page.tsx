@@ -599,9 +599,15 @@ function OngletPoints() {
               titre: `Restauration de ${p.resourceNom}`,
               detail: `Point du ${dateHeure(p.date)} · ${goHumain(p.tailleGo)}`,
               appel: () =>
+                // `granularite` est obligatoire côté contrat (`DemandeRestauration`) : sans
+                // elle, le backend refusait déjà l'appel avec un 422 « Field required »,
+                // vérifié en direct sur dev01 — ce bouton « réel » échouait donc à chaque
+                // clic. `complete` est le bon défaut pour une restauration en un clic, sans
+                // passer par l'assistant qui, lui, laisse choisir la granularité.
                 creerRessource('/sauvegarde/restaurations', {
                   pointId: p.id,
                   cible: 'origine',
+                  granularite: 'complete',
                 }),
               job: { workflow: 'backup.restore', cible: `${p.resourceNom} · ${dateCourte(p.date)}` },
             }}
